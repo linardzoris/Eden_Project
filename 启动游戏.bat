@@ -12,8 +12,8 @@ echo ========================================
 echo.
 echo   [1] Release
 echo   [2] ReleaseAVX
-echo   [3] Mixed      ^(启动前清理着色器缓存^)
-echo   [4] MixedAVX   ^(启动前清理着色器缓存^)
+echo   [3] Mixed      ^(开发者模式，将清理着色器缓存^)
+echo   [4] MixedAVX   ^(开发者模式，将清理着色器缓存^)
 echo.
 echo   [0] 退出
 echo.

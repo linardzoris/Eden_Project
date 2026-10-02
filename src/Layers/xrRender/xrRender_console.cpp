@@ -185,6 +185,7 @@ float		ps_r2_lt_smooth				= 1.f;				// 1.f
 float		ps_r2_slight_fade			= 0.6f;				// 1.f
 
 float		ps_r4_vslr_distance			= 0.7f;				// 1.f
+int			ps_r4_vslr_quality			= 1;				// 0=128px, 1=256px, 2=512px cube face
 
 //	x - min (0), y - focus (1.4), z - max (100)
 Fvector3	ps_r2_dof					= Fvector3().set(-1.25f, 1.4f, 600.f);
@@ -747,6 +748,9 @@ void		xrRender_initconsole	()
 
 	CMD3(CCC_Mask, "r4_enable_vslr", &ps_r2_ls_flags_ext, R4FLAG_OFFSCREEN_REFLECTIONS);
 	CMD4(CCC_Float, "r4_vslr_distance", &ps_r4_vslr_distance, 0.4f, 1.f);
+	// VSLR quality tier: cubemap face resolution 0 = 128px, 1 = 256px, 2 = 512px.
+	// All tiers capture all 6 faces every frame. Needs vid_restart (RT reallocation).
+	CMD4(CCC_Integer, "r4_vslr_quality", &ps_r4_vslr_quality, 0, 2);
 
 	// IX-Ray
 	CMD3(CCC_Mask, "r__fast_details_update",&ps_r2_ls_flags, R2FLAG_FAST_DETAILS_UPDATE);

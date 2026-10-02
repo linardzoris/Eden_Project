@@ -442,11 +442,12 @@ void CRender::Render()
 
 		ps_r_taa_jitter.set(0, 0, -1);
 		ps_r_taa_jitter_full.set(ps_r_taa_jitter);
-		
+
 		Fvector PointPos = Device.vCameraPosition;
+
 		RContext->CopyResource(Target->rt_Reflection_temp->pSurface, Target->rt_Reflection->pSurface);
 
-		for(auto i = 0; i < 6; ++i) {
+		for(u32 i = 0; i < 6; ++i) {
 			GPU_EVENT(FORWARD_REFLECTION_SIDE);
 
 			cView.build_camera_dir(PointPos, cmDir[i], cmNorm[i]);
@@ -462,7 +463,7 @@ void CRender::Render()
 
 			Target->u_setrt(RefSize, RefSize,
 				Target->rt_Reflection->pRT[i], NULL, NULL, Target->rt_Depth->pZRT);
-			
+
 			RImplementation.rmNormal();
 
 			RCache.set_Stencil(FALSE);

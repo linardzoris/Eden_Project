@@ -542,7 +542,9 @@ CRenderTarget::CRenderTarget()
 	}
 
 	if(RImplementation.o.offscreen_reflecitons) {
-		u32 RefSize = 256;
+		// VSLR quality tier controls cubemap face resolution (needs vid_restart to reallocate).
+		// Rough surfaces sample deep mips anyway, so lower tiers lose little visual quality.
+		const u32 RefSize = (ps_r4_vslr_quality == 0) ? 128 : (ps_r4_vslr_quality == 2) ? 512 : 256;
 		auto flags = CRT::CRTCreationFlags::MIPPED_RT_FLAG;
 
 		// TODO: Optimize memory using
