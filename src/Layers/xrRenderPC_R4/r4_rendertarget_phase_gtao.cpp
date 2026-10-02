@@ -1,0 +1,188 @@
+#include "stdafx.h"
+
+#include "r4_rendertarget.h"
+
+void CRenderTarget::phase_gtao()
+{
+	GPU_EVENT(phase_gtao);
+
+	u32 Offset = 0;
+    constexpr u32 vertex_color = color_rgba(0, 0, 0, 255);
+
+	//Calculate projection factor, to transform world radius to screen space
+	float p_scale = RCache.get_height() / (tan(deg2rad(Device.fFOV) * 0.5f) * 2.0f);
+	p_scale *= 0.5;
+	FVF::TL* pv = nullptr;
+
+	{
+		GPU_EVENT(gtao_render);
+		//Render the AO and view-z into new rendertarget
+		u_setrt(rt_gtao_0, nullptr, nullptr, nullptr);
+		RCache.set_CullMode(CULL_NONE);
+		RCache.set_Stencil(FALSE);
+
+		pv = (FVF::TL*)RCache.Vertex.Lock(3, g_combine->vb_stride, Offset);
+		pv->set(-1.0, 1.0, 1.0, 1.0, vertex_color, 0.0, 0.0);
+		pv++;
+		pv->set(3.0, 1.0, 1.0, 1.0, vertex_color, 2.0, 0.0);
+		pv++;
+		pv->set(-1.0, -3.0, 1.0, 1.0, vertex_color, 0.0, 2.0);
+		pv++;
+		RCache.Vertex.Unlock(3, g_combine->vb_stride);
+
+		//Go go power rangers
+		RCache.set_Element(s_gtao->E[0]);
+		RCache.set_c("gtao_parameters", p_scale);
+		RCache.set_Geometry(g_combine);
+		RCache.Render(D3DPT_TRIANGLELIST, Offset, 0, 3, 0, 1);
+	}
+
+	{
+		GPU_EVENT(gtao_filter);
+		//Blur...
+		u_setrt(rt_ssao_temp, nullptr, nullptr, nullptr);
+		RCache.set_CullMode(CULL_NONE);
+		RCache.set_Stencil(FALSE);
+
+		pv = (FVF::TL*)RCache.Vertex.Lock(3, g_combine->vb_stride, Offset);
+		pv->set(-1.0, 1.0, 1.0, 1.0, vertex_color, 0.0, 0.0);
+		pv++;
+		pv->set(3.0, 1.0, 1.0, 1.0, vertex_color, 2.0, 0.0);
+		pv++;
+		pv->set(-1.0, -3.0, 1.0, 1.0, vertex_color, 0.0, 2.0);
+		pv++;
+		RCache.Vertex.Unlock(3, g_combine->vb_stride);
+
+		//Go go power rangers
+		RCache.set_Element(s_gtao->E[1]);
+		RCache.set_Geometry(g_combine);
+		RCache.Render(D3DPT_TRIANGLELIST, Offset, 0, 3, 0, 1);
+	}
+}
+
+// P1: ping-pong the current/history SSLR buffers instead of a full-screen
+// CopyResource every frame. The named CTextures ("$user$sslr" /
+// "$user$sslr_old") are re-pointed to the swapped surfaces (shader binds
+// resolve through them), and the CRT raw device objects are exchanged so
+// that u_setrt() keeps writing the "current" buffer by member name.
+static void swap_sslr_history(ref_rt& cur, ref_rt& hist)
+{
+	cur->pTexture->surface_set(hist->pSurface);
+	hist->pTexture->surface_set(cur->pSurface);
+
+	ID3DTexture2D* tmpSurface = cur->pSurface;
+	cur->pSurface = hist->pSurface;
+	hist->pSurface = tmpSurface;
+
+	ID3DRenderTargetView* tmpRT = cur->pRT;
+	cur->pRT = hist->pRT;
+	hist->pRT = tmpRT;
+}
+
+static void sslr_set_viewport(float w, float h)
+{
+	D3D_VIEWPORT viewport[1] =
+	{
+		0, 0, w, h, 0.f, 1.f
+	};
+	RContext->RSSetViewports(1, viewport);
+}
+
+void CRenderTarget::phase_sslr() {
+	GPU_EVENT(phase_sslr);
+	u32 Offset = 0;
+	constexpr u32 vertex_color = color_rgba(0, 0, 0, 255);
+	FVF::TL* pv = nullptr;
+
+	// P1: trace + filter resolution comes from the RT allocated for the tier
+  // selected by r4_sslr_quality (0/1 half-res, 2 full-res). The same value is
+  // exported to shaders as sslr_params (.x = tier, .y = resolution scale).
+  const float sslr_res_scale = (ps_r4_sslr_quality >= 2) ? 1.0f : 0.5f;
+  sslr_set_viewport(float(rt_sslr_point->dwWidth), float(rt_sslr_point->dwHeight));
+
+	{
+		GPU_EVENT(sslr_render);
+		//Render the AO and view-z into new rendertarget
+		u_setrt(rt_sslr_point, rt_sslr_data, nullptr, nullptr);
+		RCache.set_CullMode(CULL_NONE);
+
+		pv = (FVF::TL*)RCache.Vertex.Lock(3, g_combine->vb_stride, Offset);
+		pv->set(-1.0, 1.0, 1.0, 1.0, vertex_color, 0.0, 0.0);
+		pv++;
+		pv->set(3.0, 1.0, 1.0, 1.0, vertex_color, 2.0, 0.0);
+		pv++;
+		pv->set(-1.0, -3.0, 1.0, 1.0, vertex_color, 0.0, 2.0);
+		pv++;
+		RCache.Vertex.Unlock(3, g_combine->vb_stride);
+
+		//Go go power rangers
+		RCache.set_Element(s_gtao->E[2]);
+		RCache.set_c("sslr_params", float(ps_r4_sslr_quality), sslr_res_scale, 0.0f, 0.0f);
+		RCache.set_Geometry(g_combine);
+		RCache.Render(D3DPT_TRIANGLELIST, Offset, 0, 3, 0, 1);
+	}
+
+	{
+		GPU_EVENT(sslr_filter);
+		u_setrt(rt_sslr_temp, nullptr, nullptr, nullptr);
+		RCache.set_CullMode(CULL_NONE);
+
+		pv = (FVF::TL*)RCache.Vertex.Lock(3, g_combine->vb_stride, Offset);
+		pv->set(-1.0, 1.0, 1.0, 1.0, vertex_color, 0.0, 0.0);
+		pv++;
+		pv->set(3.0, 1.0, 1.0, 1.0, vertex_color, 2.0, 0.0);
+		pv++;
+		pv->set(-1.0, -3.0, 1.0, 1.0, vertex_color, 0.0, 2.0);
+		pv++;
+		RCache.Vertex.Unlock(3, g_combine->vb_stride);
+
+		//Go go power rangers
+		RCache.set_Element(s_gtao->E[3]);
+		RCache.set_c("sslr_params", float(ps_r4_sslr_quality), sslr_res_scale, 0.0f, 0.0f);
+		RCache.set_Geometry(g_combine);
+		RCache.Render(D3DPT_TRIANGLELIST, Offset, 0, 3, 0, 1);
+	}
+
+	// P1: temporal runs at full resolution and performs the depth-aware
+  // upsample of the half-res filtered buffer.
+  sslr_set_viewport(RCache.get_width(), RCache.get_height());
+
+  // P1: ping-pong - exchange current/history BEFORE temporal so it samples
+  // last frame's result through "$sslr_old" and renders the new frame into
+  // the other physical buffer (same-frame readers of "$sslr" stay correct).
+  // First frame skips the swap and bootstraps the history afterwards.
+  static bool sslr_history_initialized = false;
+  if(sslr_history_initialized)
+  {
+    swap_sslr_history(rt_sslr, rt_sslr_old);
+  }
+
+  {
+		GPU_EVENT(sslr_temporal);
+		u_setrt(rt_sslr, nullptr, nullptr, nullptr);
+		RCache.set_CullMode(CULL_NONE);
+
+		pv = (FVF::TL*)RCache.Vertex.Lock(3, g_combine->vb_stride, Offset);
+		pv->set(-1.0, 1.0, 1.0, 1.0, vertex_color, 0.0, 0.0);
+		pv++;
+		pv->set(3.0, 1.0, 1.0, 1.0, vertex_color, 2.0, 0.0);
+		pv++;
+		pv->set(-1.0, -3.0, 1.0, 1.0, vertex_color, 0.0, 2.0);
+		pv++;
+		RCache.Vertex.Unlock(3, g_combine->vb_stride);
+
+		//Go go power rangers
+		RCache.set_Element(s_gtao->E[4]);
+		RCache.set_c("sslr_params", float(ps_r4_sslr_quality), sslr_res_scale, 0.0f, 0.0f);
+		RCache.set_Geometry(g_combine);
+		RCache.Render(D3DPT_TRIANGLELIST, Offset, 0, 3, 0, 1);
+	}
+
+	// P1: first frame only - seed the history buffer so next frame's temporal
+  // pass doesn't sample uninitialized memory.
+  if(!sslr_history_initialized)
+  {
+    RContext->CopyResource(rt_sslr_old->pSurface, rt_sslr->pSurface);
+    sslr_history_initialized = true;
+  }
+}

@@ -1,0 +1,100 @@
+# Global options
+set(CMAKE_CXX_FLAGS_DEBUG "/MD")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /UMBCS /D_UNICODE /DUNICODE")
+
+# Win32 Extensions
+if (CMAKE_SIZEOF_VOID_P EQUAL 4)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /LARGEADDRESSAWARE")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /LARGEADDRESSAWARE")
+    ADD_DEFINITIONS(/arch:SSE2)
+endif()
+
+# Apply definitions
+add_compile_definitions(_WINDOWS)
+
+# Treat source files as UTF-8 (project files are UTF-8 without BOM)
+add_compile_options(/utf-8)
+
+# Enable gcc/clang style for MSVC
+add_compile_options(/permissive- /fp:fast /wd4073 /wd4390 /wd4273 /sdl /wd4566 /wd4297 /wd4275 /wd4530)
+string(REGEX REPLACE "/EH[a-z]+" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+add_compile_options("$<$<CONFIG:DEBUG>:/Od>" "$<$<CONFIG:DEBUG>:/MD>" "/Ob1")
+add_compile_options("$<$<CONFIG:RELEASE>:/Ot>"  "$<$<CONFIG:RELEASE>:/Ob2>" "$<$<CONFIG:RELWITHDEBINFO>:/wd4577>")
+
+add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/MP>)
+add_compile_options(/wd4595 /wd4996 /wd4005)
+add_link_options("$<$<CONFIG:DEBUG>:/SAFESEH:NO>")
+add_compile_options("$<$<CONFIG:RELEASE>:/wd4530>" "$<$<CONFIG:DEBUG>:/wd4251>" "$<$<CONFIG:RELWITHDEBINFO>:/wd4530>")
+
+add_compile_options("$<$<CONFIG:RELEASE>:/GF>" "$<$<CONFIG:RELWITHDEBINFO>:/GF>")
+add_compile_options("$<$<CONFIG:RELEASE>:/Oi>" "$<$<CONFIG:RELWITHDEBINFO>:/Oi>")
+add_compile_options("$<$<CONFIG:RELEASE>:/Oy>" "$<$<CONFIG:RELWITHDEBINFO>:/Oy>")
+add_compile_options("$<$<CONFIG:RELEASE>:/GT>" "$<$<CONFIG:RELWITHDEBINFO>:/GT>")
+add_compile_options("$<$<CONFIG:RELEASE>:/GL>" "$<$<CONFIG:RELWITHDEBINFO>:/GL>")
+add_compile_options("$<$<CONFIG:RELWITHDEBINFO>:/Ob2>")
+add_compile_options("$<$<CONFIG:RELWITHDEBINFO>:/Ot>")
+add_link_options("$<$<CONFIG:RELEASE>:/LTCG:incremental>" "$<$<CONFIG:RELWITHDEBINFO>:/LTCG:incremental>")
+add_link_options("$<$<CONFIG:RELEASE>:/INCREMENTAL:NO>" "$<$<CONFIG:RELWITHDEBINFO>:/INCREMENTAL:NO>")
+
+# Mixed: full Release-level performance optimizations with debug info
+add_compile_options("$<$<CONFIG:MIXED>:/Ob2>" "$<$<CONFIG:MIXED>:/Ot>" "$<$<CONFIG:MIXED>:/Oi>"
+                    "$<$<CONFIG:MIXED>:/Oy>"  "$<$<CONFIG:MIXED>:/GT>" "$<$<CONFIG:MIXED>:/GF>"
+                    "$<$<CONFIG:MIXED>:/Gy>"  "$<$<CONFIG:MIXED>:/Gw>" "$<$<CONFIG:MIXED>:/GS->"
+                    "$<$<CONFIG:MIXED>:/Qpar>" "$<$<CONFIG:MIXED>:/GL>"
+                    "$<$<CONFIG:MIXED>:/wd4530>" "$<$<CONFIG:MIXED>:/wd4577>")
+add_link_options("$<$<CONFIG:MIXED>:/LTCG:incremental>" "$<$<CONFIG:MIXED>:/INCREMENTAL:NO>")
+
+# MixedAVX: full Release-level performance optimizations + AVX2 with debug info
+add_compile_options("$<$<CONFIG:MIXEDAVX>:/Ob2>" "$<$<CONFIG:MIXEDAVX>:/Ot>" "$<$<CONFIG:MIXEDAVX>:/Oi>"
+                    "$<$<CONFIG:MIXEDAVX>:/Oy>"  "$<$<CONFIG:MIXEDAVX>:/GT>" "$<$<CONFIG:MIXEDAVX>:/GF>"
+                    "$<$<CONFIG:MIXEDAVX>:/Gy>"  "$<$<CONFIG:MIXEDAVX>:/Gw>" "$<$<CONFIG:MIXEDAVX>:/GS->"
+                    "$<$<CONFIG:MIXEDAVX>:/Qpar>" "$<$<CONFIG:MIXEDAVX>:/GL>"
+                    "$<$<CONFIG:MIXEDAVX>:/wd4530>" "$<$<CONFIG:MIXEDAVX>:/wd4577>")
+add_link_options("$<$<CONFIG:MIXEDAVX>:/LTCG:incremental>" "$<$<CONFIG:MIXEDAVX>:/INCREMENTAL:NO>")
+
+## Exceptions...
+if (NOT IXRAY_LDEBUG)
+    add_compile_options("$<$<CONFIG:DEBUG>:/EHsc>")
+endif()
+
+## Edit and Continue mode
+if (IXRAY_ASAN)
+    add_compile_options("$<$<CONFIG:DEBUG>:/Zi>" "$<$<CONFIG:RELWITHDEBINFO>:/Zi>" "$<$<CONFIG:RELEASE>:/Zi>")
+else()
+    add_compile_options("$<$<CONFIG:DEBUG>:/ZI>" "$<$<CONFIG:RELWITHDEBINFO>:/Zi>" "$<$<CONFIG:RELEASE>:/Zi>")
+endif()
+
+if(${CMAKE_GENERATOR_PLATFORM} MATCHES "arm64")
+    set(IXR_ARM_ENABLE ON)
+    add_compile_options(/Zc:preprocessor)
+else()
+    set(IXR_ARM_ENABLE OFF)
+endif()
+
+# Setup build patches
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+
+# Hack for COPY
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_EX ${CMAKE_BINARY_DIR}/bin/$<CONFIG>/)
+
+# Other 
+function(target_validate_pch target target_path)
+	set_target_properties(${target} PROPERTIES DISABLE_PRECOMPILE_HEADERS ON)
+	set_target_properties(${target} PROPERTIES COMPILE_FLAGS "/Yustdafx.h")
+	set_source_files_properties(stdafx.cpp PROPERTIES COMPILE_FLAGS "/Ycstdafx.h")
+	target_precompile_headers(${target} PRIVATE "stdafx.h")
+
+	file(GLOB_RECURSE CORE_SOURCE_PCH_FILES "${target_path}/stdafx.*")
+	file(GLOB_RECURSE CORE_SOURCE_ALL_C_FILES "${target_path}/*.c")
+
+	set_source_files_properties(${CORE_SOURCE_ALL_C_FILES} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+	source_group("pch" FILES ${CORE_SOURCE_PCH_FILES})
+endfunction()
+
+# Discord
+option(IXRAY_DISCORD_RPC "Enable Discord activity" ON)
+
+# Configure dependencies
+set(RENDERDOC_API "${CMAKE_CURRENT_SOURCE_DIR}/src/3rd-Party/renderdoc")

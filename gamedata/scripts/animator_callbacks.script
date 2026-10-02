@@ -1,0 +1,56 @@
+-- 从 IWP 移植: HudAnimator 回调
+-- 仅包含垃圾系统所需函数 (spawn_trash/transform_dir) 及 exo 动画切换函数
+
+local param_ini = system_ini()
+
+function modify_exo_sect(section)
+	if db.actor:item_in_slot(7) then
+		local outfit_sect = db.actor:item_in_slot(7):section()
+	if param_ini:line_exist(outfit_sect, "is_exo") and param_ini:r_bool(outfit_sect, "is_exo") then
+		return param_ini:r_string(section, "exo_anim_section")
+		end
+	end
+	return section
+end
+
+function modify_exo_sect_bandage(section)
+	if db.actor:item_in_slot(7) then
+		local outfit_sect = db.actor:item_in_slot(7):section()
+	if param_ini:line_exist(outfit_sect, "is_exo_proto") and param_ini:r_bool(outfit_sect, "is_exo_proto") or param_ini:line_exist(outfit_sect, "is_exo") and param_ini:r_bool(outfit_sect, "is_exo") then
+		return param_ini:r_string(section, "exo_anim_section")
+		end
+	end
+	return section
+end
+
+function spawn_trash()
+	if db.actor == nil then
+		return
+	end
+
+    local trash_sect = param_ini:r_string(db.actor:get_hud_animator_section(), "trash_object")
+    local pos = device().cam_pos
+    local dir = device().cam_dir
+    local cd  = device().cam_dir
+    pos.y = pos.y + param_ini:r_float(trash_sect, "throw_offset_y")
+    dir:mul(param_ini:r_float(trash_sect, "throw_offset_x"))
+    if param_ini:line_exist(trash_sect, "throw_offset_z") then
+        local cd = device().cam_dir;
+        cd:mul(param_ini:r_float(trash_sect, "throw_offset_z"))
+        dir:add(transform_dir(cd, param_ini:r_string(trash_sect, "throw_dir")))
+    end
+    alife():create(trash_sect, pos:add(dir), db.actor:level_vertex_id(), db.actor:game_vertex_id())
+end
+
+function transform_dir(cd, dir)
+    if dir == "left" then
+        local tmp = cd.x
+        cd.x = -cd.z
+        cd.z = tmp
+    elseif dir == "right" then
+        local tmp = cd.x
+        cd.x = cd.z
+        cd.z = -tmp
+    end
+    return cd
+end

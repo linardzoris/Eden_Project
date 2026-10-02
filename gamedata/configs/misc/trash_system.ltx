@@ -1,0 +1,1233 @@
+;//////////////////////////////////////////////////////////////////////////////////////////////////
+; IWP 垃圾系统 (Trash/Junk on consumable use)
+; 从 gamedata_iwp 移植, 适配 IXRay
+;//////////////////////////////////////////////////////////////////////////////////////////////////
+
+[trash_base]
+GroupControlSection 					= spawn_group
+$spawn        							= "physics\object"
+$prefetch       						= 8
+class       							= O_PHYS_S
+script_binding      					= trash_binder.init_trash
+remove_time     						= 45
+startup_animation 						=
+fixed_bones 							=
+
+throw_offset_x							= -0.1
+throw_offset_y							= 0.2
+throw_dir								= right
+throw_impulse_z							= 50
+throw_impulse_y							= 0.05
+
+[animator_base]:hud_base
+item_visual                      		= dynamics\devices\fake_object.ogf
+hands_position							= 0.0,-10.0,-10.0
+hands_orientation						= 0.0,0.0,0.0
+hands_position_16x9						= 0.0,-10.0,-10.0
+hands_orientation_16x9					= 0.0,0.0,0.0
+item_position 					 		= 0.0,0.0,0.0
+item_orientation 				 		= 0.0,0.0,0.0
+attach_place_idx 				 		= 0
+item_attached							= false
+sound_1   								= $silent
+blend							 		= false
+part 							 		= 2
+
+anm_show						 		= hand_idle_doun
+dof										= 0.0, 0.0, 0.0, 0.0
+hide_speed_factor						= 1.7
+
+left_lua_callback				 		= null
+left2_lua_callback				 		= null
+right_lua_callback				 		= null
+right_lua_callback			 	 		= null
+start_lua_callback				 		= null
+end_lua_callback				 		= null
+
+disable_input							= false
+disable_key_input						= false
+restore_weapon 							= true
+hide_gasmask						 	= false
+can_sprint								= false
+blend_enabled 							= true
+
+lookout_hud_offset_pos_left 			= 0.05,0.03,0
+lookout_hud_offset_rot_left 			= 0,0,7
+lookout_aim_hud_offset_pos_left 		= 0,0,0
+lookout_aim_hud_offset_rot_left 		= 0,0,2
+
+lookout_hud_offset_pos_right 			= 0.03,-0.01,0
+lookout_hud_offset_rot_right 			= 0,0,8.5
+lookout_aim_hud_offset_pos_right 		= 0,0,0
+lookout_aim_hud_offset_rot_right 		= 0,0,2
+
+Llookout_inert_pos						= 0,0,0
+Llookout_inert_rot						= 0,0,0
+Llookout_inert_time						= 3.5
+
+Rlookout_inert_pos						= 0,0,0
+Rlookout_inert_rot						= 0,0,0
+Rlookout_inert_time						= 3.5
+
+crouch_hud_offset_pos 					= -0.001,0.0015,0
+crouch_hud_offset_rot 					= 0,0,0
+
+crouch_up_inert_pos						= 0,0.0005,0
+crouch_up_inert_rot						= 0,0,0
+crouch_up_inert_time					= 5
+crouch_slow_up_inert_pos				= 0,0.0005,0
+crouch_slow_up_inert_rot				= 0,0,0
+crouch_slow_up_inert_time				= 5
+crouch_factor							= 1
+
+crouch_down_inert_pos					= 0,-0.001,0
+crouch_down_inert_rot					= 0,0,0
+crouch_down_inert_time					= 6
+crouch_slow_down_inert_pos				= 0,-0.0005,0
+crouch_slow_down_inert_rot				= 0,0,0
+crouch_slow_down_inert_time				= 6
+crouch_slow_factor						= 1
+
+hud_move_jump_offset_pos             	= 0,0.008,0.01
+hud_move_jump_offset_rot             	= -13.5,-0.15,0
+hud_move_jump_time                      = 4
+
+hud_move_fall_offset_pos            	= 0,-0.02,0.02
+hud_move_fall_offset_rot            	= 7,0.4,0
+hud_move_fall_time                      = 4
+
+hud_move_landing_offset_pos          	= 0,-0.03,0
+hud_move_landing_offset_rot          	= -4.3,0,0
+hud_move_landing_time                   = 7
+
+hud_move_landing2_offset_pos         	= 0,-0.002,0
+hud_move_landing2_offset_rot         	= -5,0,0
+hud_move_landing2_time                  = 10
+
+strafe_transition_time					= 2.2
+strafe_hud_offset_pos_left 				= 0,0,0
+strafe_hud_offset_rot_left 				= 0,0,0
+strafe_hud_offset_pos_right 			= 0,0,0
+strafe_hud_offset_rot_right 			= 0,0,0
+strafe_aim_transition_time 				= 2
+strafe_aim_hud_offset_pos_left 			= 0,0,0
+strafe_aim_hud_offset_rot_left 			= 0,0,0
+strafe_aim_hud_offset_pos_right 		= 0,0,0
+strafe_aim_hud_offset_rot_right 		= 0,0,0
+strafe_change_dir_speed_factor 			= 1.2
+strafe_aim_change_dir_speed_factor 		= 1.2
+strafe_stop_speed_factor 				= 3.3
+strafe_aim_stop_speed_factor 			= 3.3
+
+move_fb_transition_time					= 3.2
+move_forward_hud_offset_pos 			= 0,0.003,0.017
+move_forward_hud_offset_rot 			= 0,0,0
+move_back_hud_offset_pos 				= 0,0,0.012
+move_back_hud_offset_rot 				= 0,0,0
+move_fb_aim_transition_time 			= 3.5
+move_forward_aim_hud_offset_pos 		= 0,0,0.0025
+move_forward_aim_hud_offset_rot 		= 0,0,0
+move_back_aim_hud_offset_pos 			= 0,0,0.001
+move_back_aim_hud_offset_rot 			= 0,0,0
+move_fb_change_dir_speed_factor 		= 2.4
+move_fb_stop_speed_factor 				= 2.4
+move_fb_aim_change_dir_speed_factor 	= 2.4
+move_fb_aim_stop_speed_factor 			= 2.4
+
+pitch_transition_time					= 0.2
+pitch_offset_right 						= 0.001
+pitch_offset_up 						= 0.006
+pitch_offset_forward 					= 0.005
+pitch_offset_up_low_limit				= -3.1415926535897932384626433832795
+
+inertion_offset_LRUD					= 0.01, 0.01, 0.01, 0.01
+inertion_offset_z						= 0.01
+inertion_offset_LRUD_aim				= 0.0035, 0.0035, 0.0035, 0.0035
+inertion_offset_z_aim					= -0.0005
+inertion_origin_offset 					= -0.06
+inertion_origin_speed 					= 7.0
+inertion_origin_aim_offset 				= -0.008
+inertion_origin_aim_speed 				= 7.0
+inertion_tendto_speed					= 0.4
+inertion_tendto_aim_speed 				= 0.4
+inertion_tendto_ret_speed				= 4
+inertion_tendto_ret_aim_speed			= 3
+inertion_min_angle						= 0
+inertion_min_angle_aim					= 0
+
+inertion_hud_offset_pos					= 0,0,0
+inertion_hud_offset_rot					= 0,0,0
+
+nearwall_transition_time				= 6.5
+nearwall_hud_offset_pos					= 0,0,-0.001
+nearwall_hud_offset_rot					= 0,0,0
+nearwall_collide_pos					= -0.01
+nearwall_additional_cam_offset			= 0.046, 0, 0
+
+;//////////////////////////////////////////////////////////////////////////////////////////////////
+; ---- 绷带 ----
+;//////////////////////////////////////////////////////////////////////////////////////////////////
+
+[bandage_use]:animator_base
+item_attached							 = true
+item_visual             			     = dynamics\weapons\wpn_eat\bints\wpn_bint_basic_hud.ogf
+
+hands_orientation						 = 0.000000,0.000000,0.000000
+hands_orientation_16x9					 = 0.000000,0.000000,0.000000
+hands_position	                         = 0.000000,0.007000,0.040750
+hands_position_16x9                      = 0.000000,0.007000,0.040750
+
+sound_1   								 = interface\item_usage\bandage_use
+
+anm_show								 = bint
+
+dof                                      = 0.0, 0.5, 5, 4
+
+disable_ui_input						 = true
+
+exo_anim_section 						 = bandage_use_exo
+right_lua_callback						 = animator_callbacks.spawn_trash
+trash_object                             = bandage_trash
+modify_sect_lua_callback                 = animator_callbacks.modify_exo_sect_bandage
+
+[bandage_trash]:trash_base
+visual                        			 = dynamics\devices\dev_bandage\dev_bandage_trash.ogf
+
+throw_dir = right
+throw_offset_y = -0.6
+throw_offset_x = -0.2
+throw_offset_z = -0.6
+
+throw_impulse_y = -9
+throw_impulse_z = 18
+
+[bandage_use_exo]:bandage_use
+anm_show								 = bint_exo, bint_exo_hud
+
+start_lua_callback						 = null
+modify_sect_lua_callback                 = null
+
+[bandage_army_use]:bandage_use
+item_visual             			     = dynamics\weapons\wpn_eat\bints\wpn_bint_army_hud.ogf
+exo_anim_section 						 = bandage_army_use_exo
+trash_object                             = bandage_army_trash
+
+[bandage_army_trash]:bandage_trash
+visual                        			 = dynamics\devices\dev_bandage\dev_bandage_army_trash.ogf
+
+[bandage_army_use_exo]:bandage_army_use
+anm_show								 = bint_exo, bint_exo_hud
+
+;//////////////////////////////////////////////////////////////////////////////////////////////////
+; ---- 抗辐射针 ----
+;//////////////////////////////////////////////////////////////////////////////////////////////////
+
+[antirad_use]:animator_base
+item_attached							 = true
+item_visual             				 = dynamics\weapons\wpn_eat\injectors\wpn_injector_big_antirad_hud.ogf
+
+hands_orientation						 = 0.000000,0.000000,0.000000
+hands_orientation_16x9					 = 0.000000,0.000000,0.000000
+hands_position	                         = 0.000000,0.011600,0.015000
+hands_position_16x9                      = 0.000000,0.011600,0.015000
+
+sound_1   								 = interface\item_usage\antirad_use
+
+anm_show								 = antirad
+
+dof                                      = 0.0, 0.5, 5, 6.1
+
+disable_ui_input						 = true
+
+exo_anim_section 						 = antirad_use_exo
+right_lua_callback						 = animator_callbacks.spawn_trash
+trash_object                             = antirad_trash
+modify_sect_lua_callback                 = animator_callbacks.modify_exo_sect
+
+[antirad_trash]:trash_base
+visual                        			 = dynamics\devices\dev_antirad\dev_antirad_trash.ogf
+
+throw_dir = right
+throw_offset_y = -0.6
+throw_offset_x = -0.2
+throw_offset_z = -0.6
+
+throw_impulse_y = -9
+throw_impulse_z = 18
+
+[antirad_use_exo]:antirad_use
+item_visual             				 = dynamics\weapons\wpn_eat\aptechki\wpn_aptechka_exo_hud.ogf
+
+hands_position                           = -0.009825,-0.014400,-0.001100
+hands_position_16x9                      = -0.009825,-0.014400,-0.001100
+
+sound_1   								 = interface\item_usage\antirad_exo_use
+
+anm_show								 = antirad_exo, antirad_exo_hud
+
+dof                                      = 0.0, 0.5, 5, 2
+
+start_lua_callback						 = null
+modify_sect_lua_callback                 = null
+trash_object                             = antirad_exo_trash
+
+[antirad_exo_trash]:antirad_trash
+visual                        			 = dynamics\devices\fake_object.ogf
+
+;//////////////////////////////////////////////////////////////////////////////////////////////////
+; ---- 医疗包 ----
+;//////////////////////////////////////////////////////////////////////////////////////////////////
+
+[medkit_use]:animator_base
+item_attached							 = true
+item_visual             				 = dynamics\weapons\wpn_eat\aptechki\wpn_aptechka_basic_hud.ogf
+
+hands_orientation						 = 0.000000,0.000000,0.000000
+hands_orientation_16x9					 = 0.000000,0.000000,0.000000
+hands_position	                         = 0.000000,-0.010000,0.030000
+hands_position_16x9                      = 0.000000,-0.010000,0.030000
+
+sound_1   								 = interface\item_usage\medkit_use
+
+anm_show								 = apteka
+
+dof                                      = 0.0, 0.5, 5, 2.8
+
+disable_ui_input						 = true
+
+exo_anim_section 						 = medkit_use_exo
+right_lua_callback						 = animator_callbacks.spawn_trash
+trash_object                             = medkit_trash
+modify_sect_lua_callback                 = animator_callbacks.modify_exo_sect
+
+[medkit_trash]:trash_base
+visual                        			 = dynamics\devices\dev_aptechka\dev_aptechka_trash.ogf
+
+throw_dir = right
+throw_offset_y = -0.6
+throw_offset_x = -0.2
+throw_offset_z = 0.6
+
+throw_impulse_y = -9
+throw_impulse_z = 18
+
+[medkit_use_army]:medkit_use
+item_visual             				 = dynamics\weapons\wpn_eat\aptechki\wpn_aptechka_army_hud.ogf
+exo_anim_section 						 = medkit_use_army_exo_hud
+
+[medkit_use_scientic]:medkit_use
+item_visual             				 = dynamics\weapons\wpn_eat\aptechki\wpn_aptechka_scientific_hud.ogf
+exo_anim_section 						 = medkit_use_scientic_exo_hud
+
+[medkit_use_exo]:medkit_use
+item_visual             				 = dynamics\weapons\wpn_eat\aptechki\wpn_aptechka_exo_hud.ogf
+
+hands_position                           = -0.009825,-0.014400,-0.001100
+hands_position_16x9                      = -0.009825,-0.014400,-0.001100
+
+anm_show								 = apteka_exo, apteka_exo_hud
+
+dof                                      = 0.0, 0.5, 5, 2
+
+sound_1   								 = interface\item_usage\medkit_exo_use
+
+trash_object                             = medkit_exo_trash
+right_lua_callback						 = null
+modify_sect_lua_callback                 = null
+
+[medkit_use_army_exo_hud]:medkit_use_exo
+anm_show								 = apteka_blue_exo, apteka_blue_exo_hud
+
+[medkit_use_scientic_exo_hud]:medkit_use_exo
+anm_show								 = apteka_yellow_exo, apteka_yellow_exo_hud
+
+[medkit_exo_trash]:medkit_trash
+visual                        			 = dynamics\devices\fake_object.ogf
+
+;//////////////////////////////////////////////////////////////////////////////////////////////////
+; ---- 生化自卫药(anabiotic) ----
+;//////////////////////////////////////////////////////////////////////////////////////////////////
+
+[drug_biotik_use]:animator_base
+item_attached							 = true
+item_visual             				 = dynamics\weapons\wpn_eat\tabletki\wpn_drug_biotik_hud.ogf
+
+hands_orientation						 = 0.000000,0.000000,0.000000
+hands_orientation_16x9					 = 0.000000,0.000000,0.000000
+hands_position              			 = 0.000000,-0.021500,0.07
+hands_position_16x9         			 = 0.000000,-0.021500,0.07
+
+lookout_hud_offset_pos_left 			= 0.01,0.01,0
+lookout_hud_offset_rot_left 			= 0,0,0
+
+lookout_hud_offset_pos_right 			= 0.01,-0.005,0
+lookout_hud_offset_rot_right 			= 0,0,0
+
+inertion_offset_LRUD					= 0.007, 0.007, 0.007, 0.007
+inertion_offset_z						= -0.001
+inertion_origin_offset 					= -0.01
+inertion_origin_speed 					= 7.0
+inertion_tendto_speed					= 0.4
+inertion_tendto_ret_speed				= 4
+inertion_min_angle						= 0
+
+crouch_hud_offset_pos 					= 0,0,0
+crouch_hud_offset_rot 					= 0,0,0
+
+crouch_up_inert_pos						= 0,0,0
+crouch_up_inert_rot						= 0,0,0
+crouch_up_inert_time					= 5
+crouch_slow_up_inert_pos				= 0,0,0
+crouch_slow_up_inert_rot				= 0,0,0
+crouch_slow_up_inert_time				= 5
+crouch_factor							= 1
+
+crouch_down_inert_pos					= 0,0,0
+crouch_down_inert_rot					= 0,0,0
+crouch_down_inert_time					= 6
+crouch_slow_down_inert_pos				= 0,0,0
+crouch_slow_down_inert_rot				= 0,0,0
+crouch_slow_down_inert_time				= 6
+crouch_slow_factor						= 1
+
+hud_move_jump_offset_pos             	= 0,0,0
+hud_move_jump_offset_rot             	= 0,0,0
+hud_move_jump_time                      = 4
+
+hud_move_fall_offset_pos            	= 0,0,0
+hud_move_fall_offset_rot            	= 0,0,0
+hud_move_fall_time                      = 4
+
+hud_move_landing_offset_pos          	= 0,0,0
+hud_move_landing_offset_rot          	= 0,0,0
+hud_move_landing_time                   = 7
+
+hud_move_landing2_offset_pos         	= 0,0,0
+hud_move_landing2_offset_rot         	= 0,0,0
+hud_move_landing2_time                  = 10
+
+nearwall_transition_time				= 6.5
+nearwall_hud_offset_pos					= 0,0,0
+nearwall_hud_offset_rot					= 0,0,0
+nearwall_collide_pos					= -0.01
+move_forward_hud_offset_pos 			= 0,0,0
+move_back_hud_offset_pos 				= 0,0,0
+pitch_offset_right 						= 0
+pitch_offset_up 						= 0
+pitch_offset_forward 					= 0
+
+sound_1   								 = interface\item_usage\anabiotic_use
+
+anm_show								 = biotik, biotik_hud
+
+dof                                      = 0.0, 0.5, 5, 8
+
+disable_ui_input						 = true
+disable_key_input						 = true
+
+right_lua_callback						 = animator_callbacks.spawn_trash
+trash_object                             = drug_biotik_trash
+
+restore_weapon 							 = false
+
+hide_gasmask						 	 = true
+
+[drug_biotik_trash]:trash_base
+visual                        			 = dynamics\equipments\medical\drug_anabiotic_trash.ogf
+
+throw_dir = right
+throw_offset_y = -0.6
+throw_offset_x = -0.2
+throw_offset_z = -0.6
+
+throw_impulse_y = -90
+throw_impulse_z = 180
+
+;//////////////////////////////////////////////////////////////////////////////////////////////////
+; ---- 大力丸(hercules) ----
+;//////////////////////////////////////////////////////////////////////////////////////////////////
+
+[drug_booster_use]:animator_base
+item_attached							 = true
+item_visual             				 = dynamics\weapons\wpn_eat\drinks\wpn_drug_booster_hud.ogf
+
+hands_orientation						 = 0.000000,0.000000,0.000000
+hands_orientation_16x9					 = 0.000000,0.000000,0.000000
+hands_position              			 = 0.000000,-0.002900,0.063350
+hands_position_16x9         			 = 0.000000,-0.002900,0.063350
+
+lookout_hud_offset_pos_left 			= 0.01,0.01,0
+lookout_hud_offset_rot_left 			= 0,0,0
+
+lookout_hud_offset_pos_right 			= 0.01,-0.005,0
+lookout_hud_offset_rot_right 			= 0,0,0
+
+inertion_offset_LRUD					= 0.007, 0.007, 0.007, 0.007
+inertion_offset_z						= -0.001
+inertion_origin_offset 					= -0.01
+inertion_origin_speed 					= 7.0
+inertion_tendto_speed					= 0.4
+inertion_tendto_ret_speed				= 4
+inertion_min_angle						= 0
+
+crouch_hud_offset_pos 					= 0,0,0
+crouch_hud_offset_rot 					= 0,0,0
+
+crouch_up_inert_pos						= 0,0,0
+crouch_up_inert_rot						= 0,0,0
+crouch_up_inert_time					= 5
+crouch_slow_up_inert_pos				= 0,0,0
+crouch_slow_up_inert_rot				= 0,0,0
+crouch_slow_up_inert_time				= 5
+crouch_factor							= 1
+
+crouch_down_inert_pos					= 0,0,0
+crouch_down_inert_rot					= 0,0,0
+crouch_down_inert_time					= 6
+crouch_slow_down_inert_pos				= 0,0,0
+crouch_slow_down_inert_rot				= 0,0,0
+crouch_slow_down_inert_time				= 6
+crouch_slow_factor						= 1
+
+hud_move_jump_offset_pos             	= 0,0,0
+hud_move_jump_offset_rot             	= 0,0,0
+hud_move_jump_time                      = 4
+
+hud_move_fall_offset_pos            	= 0,0,0
+hud_move_fall_offset_rot            	= 0,0,0
+hud_move_fall_time                      = 4
+
+hud_move_landing_offset_pos          	= 0,0,0
+hud_move_landing_offset_rot          	= 0,0,0
+hud_move_landing_time                   = 7
+
+hud_move_landing2_offset_pos         	= 0,0,0
+hud_move_landing2_offset_rot         	= 0,0,0
+hud_move_landing2_time                  = 10
+
+nearwall_transition_time				= 6.5
+nearwall_hud_offset_pos					= 0,0,0
+nearwall_hud_offset_rot					= 0,0,0
+nearwall_collide_pos					= -0.01
+move_forward_hud_offset_pos 			= 0,0,0
+move_back_hud_offset_pos 				= 0,0,0
+pitch_offset_right 						= 0
+pitch_offset_up 						= 0
+pitch_offset_forward 					= 0
+
+sound_1   								 = interface\item_usage\hercules_use
+
+anm_show								 = hercules, hercules_hud
+
+dof                                      = 0.0, 0.5, 5, 6.5
+
+disable_ui_input						 = true
+
+right_lua_callback						 = animator_callbacks.spawn_trash
+trash_object                             = drug_booster_trash
+
+hide_gasmask						 	 = true
+
+[drug_booster_trash]:trash_base
+visual                        			 = dynamics\equipments\medical\drug_booster_trash.ogf
+throw_dir = left
+throw_impulse_z = 25.0
+
+;//////////////////////////////////////////////////////////////////////////////////////////////////
+; ---- 罐头 ----
+;//////////////////////////////////////////////////////////////////////////////////////////////////
+
+[conserva_use]:animator_base
+item_attached							 = true
+item_visual             				 = dynamics\weapons\wpn_eat\conservi\wpn_eat_conserva.ogf
+
+hands_orientation	 					 = 0.000000,0.000000,0.000000
+hands_orientation_16x9 					 = 0.000000,0.000000,0.000000
+hands_position							 = -0.01,0.01,-0.1
+hands_position_16x9						 = -0.01,0.01,-0.1
+
+lookout_hud_offset_pos_left 			= 0.01,0.01,0
+lookout_hud_offset_rot_left 			= 0,0,0
+
+lookout_hud_offset_pos_right 			= 0.01,-0.005,0
+lookout_hud_offset_rot_right 			= 0,0,0
+
+inertion_offset_LRUD					= 0.007, 0.007, 0.007, 0.007
+inertion_offset_z						= -0.001
+inertion_origin_offset 					= -0.01
+inertion_origin_speed 					= 7.0
+inertion_tendto_speed					= 0.4
+inertion_tendto_ret_speed				= 4
+inertion_min_angle						= 0
+
+crouch_hud_offset_pos 					= 0,0,0
+crouch_hud_offset_rot 					= 0,0,0
+
+crouch_up_inert_pos						= 0,0,0
+crouch_up_inert_rot						= 0,0,0
+crouch_up_inert_time					= 5
+crouch_slow_up_inert_pos				= 0,0,0
+crouch_slow_up_inert_rot				= 0,0,0
+crouch_slow_up_inert_time				= 5
+crouch_factor							= 1
+
+crouch_down_inert_pos					= 0,0,0
+crouch_down_inert_rot					= 0,0,0
+crouch_down_inert_time					= 6
+crouch_slow_down_inert_pos				= 0,0,0
+crouch_slow_down_inert_rot				= 0,0,0
+crouch_slow_down_inert_time				= 6
+crouch_slow_factor						= 1
+
+hud_move_jump_offset_pos             	= 0,0,0
+hud_move_jump_offset_rot             	= 0,0,0
+hud_move_jump_time                      = 4
+
+hud_move_fall_offset_pos            	= 0,0,0
+hud_move_fall_offset_rot            	= 0,0,0
+hud_move_fall_time                      = 4
+
+hud_move_landing_offset_pos          	= 0,0,0
+hud_move_landing_offset_rot          	= 0,0,0
+hud_move_landing_time                   = 7
+
+hud_move_landing2_offset_pos         	= 0,0,0
+hud_move_landing2_offset_rot         	= 0,0,0
+hud_move_landing2_time                  = 10
+
+nearwall_transition_time				= 6.5
+nearwall_hud_offset_pos					= 0,0,0
+nearwall_hud_offset_rot					= 0,0,0
+nearwall_collide_pos					= -0.01
+move_forward_hud_offset_pos 			= 0,0,0
+move_back_hud_offset_pos 				= 0,0,0
+pitch_offset_right 						= 0
+pitch_offset_up 						= 0
+pitch_offset_forward 					= 0
+
+sound_1   								 = interface\item_usage\conserva_use
+
+anm_show								 = conserva, conserva_hud
+
+dof                                      = 0.0, 0.5, 5, 9.1
+
+disable_ui_input						 = true
+
+right_lua_callback						 = animator_callbacks.spawn_trash
+trash_object                             = conserva_trash
+
+hide_gasmask						 	 = true
+
+[conserva_trash]:trash_base
+visual                        			 = dynamics\devices\dev_conserv\dev_conserv_trash.ogf
+throw_dir = left
+throw_offset_y = -0.5
+throw_offset_x = 0.2
+throw_offset_z = 0.6
+
+throw_impulse_z = 2
+
+;//////////////////////////////////////////////////////////////////////////////////////////////////
+; ---- 能量饮料 ----
+;//////////////////////////////////////////////////////////////////////////////////////////////////
+
+[energy_drink_use]:animator_base
+item_attached							 = true
+item_visual             				 = dynamics\weapons\wpn_eat\banki\wpn_banka_energy_hud.ogf
+
+hands_orientation						 = 0.000000,0.000000,0.000000
+hands_orientation_16x9					 = 0.000000,0.000000,0.000000
+hands_position              			 = 0.000000,-0.023800,0.07
+hands_position_16x9         			 = 0.000000,-0.023800,0.07
+
+lookout_hud_offset_pos_left 			= 0.01,0.01,0
+lookout_hud_offset_rot_left 			= 0,0,0
+
+lookout_hud_offset_pos_right 			= 0.01,-0.005,0
+lookout_hud_offset_rot_right 			= 0,0,0
+
+inertion_offset_LRUD					= 0.007, 0.007, 0.007, 0.007
+inertion_offset_z						= -0.001
+inertion_origin_offset 					= -0.01
+inertion_origin_speed 					= 7.0
+inertion_tendto_speed					= 0.4
+inertion_tendto_ret_speed				= 4
+inertion_min_angle						= 0
+
+crouch_hud_offset_pos 					= 0,0,0
+crouch_hud_offset_rot 					= 0,0,0
+
+crouch_up_inert_pos						= 0,0,0
+crouch_up_inert_rot						= 0,0,0
+crouch_up_inert_time					= 5
+crouch_slow_up_inert_pos				= 0,0,0
+crouch_slow_up_inert_rot				= 0,0,0
+crouch_slow_up_inert_time				= 5
+crouch_factor							= 1
+
+crouch_down_inert_pos					= 0,0,0
+crouch_down_inert_rot					= 0,0,0
+crouch_down_inert_time					= 6
+crouch_slow_down_inert_pos				= 0,0,0
+crouch_slow_down_inert_rot				= 0,0,0
+crouch_slow_down_inert_time				= 6
+crouch_slow_factor						= 1
+
+hud_move_jump_offset_pos             	= 0,0,0
+hud_move_jump_offset_rot             	= 0,0,0
+hud_move_jump_time                      = 4
+
+hud_move_fall_offset_pos            	= 0,0,0
+hud_move_fall_offset_rot            	= 0,0,0
+hud_move_fall_time                      = 4
+
+hud_move_landing_offset_pos          	= 0,0,0
+hud_move_landing_offset_rot          	= 0,0,0
+hud_move_landing_time                   = 7
+
+hud_move_landing2_offset_pos         	= 0,0,0
+hud_move_landing2_offset_rot         	= 0,0,0
+hud_move_landing2_time                  = 10
+
+nearwall_transition_time				= 6.5
+nearwall_hud_offset_pos					= 0,0,0
+nearwall_hud_offset_rot					= 0,0,0
+nearwall_collide_pos					= -0.01
+move_forward_hud_offset_pos 			= 0,0,0
+move_back_hud_offset_pos 				= 0,0,0
+pitch_offset_right 						= 0
+pitch_offset_up 						= 0
+pitch_offset_forward 					= 0
+
+sound_1   								 = interface\item_usage\drink_soda_use
+
+anm_show								 = energy, energy_hud
+
+dof                                      = 0.0, 0.5, 5, 5.2
+
+disable_ui_input						 = true
+
+right_lua_callback						 = animator_callbacks.spawn_trash
+trash_object                             = energy_drink_trash
+
+hide_gasmask						 	 = true
+
+[energy_drink_trash]:trash_base
+visual                        			 = dynamics\devices\dev_drink_stalker\dev_drink_stalker_trash.ogf
+throw_dir = right
+throw_impulse_z = 25.0
+
+;//////////////////////////////////////////////////////////////////////////////////////////////////
+; ---- 伏特加 ----
+;//////////////////////////////////////////////////////////////////////////////////////////////////
+
+[vodka_use]:animator_base
+item_attached							 = true
+item_visual             				 = dynamics\weapons\wpn_eat\vodki\wpn_vodka_kazaki_hud.ogf
+
+hands_orientation						 = 0.000000,0.000000,0.000000
+hands_orientation_16x9					 = 0.000000,0.000000,0.000000
+hands_position              			 = 0.000000,-0.012800,0.07
+hands_position_16x9         			 = 0.000000,-0.012800,0.07
+
+lookout_hud_offset_pos_left 			= 0.01,0.01,0
+lookout_hud_offset_rot_left 			= 0,0,0
+
+lookout_hud_offset_pos_right 			= 0.01,-0.005,0
+lookout_hud_offset_rot_right 			= 0,0,0
+
+inertion_offset_LRUD					= 0.007, 0.007, 0.007, 0.007
+inertion_offset_z						= -0.001
+inertion_origin_offset 					= -0.01
+inertion_origin_speed 					= 7.0
+inertion_tendto_speed					= 0.4
+inertion_tendto_ret_speed				= 4
+inertion_min_angle						= 0
+
+crouch_hud_offset_pos 					= 0,0,0
+crouch_hud_offset_rot 					= 0,0,0
+
+crouch_up_inert_pos						= 0,0,0
+crouch_up_inert_rot						= 0,0,0
+crouch_up_inert_time					= 5
+crouch_slow_up_inert_pos				= 0,0,0
+crouch_slow_up_inert_rot				= 0,0,0
+crouch_slow_up_inert_time				= 5
+crouch_factor							= 1
+
+crouch_down_inert_pos					= 0,0,0
+crouch_down_inert_rot					= 0,0,0
+crouch_down_inert_time					= 6
+crouch_slow_down_inert_pos				= 0,0,0
+crouch_slow_down_inert_rot				= 0,0,0
+crouch_slow_down_inert_time				= 6
+crouch_slow_factor						= 1
+
+hud_move_jump_offset_pos             	= 0,0,0
+hud_move_jump_offset_rot             	= 0,0,0
+hud_move_jump_time                      = 4
+
+hud_move_fall_offset_pos            	= 0,0,0
+hud_move_fall_offset_rot            	= 0,0,0
+hud_move_fall_time                      = 4
+
+hud_move_landing_offset_pos          	= 0,0,0
+hud_move_landing_offset_rot          	= 0,0,0
+hud_move_landing_time                   = 7
+
+hud_move_landing2_offset_pos         	= 0,0,0
+hud_move_landing2_offset_rot         	= 0,0,0
+hud_move_landing2_time                  = 10
+
+nearwall_transition_time				= 6.5
+nearwall_hud_offset_pos					= 0,0,0
+nearwall_hud_offset_rot					= 0,0,0
+nearwall_collide_pos					= -0.01
+move_forward_hud_offset_pos 			= 0,0,0
+move_back_hud_offset_pos 				= 0,0,0
+pitch_offset_right 						= 0
+pitch_offset_up 						= 0
+pitch_offset_forward 					= 0
+
+sound_1   								 = interface\item_usage\vodka_use
+sound_11   								 = interface\item_usage\vodka_use1
+sound_12   								 = interface\item_usage\vodka_use2
+sound_13   								 = interface\item_usage\vodka_use3
+sound_14   								 = interface\item_usage\vodka_use4
+
+anm_show								 = vodka, vodka_hud
+
+dof                                      = 0.0, 0.5, 5, 7.1
+
+disable_ui_input						 = true
+hide_gasmask						 	 = true
+
+last_use_section = vodka_last
+
+[vodka_last]:vodka_use
+anm_show								 = vodka_last, vodka_hud_last
+
+sound_1   								 = interface\item_usage\vodka_use_last
+sound_11   								 = interface\item_usage\vodka_use_last
+sound_12   								 = interface\item_usage\vodka_use_last
+sound_13   								 = interface\item_usage\vodka_use_last
+sound_14   								 = interface\item_usage\vodka_use_last
+
+right_lua_callback						 = animator_callbacks.spawn_trash
+trash_object                             = vodka_trash
+
+[vodka_trash]:trash_base
+visual                        			 = dynamics\devices\dev_vodka\dev_vodka_trash.ogf
+throw_dir = left
+throw_impulse_z = 25.0
+
+;//////////////////////////////////////////////////////////////////////////////////////////////////
+; ---- 凝血/解毒/防辐射/防 psi 药片 ----
+;//////////////////////////////////////////////////////////////////////////////////////////////////
+
+[drug_coagulant_use]:animator_base
+item_attached							 = true
+item_visual             				 = dynamics\weapons\wpn_eat\tabletki\wpn_tabletki_1_0_drug_coagulant_hud.ogf
+
+hands_orientation						 = 0.007700,-0.010000,0.005000
+hands_orientation_16x9					 = 0.007700,-0.010000,0.005000
+hands_position		                     = 0.007700,-0.010000,0.005000
+hands_position_16x9                      = 0.007700,-0.010000,0.005000
+
+lookout_hud_offset_pos_left 			= 0.01,0.01,0
+lookout_hud_offset_rot_left 			= 0,0,0
+
+lookout_hud_offset_pos_right 			= 0.01,-0.005,0
+lookout_hud_offset_rot_right 			= 0,0,0
+
+inertion_offset_LRUD					= 0.007, 0.007, 0.007, 0.007
+inertion_offset_z						= -0.001
+inertion_origin_offset 					= -0.01
+inertion_origin_speed 					= 7.0
+inertion_tendto_speed					= 0.4
+inertion_tendto_ret_speed				= 4
+inertion_min_angle						= 0
+
+crouch_hud_offset_pos 					= 0,0,0
+crouch_hud_offset_rot 					= 0,0,0
+
+crouch_up_inert_pos						= 0,0,0
+crouch_up_inert_rot						= 0,0,0
+crouch_up_inert_time					= 5
+crouch_slow_up_inert_pos				= 0,0,0
+crouch_slow_up_inert_rot				= 0,0,0
+crouch_slow_up_inert_time				= 5
+crouch_factor							= 1
+
+crouch_down_inert_pos					= 0,0,0
+crouch_down_inert_rot					= 0,0,0
+crouch_down_inert_time					= 6
+crouch_slow_down_inert_pos				= 0,0,0
+crouch_slow_down_inert_rot				= 0,0,0
+crouch_slow_down_inert_time				= 6
+crouch_slow_factor						= 1
+
+hud_move_jump_offset_pos             	= 0,0,0
+hud_move_jump_offset_rot             	= 0,0,0
+hud_move_jump_time                      = 4
+
+hud_move_fall_offset_pos            	= 0,0,0
+hud_move_fall_offset_rot            	= 0,0,0
+hud_move_fall_time                      = 4
+
+hud_move_landing_offset_pos          	= 0,0,0
+hud_move_landing_offset_rot          	= 0,0,0
+hud_move_landing_time                   = 7
+
+hud_move_landing2_offset_pos         	= 0,0,0
+hud_move_landing2_offset_rot         	= 0,0,0
+hud_move_landing2_time                  = 10
+
+nearwall_transition_time				= 6.5
+nearwall_hud_offset_pos					= 0,0,0
+nearwall_hud_offset_rot					= 0,0,0
+nearwall_collide_pos					= -0.01
+move_forward_hud_offset_pos 			= 0,0,0
+move_back_hud_offset_pos 				= 0,0,0
+pitch_offset_right 						= 0
+pitch_offset_up 						= 0
+pitch_offset_forward 					= 0
+
+sound_1   								 = interface\item_usage\pills_use
+
+anm_show								 = drugs, drugs_hud
+
+dof                                      = 0.0, 0.5, 5, 3.6
+
+disable_ui_input						 = true
+
+hide_gasmask						 	 = true
+
+last_use_section = drug_coagulant_last
+
+[drug_coagulant_last]:drug_coagulant_use
+anm_show								 = drugs_last, drugs_hud_last
+
+sound_1   								 = interface\item_usage\pills_use_last
+
+right_lua_callback						 = animator_callbacks.spawn_trash
+trash_object                             = drug_coagulant_trash
+
+[drug_coagulant_trash]:trash_base
+visual                        			 = dynamics\equipments\medical\drug_sleep_trash.ogf
+
+throw_dir = right
+throw_offset_y = -0.6
+throw_offset_x = 0.2
+throw_offset_z = 0.6
+
+throw_impulse_y = -9
+throw_impulse_z = 9
+
+[drug_antidot_use]:drug_coagulant_use
+item_visual             				= dynamics\weapons\wpn_eat\tabletki\wpn_tabletki_2_0_drug_antidot_hud.ogf
+last_use_section = drug_antidot_last
+
+[drug_antidot_last]:drug_coagulant_last
+item_visual             				= dynamics\weapons\wpn_eat\tabletki\wpn_tabletki_2_0_drug_antidot_hud.ogf
+trash_object                             = drug_antidot_trash
+
+[drug_antidot_trash]:drug_coagulant_trash
+visual                        			 = dynamics\equipments\medical\drug_antidot_trash.ogf
+
+[drug_radioprotector_use]:drug_coagulant_use
+item_visual             				= dynamics\weapons\wpn_eat\tabletki\wpn_tabletki_3_0_drug_radioprotector_hud.ogf
+last_use_section = drug_radioprotector_last
+
+[drug_radioprotector_last]:drug_coagulant_last
+item_visual             				= dynamics\weapons\wpn_eat\tabletki\wpn_tabletki_3_0_drug_radioprotector_hud.ogf
+trash_object                             = drug_radioprotector_trash
+
+[drug_radioprotector_trash]:drug_coagulant_trash
+visual                        			 = dynamics\equipments\medical\drug_radioprotector_trash.ogf
+
+[drug_psy_blockade_use]:drug_coagulant_use
+item_visual             				= dynamics\weapons\wpn_eat\tabletki\wpn_tabletki_4_0_drug_psy_blockade_hud.ogf
+last_use_section = drug_psy_blockade_last
+
+[drug_psy_blockade_last]:drug_coagulant_last
+item_visual             				= dynamics\weapons\wpn_eat\tabletki\wpn_tabletki_4_0_drug_psy_blockade_hud.ogf
+trash_object                             = drug_psy_blockade_trash
+
+[drug_psy_blockade_trash]:drug_coagulant_trash
+visual                        			 = dynamics\equipments\medical\drug_psy_blockade_trash.ogf
+
+;//////////////////////////////////////////////////////////////////////////////////////////////////
+; ---- 注射器(对应 Eden drug_coagulant) ----
+;//////////////////////////////////////////////////////////////////////////////////////////////////
+
+[stimulator_use]:animator_base
+item_attached							 = true
+item_visual             				 = dynamics\weapons\wpn_eat\injectors\stimulator_hud.ogf
+
+hands_orientation						 = 0.000000,0.000000,0.000000
+hands_orientation_16x9					 = 0.000000,0.000000,0.000000
+hands_position		                     = 0.000000,0.000000,0.000000
+hands_position_16x9                      = 0.000000,0.000000,0.000000
+
+lookout_hud_offset_pos_left 			= 0.01,0.01,0
+lookout_hud_offset_rot_left 			= 0,0,0
+
+lookout_hud_offset_pos_right 			= 0.01,-0.005,0
+lookout_hud_offset_rot_right 			= 0,0,0
+
+inertion_offset_LRUD					= 0.007, 0.007, 0.007, 0.007
+inertion_offset_z						= -0.001
+inertion_origin_offset 					= -0.01
+inertion_origin_speed 					= 7.0
+inertion_tendto_speed					= 0.4
+inertion_tendto_ret_speed				= 4
+inertion_min_angle						= 0
+
+crouch_hud_offset_pos 					= 0,0,0
+crouch_hud_offset_rot 					= 0,0,0
+
+crouch_up_inert_pos						= 0,0,0
+crouch_up_inert_rot						= 0,0,0
+crouch_up_inert_time					= 5
+crouch_slow_up_inert_pos				= 0,0,0
+crouch_slow_up_inert_rot				= 0,0,0
+crouch_slow_up_inert_time				= 5
+crouch_factor							= 1
+
+crouch_down_inert_pos					= 0,0,0
+crouch_down_inert_rot					= 0,0,0
+crouch_down_inert_time					= 6
+crouch_slow_down_inert_pos				= 0,0,0
+crouch_slow_down_inert_rot				= 0,0,0
+crouch_slow_down_inert_time				= 6
+crouch_slow_factor						= 1
+
+hud_move_jump_offset_pos             	= 0,0,0
+hud_move_jump_offset_rot             	= 0,0,0
+hud_move_jump_time                      = 4
+
+hud_move_fall_offset_pos            	= 0,0,0
+hud_move_fall_offset_rot            	= 0,0,0
+hud_move_fall_time                      = 4
+
+hud_move_landing_offset_pos          	= 0,0,0
+hud_move_landing_offset_rot          	= 0,0,0
+hud_move_landing_time                   = 7
+
+hud_move_landing2_offset_pos         	= 0,0,0
+hud_move_landing2_offset_rot         	= 0,0,0
+hud_move_landing2_time                  = 10
+
+nearwall_transition_time				= 6.5
+nearwall_hud_offset_pos					= 0,0,0
+nearwall_hud_offset_rot					= 0,0,0
+nearwall_collide_pos					= -0.01
+move_forward_hud_offset_pos 			= 0,0,0
+move_back_hud_offset_pos 				= 0,0,0
+pitch_offset_right 						= 0
+pitch_offset_up 						= 0
+pitch_offset_forward 					= 0
+
+sound_1   								 = interface\item_usage\stimulator_use
+sound_11   								 = interface\item_usage\stimulator_use1
+sound_12   								 = interface\item_usage\stimulator_use2
+sound_13   								 = interface\item_usage\stimulator_use3
+
+anm_show								 = stimulator
+
+dof                                      = 0.0, 0.5, 5, 2.0
+
+disable_ui_input						 = true
+
+exo_anim_section 						 = stimulator_use_exo
+right_lua_callback						 = animator_callbacks.spawn_trash
+trash_object                             = stimulator_trash
+modify_sect_lua_callback                 = animator_callbacks.modify_exo_sect
+
+[stimulator_trash]:trash_base
+visual                        			 = dynamics\equipments\medical\drug_coagulant_trash.ogf
+
+throw_dir = right
+throw_offset_y = -0.6
+throw_offset_x = -0.2
+throw_offset_z = 0.6
+
+throw_impulse_y = -9
+throw_impulse_z = 18
+
+[stimulator_use_exo]:stimulator_use
+anm_show								 = stimulator_exo
+
+start_lua_callback						 = null
+modify_sect_lua_callback                 = null
+
+;//////////////////////////////////////////////////////////////////////////////////////////////////
+; ---- 维修工具箱 ----
+;//////////////////////////////////////////////////////////////////////////////////////////////////
+
+[toolkit_all]:animator_base
+hands_position	                         = 0.000000,-0.20000,-0.20000
+hands_position_16x9                      = 0.000000,-0.20000,-0.20000
+
+anm_show								 = toolkit
+
+disable_input							 = true
+disable_ui_input						 = true
+disable_key_input						 = true
+
+lookout_hud_offset_pos_left 			= 0.01,0.01,0
+lookout_hud_offset_rot_left 			= 0,0,0
+
+lookout_hud_offset_pos_right 			= 0.01,-0.005,0
+lookout_hud_offset_rot_right 			= 0,0,0
+
+inertion_offset_LRUD					= 0.007, 0.007, 0.007, 0.007
+inertion_offset_z						= -0.001
+inertion_origin_offset 					= -0.01
+inertion_origin_speed 					= 7.0
+inertion_tendto_speed					= 0.4
+inertion_tendto_ret_speed				= 4
+inertion_min_angle						= 0
+
+crouch_hud_offset_pos 					= 0,0,0
+crouch_hud_offset_rot 					= 0,0,0
+
+crouch_up_inert_pos						= 0,0,0
+crouch_up_inert_rot						= 0,0,0
+crouch_up_inert_time					= 5
+crouch_slow_up_inert_pos				= 0,0,0
+crouch_slow_up_inert_rot				= 0,0,0
+crouch_slow_up_inert_time				= 5
+crouch_factor							= 1
+
+crouch_down_inert_pos					= 0,0,0
+crouch_down_inert_rot					= 0,0,0
+crouch_down_inert_time					= 6
+crouch_slow_down_inert_pos				= 0,0,0
+crouch_slow_down_inert_rot				= 0,0,0
+crouch_slow_down_inert_time				= 6
+crouch_slow_factor						= 1
+
+hud_move_jump_offset_pos             	= 0,0,0
+hud_move_jump_offset_rot             	= 0,0,0
+hud_move_jump_time                      = 4
+
+hud_move_fall_offset_pos            	= 0,0,0
+hud_move_fall_offset_rot            	= 0,0,0
+hud_move_fall_time                      = 4
+
+hud_move_landing_offset_pos          	= 0,0,0
+hud_move_landing_offset_rot          	= 0,0,0
+hud_move_landing_time                   = 7
+
+hud_move_landing2_offset_pos         	= 0,0,0
+hud_move_landing2_offset_rot         	= 0,0,0
+hud_move_landing2_time                  = 10
+
+nearwall_transition_time				= 6.5
+nearwall_hud_offset_pos					= 0,0,0
+nearwall_hud_offset_rot					= 0,0,0
+nearwall_collide_pos					= -0.01
+
+[toolkit_weapon]:toolkit_all
+item_attached							 = true
+item_visual             				 = dynamics\weapons\wpn_eat\dev_instrument_hud.ogf
+
+hands_position	                         = 0.000000,0.000000,-0.010000
+hands_position_16x9                      = 0.000000,0.000000,-0.010000
+
+sound_1   								 = interface\inv_toolkit_weapon
+anm_show								 = box_repair_weapon
+dof                                      = 0.0, 0.5, 5, 8.5
+
+[toolkit_weapon_last]:toolkit_weapon
+anm_show								 = box_repair_weapon_last
+
+sound_1   								 = interface\inv_toolkit_weapon_last
+
+right_lua_callback						 = animator_callbacks.spawn_trash
+trash_object                             = toolkit_weapon_trash
+
+[toolkit_weapon_trash]:trash_base
+visual                        			 = dynamics\weapons\wpn_eat\dev_instrument_trash.ogf
+throw_dir = right
+throw_offset_z = 0.5
+throw_impulse_z = 30.0
+
+[toolkit_outfit]:toolkit_all
+item_attached							 = true
+item_visual             				 = dynamics\weapons\wpn_eat\item_sewingkit_hud.ogf
+
+hands_position	                         = 0.000000,0.000000,0.020000
+hands_position_16x9                      = 0.000000,0.000000,0.020000
+
+sound_1   								 = interface\inv_toolkit_outfit
+anm_show								 = sewing_kit_using
+dof                                      = 0.0, 0.5, 5, 11.0
+
+[toolkit_outfit_last]:toolkit_outfit
+anm_show								 = sewing_kit_using_last
+
+sound_1   								 = interface\inv_toolkit_outfit_last
+
+right_lua_callback						 = animator_callbacks.spawn_trash
+trash_object                             = toolkit_outfit_trash
+
+[toolkit_outfit_trash]:trash_base
+visual                        			 = dynamics\weapons\wpn_eat\item_sewingkit_trash.ogf
+throw_dir = right
+throw_offset_z = 0.5
+throw_impulse_z = 20.0
+
+;//////////////////////////////////////////////////////////////////////////////////////////////////
+; ---- 物品段 DLTX 覆盖: 挂载 animator ----
+;//////////////////////////////////////////////////////////////////////////////////////////////////
+
+![bandage]
+animator_sect = bandage_use
+
+![antirad]
+animator_sect = antirad_use
+
+![medkit]
+animator_sect = medkit_use
+
+![medkit_army]
+animator_sect = medkit_use_army
+
+![medkit_scientic]
+animator_sect = medkit_use_scientic
+
+![conserva]
+animator_sect = conserva_use
+
+![energy_drink]
+animator_sect = energy_drink_use
+
+![vodka]
+animator_sect = vodka_use
+
+![drug_anabiotic]
+animator_sect = drug_biotik_use
+
+![drug_booster]
+animator_sect = drug_booster_use
+
+![drug_coagulant]
+animator_sect = stimulator_use
+
+![drug_antidot]
+animator_sect = drug_antidot_use
+
+![drug_radioprotector]
+animator_sect = drug_radioprotector_use
+
+![drug_psy_blockade]
+animator_sect = drug_psy_blockade_use
+
+![itm_gunsmith_toolkit]
+animator_sect = toolkit_weapon
+
+![itm_outfit_toolkit]
+animator_sect = toolkit_outfit
