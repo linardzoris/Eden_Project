@@ -163,10 +163,16 @@ void GbufferUnpack(in float2 TexCoord, in float2 HPos, inout IXrayGbuffer O)
     HPos = HPos - m_taa_jitter.xy * float2(0.5f, -0.5f) * pos_decompression_params2.xy;
 
     float3 P = float3(HPos * pos_decompression_params.zw - pos_decompression_params.xy, 1.0f);
-    float3 P_hud = float3(HPos * pos_decompression_params_hud.zw - pos_decompression_params_hud.xy, 1.0f);
-
     O.Point = P * depth_unpack.x * rcp(O.Depth - depth_unpack.y);
-    O.PointHud = P_hud * depth_unpack.z * rcp(O.Depth * 50.0f - depth_unpack.w);
+
+    // P2: HUD-space position is only read when depth is in the HUD range.
+    // Skip its reconstruction (one rcp + ALU) for all world pixels.
+    [branch]
+    if (O.Depth < 0.02f)
+    {
+        float3 P_hud = float3(HPos * pos_decompression_params_hud.zw - pos_decompression_params_hud.xy, 1.0f);
+        O.PointHud = P_hud * depth_unpack.z * rcp(O.Depth * 50.0f - depth_unpack.w);
+    }
 
     O.PointReal = O.Depth < 0.02f ? O.PointHud : O.Point;
 	
@@ -202,10 +208,16 @@ void GbufferUnpack(in float2 TexCoord, inout IXrayGbuffer O)
     HPos = HPos - m_taa_jitter.xy * float2(0.5f, -0.5f) * pos_decompression_params2.xy;
 
     float3 P = float3(HPos * pos_decompression_params.zw - pos_decompression_params.xy, 1.0f);
-    float3 P_hud = float3(HPos * pos_decompression_params_hud.zw - pos_decompression_params_hud.xy, 1.0f);
-
     O.Point = P * depth_unpack.x * rcp(O.Depth - depth_unpack.y);
-    O.PointHud = P_hud * depth_unpack.z * rcp(O.Depth * 50.0f - depth_unpack.w);
+
+    // P2: HUD-space position is only read when depth is in the HUD range.
+    // Skip its reconstruction (one rcp + ALU) for all world pixels.
+    [branch]
+    if (O.Depth < 0.02f)
+    {
+        float3 P_hud = float3(HPos * pos_decompression_params_hud.zw - pos_decompression_params_hud.xy, 1.0f);
+        O.PointHud = P_hud * depth_unpack.z * rcp(O.Depth * 50.0f - depth_unpack.w);
+    }
 
     O.PointReal = O.Depth < 0.02f ? O.PointHud : O.Point;
 	

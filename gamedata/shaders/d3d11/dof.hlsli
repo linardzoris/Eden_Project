@@ -41,6 +41,12 @@ float3 dof(float2 center)
     // Scale tap offsets based on render target size
     float depth = sampleDepth(center);
     float blur = DOFFactor(depth);
+
+    // P0: pixels in focus have zero blur and all 12 taps would be redundant
+    // same-address samples. Exit early with the single center sample.
+    if (blur <= 0.001h)
+        return s_image.Sample(smp_rtlinear, center).xyz;
+
     float2 scale = 0.5f * screen_res.zw * dof_kernel.z * blur;
 
     // poisson

@@ -24,7 +24,9 @@ float4 main(v2p I) : SV_Target
     float s = 1.0f;
 	
 #ifdef USE_SHADOW
-    s = shadow(PS);
+    //P5: smoke plane is low resolution and noise-modulated; single hard
+    //shadow tap is visually equivalent to 4-tap PCF here
+    s = shadow_volumetric(PS);
 #endif
 
     // ----- lightmap

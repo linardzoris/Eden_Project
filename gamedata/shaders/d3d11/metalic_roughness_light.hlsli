@@ -34,7 +34,10 @@ float GeometrySmithD(float NdotL, float NdotV, float Roughness)
 
 float3 FresnelSchlick(float3 F, float NdotV)
 {
-    return F + (1.0f - F) * pow(1.0f - NdotV, 5.0f);
+    //P4: integer power 5 via multiplication instead of pow()
+    float x = 1.0f - NdotV;
+    float x5 = x * x * x * x * x;
+    return F + (1.0f - F) * x5;
 }
 
 float3 DirectLight(float4 Radiance, float3 Light, float3 Normal, float3 View, float3 Color, float Metalness, float Roughness, float3 F0 = 0.04f)

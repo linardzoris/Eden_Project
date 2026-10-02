@@ -60,15 +60,27 @@ float example_how_to_not_implement_gtao(float3 view_position, float3 view_normal
 	//Slice angle, we integrate AO over 2*PI
 	float slice_angle = GTAO_TAU / float(GTAO_DIRECTIONS);
 
+	//P3: one sincos for the jittered initial angle, then rotate the 2D
+	//direction by a constant angle each iteration (2 MADs) instead of
+	//evaluating cos()+sin() per direction.
+	float dir_sin, dir_cos;
+	sincos(slice_angle, dir_sin, dir_cos);
+
+	float initial_sin, initial_cos;
+	sincos(jitter.x * slice_angle, initial_sin, initial_cos);
+	float2 slice_xy = float2(initial_cos, initial_sin);
+
 	//Accumulated occlusion and slice weight
 	float2 occ_weight = (0.0).xx;
 
 	for (int i = 0; i < GTAO_DIRECTIONS; i++)
 	{
-		float angle = (float(i) + jitter.x) * slice_angle;
-
 		//Slice direction
-		float3 slice_direction = float3(cos(angle), sin(angle), 0.0);
+		float3 slice_direction = float3(slice_xy, 0.0);
+
+		//Rotate direction by slice_angle for the next iteration
+		slice_xy = float2(slice_xy.x * dir_cos - slice_xy.y * dir_sin,
+		                  slice_xy.x * dir_sin + slice_xy.y * dir_cos);
 
 		//GTAO math
 		float3 axis = cross(view_direction, slice_direction);
