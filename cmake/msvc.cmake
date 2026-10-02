@@ -20,21 +20,22 @@ add_compile_options(/permissive- /fp:fast /wd4073 /wd4390 /wd4273 /sdl /wd4566 /
 string(REGEX REPLACE "/EH[a-z]+" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
 add_compile_options("$<$<CONFIG:DEBUG>:/Od>" "$<$<CONFIG:DEBUG>:/MD>" "/Ob1")
 add_compile_options("$<$<CONFIG:RELEASE>:/Ot>"  "$<$<CONFIG:RELEASE>:/Ob2>" "$<$<CONFIG:RELWITHDEBINFO>:/wd4577>")
+add_compile_options("$<$<CONFIG:RELEASEAVX>:/Ot>" "$<$<CONFIG:RELEASEAVX>:/Ob2>")
 
 add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/MP>)
 add_compile_options(/wd4595 /wd4996 /wd4005)
 add_link_options("$<$<CONFIG:DEBUG>:/SAFESEH:NO>")
-add_compile_options("$<$<CONFIG:RELEASE>:/wd4530>" "$<$<CONFIG:DEBUG>:/wd4251>" "$<$<CONFIG:RELWITHDEBINFO>:/wd4530>")
+add_compile_options("$<$<CONFIG:RELEASE>:/wd4530>" "$<$<CONFIG:DEBUG>:/wd4251>" "$<$<CONFIG:RELWITHDEBINFO>:/wd4530>" "$<$<CONFIG:RELEASEAVX>:/wd4530>")
 
-add_compile_options("$<$<CONFIG:RELEASE>:/GF>" "$<$<CONFIG:RELWITHDEBINFO>:/GF>")
-add_compile_options("$<$<CONFIG:RELEASE>:/Oi>" "$<$<CONFIG:RELWITHDEBINFO>:/Oi>")
-add_compile_options("$<$<CONFIG:RELEASE>:/Oy>" "$<$<CONFIG:RELWITHDEBINFO>:/Oy>")
-add_compile_options("$<$<CONFIG:RELEASE>:/GT>" "$<$<CONFIG:RELWITHDEBINFO>:/GT>")
-add_compile_options("$<$<CONFIG:RELEASE>:/GL>" "$<$<CONFIG:RELWITHDEBINFO>:/GL>")
+add_compile_options("$<$<CONFIG:RELEASE>:/GF>" "$<$<CONFIG:RELWITHDEBINFO>:/GF>" "$<$<CONFIG:RELEASEAVX>:/GF>")
+add_compile_options("$<$<CONFIG:RELEASE>:/Oi>" "$<$<CONFIG:RELWITHDEBINFO>:/Oi>" "$<$<CONFIG:RELEASEAVX>:/Oi>")
+add_compile_options("$<$<CONFIG:RELEASE>:/Oy>" "$<$<CONFIG:RELWITHDEBINFO>:/Oy>" "$<$<CONFIG:RELEASEAVX>:/Oy>")
+add_compile_options("$<$<CONFIG:RELEASE>:/GT>" "$<$<CONFIG:RELWITHDEBINFO>:/GT>" "$<$<CONFIG:RELEASEAVX>:/GT>")
+add_compile_options("$<$<CONFIG:RELEASE>:/GL>" "$<$<CONFIG:RELWITHDEBINFO>:/GL>" "$<$<CONFIG:RELEASEAVX>:/GL>")
 add_compile_options("$<$<CONFIG:RELWITHDEBINFO>:/Ob2>")
 add_compile_options("$<$<CONFIG:RELWITHDEBINFO>:/Ot>")
-add_link_options("$<$<CONFIG:RELEASE>:/LTCG:incremental>" "$<$<CONFIG:RELWITHDEBINFO>:/LTCG:incremental>")
-add_link_options("$<$<CONFIG:RELEASE>:/INCREMENTAL:NO>" "$<$<CONFIG:RELWITHDEBINFO>:/INCREMENTAL:NO>")
+add_link_options("$<$<CONFIG:RELEASE>:/LTCG:incremental>" "$<$<CONFIG:RELWITHDEBINFO>:/LTCG:incremental>" "$<$<CONFIG:RELEASEAVX>:/LTCG:incremental>")
+add_link_options("$<$<CONFIG:RELEASE>:/INCREMENTAL:NO>" "$<$<CONFIG:RELWITHDEBINFO>:/INCREMENTAL:NO>" "$<$<CONFIG:RELEASEAVX>:/INCREMENTAL:NO>")
 
 # Mixed: full Release-level performance optimizations with debug info
 add_compile_options("$<$<CONFIG:MIXED>:/Ob2>" "$<$<CONFIG:MIXED>:/Ot>" "$<$<CONFIG:MIXED>:/Oi>"
@@ -59,9 +60,9 @@ endif()
 
 ## Edit and Continue mode
 if (IXRAY_ASAN)
-    add_compile_options("$<$<CONFIG:DEBUG>:/Zi>" "$<$<CONFIG:RELWITHDEBINFO>:/Zi>" "$<$<CONFIG:RELEASE>:/Zi>")
+    add_compile_options("$<$<CONFIG:DEBUG>:/Zi>" "$<$<CONFIG:RELWITHDEBINFO>:/Zi>" "$<$<CONFIG:RELEASE>:/Zi>" "$<$<CONFIG:RELEASEAVX>:/Zi>")
 else()
-    add_compile_options("$<$<CONFIG:DEBUG>:/ZI>" "$<$<CONFIG:RELWITHDEBINFO>:/Zi>" "$<$<CONFIG:RELEASE>:/Zi>")
+    add_compile_options("$<$<CONFIG:DEBUG>:/ZI>" "$<$<CONFIG:RELWITHDEBINFO>:/Zi>" "$<$<CONFIG:RELEASE>:/Zi>" "$<$<CONFIG:RELEASEAVX>:/Zi>")
 endif()
 
 if(${CMAKE_GENERATOR_PLATFORM} MATCHES "arm64")

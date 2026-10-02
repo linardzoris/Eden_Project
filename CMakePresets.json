@@ -296,6 +296,12 @@
             "configuration": "Release"
         },
         {
+            "name": "Engine-x64-Windows-ReleaseAVX",
+            "displayName": "Engine-x64-Windows-ReleaseAVX",
+            "configurePreset": "Engine-x64-Windows",
+            "configuration": "ReleaseAVX"
+        },
+        {
             "name": "Engine-x64-Windows-Mixed",
             "displayName": "Engine-x64-Windows-Mixed",
             "configurePreset": "Engine-x64-Windows",
