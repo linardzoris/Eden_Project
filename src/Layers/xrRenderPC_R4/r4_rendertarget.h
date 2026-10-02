@@ -229,9 +229,6 @@ private:
 
 	//	Igor: used for volumetric lights
 	bool						m_bHasActiveVolumetric;
-
-	//	SPP ping-pong state: false = current LDR image in rt_Back_Buffer, true = in rt_Back_Buffer_AA
-	bool						m_sppSrcIsAA					= false;
 public:
 								CRenderTarget			();
 								~CRenderTarget			();

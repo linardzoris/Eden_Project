@@ -401,10 +401,6 @@ void CRenderTarget::phase_combine()
 	//	if FP16-BLEND !not! supported - draw flares here, overwise they are already in the bloom target
 	g_pGamePersistent->Environment().RenderFlares();	// lens-flares
 
-	//	SPP ping-pong: effects alternate between rt_Back_Buffer and rt_Back_Buffer_AA,
-	//	r2_RT_backbuffer_final is re-pointed at the current source before each pass.
-	m_sppSrcIsAA = false;
-
 	if(ps_r4_cas_sharpening > EPS) {
 		GPU_EVENT(phase_cas);
 		phase_cas();
@@ -424,14 +420,6 @@ void CRenderTarget::phase_combine()
 		GPU_EVENT(PhaseAberration);
 		PhaseAberration();
 	}
-
-	//	Odd number of effects leaves the image in rt_Back_Buffer_AA: resolve it back
-	if(m_sppSrcIsAA) {
-		RContext->CopyResource(rt_Back_Buffer->pSurface, rt_Back_Buffer_AA->pSurface);
-		m_sppSrcIsAA = false;
-	}
-	if(rt_Back_Buffer->pTexture->pSurface != rt_Back_Buffer->pSurface)
-		rt_Back_Buffer->pTexture->surface_set(rt_Back_Buffer->pSurface);
 
 	if(u_need_PP()) {
 		if(rt_BackbufferLUT->pTexture->pSurface != rt_BackbufferLUT->pSurface)

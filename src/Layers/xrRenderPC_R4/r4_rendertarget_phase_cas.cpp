@@ -5,14 +5,7 @@ void CRenderTarget::phase_cas()
 	u32 Offset = 0;
 	Fvector2 p0, p1;
 
-	//	Ping-pong: sample the current source buffer, render into the other one
-	const ref_rt& src = m_sppSrcIsAA ? rt_Back_Buffer_AA : rt_Back_Buffer;
-	const ref_rt& dst = m_sppSrcIsAA ? rt_Back_Buffer : rt_Back_Buffer_AA;
-
-	if(rt_Back_Buffer->pTexture->pSurface != src->pSurface)
-		rt_Back_Buffer->pTexture->surface_set(src->pSurface);
-
-    u_setrt(dst, nullptr, nullptr, nullptr);
+    u_setrt(rt_Back_Buffer_AA, nullptr, nullptr, nullptr);
     RCache.set_CullMode(CULL_NONE);
     RCache.set_Stencil(FALSE);
 
@@ -40,6 +33,6 @@ void CRenderTarget::phase_cas()
 	RCache.set_Geometry(g_combine);
 	RCache.Render(D3DPT_TRIANGLELIST, Offset, 0, 4, 0, 2);
 
-	//	Source/destination swapped for the next effect
-	m_sppSrcIsAA = !m_sppSrcIsAA;
+	//Resolve back to rt_Back_Buffer
+    RContext->CopyResource(rt_Back_Buffer->pSurface, rt_Back_Buffer_AA->pSurface);
 }

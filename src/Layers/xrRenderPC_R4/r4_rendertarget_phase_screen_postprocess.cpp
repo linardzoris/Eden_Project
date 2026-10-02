@@ -8,14 +8,7 @@ void CRenderTarget::RenderEffect(ScreenPostProcessType postProcessType, bool pos
 
     // Set render target
     if (postProcessMode) {
-        //	Ping-pong: sample the current source buffer, render into the other one
-        const ref_rt& src = m_sppSrcIsAA ? rt_Back_Buffer_AA : rt_Back_Buffer;
-        const ref_rt& dst = m_sppSrcIsAA ? rt_Back_Buffer : rt_Back_Buffer_AA;
-
-        if(rt_Back_Buffer->pTexture->pSurface != src->pSurface)
-            rt_Back_Buffer->pTexture->surface_set(src->pSurface);
-
-        u_setrt(dst, nullptr, nullptr, nullptr);
+        u_setrt(rt_Back_Buffer_AA, nullptr, nullptr, nullptr);
     }
 
     // Configure rendering settings
@@ -37,9 +30,9 @@ void CRenderTarget::RenderEffect(ScreenPostProcessType postProcessType, bool pos
     // Render
     RCache.Render(D3DPT_TRIANGLELIST, Offset, 0, 4, 0, 2);
 
-    //	Source/destination swapped for the next effect
+    // Copy resource
     if (postProcessMode) {
-        m_sppSrcIsAA = !m_sppSrcIsAA;
+        RContext->CopyResource(rt_Back_Buffer->pSurface, rt_Back_Buffer_AA->pSurface);
     }
 }
 
