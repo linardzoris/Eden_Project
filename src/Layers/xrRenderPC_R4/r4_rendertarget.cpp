@@ -594,7 +594,19 @@ CRenderTarget::CRenderTarget()
 		b_gtao = new CBlender_gtao();
 		s_gtao.create(b_gtao);
 
-		rt_gtao_0.create("$user$gtao_0", s_dwWidth, s_dwHeight, DxgiFormat::DXGI_FORMAT_R32_UINT); //AO.view-z
+		// r4_gtao_resolution: 0 = full-res, 1 = half-res AO buffers
+		const u32 gtao_div = (ps_r4_gtao_resolution == 1) ? 2 : 1;
+		const u32 gtao_w = s_dwWidth / gtao_div;
+		const u32 gtao_h = s_dwHeight / gtao_div;
+
+		rt_gtao_0.create("$user$gtao_0", gtao_w, gtao_h, DxgiFormat::DXGI_FORMAT_R32_UINT); //AO.view-z
+
+		if (gtao_div > 1)
+		{
+			// Half-res filter output; s_occ texture is re-pointed to this surface
+			// while GTAO mode is active (restored for SSAO/off).
+			rt_gtao_filtered.create("$user$gtao_filtered", gtao_w, gtao_h, DxgiFormat::DXGI_FORMAT_R8_UNORM);
+		}
 	}
 
 	//Puddles

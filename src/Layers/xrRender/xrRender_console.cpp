@@ -201,6 +201,8 @@ float		ps_r2_gloss_factor = 3.14f;
 int			ps_r__detail_radius = 120;
 float		ps_r4_cas_sharpening = 0.0f;
 int			ps_r4_sslr_quality = 1;		// 0=perf(half-res), 1=balanced(half-res), 2=quality(full-res)
+float		ps_r4_gtao_intensity = 1.0f;	// 1.0 = neutral; >1 = darker/more visible AO
+int			ps_r4_gtao_resolution = 0;	// 0=full-res, 1=half-res (vid_restart to apply)
 
 // Test float exported to shaders for development
 float		ps_r__test_exp_to_shaders_1	= 1.0f;
@@ -774,6 +776,8 @@ void		xrRender_initconsole	()
 	CMD3(CCC_Mask, "r4_sslr_reflections", &ps_r2_ls_flags_ext, R4FLAG_SSLR_ON_WORLD);
 	CMD4(CCC_Float, "r4_cas_sharpening", &ps_r4_cas_sharpening, 0.0f, 1.0f);
 	CMD4(CCC_Integer, "r4_sslr_quality", &ps_r4_sslr_quality, 0, 2);	// vid_restart to apply
+	CMD4(CCC_Float, "r4_gtao_intensity", &ps_r4_gtao_intensity, 0.1f, 4.0f);
+	CMD4(CCC_Integer, "r4_gtao_resolution", &ps_r4_gtao_resolution, 0, 1);	// vid_restart to apply
 
 	CMD3(CCC_Mask, "r4_puddles", &ps_r2_ls_flags_ext, R4FLAG_PUDDLES);
 

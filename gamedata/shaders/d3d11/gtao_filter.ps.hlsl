@@ -25,11 +25,18 @@ struct PSInput
 
 Texture2D<uint> t_gtao_packed;
 
+//AO buffer dims (xy) and rcp dims (zw). Equals pos_decompression_params2 at
+//full-res; differs when GTAO runs at half resolution (r4_gtao_resolution).
+float4 gtao_filter_params;
+
+//AO strength curve. 1.0 = neutral, >1.0 = darker/more visible occlusion.
+float gtao_intensity;
+
 float main(PSInput I) : SV_Target
 {
 	//Texture coordinates used for Gather4 (this fixes grid-like artifacts)
 	//https://www.reedbeta.com/blog/texture-gathers-and-coordinate-precision/
-    float2 gather_texcoord = (floor(I.texcoord.xy * pos_decompression_params2.xy - 0.5f) + 1.0f) * pos_decompression_params2.zw;
+    float2 gather_texcoord = (floor(I.texcoord.xy * gtao_filter_params.xy - 0.5f) + 1.0f) * gtao_filter_params.zw;
 
     //Accumulated moments
     float4 x_x2_y_xy = (0.0).xxxx;
@@ -80,6 +87,7 @@ float main(PSInput I) : SV_Target
     float beta = cyx * rcp(vx);
     float alpha = x_x2_y_xy.z - beta * x_x2_y_xy.x;
 
-    //Final, filtered value
-    return saturate(beta * center_tap + alpha);
+    //Final, filtered value. Power curve scales the perceived AO strength
+    //(gtao_intensity = 1.0 is mathematically identical to the original output).
+    return saturate(pow(saturate(beta * center_tap + alpha), gtao_intensity));
 }

@@ -95,6 +95,7 @@ public:
 
 	//GTAO
 	ref_rt						rt_gtao_0;
+	ref_rt						rt_gtao_filtered;	// half-res GTAO filter output (up-sampled to rt_ssao_temp)
 
 	//TAA
 	ref_rt					rt_Generic_0_prev; //previous frame for taa

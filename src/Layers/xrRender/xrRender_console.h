@@ -128,6 +128,11 @@ extern ECORE_API float			ps_r4_cas_sharpening;
 // Changes take effect after vid_restart (RTs are allocated with the tier).
 extern ECORE_API int			ps_r4_sslr_quality;
 
+// GTAO: effect strength (power curve, 1.0 = neutral) and buffer resolution
+// (0 = full-res, 1 = half-res). Resolution needs vid_restart (RT allocation).
+extern ECORE_API float			ps_r4_gtao_intensity;
+extern ECORE_API int			ps_r4_gtao_resolution;
+
 // Test float exported to shaders for development
 extern  float					ps_r__test_exp_to_shaders_1;
 extern  float					ps_r__test_exp_to_shaders_2;

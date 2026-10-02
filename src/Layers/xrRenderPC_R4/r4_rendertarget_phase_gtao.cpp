@@ -2,6 +2,9 @@
 
 #include "r4_rendertarget.h"
 
+// Defined in r4_rendertarget_phase_ssao.cpp
+void set_viewport(ID3DDeviceContext* dev, float w, float h);
+
 void CRenderTarget::phase_gtao()
 {
 	GPU_EVENT(phase_gtao);
@@ -13,6 +16,13 @@ void CRenderTarget::phase_gtao()
 	float p_scale = RCache.get_height() / (tan(deg2rad(Device.fFOV) * 0.5f) * 2.0f);
 	p_scale *= 0.5;
 	FVF::TL* pv = nullptr;
+
+	// r4_gtao_resolution: AO buffers (rt_gtao_0/rt_gtao_filtered) may be half-res.
+	// Shaders stay resolution-agnostic: gtao_render offsets are normalized UVs
+	// (p_scale is derived from the full-res target), the filter gets explicit dims.
+	const bool gtao_half = rt_gtao_filtered._get() != nullptr;
+	if (gtao_half)
+		set_viewport(RContext, float(rt_gtao_0->dwWidth), float(rt_gtao_0->dwHeight));
 
 	{
 		GPU_EVENT(gtao_render);
@@ -39,8 +49,8 @@ void CRenderTarget::phase_gtao()
 
 	{
 		GPU_EVENT(gtao_filter);
-		//Blur...
-		u_setrt(rt_ssao_temp, nullptr, nullptr, nullptr);
+		//Blur... Half-res mode filters into rt_gtao_filtered (up-sampled on s_occ read)
+		u_setrt(gtao_half ? rt_gtao_filtered : rt_ssao_temp, nullptr, nullptr, nullptr);
 		RCache.set_CullMode(CULL_NONE);
 		RCache.set_Stencil(FALSE);
 
@@ -55,8 +65,27 @@ void CRenderTarget::phase_gtao()
 
 		//Go go power rangers
 		RCache.set_Element(s_gtao->E[1]);
+		RCache.set_c("gtao_filter_params",
+			float(rt_gtao_0->dwWidth), float(rt_gtao_0->dwHeight),
+			1.0f / float(rt_gtao_0->dwWidth), 1.0f / float(rt_gtao_0->dwHeight));
+		RCache.set_c("gtao_intensity", ps_r4_gtao_intensity);
 		RCache.set_Geometry(g_combine);
 		RCache.Render(D3DPT_TRIANGLELIST, Offset, 0, 3, 0, 1);
+	}
+
+	if (gtao_half)
+	{
+		//Restore full-res viewport for the following passes
+		set_viewport(RContext, RCache.get_width(), RCache.get_height());
+
+		//Point s_occ (bound to r2_RT_ssao_temp) at the half-res filtered AO.
+		//combine_1 samples it with bilinear at normalized UVs - free up-sampling.
+		rt_ssao_temp->pTexture->surface_set(rt_gtao_filtered->pSurface);
+	}
+	else
+	{
+		//Full-res GTAO writes rt_ssao_temp directly - make sure s_occ reads it
+		rt_ssao_temp->pTexture->surface_set(rt_ssao_temp->pSurface);
 	}
 }
 

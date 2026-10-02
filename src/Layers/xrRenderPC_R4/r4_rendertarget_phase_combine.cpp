@@ -64,12 +64,16 @@ void CRenderTarget::phase_combine()
 		switch(ps_r_ssao_mode) {
 			case 0:
 			{
+				// s_occ may have been re-pointed to the half-res GTAO buffer
+				rt_ssao_temp->pTexture->surface_set(rt_ssao_temp->pSurface);
 				FLOAT ColorRGBA[4] = {1.0f, 1.0f, 1.0f, 1.0f};
 				RContext->ClearRenderTargetView(rt_ssao_temp->pRT, ColorRGBA);
 				break;
 			}
 			case 1:
 			{
+				// s_occ may have been re-pointed to the half-res GTAO buffer
+				rt_ssao_temp->pTexture->surface_set(rt_ssao_temp->pSurface);
 				phase_ssao();
 				break;
 			}
