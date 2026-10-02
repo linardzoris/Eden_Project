@@ -305,6 +305,13 @@ void CRender::render_menu() {
 	RCache.set_Stencil(FALSE);
 	RCache.set_ColorWriteEnable();
 
+	//	phase_combine may have left these named textures re-pointed (scale/pp elision);
+	//	the menu path renders into the RT surfaces directly, so restore default bindings.
+	if (Target->rt_Generic->pTexture->pSurface != Target->rt_Generic->pSurface)
+		Target->rt_Generic->pTexture->surface_set(Target->rt_Generic->pSurface);
+	if (Target->rt_BackbufferLUT->pTexture->pSurface != Target->rt_BackbufferLUT->pSurface)
+		Target->rt_BackbufferLUT->pTexture->surface_set(Target->rt_BackbufferLUT->pSurface);
+
 	// Main Render
 	{
 		Target->u_setrt(Target->rt_Generic, 0, 0, 0);		// LDR RT
@@ -375,6 +382,8 @@ void CRender::Render()
 	bool	bMenu = pMainMenu?pMainMenu->CanSkipSceneRendering():false;
 
 	if (!(g_pGameLevel && g_hud) || bMenu) {
+		if (Target->rt_BackbufferLUT->pTexture->pSurface != Target->rt_BackbufferLUT->pSurface)
+			Target->rt_BackbufferLUT->pTexture->surface_set(Target->rt_BackbufferLUT->pSurface);
 		Target->u_setrt((u32)RCache.get_target_width(), (u32)RCache.get_target_height(), RImplementation.Target->rt_BackbufferLUT->pRT, nullptr, nullptr, nullptr);
 		return;
 	}

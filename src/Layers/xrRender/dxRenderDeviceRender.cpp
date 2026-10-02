@@ -508,6 +508,10 @@ void dxRenderDeviceRender::SetupDefaultTarget()
 {
 #ifndef _EDITOR
 #ifdef USE_DX11
+	//	phase_combine may have left r2_RT_backbuffer_lut re-pointed to rt_Back_Buffer
+	//	(phase_pp elision); loading screens draw into rt_BackbufferLUT directly.
+	if (RImplementation.Target->rt_BackbufferLUT->pTexture->pSurface != RImplementation.Target->rt_BackbufferLUT->pSurface)
+		RImplementation.Target->rt_BackbufferLUT->pTexture->surface_set(RImplementation.Target->rt_BackbufferLUT->pSurface);
 	RCache.set_RT(RImplementation.Target->rt_BackbufferLUT->pRT);
 #else
 	RCache.set_RT(RTarget);

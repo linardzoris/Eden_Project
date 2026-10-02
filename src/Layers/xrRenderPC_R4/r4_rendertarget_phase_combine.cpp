@@ -291,6 +291,8 @@ void CRenderTarget::phase_combine()
 	{
 		case 4:
 		{
+			if(rt_Generic->pTexture->pSurface != rt_Generic->pSurface)
+				rt_Generic->pTexture->surface_set(rt_Generic->pSurface);
 			if(!phase_xess())
 			{
 				ps_proxy_r_scale_mode = ps_r_scale_mode = 1;
@@ -299,6 +301,8 @@ void CRenderTarget::phase_combine()
 		}
 		case 3:
 		{
+			if(rt_Generic->pTexture->pSurface != rt_Generic->pSurface)
+				rt_Generic->pTexture->surface_set(rt_Generic->pSurface);
 			if(!phase_fsr()) 
 			{
 				ps_proxy_r_scale_mode = ps_r_scale_mode = 1;
@@ -307,6 +311,8 @@ void CRenderTarget::phase_combine()
 		}
 		case 2:
 		{
+			if(rt_Generic->pTexture->pSurface != rt_Generic->pSurface)
+				rt_Generic->pTexture->surface_set(rt_Generic->pSurface);
 			if(!phase_dlss())
 			{
 				ps_proxy_r_scale_mode = ps_r_scale_mode = 3;
@@ -315,7 +321,25 @@ void CRenderTarget::phase_combine()
 		}
 		default:
 		{
-			phase_scale();
+			//	No upscaler: when render res == target res, phase_scale is a pure copy.
+			//	Point r2_RT_generic directly at rt_Generic_0 and skip the pass.
+			//	Exception: SSLR raymarches against r2_RT_generic expecting the previous
+			//	frame's combined image, but rt_Generic_0 is cleared at scene begin —
+			//	keep the copy when SSLR is active.
+			bool can_elide = rt_Generic_0->dwWidth == rt_Generic->dwWidth
+				&& rt_Generic_0->dwHeight == rt_Generic->dwHeight
+				&& !RImplementation.o.deffered_reflecitons;
+			if(can_elide)
+			{
+				if(rt_Generic->pTexture->pSurface != rt_Generic_0->pSurface)
+					rt_Generic->pTexture->surface_set(rt_Generic_0->pSurface);
+			}
+			else
+			{
+				if(rt_Generic->pTexture->pSurface != rt_Generic->pSurface)
+					rt_Generic->pTexture->surface_set(rt_Generic->pSurface);
+				phase_scale();
+			}
 		}
 		break;
 	}
@@ -377,6 +401,10 @@ void CRenderTarget::phase_combine()
 	//	if FP16-BLEND !not! supported - draw flares here, overwise they are already in the bloom target
 	g_pGamePersistent->Environment().RenderFlares();	// lens-flares
 
+	//	SPP ping-pong: effects alternate between rt_Back_Buffer and rt_Back_Buffer_AA,
+	//	r2_RT_backbuffer_final is re-pointed at the current source before each pass.
+	m_sppSrcIsAA = false;
+
 	if(ps_r4_cas_sharpening > EPS) {
 		GPU_EVENT(phase_cas);
 		phase_cas();
@@ -396,9 +424,28 @@ void CRenderTarget::phase_combine()
 		GPU_EVENT(PhaseAberration);
 		PhaseAberration();
 	}
-	{
+
+	//	Odd number of effects leaves the image in rt_Back_Buffer_AA: resolve it back
+	if(m_sppSrcIsAA) {
+		RContext->CopyResource(rt_Back_Buffer->pSurface, rt_Back_Buffer_AA->pSurface);
+		m_sppSrcIsAA = false;
+	}
+	if(rt_Back_Buffer->pTexture->pSurface != rt_Back_Buffer->pSurface)
+		rt_Back_Buffer->pTexture->surface_set(rt_Back_Buffer->pSurface);
+
+	if(u_need_PP()) {
+		if(rt_BackbufferLUT->pTexture->pSurface != rt_BackbufferLUT->pSurface)
+			rt_BackbufferLUT->pTexture->surface_set(rt_BackbufferLUT->pSurface);
 		GPU_EVENT(phase_pp);
 		phase_pp();
+	}
+	else {
+		//	No post-process params active: let gamma sample rt_Back_Buffer directly
+		if(rt_BackbufferLUT->pTexture->pSurface != rt_Back_Buffer->pSurface)
+			rt_BackbufferLUT->pTexture->surface_set(rt_Back_Buffer->pSurface);
+		//	2D UI is drawn after phase_combine into the currently bound target;
+		//	it must be the same buffer gamma will sample
+		u_setrt(rt_Back_Buffer, 0, 0, 0);
 	}
 
 	//	Re-adapt luminance
