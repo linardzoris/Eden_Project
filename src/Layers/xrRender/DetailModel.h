@@ -25,6 +25,9 @@ public:
 #endif
 	
 	xr_vector<xr_shared_ptr<SlotItem>> m_items[3][2];
+	// Margin ring around the camera frustum, consumed ONLY by the sun SMAP
+	// grass pass: lets clumps just off-screen still cast shadows into view.
+	xr_vector<xr_shared_ptr<SlotItem>> m_items_shadow[3][2];
 	void			Load		(IReader* S);
 	void			Optimize	();
 	virtual void	Unload		();

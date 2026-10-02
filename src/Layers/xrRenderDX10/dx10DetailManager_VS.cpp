@@ -127,9 +127,15 @@ void CDetailManager::hw_Render_dump(const Fvector4& consts, const Fvector4& wave
 	RCache.set_c("wave_old", wave_old);
 	RCache.set_c("dir2D_old", wind_old);
 
+	const bool							bSmap = (RImplementation.phase == CRender::PHASE_SMAP);
+
 	for (CDetail& Object : objects)
 	{
-		auto it = detailBuffer_map.lower_bound(Object.m_items[var_id][render_key].size());
+		auto&							itemsMain = Object.m_items[var_id][render_key];
+		auto&							itemsRing = Object.m_items_shadow[var_id][render_key];
+		const u32						totalCount = itemsMain.size() + (bSmap ? itemsRing.size() : 0);
+
+		auto it = detailBuffer_map.lower_bound(totalCount);
 
 		//Use largest buffer possible [should keep HUGE buffer around in those cases]
 		if(it == detailBuffer_map.end())
@@ -149,38 +155,46 @@ void CDetailManager::hw_Render_dump(const Fvector4& consts, const Fvector4& wave
 		u32 instanceCount = 0;
 		static InstanceData* c_storage = NULL;
 
-		for (auto& S : Object.m_items[var_id][render_key])
+		auto ProcessList = [&](const xr_vector<xr_shared_ptr<CDetail::SlotItem>>& items)
 		{
-			CDetail::SlotItem& Instance = *S.get();
-
-			if (RImplementation.pOutdoorSector && PortalTraverser.i_marker != RImplementation.pOutdoorSector->r_marker)
-				continue;
-
-			if (RImplementation.phase == CRender::PHASE_SMAP && L)
+			for (auto& S : items)
 			{
-				if(L->position.distance_to_sqr(Instance.pos) >= _sqr(L->range))
+				CDetail::SlotItem& Instance = *S.get();
+
+				if (RImplementation.pOutdoorSector && PortalTraverser.i_marker != RImplementation.pOutdoorSector->r_marker)
 					continue;
-			}
 
-			//LVutner: Update the instance buffer
-			if(instanceCount == 0)
-			{
-				D3D11_MAPPED_SUBRESOURCE pSubRes;
-				RContext->Map(currentBuffer, 0, D3D_MAP_WRITE_DISCARD, 0, &pSubRes);
-				c_storage = reinterpret_cast<InstanceData*>(pSubRes.pData);
-			}
-			c_storage[instanceCount] = {Instance.hpb, Instance.scale_calculated, Instance.pos, Instance.c_hemi};
+				if (RImplementation.phase == CRender::PHASE_SMAP && L)
+				{
+					if(L->position.distance_to_sqr(Instance.pos) >= _sqr(L->range))
+						continue;
+				}
 
-			//Increment
-			instanceCount++;
+				//LVutner: Update the instance buffer
+				if(instanceCount == 0)
+				{
+					D3D11_MAPPED_SUBRESOURCE pSubRes;
+					RContext->Map(currentBuffer, 0, D3D_MAP_WRITE_DISCARD, 0, &pSubRes);
+					c_storage = reinterpret_cast<InstanceData*>(pSubRes.pData);
+				}
+				c_storage[instanceCount] = {Instance.hpb, Instance.scale_calculated, Instance.pos, Instance.c_hemi};
 
-			if (instanceCount >= currentSize)
-			{ 
-				RContext->Unmap(currentBuffer, 0);
-				RCache.RenderInstancedIndexed(D3DPT_TRIANGLELIST, 0, 0, Object.number_vertices, 0, Object.number_indices / 3, instanceCount, 0);
-				instanceCount = 0; //Reset
+				//Increment
+				instanceCount++;
+
+				if (instanceCount >= currentSize)
+				{ 
+					RContext->Unmap(currentBuffer, 0);
+					RCache.RenderInstancedIndexed(D3DPT_TRIANGLELIST, 0, 0, Object.number_vertices, 0, Object.number_indices / 3, instanceCount, 0);
+					instanceCount = 0; //Reset
+				}
 			}
-		}
+		};
+
+		ProcessList(itemsMain);
+		// Margin ring exists only for the sun shadow pass.
+		if (bSmap)
+			ProcessList(itemsRing);
 
 		//Render remaining instances
 		if (instanceCount > 0 && instanceCount < currentSize)

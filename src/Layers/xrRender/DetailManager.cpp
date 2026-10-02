@@ -91,7 +91,10 @@ void CDetailManager::cache_Free()
 #endif
 		for (u32 i = 0; i < 3; ++i)
 			for (u32 j = 0; j < 2; ++j)
+			{
 				Objectl.m_items[i][j].clear();
+				Objectl.m_items_shadow[i][j].clear();
+			}
 	}
 }
 
@@ -192,6 +195,16 @@ void CDetailManager::UpdateVisibleM()
 	PROF_EVENT("UpdateVisibleM");
 	CFrustum	View;
 	View.CreateFromMatrix		(RDEVICE.mFullTransform_saved, FRUSTUM_P_LRTB + FRUSTUM_P_FAR);
+
+	// Expanded frustum for the sun SMAP margin ring: side planes moved
+	// outward (inside is n.p+d<=0, so subtracting d expands). A metric
+	// margin gives a wide angular ring near the camera (where off-screen
+	// near clumps must keep casting) and a narrow angular ring far away.
+	constexpr	float			SMAP_RING_MARGIN = 16.0f;	// ~near cascade size
+	CFrustum	ViewShadow;
+	ViewShadow.CreateFromMatrix	(RDEVICE.mFullTransform_saved, FRUSTUM_P_LRTB + FRUSTUM_P_FAR);
+	for (int p = 0; p < 4; ++p)
+		ViewShadow.planes[p].d	-= SMAP_RING_MARGIN;
 	
 	float fade_limit			= dm_fade;	fade_limit=fade_limit*fade_limit;
 	float fade_start			= 1.f;		fade_start=fade_start*fade_start;
@@ -207,7 +220,10 @@ void CDetailManager::UpdateVisibleM()
 		CDetail& Objectl = *D;
 #endif
 		for (u32 i = 0; i < 3; ++i)
+		{
 			Objectl.m_items[i][calc_key].clear();
+			Objectl.m_items_shadow[i][calc_key].clear();
+		}
 	}
 
 	// Initialize 'vis' and 'cache'
@@ -223,8 +239,21 @@ void CDetailManager::UpdateVisibleM()
 
 		u32 mask = 0xff;
 		u32 res = View.testSAABB(MS.vis.sphere.P, MS.vis.sphere.R, MS.vis.box.data(), mask);
+
+		// Macro-cell (4x4 slots) classification. The ring decision is made
+		// per SLOT below, not here: a macro-cell intersecting the strict
+		// frustum still contains slots fully outside it, and those are
+		// exactly the edge clumps that must keep casting.
+		bool bMacroRing		= false;
+		u32 resRingMacro	= fcvNone;
+		u32 maskRingMacro	= 0xff;
 		if (fcvNone==res)
-			continue;	// invisible-view frustum
+		{
+			resRingMacro	= ViewShadow.testSAABB(MS.vis.sphere.P, MS.vis.sphere.R, MS.vis.box.data(), maskRingMacro);
+			if (fcvNone==resRingMacro)
+				continue;	// invisible-view frustum
+			bMacroRing		= true;
+		}
 
 		// test slots
 		for (u32 _i=0; _i < dm_cache_count ; _i++)
@@ -235,16 +264,44 @@ void CDetailManager::UpdateVisibleM()
 			if (S.empty)
 				continue;
 
-			// if upper test = fcvPartial - test inner slots
-			if (fcvPartial==res)
+			// Per-slot frustum test. Try strict View first; if the slot is
+			// outside it, retry the expanded ViewShadow -> ring slot.
+			bool bSlotRing	= false;
+			if (bMacroRing)
 			{
-				u32 _mask	= mask;
-				u32 _res = View.testSAABB(S.vis.sphere.P, S.vis.sphere.R, S.vis.box.data(), _mask);
-				if (fcvNone==_res)
-					continue;	// invisible-view frustum
+				// Macro-cell only survived the expanded frustum.
+				if (fcvPartial==resRingMacro)
+				{
+					u32	_mask	= maskRingMacro;
+					u32 _res	= ViewShadow.testSAABB(S.vis.sphere.P, S.vis.sphere.R, S.vis.box.data(), _mask);
+					if (fcvNone==_res)
+						continue;
+				}
+				bSlotRing		= true;
+			}
+			else
+			{
+				bool bInside	= true;
+				u32	_strictMask	= mask;
+				if (fcvPartial==res)
+				{
+					u32 _res	= View.testSAABB(S.vis.sphere.P, S.vis.sphere.R, S.vis.box.data(), _strictMask);
+					if (fcvNone==_res)
+						bInside	= false;
+				}
+				if (!bInside)
+				{
+					u32	_ringMask = 0xff;
+					u32 _res	= ViewShadow.testSAABB(S.vis.sphere.P, S.vis.sphere.R, S.vis.box.data(), _ringMask);
+					if (fcvNone==_res)
+						continue;	// invisible-view frustum
+					bSlotRing		= true;
+				}
 			}
 #ifndef _EDITOR
-			if (!RImplementation.HOM.visible(S.vis))
+			// HOM culls in screen space and is meaningless for the
+			// off-screen margin ring, which must be kept unconditionally.
+			if (!bSlotRing && !RImplementation.HOM.visible(S.vis))
 				continue;	// invisible-occlusion
 #endif
 			// Add to visibility structures
@@ -277,8 +334,11 @@ void CDetailManager::UpdateVisibleM()
 						continue;
 
 					u32 vis_id = 0;
-					if (ssa > r_ssaCHEAP)
-						vis_id = Item.vis_ID;
+				if (ssa > r_ssaCHEAP)
+					vis_id = Item.vis_ID;
+				if (bSlotRing)
+					D.m_items_shadow[vis_id][calc_key].push_back(SItem);
+				else
 					D.m_items[vis_id][calc_key].push_back(SItem);
 				}
 			}
