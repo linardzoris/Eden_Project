@@ -36,7 +36,8 @@ static ComPtr<ID3D12PipelineState> g_cubePSO;
 static D3D12_GPU_VIRTUAL_ADDRESS g_cubeCBV = 0;
 static void* g_cubeCBPtr = nullptr;
 
-struct CubeVertex { float pos[3]; float nrm[3]; };
+// M6: 顶点规范化布局 32B = pos + nrm + uv（与 R5Visual 子网格一致）
+struct CubeVertex { float pos[3]; float nrm[3]; float uv[2]; };
 static D3D12_GPU_VIRTUAL_ADDRESS g_cubeVB = 0;
 static D3D12_GPU_VIRTUAL_ADDRESS g_cubeIB = 0;
 
@@ -85,7 +86,7 @@ float4 PSMain(VSOut i) : SV_TARGET
 )";
 
 // M4a: 立方体着色器（MRT 输出 G-buffer：albedo + 法线）
-// M4c: 采样测试纹理（t2 + s0）
+// M4c/M6: 采样纹理（t2 + s0），使用顶点真实 UV
 static const char* g_hlslCube = R"(
 cbuffer CB : register(b0)
 {
@@ -101,6 +102,7 @@ struct VSIn
 {
 	float3 pos : POSITION;
 	float3 nrm : NORMAL;
+	float2 uv  : TEXCOORD0;
 };
 
 struct VSOut
@@ -115,11 +117,7 @@ VSOut VSMain(VSIn i)
 	VSOut o;
 	o.pos = mul(float4(i.pos, 1.0), mvp);
 	o.nrm = mul(float4(i.nrm, 0.0), world).xyz;
-	// 用法线方向选面，生成平铺 UV（简单 box mapping）
-	float3 an = abs(i.nrm);
-	if (an.x > 0.5)		o.uv = i.pos.zy * 0.5 + 0.5;
-	else if (an.y > 0.5) o.uv = i.pos.xz * 0.5 + 0.5;
-	else				o.uv = i.pos.xy * 0.5 + 0.5;
+	o.uv = i.uv;	// 顶点真实 UV（M6）
 	return o;
 }
 
@@ -513,10 +511,11 @@ bool r5_pipeline::Init()
 	if (!cubeVs || !cubePs)
 		return false;
 
-	// 输入布局
+	// 输入布局（规范化 32B：pos@0 + nrm@12 + uv@24）
 	D3D12_INPUT_ELEMENT_DESC layout[] = {
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 	};
 
 	// PSO
@@ -550,20 +549,27 @@ bool r5_pipeline::Init()
 		return false;
 	}
 
-	// 静态几何：24 顶点立方体（每面独立法线）
+	// 静态几何：24 顶点立方体（每面独立法线）+ 每面 box-mapping UV
+	// UV 规则（对应旧 shader box mapping）：±X 面 pos.zy、±Y 面 pos.xz、±Z 面 pos.xy，各 +0.5
 	static const CubeVertex cubeVerts[24] = {
-		// -Z
-		{{-0.5f,-0.5f,-0.5f},{0,0,-1}}, {{0.5f,-0.5f,-0.5f},{0,0,-1}}, {{0.5f,0.5f,-0.5f},{0,0,-1}}, {{-0.5f,0.5f,-0.5f},{0,0,-1}},
-		// +Z
-		{{-0.5f,-0.5f,0.5f},{0,0,1}}, {{0.5f,-0.5f,0.5f},{0,0,1}}, {{0.5f,0.5f,0.5f},{0,0,1}}, {{-0.5f,0.5f,0.5f},{0,0,1}},
-		// -X
-		{{-0.5f,-0.5f,-0.5f},{-1,0,0}}, {{-0.5f,0.5f,-0.5f},{-1,0,0}}, {{-0.5f,0.5f,0.5f},{-1,0,0}}, {{-0.5f,-0.5f,0.5f},{-1,0,0}},
-		// +X
-		{{0.5f,-0.5f,-0.5f},{1,0,0}}, {{0.5f,0.5f,-0.5f},{1,0,0}}, {{0.5f,0.5f,0.5f},{1,0,0}}, {{0.5f,-0.5f,0.5f},{1,0,0}},
-		// -Y
-		{{-0.5f,-0.5f,-0.5f},{0,-1,0}}, {{-0.5f,-0.5f,0.5f},{0,-1,0}}, {{0.5f,-0.5f,0.5f},{0,-1,0}}, {{0.5f,-0.5f,-0.5f},{0,-1,0}},
-		// +Y
-		{{-0.5f,0.5f,-0.5f},{0,1,0}}, {{-0.5f,0.5f,0.5f},{0,1,0}}, {{0.5f,0.5f,0.5f},{0,1,0}}, {{0.5f,0.5f,-0.5f},{0,1,0}},
+		// -Z (nrm 0,0,-1): uv = pos.xy + 0.5
+		{{-0.5f,-0.5f,-0.5f},{0,0,-1},{0,0}}, {{0.5f,-0.5f,-0.5f},{0,0,-1},{1,0}},
+		{{0.5f,0.5f,-0.5f},{0,0,-1},{1,1}}, {{-0.5f,0.5f,-0.5f},{0,0,-1},{0,1}},
+		// +Z (nrm 0,0,1): uv = pos.xy + 0.5
+		{{-0.5f,-0.5f,0.5f},{0,0,1},{0,0}}, {{0.5f,-0.5f,0.5f},{0,0,1},{1,0}},
+		{{0.5f,0.5f,0.5f},{0,0,1},{1,1}}, {{-0.5f,0.5f,0.5f},{0,0,1},{0,1}},
+		// -X (nrm -1,0,0): uv = pos.zy + 0.5 (z→u, y→v)
+		{{-0.5f,-0.5f,-0.5f},{-1,0,0},{0,0}}, {{-0.5f,0.5f,-0.5f},{-1,0,0},{0,1}},
+		{{-0.5f,0.5f,0.5f},{-1,0,0},{1,1}}, {{-0.5f,-0.5f,0.5f},{-1,0,0},{1,0}},
+		// +X (nrm 1,0,0): uv = pos.zy + 0.5
+		{{0.5f,-0.5f,-0.5f},{1,0,0},{0,0}}, {{0.5f,0.5f,-0.5f},{1,0,0},{0,1}},
+		{{0.5f,0.5f,0.5f},{1,0,0},{1,1}}, {{0.5f,-0.5f,0.5f},{1,0,0},{1,0}},
+		// -Y (nrm 0,-1,0): uv = pos.xz + 0.5
+		{{-0.5f,-0.5f,-0.5f},{0,-1,0},{0,0}}, {{-0.5f,-0.5f,0.5f},{0,-1,0},{1,0}},
+		{{0.5f,-0.5f,0.5f},{0,-1,0},{1,1}}, {{0.5f,-0.5f,-0.5f},{0,-1,0},{0,1}},
+		// +Y (nrm 0,1,0): uv = pos.xz + 0.5
+		{{-0.5f,0.5f,-0.5f},{0,1,0},{0,0}}, {{-0.5f,0.5f,0.5f},{0,1,0},{1,0}},
+		{{0.5f,0.5f,0.5f},{0,1,0},{1,1}}, {{0.5f,0.5f,-0.5f},{0,1,0},{0,1}},
 	};
 
 	static const u16 cubeIdx[36] = {
@@ -807,7 +813,7 @@ void r5_pipeline::DrawCube(float timeSec)
 	D3D12_VERTEX_BUFFER_VIEW vbv = {};
 	vbv.BufferLocation = g_cubeVB;
 	vbv.SizeInBytes = sizeof(CubeVertex) * 24;
-	vbv.StrideInBytes = sizeof(CubeVertex);
+	vbv.StrideInBytes = sizeof(CubeVertex);	// 32B（pos+nrm+uv）
 	cmd->IASetVertexBuffers(0, 1, &vbv);
 
 	D3D12_INDEX_BUFFER_VIEW ibv = {};
@@ -849,9 +855,13 @@ void r5_pipeline::DrawVisual(const R5Visual& v, float timeSec)
 	WriteCubeCB(model, timeSec);
 	PrepareGBuffer(cmd);
 
-	// 逐个绘制子网格（每个自带 stride/顶点格式）
+	// 逐个绘制子网格（每个自带 stride/顶点格式/贴图）
 	for (const R5Visual::SubMesh& sm : v.m_meshes)
 	{
+		// M6: 绑定子网格自己的贴图 SRV（缺失时 PrepareGBuffer 已绑定测试纹理）
+		if (sm.texSRV.ptr != 0)
+			cmd->SetGraphicsRootDescriptorTable(1, sm.texSRV);
+
 		D3D12_VERTEX_BUFFER_VIEW vbv = {};
 		vbv.BufferLocation = sm.VB;
 		vbv.SizeInBytes = (UINT64)sm.vCount * sm.stride;

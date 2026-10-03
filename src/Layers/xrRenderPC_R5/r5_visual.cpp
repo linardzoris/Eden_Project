@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "r5_visual.h"
 #include "r5_resources.h"
+#include "r5_texture.h"
 
 #include <d3d12.h>
 
@@ -51,48 +52,43 @@ static UINT ComputeVertexStride(u32 fvf)
 static UINT ComputeVertexStride(u32 fvf); // fwd
 
 // 各 FVF 格式中 POSITION/NORMAL 的字节偏移（pack(2) vertBoned*W 布局）
-static void GetPosNrmOffset(u32 fvf, UINT& posOff, UINT& nrmOff, bool& hasNrm)
+// 各 FVF 格式中 POSITION/NORMAL/UV 的字节偏移（pack(2) vertBoned*W 布局）
+// 返回 uvOff；hasUv=false 表示无 UV（标准 FVF 无 TEX 时）
+static void GetPosNrmUvOffset(u32 fvf, UINT& posOff, UINT& nrmOff, UINT& uvOff, bool& hasNrm, bool& hasUv)
 {
 	hasNrm = true;
+	hasUv = true;
 	switch (fvf)
 	{
-	case 1:  case 0x12071980: posOff = 0;  nrmOff = 12; break;	// vertBoned1W: P@0 N@12
+	case 1:  case 0x12071980: posOff = 0;  nrmOff = 12; uvOff = 48; break;	// vertBoned1W: P@0 N@12 uv@48
 	case 2:  case 0x240E3300:
-	case 0x36154C80:           posOff = 4;  nrmOff = 16; break;	// vertBoned2W: m[2]@0 P@4 N@16
-	case 0x481CC600:           posOff = 6;  nrmOff = 18; break;	// vertBoned3W: m[3]@0 P@6 N@18
-	case 0x5A2B1F80:           posOff = 8;  nrmOff = 20; break;	// vertBoned4W: m[4]@0 P@8 N@20
+	case 0x36154C80:           posOff = 4;  nrmOff = 16; uvOff = 56; break;	// vertBoned2W: m[2]@0 P@4 N@16 uv@56
+	case 0x481CC600:           posOff = 6;  nrmOff = 18; uvOff = 62; break;	// vertBoned3W: m[3]@0 P@6 N@18 uv@62
+	case 0x5A2B1F80:           posOff = 8;  nrmOff = 20; uvOff = 68; break;	// vertBoned4W: m[4]@0 P@8 N@20 uv@68
 	default:
-		posOff = 0; nrmOff = 12; break;
-	}
-	// 标准 FVF 路径：若未声明 NORMAL 则用默认法线
-	if ((fvf & 0x80000000u) == 0)
 	{
-		// 仅骨架 sentinel 是高位值；标准 FVF 检查 NORMAL 位
-		switch (fvf)
-		{
-		case 1: case 2: case 0x12071980: case 0x240E3300:
-		case 0x481CC600: case 0x5A2B1F80: case 0x36154C80:
-			break;
-		default:
-			if (!(fvf & R5_FVF_NORMAL))
-			{
-				hasNrm = false;
-				posOff = 0;
-				// XYZ 后无 NORMAL；nrmOff 无效
-			}
-			break;
-		}
+		// 标准 FVF：XYZ[+NORMAL[+DIFFUSE[+SPECULAR]]][+TEX0..n]
+		posOff = 0;
+		UINT o = 12; // XYZ
+		if (fvf & R5_FVF_NORMAL)  { nrmOff = o; o += 12; } else { nrmOff = o; hasNrm = false; }
+		if (fvf & R5_FVF_DIFFUSE) o += 4;
+		if (fvf & R5_FVF_SPECULAR) o += 4;
+		UINT nTex = (fvf & R5_FVF_TEXMASK) >> R5_FVF_TEXSHIFT;
+		if (nTex > 0) { uvOff = o; } else { uvOff = 0; hasUv = false; }
+		break;
+	}
 	}
 }
 
-// 单个已解析子网格（GEOMDEF 流，规范化 verts: Fvector pos + Fvector nrm = 24B）
+// 单个已解析子网格（GEOMDEF 流，规范化 verts: pos + nrm + uv = 32B）
 struct CollectedMesh
 {
 	UINT vCount = 0;
 	UINT iCount = 0;
-	UINT stride = 24;	// 规范化步长
-	xr_vector<u8> verts;	// 24B/顶点：pos@0, nrm@12
+	UINT stride = 32;	// 规范化步长
+	xr_vector<u8> verts;	// 32B/顶点：pos@0, nrm@12, uv@24
 	xr_vector<u8> inds;		// 索引字节（u16）
+	string_path texName;	// M6: 子网格贴图名（OGF_TEXTURE 首个 Z-string），空表示无
 	bool ok = false;
 };
 
@@ -115,27 +111,30 @@ static void CollectGeometry(const u8* p, size_t size, CollectedMesh& out)
 			UINT srcStride = ComputeVertexStride(fvfTmp);
 			if (srcStride && 8u + (u64)vc * srcStride <= sz)
 			{
-				UINT posOff, nrmOff;
-				bool hasNrm;
-				GetPosNrmOffset(fvfTmp, posOff, nrmOff, hasNrm);
+				UINT posOff, nrmOff, uvOff;
+				bool hasNrm, hasUv;
+				GetPosNrmUvOffset(fvfTmp, posOff, nrmOff, uvOff, hasNrm, hasUv);
 
 				out.vCount = vc;
-				out.stride = 24;
-				out.verts.resize((size_t)vc * 24);
+				out.stride = 32;
+				out.verts.resize((size_t)vc * 32);
 				const u8* s = d + 8;
 				for (u32 i = 0; i < vc; ++i)
 				{
 					const u8* sv = s + (size_t)i * srcStride;
-					u8* dv = out.verts.data() + (size_t)i * 24;
+					u8* dv = out.verts.data() + (size_t)i * 32;
 					memcpy(dv, sv + posOff, 12);
 					if (hasNrm)
 						memcpy(dv + 12, sv + nrmOff, 12);
 					else
 					{
-						// 默认 +Y 法线
 						dv[12] = 0; dv[13] = 0; dv[14] = 0x3F; dv[15] = 0;
 						memset(dv + 16, 0, 8);
 					}
+					if (hasUv)
+						memcpy(dv + 24, sv + uvOff, 8);
+					else
+						memset(dv + 24, 0, 8);
 				}
 			}
 		}
@@ -146,6 +145,18 @@ static void CollectGeometry(const u8* p, size_t size, CollectedMesh& out)
 			{
 				out.iCount = ic;
 				out.inds.assign(d + 4, d + 4 + (size_t)ic * 2);
+			}
+		}
+		else if (id == OGF_TEXTURE && sz >= 1 && out.texName[0] == 0)
+		{
+			// OGF_TEXTURE: Z-string 贴图名 + Z-string shader 名
+			size_t n = 0;
+			while (n < sz && d[n] != 0 && n < sizeof(out.texName) - 1)
+				++n;
+			if (n > 0)
+			{
+				memcpy(out.texName, d, n);
+				out.texName[n] = 0;
 			}
 		}
 		o += 8 + sz;
@@ -215,6 +226,7 @@ bool R5Visual::Load(const char* name)
 	}
 	// 顶层静态网格（MT_NORMAL）：几何直接在顶层
 	CollectedMesh topMesh;
+	topMesh.texName[0] = 0;	// string_path 是栈数组，必须先清空
 	CollectGeometry(base, total, topMesh);
 	if (topMesh.ok)
 	{
@@ -223,7 +235,8 @@ bool R5Visual::Load(const char* name)
 		memcpy(vdst, topMesh.verts.data(), (size_t)topMesh.vCount * topMesh.stride);
 		void* idst = r5_res::g_upload.Alloc((u64)topMesh.iCount * 2, iAddr);
 		memcpy(idst, topMesh.inds.data(), (size_t)topMesh.iCount * 2);
-		m_meshes.push_back({ vAddr, iAddr, topMesh.stride, topMesh.vCount, topMesh.iCount });
+		D3D12_GPU_DESCRIPTOR_HANDLE tex = r5_texture::Load(topMesh.texName[0] ? topMesh.texName : "$shadertest");
+		m_meshes.push_back({ vAddr, iAddr, topMesh.stride, topMesh.vCount, topMesh.iCount, tex });
 	}
 
 	// 骨架网格（MT_SKELETON_RIGID=10 / MT_SKELETON_ANIM=3 / GEOMDEF）：几何在 OGF_CHILDREN 子网格
@@ -246,6 +259,7 @@ bool R5Visual::Load(const char* name)
 					if (c + 8 + subSz > sz)
 						break;
 					CollectedMesh sub;
+					sub.texName[0] = 0;	// string_path 是栈数组，必须先清空（否则复用旧子网格的贴图名）
 					CollectGeometry(d + c + 8, subSz, sub);
 					if (sub.ok)
 					{
@@ -256,7 +270,14 @@ bool R5Visual::Load(const char* name)
 						void* idst = r5_res::g_upload.Alloc((u64)sub.iCount * 2, iAddr);
 						memcpy(idst, sub.inds.data(), (size_t)sub.iCount * 2);
 
-						m_meshes.push_back({ vAddr, iAddr, sub.stride, sub.vCount, sub.iCount });
+						// M6: 加载子网格贴图（缺失/加载失败回退测试纹理）
+						D3D12_GPU_DESCRIPTOR_HANDLE tex = {};
+						if (sub.texName[0])
+							tex = r5_texture::Load(sub.texName);
+						if (tex.ptr == 0)
+							tex = r5_texture::GetTestSRV();
+
+						m_meshes.push_back({ vAddr, iAddr, sub.stride, sub.vCount, sub.iCount, tex });
 					}
 					c += 8 + subSz;
 				}

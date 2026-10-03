@@ -31,7 +31,7 @@ public:
 	virtual u32				getType() override { return m_type; }
 	virtual shared_str		getDebugName() override { return m_name; }
 
-	// 单个子网格（独立顶点格式/缓冲，自带 stride）
+	// 单个子网格（独立顶点格式/缓冲，自带 stride；规范化 verts = pos+nrm+uv 32B）
 	struct SubMesh
 	{
 		D3D12_GPU_VIRTUAL_ADDRESS VB = 0;
@@ -39,6 +39,7 @@ public:
 		UINT stride = 0;
 		UINT vCount = 0;
 		UINT iCount = 0;
+		D3D12_GPU_DESCRIPTOR_HANDLE texSRV = {};	// M6: 子网格贴图 SRV（缺失时回退测试纹理）
 	};
 
 	// 解析 OGF 并上传几何到 GPU。失败返回 false。

@@ -17,9 +17,24 @@ namespace dx12
 // 状态
 // ---------------------------------------------------------------------------
 
+// 通用纹理缓存条目（M6）
+struct TexEntry
+{
+	Microsoft::WRL::ComPtr<ID3D12Resource> res;
+	Microsoft::WRL::ComPtr<ID3D12Resource> uploadBuf;
+	xr_vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> layouts;
+	xr_vector<UINT> numRows;
+	xr_vector<UINT64> rowSizes;
+	UINT numSub = 0;
+	bool uploaded = false;
+	D3D12_GPU_DESCRIPTOR_HANDLE gpuSRV = {};
+};
+
+static xr_vector<TexEntry> g_entries;
+static xr_vector<shared_str> g_names;
+
 static ComPtr<ID3D12Resource> g_testTex;
 static ComPtr<ID3D12Resource> g_uploadBuf;
-static ComPtr<ID3D12DescriptorHeap> g_srvHeap;	// CPU-only 持久 SRV 堆
 static D3D12_CPU_DESCRIPTOR_HANDLE g_testSRV_CPU = {};
 static D3D12_GPU_DESCRIPTOR_HANDLE g_testSRV = {};
 static bool g_ready = false;
@@ -31,6 +46,149 @@ static xr_vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> g_layouts;
 static xr_vector<UINT> g_numRows;
 static xr_vector<UINT64> g_rowSizes;
 static bool g_uploadDone = false;
+
+// 通用 DDS 加载核心：读取文件 -> 建纹理 + UPLOAD 缓冲 -> 拷贝像素到 UPLOAD -> 创建 SRV
+// 返回是否成功；SRV 描述符分配在 g_gpuHeap（caller 需保证 Init 期调用）
+static bool LoadDDSCommon(const wchar_t* wpath, ID3D12Resource** outRes, ID3D12Resource** outUpload,
+	DirectX::TexMetadata& outMeta, xr_vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& layouts,
+	xr_vector<UINT>& numRows, xr_vector<UINT64>& rowSizes)
+{
+	ID3D12Device* dev = dx12::GetDevice();
+
+	DirectX::ScratchImage image;
+	HRESULT hr = DirectX::LoadFromDDSFile(wpath, DirectX::DDS_FLAGS_NONE, &outMeta, image);
+	if (FAILED(hr))
+		return false;
+
+	D3D12_HEAP_PROPERTIES heapProps = {};
+	heapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
+
+	D3D12_RESOURCE_DESC texDesc = {};
+	texDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	texDesc.Width = outMeta.width;
+	texDesc.Height = (UINT)outMeta.height;
+	texDesc.DepthOrArraySize = (UINT16)outMeta.arraySize;
+	texDesc.MipLevels = (UINT16)outMeta.mipLevels;
+	texDesc.Format = outMeta.format;
+	texDesc.SampleDesc.Count = 1;
+	texDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+
+	ComPtr<ID3D12Resource> res;
+	hr = dev->CreateCommittedResource(
+		&heapProps, D3D12_HEAP_FLAG_NONE, &texDesc,
+		D3D12_RESOURCE_STATE_COPY_DEST,
+		nullptr,
+		IID_PPV_ARGS(&res));
+	if (FAILED(hr))
+		return false;
+
+	UINT numSub = (UINT)outMeta.mipLevels * (UINT)outMeta.arraySize;
+	layouts.resize(numSub);
+	numRows.resize(numSub);
+	rowSizes.resize(numSub);
+	UINT64 totalBytes = 0;
+	dev->GetCopyableFootprints(&texDesc, 0, numSub, 0, layouts.data(), numRows.data(), rowSizes.data(), &totalBytes);
+
+	D3D12_HEAP_PROPERTIES uploadHeap = {};
+	uploadHeap.Type = D3D12_HEAP_TYPE_UPLOAD;
+
+	D3D12_RESOURCE_DESC uploadDesc = {};
+	uploadDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	uploadDesc.Width = totalBytes;
+	uploadDesc.Height = 1;
+	uploadDesc.DepthOrArraySize = 1;
+	uploadDesc.MipLevels = 1;
+	uploadDesc.SampleDesc.Count = 1;
+	uploadDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+
+	ComPtr<ID3D12Resource> uploadBuf;
+	hr = dev->CreateCommittedResource(
+		&uploadHeap, D3D12_HEAP_FLAG_NONE, &uploadDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&uploadBuf));
+	if (FAILED(hr))
+		return false;
+
+	void* mapped = nullptr;
+	hr = uploadBuf->Map(0, nullptr, &mapped);
+	if (FAILED(hr))
+		return false;
+	u8* uploadCpu = (u8*)mapped;
+
+	for (UINT i = 0; i < numSub; ++i)
+	{
+		const DirectX::Image* img = image.GetImage(i % outMeta.mipLevels, i / outMeta.mipLevels, 0);
+		if (!img) continue;
+
+		D3D12_PLACED_SUBRESOURCE_FOOTPRINT& fp = layouts[i];
+		u8* dst = uploadCpu + fp.Offset;
+		const u8* src = (const u8*)img->pixels;
+
+		for (UINT row = 0; row < numRows[i]; ++row)
+		{
+			memcpy(dst + row * fp.Footprint.RowPitch, src + row * img->rowPitch, rowSizes[i]);
+		}
+	}
+	uploadBuf->Unmap(0, nullptr);
+
+	*outRes = res.Detach();
+	*outUpload = uploadBuf.Detach();
+	return true;
+}
+
+// 通用纹理加载（缓存去重）
+D3D12_GPU_DESCRIPTOR_HANDLE r5_texture::Load(const char* relPath)
+{
+	if (!relPath || !relPath[0])
+		return {};
+	for (size_t i = 0; i < g_names.size(); ++i)
+		if (g_names[i].equal(relPath))
+			return g_entries[i].gpuSRV;
+
+	char full[MAX_PATH];
+	xr_strconcat(full, "gamedata\\textures\\", relPath, ".dds");
+	wchar_t wpath[MAX_PATH];
+	MultiByteToWideChar(CP_ACP, 0, full, -1, wpath, MAX_PATH);
+
+	DirectX::TexMetadata meta;
+	xr_vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> layouts;
+	xr_vector<UINT> numRows;
+	xr_vector<UINT64> rowSizes;
+	ID3D12Resource* res = nullptr;
+	ID3D12Resource* uploadBuf = nullptr;
+	if (!LoadDDSCommon(wpath, &res, &uploadBuf, meta, layouts, numRows, rowSizes))
+	{
+		Msg("! R5 texture: Load(%s) failed", full);
+		return {};
+	}
+
+	TexEntry e;
+	e.res.Attach(res);
+	e.uploadBuf.Attach(uploadBuf);
+	e.layouts = std::move(layouts);
+	e.numRows = std::move(numRows);
+	e.rowSizes = std::move(rowSizes);
+	e.numSub = (UINT)meta.mipLevels * (UINT)meta.arraySize;
+
+	// SRV 描述符分配在 g_gpuHeap（Init 期调用，槽位在 G-buffer/测试纹理之后）
+	// 必须先 AllocCPU 再 AllocGPU（AllocGPU 依赖 offset 已被 AllocCPU 推进）
+	D3D12_CPU_DESCRIPTOR_HANDLE srvCpu = r5_res::g_gpuHeap.AllocCPU(1);
+	e.gpuSRV = r5_res::g_gpuHeap.AllocGPU(1);
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Format = meta.format;
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Texture2D.MipLevels = (UINT)meta.mipLevels;
+	dx12::GetDevice()->CreateShaderResourceView(res, &srvDesc, srvCpu);
+
+	g_names.push_back(relPath);
+	g_entries.push_back(e);
+	Msg("* R5 texture: %s loaded (%ux%u, %u mips, fmt %u), upload deferred", relPath,
+		(UINT)meta.width, (UINT)meta.height, (UINT)meta.mipLevels, (UINT)meta.format);
+	return e.gpuSRV;
+}
 
 // ---------------------------------------------------------------------------
 // Init：加载 $shadertest.dds -> DX12 纹理 + SRV
@@ -189,10 +347,45 @@ bool r5_texture::Init()
 
 void r5_texture::UploadFirstFrame(ID3D12GraphicsCommandList* cmd)
 {
+	if (!cmd)
+		return;
+
+	// 通用纹理缓存：未上传的条目录制 Copy + 屏障
+	for (size_t i = 0; i < g_entries.size(); ++i)
+	{
+		TexEntry& e = g_entries[i];
+		if (e.uploaded || !e.res || !e.uploadBuf || e.numSub == 0)
+			continue;
+
+		for (UINT k = 0; k < e.numSub; ++k)
+		{
+			D3D12_TEXTURE_COPY_LOCATION dstLoc = {};
+			dstLoc.pResource = e.res.Get();
+			dstLoc.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+			dstLoc.SubresourceIndex = k;
+
+			D3D12_TEXTURE_COPY_LOCATION srcLoc = {};
+			srcLoc.pResource = e.uploadBuf.Get();
+			srcLoc.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+			srcLoc.PlacedFootprint = e.layouts[k];
+
+			cmd->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, nullptr);
+		}
+
+		D3D12_RESOURCE_BARRIER barrier = {};
+		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+		barrier.Transition.pResource = e.res.Get();
+		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+		cmd->ResourceBarrier(1, &barrier);
+
+		e.uploaded = true;
+	}
+
+	// 测试纹理（既有路径）
 	if (g_uploadDone || !g_testTex || !g_uploadBuf || g_numSub == 0)
 		return;
 
-	// 每个 subresource 执行 CopyTextureRegion
 	for (UINT i = 0; i < g_numSub; ++i)
 	{
 		D3D12_TEXTURE_COPY_LOCATION dstLoc = {};
@@ -208,7 +401,6 @@ void r5_texture::UploadFirstFrame(ID3D12GraphicsCommandList* cmd)
 		cmd->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, nullptr);
 	}
 
-	// 屏障：COPY_DEST -> PS_SRV
 	D3D12_RESOURCE_BARRIER barrier = {};
 	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 	barrier.Transition.pResource = g_testTex.Get();
@@ -226,7 +418,8 @@ void r5_texture::UploadFirstFrame(ID3D12GraphicsCommandList* cmd)
 
 void r5_texture::Shutdown()
 {
-	g_srvHeap.Reset();
+	g_entries.clear();
+	g_names.clear();
 	g_uploadBuf.Reset();
 	g_testTex.Reset();
 	g_testSRV = {};
