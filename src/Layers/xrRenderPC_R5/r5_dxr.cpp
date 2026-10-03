@@ -2,6 +2,7 @@
 #include "r5_dxr.h"
 #include "r5_pipeline.h"
 #include "r5_resources.h"
+#include "r5_texture.h"
 
 #include <d3d12.h>
 #include <d3dcompiler.h>

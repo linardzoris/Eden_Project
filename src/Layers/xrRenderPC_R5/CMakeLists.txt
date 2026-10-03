@@ -32,3 +32,7 @@ target_link_libraries(xrRender_R5 PUBLIC "d3dcompiler.lib")
 target_link_libraries(xrRender_R5 PUBLIC "dxguid.lib")
 
 target_include_directories(xrRender_R5 PUBLIC "${RENDERDOC_API}")
+
+## DirectXTex（M4c: DDS 纹理加载，与 R4 同包）
+target_include_directories(xrRender_R5 PUBLIC "${CMAKE_BINARY_DIR}/packages/directxtex_desktop_2019.2024.6.5.1/include/")
+target_link_libraries(xrRender_R5 PUBLIC ${CMAKE_BINARY_DIR}/packages/directxtex_desktop_2019.2024.6.5.1/native/lib/${NUGET_PACKAGE_PLATFORM}/release/DirectXTex.lib)

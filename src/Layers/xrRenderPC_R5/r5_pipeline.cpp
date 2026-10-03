@@ -2,6 +2,7 @@
 #include "r5_pipeline.h"
 #include "r5_resources.h"
 #include "r5_dxr.h"
+#include "r5_texture.h"
 
 #include <d3d12.h>
 #include <d3dcompiler.h>
@@ -83,6 +84,7 @@ float4 PSMain(VSOut i) : SV_TARGET
 )";
 
 // M4a: 立方体着色器（MRT 输出 G-buffer：albedo + 法线）
+// M4c: 采样测试纹理（t2 + s0）
 static const char* g_hlslCube = R"(
 cbuffer CB : register(b0)
 {
@@ -90,6 +92,9 @@ cbuffer CB : register(b0)
 	row_major float4x4 world;
 	float4 color;
 };
+
+Texture2D g_texture : register(t2);
+SamplerState g_smp : register(s0);
 
 struct VSIn
 {
@@ -109,7 +114,11 @@ VSOut VSMain(VSIn i)
 	VSOut o;
 	o.pos = mul(float4(i.pos, 1.0), mvp);
 	o.nrm = mul(float4(i.nrm, 0.0), world).xyz;
-	o.uv = i.pos.xy * 0.5 + 0.5;
+	// 用法线方向选面，生成平铺 UV（简单 box mapping）
+	float3 an = abs(i.nrm);
+	if (an.x > 0.5)		o.uv = i.pos.zy * 0.5 + 0.5;
+	else if (an.y > 0.5) o.uv = i.pos.xz * 0.5 + 0.5;
+	else				o.uv = i.pos.xy * 0.5 + 0.5;
 	return o;
 }
 
@@ -123,7 +132,9 @@ PSOut PSMain(VSOut i)
 {
 	PSOut o;
 	float3 n = normalize(i.nrm);
-	o.albedo = float4(color.rgb, 1.0);
+	// M4c: BC3(DXT5) 带 alpha，采样后强制忽略 alpha 只取 RGB
+	float3 tex = g_texture.Sample(g_smp, i.uv).rgb;
+	o.albedo = float4(tex, 1.0);	// 去掉 color 调制，直接显示纹理
 	o.normal = float4(n * 0.5 + 0.5, 1.0);
 	return o;
 }
@@ -247,6 +258,12 @@ static bool CreateGBufferAndComposePSO(ID3D12Device* dev, UINT width, UINT heigh
 		uavDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
 		dev->CreateUnorderedAccessView(g_gbufRT[0].Get(), nullptr, &uavDesc, uavCpu);
+	}
+
+	// M4c: 纹理 SRV（GPU 堆槽位 3，在 G-buffer SRV×2 + UAV 之后，避免被覆盖）
+	if (!r5_texture::Init())
+	{
+		Msg("! R5: texture init failed");
 	}
 
 	// 合成根签名：2 SRV 描述符表 + 静态采样器
@@ -437,21 +454,42 @@ bool r5_pipeline::Init()
 	}
 
 	// -----------------------------------------------------------------------
-	// M3c: 立方体根签名（1 CBV）+ PSO + 静态几何
+	// M3c/M4c: 立方体根签名（CBV + SRV 表 t2 + 静态采样器 s0）+ PSO + 静态几何
 	// -----------------------------------------------------------------------
 
-	// 根签名：1 个 CBV 描述符
-	D3D12_ROOT_PARAMETER cubeParam = {};
-	cubeParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-	cubeParam.Descriptor.ShaderRegister = 0;
-	cubeParam.Descriptor.RegisterSpace = 0;
-	cubeParam.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+	// param[0] = CBV (b0)
+	D3D12_ROOT_PARAMETER cubeParams[2] = {};
+	cubeParams[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+	cubeParams[0].Descriptor.ShaderRegister = 0;
+	cubeParams[0].Descriptor.RegisterSpace = 0;
+	cubeParams[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+	// param[1] = SRV 描述符表 (t2)
+	D3D12_DESCRIPTOR_RANGE srvRange = {};
+	srvRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+	srvRange.NumDescriptors = 1;
+	srvRange.BaseShaderRegister = 2;	// t2
+	srvRange.RegisterSpace = 0;
+	cubeParams[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	cubeParams[1].DescriptorTable.NumDescriptorRanges = 1;
+	cubeParams[1].DescriptorTable.pDescriptorRanges = &srvRange;
+	cubeParams[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+	// 静态采样器 s0
+	D3D12_STATIC_SAMPLER_DESC sampler = {};
+	sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+	sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	sampler.ShaderRegister = 0;	// s0
+	sampler.RegisterSpace = 0;
+	sampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 	D3D12_ROOT_SIGNATURE_DESC cubeRsDesc = {};
-	cubeRsDesc.NumParameters = 1;
-	cubeRsDesc.pParameters = &cubeParam;
-	cubeRsDesc.NumStaticSamplers = 0;
-	cubeRsDesc.pStaticSamplers = nullptr;
+	cubeRsDesc.NumParameters = 2;
+	cubeRsDesc.pParameters = cubeParams;
+	cubeRsDesc.NumStaticSamplers = 1;
+	cubeRsDesc.pStaticSamplers = &sampler;
 	cubeRsDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
 	ComPtr<ID3DBlob> cubeSigBlob;
@@ -582,6 +620,7 @@ bool r5_pipeline::Init()
 void r5_pipeline::Shutdown()
 {
 	r5_dxr::Shutdown();
+	r5_texture::Shutdown();
 	g_compPSO.Reset();
 	g_compRootSig.Reset();
 	g_gbufRT[0].Reset();
@@ -644,6 +683,9 @@ void r5_pipeline::DrawCube(float timeSec)
 	ID3D12GraphicsCommandList* cmd = dx12::GetCmdList();
 	if (!cmd || !g_cubePSO || !g_cubeCBPtr || !g_gbufRT[0])
 		return;
+
+	// 首帧：在打开的命令列表上录制纹理上传（Init 阶段命令列表关闭，命令会被丢弃）
+	r5_texture::UploadFirstFrame(cmd);
 
 	// 模型矩阵（旋转 Y）
 	float angle = timeSec * 1.0f;
@@ -728,11 +770,18 @@ void r5_pipeline::DrawCube(float timeSec)
 	cmd->ClearRenderTargetView(g_gbufRTV[1], clearNormal, 0, nullptr);
 	cmd->ClearDepthStencilView(dsv, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
+	// 绑定 GPU 描述符堆（M4c: SRV 表）
+	ID3D12DescriptorHeap* heaps[] = { r5_res::g_gpuHeap.Heap() };
+	cmd->SetDescriptorHeaps(1, heaps);
+
 	cmd->SetPipelineState(g_cubePSO.Get());
 	cmd->SetGraphicsRootSignature(g_cubeRootSig.Get());
 
 	// 绑定 CBV（root CBV，无需描述符表）
 	cmd->SetGraphicsRootConstantBufferView(0, g_cubeCBV);
+
+	// M4c: 直接绑定 GPU 堆槽位 0 的 SRV（已在 Init 时创建，G-buffer 从槽位 1 开始）
+	cmd->SetGraphicsRootDescriptorTable(1, r5_texture::GetTestSRV());
 
 	// 顶点/索引缓冲（静态，使用记录的 GPU 地址）
 	D3D12_VERTEX_BUFFER_VIEW vbv = {};

@@ -498,14 +498,16 @@ void CRender::Render()
 	const float clearColor[4] = { 0.0f, 0.0f, 0.5f, 1.0f };
 	cmd->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
 
-	if (r5_dxr::Ready())
+	// M4c 纹理验证：临时强制走光栅路径以验证纹理采样（验证后恢复 DXR 优先）
+	static bool s_testTexture = true;
+	if (r5_dxr::Ready() && !s_testTexture)
 	{
 		// M4b: DXR 光追立方体 -> G-buffer RT0
 		r5_dxr::Render(Device.fTimeGlobal);
 	}
 	else
 	{
-		// M4a 回退：光栅立方体 -> G-buffer（MRT）
+		// M4a/M4c 回退：光栅立方体 -> G-buffer（MRT），采样测试纹理
 		r5_pipeline::DrawCube(Device.fTimeGlobal);
 	}
 
