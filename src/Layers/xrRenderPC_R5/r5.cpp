@@ -4,6 +4,7 @@
 #include "r5_stubs.h"
 #include "r5_pipeline.h"
 #include "r5_resources.h"
+#include "r5_dxr.h"
 
 // ---------------------------------------------------------------------------
 // FactoryPtr<IUIShader> 显式实例化（共享层 RenderFactory.cpp 提供，R5 自包含需自行提供）
@@ -485,24 +486,31 @@ void CRender::Calculate()
 
 void CRender::Render()
 {
-	// M3b: 验证拷贝 pass
-	//   1) 立方体 -> scene RT
-	//   2) scene RT -> backbuffer (copy pass)
-	// 如果拷贝成功，画面 = 和 M3c 相同的旋转立方体
+	// M4a/M4b: G-buffer MRT + 合成 pass（DXR 可用时光追写入 RT0，否则光栅立方体）
+	//   1) DXR DispatchRays -> RT0 或 立方体 -> G-buffer (RT0=albedo, RT1=normal)
+	//   2) 合成 pass 采样两张 G-buffer -> backbuffer
 	r5_pipeline::BeginFrame();
 	r5_res::BeginFrame();
 
-	// 清屏 backbuffer（深蓝，拷贝后会覆盖）
+	// 清屏 backbuffer（深蓝，合成后会覆盖）
 	ID3D12GraphicsCommandList* cmd = dx12::GetCmdList();
 	D3D12_CPU_DESCRIPTOR_HANDLE rtv = dx12::GetCurrentRTV();
 	const float clearColor[4] = { 0.0f, 0.0f, 0.5f, 1.0f };
 	cmd->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
 
-	// M3c: 立方体渲染到内部 scene RT
-	r5_pipeline::DrawCube(Device.fTimeGlobal);
+	if (r5_dxr::Ready())
+	{
+		// M4b: DXR 光追立方体 -> G-buffer RT0
+		r5_dxr::Render(Device.fTimeGlobal);
+	}
+	else
+	{
+		// M4a 回退：光栅立方体 -> G-buffer（MRT）
+		r5_pipeline::DrawCube(Device.fTimeGlobal);
+	}
 
-	// M3b: 拷贝 scene RT -> backbuffer（验证 SRV 描述符表 + 采样器 + 屏障）
-	r5_pipeline::DrawCopy();
+	// G-buffer 合成 -> backbuffer
+	r5_pipeline::DrawCompose();
 
 	r5_pipeline::EndFrame();
 }

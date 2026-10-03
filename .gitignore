@@ -87,5 +87,5 @@ gamedata/ai
 _delete_later/
 _profiles/
 bins/
-
-Eden Launcher.exe
+*.zip
+dxc_2026_09_29/

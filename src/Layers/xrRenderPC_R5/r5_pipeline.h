@@ -5,6 +5,8 @@
 // - 根签名 + PSO 创建
 // - 每帧 Begin/End 封装
 
+#include <d3d12.h>
+
 namespace r5_pipeline
 {
 	bool Init();
@@ -17,9 +19,16 @@ namespace r5_pipeline
 	// M2: 全屏三角形 pass
 	void DrawFullscreenTriangle();
 
-	// M3c: MVP 立方体 pass
+	// M3c: MVP 立方体 pass（M4a: MRT 输出 G-buffer albedo+normal）
 	void DrawCube(float timeSec);
 
-	// M3b: 全屏拷贝 pass（采样内部 RT 到 backbuffer）
-	void DrawCopy();
+	// M4a: G-buffer 合成 pass（多 SRV 采样，Lambert 光照到 backbuffer）
+	void DrawCompose();
+
+	// M4b: DXR 数据暴露
+	D3D12_GPU_VIRTUAL_ADDRESS GetCubeVB();
+	D3D12_GPU_VIRTUAL_ADDRESS GetCubeIB32();
+	ID3D12Resource* GetGBufferRT(int i);
+	D3D12_GPU_DESCRIPTOR_HANDLE GetGBufferUAV();
+	D3D12_CPU_DESCRIPTOR_HANDLE GetGBufferRTV(int i);
 }

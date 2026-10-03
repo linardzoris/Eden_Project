@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "r5_pipeline.h"
 #include "r5_resources.h"
+#include "r5_dxr.h"
 
 #include <d3d12.h>
 #include <d3dcompiler.h>
@@ -37,17 +38,21 @@ struct CubeVertex { float pos[3]; float nrm[3]; };
 static D3D12_GPU_VIRTUAL_ADDRESS g_cubeVB = 0;
 static D3D12_GPU_VIRTUAL_ADDRESS g_cubeIB = 0;
 
-// M3b: 内部 RT（立方体渲染目标 + 拷贝源）
-static ComPtr<ID3D12Resource> g_sceneRT;
-static ComPtr<ID3D12DescriptorHeap> g_rtvHeap;	// CPU-only RTV 堆
-static D3D12_CPU_DESCRIPTOR_HANDLE g_sceneRTV = {};
+// M4b: DXR 用 32 位索引副本（D3D12_RAYTRACING_GEOMETRY_DESC 仅支持 u32）+ 描述符暴露
+static D3D12_GPU_VIRTUAL_ADDRESS g_cubeIB32 = 0;
+static D3D12_GPU_DESCRIPTOR_HANDLE g_gbufUAV_GPU = {};	// RT0 的 UAV（GPU 堆槽位）
+
+// M4a: G-buffer（RT0=albedo, RT1=normal）+ 合成源
+static ComPtr<ID3D12Resource> g_gbufRT[2];
+static ComPtr<ID3D12DescriptorHeap> g_rtvHeap;	// CPU-only RTV 堆（2 槽）
+static D3D12_CPU_DESCRIPTOR_HANDLE g_gbufRTV[2] = {};
 static UINT g_rtvDescriptorSize = 0;
 
-// M3b: 拷贝 PSO（SRV 描述符表 + 静态采样器）
-static ComPtr<ID3D12RootSignature> g_copyRootSig;
-static ComPtr<ID3D12PipelineState> g_copyPSO;
-static D3D12_CPU_DESCRIPTOR_HANDLE g_copySRV_CPU = {};
-static D3D12_GPU_DESCRIPTOR_HANDLE g_copySRV_GPU = {};
+// M4a: 合成 PSO（2×SRV 描述符表 + 静态采样器）
+static ComPtr<ID3D12RootSignature> g_compRootSig;
+static ComPtr<ID3D12PipelineState> g_compPSO;
+static D3D12_CPU_DESCRIPTOR_HANDLE g_gbufSRV_CPU = {};	// 2 个连续 SRV 基址
+static D3D12_GPU_DESCRIPTOR_HANDLE g_gbufSRV_GPU = {};
 
 // 内嵌 HLSL 源码（M2 验证用，后续迁移到 gamedata）
 static const char* g_hlslFullscreen = R"(
@@ -77,11 +82,12 @@ float4 PSMain(VSOut i) : SV_TARGET
 }
 )";
 
-// M3c: 立方体着色器
+// M4a: 立方体着色器（MRT 输出 G-buffer：albedo + 法线）
 static const char* g_hlslCube = R"(
 cbuffer CB : register(b0)
 {
 	row_major float4x4 mvp;
+	row_major float4x4 world;
 	float4 color;
 };
 
@@ -102,16 +108,24 @@ VSOut VSMain(VSIn i)
 {
 	VSOut o;
 	o.pos = mul(float4(i.pos, 1.0), mvp);
-	o.nrm = i.nrm;
+	o.nrm = mul(float4(i.nrm, 0.0), world).xyz;
 	o.uv = i.pos.xy * 0.5 + 0.5;
 	return o;
 }
 
-float4 PSMain(VSOut i) : SV_TARGET
+struct PSOut
 {
-	// 简单法线可视化 + 时间变色
-	float3 n = normalize(i.nrm) * 0.5 + 0.5;
-	return float4(n * color.rgb, 1.0);
+	float4 albedo : SV_TARGET0;
+	float4 normal : SV_TARGET1;
+};
+
+PSOut PSMain(VSOut i)
+{
+	PSOut o;
+	float3 n = normalize(i.nrm);
+	o.albedo = float4(color.rgb, 1.0);
+	o.normal = float4(n * 0.5 + 0.5, 1.0);
+	return o;
 }
 )";
 
@@ -150,78 +164,104 @@ static ComPtr<ID3DBlob> LoadShaderFromFile(const char* relativePath, const char*
 }
 
 // ---------------------------------------------------------------------------
-// M3b: 创建内部 RT + 拷贝 PSO
+// M4a: 创建 G-buffer（2×RT）+ 合成 PSO（多 SRV 描述符表）
 // ---------------------------------------------------------------------------
 
-static bool CreateSceneRTAndCopyPSO(ID3D12Device* dev, UINT width, UINT height)
+static bool CreateGBufferAndComposePSO(ID3D12Device* dev, UINT width, UINT height)
 {
-	// RTV 堆（CPU-only，仅内部使用）
+	// RTV 堆（CPU-only，2 槽）
 	D3D12_DESCRIPTOR_HEAP_DESC rtvHd = {};
 	rtvHd.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-	rtvHd.NumDescriptors = 1;
+	rtvHd.NumDescriptors = 2;
 	HRESULT hr = dev->CreateDescriptorHeap(&rtvHd, IID_PPV_ARGS(&g_rtvHeap));
 	if (FAILED(hr))
 		return false;
 
 	g_rtvDescriptorSize = dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-	g_sceneRTV = g_rtvHeap->GetCPUDescriptorHandleForHeapStart();
+	g_gbufRTV[0] = g_rtvHeap->GetCPUDescriptorHandleForHeapStart();
+	g_gbufRTV[1].ptr = g_gbufRTV[0].ptr + g_rtvDescriptorSize;
 
-	// 内部 RT：R8G8B8A8，可渲染可采样
-	D3D12_CLEAR_VALUE clearRT = {};
-	clearRT.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	clearRT.Color[0] = 0.0f;
-	clearRT.Color[1] = 0.0f;
-	clearRT.Color[2] = 0.3f;
-	clearRT.Color[3] = 1.0f;
+	// SRV 描述符（GPU 堆，2 个连续槽）
+	g_gbufSRV_CPU = r5_res::g_gpuHeap.AllocCPU(2);
+	g_gbufSRV_GPU = r5_res::g_gpuHeap.AllocGPU(2);
 
 	D3D12_HEAP_PROPERTIES heapProps = {};
 	heapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
 
-	D3D12_RESOURCE_DESC rtDesc = {};
-	rtDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-	rtDesc.Width = width;
-	rtDesc.Height = height;
-	rtDesc.DepthOrArraySize = 1;
-	rtDesc.MipLevels = 1;
-	rtDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	rtDesc.SampleDesc.Count = 1;
-	rtDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+	// RT0=albedo 清为深蓝（背景），RT1=normal 清为黑（标记无几何）
+	static const float kAlbedoClear[4] = { 0.0f, 0.0f, 0.3f, 1.0f };
+	static const float kNormalClear[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	static const float* kClears[2] = { kAlbedoClear, kNormalClear };
 
-	hr = dev->CreateCommittedResource(
-		&heapProps, D3D12_HEAP_FLAG_NONE, &rtDesc,
-		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-		&clearRT,
-		IID_PPV_ARGS(&g_sceneRT)
-	);
-	if (FAILED(hr))
-		return false;
+	for (int i = 0; i < 2; ++i)
+	{
+		D3D12_CLEAR_VALUE clearVal = {};
+		clearVal.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		clearVal.Color[0] = kClears[i][0];
+		clearVal.Color[1] = kClears[i][1];
+		clearVal.Color[2] = kClears[i][2];
+		clearVal.Color[3] = kClears[i][3];
 
-	dev->CreateRenderTargetView(g_sceneRT.Get(), nullptr, g_sceneRTV);
+		D3D12_RESOURCE_DESC rtDesc = {};
+		rtDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+		rtDesc.Width = width;
+		rtDesc.Height = height;
+		rtDesc.DepthOrArraySize = 1;
+		rtDesc.MipLevels = 1;
+		rtDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		rtDesc.SampleDesc.Count = 1;
+		rtDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+		// M4b: RT0 同时作为 DXR DispatchRays 的 UAV 输出
+		if (i == 0)
+			rtDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
-	// SRV 描述符（在 GPU 堆中分配）
-	g_copySRV_CPU = r5_res::g_gpuHeap.AllocCPU(1);
-	g_copySRV_GPU = r5_res::g_gpuHeap.AllocGPU(1);
+		hr = dev->CreateCommittedResource(
+			&heapProps, D3D12_HEAP_FLAG_NONE, &rtDesc,
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+			&clearVal,
+			IID_PPV_ARGS(&g_gbufRT[i])
+		);
+		if (FAILED(hr))
+			return false;
 
-	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-	srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	srvDesc.Texture2D.MipLevels = 1;
-	dev->CreateShaderResourceView(g_sceneRT.Get(), &srvDesc, g_copySRV_CPU);
+		dev->CreateRenderTargetView(g_gbufRT[i].Get(), nullptr, g_gbufRTV[i]);
 
-	// 根签名：SRV 描述符表 + 静态采样器
+		// 每个 RT 的 SRV（顺序对应合成 shader 的 t0/t1）
+		D3D12_CPU_DESCRIPTOR_HANDLE srvCpu = g_gbufSRV_CPU;
+		srvCpu.ptr += SIZE_T(i) * r5_res::g_gpuHeap.DescriptorSize();
+
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.Texture2D.MipLevels = 1;
+		dev->CreateShaderResourceView(g_gbufRT[i].Get(), &srvDesc, srvCpu);
+	}
+
+	// M4b: RT0 的 UAV 描述符（紧跟 2 个 SRV 之后，GPU 堆槽位 2）
+	{
+		D3D12_CPU_DESCRIPTOR_HANDLE uavCpu = r5_res::g_gpuHeap.AllocCPU(1);
+		g_gbufUAV_GPU = r5_res::g_gpuHeap.AllocGPU(1);
+
+		D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+		uavDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+		dev->CreateUnorderedAccessView(g_gbufRT[0].Get(), nullptr, &uavDesc, uavCpu);
+	}
+
+	// 合成根签名：2 SRV 描述符表 + 静态采样器
 	D3D12_DESCRIPTOR_RANGE srvRange = {};
 	srvRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	srvRange.NumDescriptors = 1;
+	srvRange.NumDescriptors = 2;	// t0 albedo, t1 normal
 	srvRange.BaseShaderRegister = 0;
 	srvRange.RegisterSpace = 0;
 	srvRange.OffsetInDescriptorsFromTableStart = 0;
 
-	D3D12_ROOT_PARAMETER copyParam = {};
-	copyParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	copyParam.DescriptorTable.NumDescriptorRanges = 1;
-	copyParam.DescriptorTable.pDescriptorRanges = &srvRange;
-	copyParam.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+	D3D12_ROOT_PARAMETER compParam = {};
+	compParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	compParam.DescriptorTable.NumDescriptorRanges = 1;
+	compParam.DescriptorTable.pDescriptorRanges = &srvRange;
+	compParam.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 	D3D12_STATIC_SAMPLER_DESC sampler = {};
 	sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
@@ -232,61 +272,61 @@ static bool CreateSceneRTAndCopyPSO(ID3D12Device* dev, UINT width, UINT height)
 	sampler.RegisterSpace = 0;
 	sampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-	D3D12_ROOT_SIGNATURE_DESC copyRsDesc = {};
-	copyRsDesc.NumParameters = 1;
-	copyRsDesc.pParameters = &copyParam;
-	copyRsDesc.NumStaticSamplers = 1;
-	copyRsDesc.pStaticSamplers = &sampler;
-	copyRsDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+	D3D12_ROOT_SIGNATURE_DESC compRsDesc = {};
+	compRsDesc.NumParameters = 1;
+	compRsDesc.pParameters = &compParam;
+	compRsDesc.NumStaticSamplers = 1;
+	compRsDesc.pStaticSamplers = &sampler;
+	compRsDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
 	ComPtr<ID3DBlob> sigBlob;
 	ComPtr<ID3DBlob> sigErr;
-	hr = D3D12SerializeRootSignature(&copyRsDesc, D3D_ROOT_SIGNATURE_VERSION_1, &sigBlob, &sigErr);
+	hr = D3D12SerializeRootSignature(&compRsDesc, D3D_ROOT_SIGNATURE_VERSION_1, &sigBlob, &sigErr);
 	if (FAILED(hr))
 	{
 		if (sigErr)
-			Msg("! R5 copy root sig error: %s", (const char*)sigErr->GetBufferPointer());
+			Msg("! R5 compose root sig error: %s", (const char*)sigErr->GetBufferPointer());
 		return false;
 	}
 
-	hr = dev->CreateRootSignature(0, sigBlob->GetBufferPointer(), sigBlob->GetBufferSize(), IID_PPV_ARGS(&g_copyRootSig));
+	hr = dev->CreateRootSignature(0, sigBlob->GetBufferPointer(), sigBlob->GetBufferSize(), IID_PPV_ARGS(&g_compRootSig));
 	if (FAILED(hr))
 		return false;
 
-	// 加载 gamedata shader
-	ComPtr<ID3DBlob> vs = LoadShaderFromFile("copy_simple.ps.hlsl", "VSMain", "vs_5_1");
-	ComPtr<ID3DBlob> ps = LoadShaderFromFile("copy_simple.ps.hlsl", "PSMain", "ps_5_1");
+	// 加载 gamedata 合成 shader
+	ComPtr<ID3DBlob> vs = LoadShaderFromFile("gbuffer_compose.ps.hlsl", "VSMain", "vs_5_1");
+	ComPtr<ID3DBlob> ps = LoadShaderFromFile("gbuffer_compose.ps.hlsl", "PSMain", "ps_5_1");
 	if (!vs || !ps)
 		return false;
 
 	// PSO
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC copyPsoDesc = {};
-	copyPsoDesc.pRootSignature = g_copyRootSig.Get();
-	copyPsoDesc.VS = { vs->GetBufferPointer(), vs->GetBufferSize() };
-	copyPsoDesc.PS = { ps->GetBufferPointer(), ps->GetBufferSize() };
-	copyPsoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
-	copyPsoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
-	copyPsoDesc.RasterizerState.DepthClipEnable = FALSE;
-	copyPsoDesc.BlendState.RenderTarget[0].BlendEnable = FALSE;
-	copyPsoDesc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-	copyPsoDesc.DepthStencilState.DepthEnable = FALSE;
-	copyPsoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
-	copyPsoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-	copyPsoDesc.DSVFormat = DXGI_FORMAT_UNKNOWN;
-	copyPsoDesc.SampleMask = UINT_MAX;
-	copyPsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	copyPsoDesc.NumRenderTargets = 1;
-	copyPsoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-	copyPsoDesc.SampleDesc.Count = 1;
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC compPsoDesc = {};
+	compPsoDesc.pRootSignature = g_compRootSig.Get();
+	compPsoDesc.VS = { vs->GetBufferPointer(), vs->GetBufferSize() };
+	compPsoDesc.PS = { ps->GetBufferPointer(), ps->GetBufferSize() };
+	compPsoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
+	compPsoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+	compPsoDesc.RasterizerState.DepthClipEnable = FALSE;
+	compPsoDesc.BlendState.RenderTarget[0].BlendEnable = FALSE;
+	compPsoDesc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+	compPsoDesc.DepthStencilState.DepthEnable = FALSE;
+	compPsoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+	compPsoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+	compPsoDesc.DSVFormat = DXGI_FORMAT_UNKNOWN;
+	compPsoDesc.SampleMask = UINT_MAX;
+	compPsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	compPsoDesc.NumRenderTargets = 1;
+	compPsoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+	compPsoDesc.SampleDesc.Count = 1;
 
-	hr = dev->CreateGraphicsPipelineState(&copyPsoDesc, IID_PPV_ARGS(&g_copyPSO));
+	hr = dev->CreateGraphicsPipelineState(&compPsoDesc, IID_PPV_ARGS(&g_compPSO));
 	if (FAILED(hr))
 	{
-		Msg("! R5: copy PSO failed 0x%08x", hr);
+		Msg("! R5: compose PSO failed 0x%08x", hr);
 		return false;
 	}
 
-	Msg("* R5: scene RT + copy PSO created (%ux%u)", width, height);
+	Msg("* R5: G-buffer (2xRT) + compose PSO created (%ux%u)", width, height);
 	return true;
 }
 
@@ -458,8 +498,10 @@ bool r5_pipeline::Init()
 	cubePsoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
 	cubePsoDesc.SampleMask = UINT_MAX;
 	cubePsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	cubePsoDesc.NumRenderTargets = 1;
+	// M4a: MRT 输出到 G-buffer（RT0=albedo, RT1=normal）
+	cubePsoDesc.NumRenderTargets = 2;
 	cubePsoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+	cubePsoDesc.RTVFormats[1] = DXGI_FORMAT_R8G8B8A8_UNORM;
 	cubePsoDesc.SampleDesc.Count = 1;
 
 	hr = dev->CreateGraphicsPipelineState(&cubePsoDesc, IID_PPV_ARGS(&g_cubePSO));
@@ -506,6 +548,16 @@ bool r5_pipeline::Init()
 	memcpy(ibCpu, cubeIdx, sizeof(cubeIdx));
 	g_cubeIB = ibAddr;
 
+	// M4b: DXR 用 32 位索引副本（光线生成/命中 shader 通过 raw SRV 读取）
+	static const u32 cubeIdx32[36] = {
+		0,1,2, 0,2,3,	4,6,5, 4,7,6,	8,9,10, 8,10,11,
+		12,14,13, 12,15,14,	16,17,18, 16,18,19,	20,22,21, 20,23,22,
+	};
+	D3D12_GPU_VIRTUAL_ADDRESS ib32Addr;
+	u32* ib32Cpu = (u32*)r5_res::g_upload.Alloc(sizeof(cubeIdx32), ib32Addr);
+	memcpy(ib32Cpu, cubeIdx32, sizeof(cubeIdx32));
+	g_cubeIB32 = ib32Addr;
+
 	// 常量缓冲（256 对齐，M3c 单对象）
 	D3D12_GPU_VIRTUAL_ADDRESS cbAddr;
 	g_cubeCBPtr = r5_res::g_upload.Alloc(256, cbAddr);
@@ -514,11 +566,14 @@ bool r5_pipeline::Init()
 	// 保护静态数据
 	r5_res::g_upload.MarkPersist();
 
-	// M3b: 内部 RT + 拷贝 PSO
-	if (!CreateSceneRTAndCopyPSO(dev, Device.TargetWidth, Device.TargetHeight))
+	// M4a: G-buffer + 合成 PSO
+	if (!CreateGBufferAndComposePSO(dev, Device.TargetWidth, Device.TargetHeight))
 	{
-		Msg("! R5: scene RT / copy PSO init failed");
+		Msg("! R5: G-buffer / compose PSO init failed");
 	}
+
+	// M4b: DXR（失败时 Ready()=false，回退光栅路径）
+	r5_dxr::Init();
 
 	Msg("* R5: pipeline initialized (root sig + fullscreen PSO + cube PSO)");
 	return true;
@@ -526,9 +581,11 @@ bool r5_pipeline::Init()
 
 void r5_pipeline::Shutdown()
 {
-	g_copyPSO.Reset();
-	g_copyRootSig.Reset();
-	g_sceneRT.Reset();
+	r5_dxr::Shutdown();
+	g_compPSO.Reset();
+	g_compRootSig.Reset();
+	g_gbufRT[0].Reset();
+	g_gbufRT[1].Reset();
 	g_rtvHeap.Reset();
 	g_cubePSO.Reset();
 	g_cubeRootSig.Reset();
@@ -585,15 +642,14 @@ void r5_pipeline::DrawFullscreenTriangle()
 void r5_pipeline::DrawCube(float timeSec)
 {
 	ID3D12GraphicsCommandList* cmd = dx12::GetCmdList();
-	if (!cmd || !g_cubePSO || !g_cubeCBPtr || !g_sceneRT)
+	if (!cmd || !g_cubePSO || !g_cubeCBPtr || !g_gbufRT[0])
 		return;
 
-	// MVP 矩阵（单位矩阵，立方体在屏幕中心）
+	// 模型矩阵（旋转 Y）
 	float angle = timeSec * 1.0f;
 	float c = _cos(angle), s = _sin(angle);
 
-	// 旋转矩阵 Y
-	float mvp[16] = {
+	float model[16] = {
 		c, 0, -s, 0,
 		0, 1, 0, 0,
 		s, 0, c, 0,
@@ -628,28 +684,31 @@ void r5_pipeline::DrawCube(float timeSec)
 			for (int k = 0; k < 4; ++k)
 				vp[i * 4 + j] += view[i * 4 + k] * proj[k * 4 + j];
 
-	// mvp * vp
+	// model * vp
 	float finalMvp[16] = {};
 	for (int i = 0; i < 4; ++i)
 		for (int j = 0; j < 4; ++j)
 			for (int k = 0; k < 4; ++k)
-				finalMvp[i * 4 + j] += mvp[i * 4 + k] * vp[k * 4 + j];
+				finalMvp[i * 4 + j] += model[i * 4 + k] * vp[k * 4 + j];
 
-	// 写入 CB
+	// 写入 CB：mvp@0, world@64, color@128
 	float color[4] = { _cos(timeSec * 2.0f) * 0.5f + 0.5f, _sin(timeSec * 3.0f) * 0.5f + 0.5f, 0.8f, 1.0f };
 	memcpy((u8*)g_cubeCBPtr, finalMvp, 64);
-	memcpy((u8*)g_cubeCBPtr + 64, color, 16);
+	memcpy((u8*)g_cubeCBPtr + 64, model, 64);
+	memcpy((u8*)g_cubeCBPtr + 128, color, 16);
 
-	D3D12_CPU_DESCRIPTOR_HANDLE rtv = g_sceneRTV;
 	D3D12_CPU_DESCRIPTOR_HANDLE dsv = dx12::GetCurrentDSV();
 
-	// 场景 RT：PS SRV -> RT
-	D3D12_RESOURCE_BARRIER toRT = {};
-	toRT.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-	toRT.Transition.pResource = g_sceneRT.Get();
-	toRT.Transition.StateBefore = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-	toRT.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-	cmd->ResourceBarrier(1, &toRT);
+	// G-buffer：PS SRV -> RT（两张一起屏障）
+	D3D12_RESOURCE_BARRIER toRT[2] = {};
+	for (int i = 0; i < 2; ++i)
+	{
+		toRT[i].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+		toRT[i].Transition.pResource = g_gbufRT[i].Get();
+		toRT[i].Transition.StateBefore = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+		toRT[i].Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+	}
+	cmd->ResourceBarrier(2, toRT);
 
 	D3D12_VIEWPORT vpPort = {};
 	vpPort.Width = (float)Device.TargetWidth;
@@ -662,9 +721,11 @@ void r5_pipeline::DrawCube(float timeSec)
 	sc.bottom = (LONG)Device.TargetHeight;
 	cmd->RSSetScissorRects(1, &sc);
 
-	cmd->OMSetRenderTargets(1, &rtv, FALSE, &dsv);
-	const float sceneClear[4] = { 0.0f, 0.0f, 0.3f, 1.0f };
-	cmd->ClearRenderTargetView(rtv, sceneClear, 0, nullptr);
+	cmd->OMSetRenderTargets(2, g_gbufRTV, FALSE, &dsv);
+	const float clearAlbedo[4] = { 0.0f, 0.0f, 0.3f, 1.0f };
+	const float clearNormal[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	cmd->ClearRenderTargetView(g_gbufRTV[0], clearAlbedo, 0, nullptr);
+	cmd->ClearRenderTargetView(g_gbufRTV[1], clearNormal, 0, nullptr);
 	cmd->ClearDepthStencilView(dsv, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
 	cmd->SetPipelineState(g_cubePSO.Get());
@@ -689,19 +750,36 @@ void r5_pipeline::DrawCube(float timeSec)
 	cmd->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	cmd->DrawIndexedInstanced(36, 1, 0, 0, 0);
 
-	// 场景 RT：RT -> PS SRV（供拷贝 pass 采样）
-	D3D12_RESOURCE_BARRIER toSRV = {};
-	toSRV.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-	toSRV.Transition.pResource = g_sceneRT.Get();
-	toSRV.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-	toSRV.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-	cmd->ResourceBarrier(1, &toSRV);
+	// G-buffer：RT -> PS SRV（供合成 pass 采样）
+	D3D12_RESOURCE_BARRIER toSRV[2] = {};
+	for (int i = 0; i < 2; ++i)
+	{
+		toSRV[i].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+		toSRV[i].Transition.pResource = g_gbufRT[i].Get();
+		toSRV[i].Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+		toSRV[i].Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+	}
+	cmd->ResourceBarrier(2, toSRV);
 }
 
-void r5_pipeline::DrawCopy()
+// ---------------------------------------------------------------------------
+// M4b: DXR 数据暴露（供 r5_dxr 使用）
+// ---------------------------------------------------------------------------
+
+namespace r5_pipeline
+{
+	D3D12_GPU_VIRTUAL_ADDRESS GetCubeVB() { return g_cubeVB; }
+	D3D12_GPU_VIRTUAL_ADDRESS GetCubeIB32() { return g_cubeIB32; }
+	ID3D12Resource* GetGBufferRT(int i) { return g_gbufRT[i].Get(); }
+	D3D12_GPU_DESCRIPTOR_HANDLE GetGBufferUAV() { return g_gbufUAV_GPU; }
+	D3D12_CPU_DESCRIPTOR_HANDLE GetGBufferRTV(int i) { return g_gbufRTV[i]; }
+}
+
+// M4a: G-buffer 合成 pass（采样 albedo+normal，简单 Lambert 光照输出 backbuffer）
+void r5_pipeline::DrawCompose()
 {
 	ID3D12GraphicsCommandList* cmd = dx12::GetCmdList();
-	if (!cmd || !g_copyPSO || !g_sceneRT)
+	if (!cmd || !g_compPSO || !g_gbufRT[0])
 		return;
 
 	D3D12_CPU_DESCRIPTOR_HANDLE rtv = dx12::GetCurrentRTV();
@@ -723,11 +801,11 @@ void r5_pipeline::DrawCopy()
 	cmd->RSSetScissorRects(1, &sc);
 
 	cmd->OMSetRenderTargets(1, &rtv, FALSE, &dsv);
-	cmd->SetPipelineState(g_copyPSO.Get());
-	cmd->SetGraphicsRootSignature(g_copyRootSig.Get());
+	cmd->SetPipelineState(g_compPSO.Get());
+	cmd->SetGraphicsRootSignature(g_compRootSig.Get());
 
-	// 绑定 SRV 描述符表
-	cmd->SetGraphicsRootDescriptorTable(0, g_copySRV_GPU);
+	// 绑定 2×SRV 描述符表（t0=albedo, t1=normal）
+	cmd->SetGraphicsRootDescriptorTable(0, g_gbufSRV_GPU);
 
 	cmd->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	cmd->DrawInstanced(3, 1, 0, 0);

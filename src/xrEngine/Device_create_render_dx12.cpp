@@ -47,19 +47,26 @@ namespace dx12
 
 	bool CreateDeviceAndQueue()
 	{
-		// 调试层
-		if (Core.ParamsData.test(ECoreParams::dxdebug))
+		// 调试层：-dxdebug，或 M4b 排障期对 DX12 无条件启用（之后可还原）
+		const bool dxdebug = Core.ParamsData.test(ECoreParams::dxdebug) || true;
+		if (dxdebug)
 		{
 			ComPtr<ID3D12Debug> dbg;
-			if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&dbg))))
+			HRESULT hrDbg = D3D12GetDebugInterface(IID_PPV_ARGS(&dbg));
+			if (SUCCEEDED(hrDbg) && dbg)
 			{
 				dbg->EnableDebugLayer();
+				Msg("* DX12: debug layer enabled");
+			}
+			else
+			{
+				Msg("! DX12: debug layer unavailable 0x%08x", hrDbg);
 			}
 		}
 
 		ComPtr<IDXGIFactory6> factory;
 		HRESULT hr = CreateDXGIFactory2(
-			Core.ParamsData.test(ECoreParams::dxdebug) ? DXGI_CREATE_FACTORY_DEBUG : 0,
+			dxdebug ? DXGI_CREATE_FACTORY_DEBUG : 0,
 			IID_PPV_ARGS(&factory)
 		);
 		if (FAILED(hr))
@@ -318,6 +325,7 @@ bool UpdateBuffersD3D12()
 
 bool CreateD3D12()
 {
+	Msg("* DX12: CreateD3D12 entry");
 	HWND hwnd = (HWND)SDL_GetPointerProperty(SDL_GetWindowProperties(g_AppInfo.Window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr);
 	if (!hwnd)
 	{
