@@ -485,21 +485,24 @@ void CRender::Calculate()
 
 void CRender::Render()
 {
-	// M1: 帧管理 + M2: 全屏三角形 + M3c: 立方体
+	// M3b: 验证拷贝 pass
+	//   1) 立方体 -> scene RT
+	//   2) scene RT -> backbuffer (copy pass)
+	// 如果拷贝成功，画面 = 和 M3c 相同的旋转立方体
 	r5_pipeline::BeginFrame();
 	r5_res::BeginFrame();
 
-	// 清屏（M0 验证用，后续由具体 pass 替代）
+	// 清屏 backbuffer（深蓝，拷贝后会覆盖）
 	ID3D12GraphicsCommandList* cmd = dx12::GetCmdList();
 	D3D12_CPU_DESCRIPTOR_HANDLE rtv = dx12::GetCurrentRTV();
 	const float clearColor[4] = { 0.0f, 0.0f, 0.5f, 1.0f };
 	cmd->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
 
-	// M2: 全屏三角形
-	r5_pipeline::DrawFullscreenTriangle();
-
-	// M3c: 旋转立方体（时间从引擎全局时钟取）
+	// M3c: 立方体渲染到内部 scene RT
 	r5_pipeline::DrawCube(Device.fTimeGlobal);
+
+	// M3b: 拷贝 scene RT -> backbuffer（验证 SRV 描述符表 + 采样器 + 屏障）
+	r5_pipeline::DrawCopy();
 
 	r5_pipeline::EndFrame();
 }

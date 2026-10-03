@@ -19,4 +19,7 @@ namespace r5_pipeline
 
 	// M3c: MVP 立方体 pass
 	void DrawCube(float timeSec);
+
+	// M3b: 全屏拷贝 pass（采样内部 RT 到 backbuffer）
+	void DrawCopy();
 }
