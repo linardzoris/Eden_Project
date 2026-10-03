@@ -14,6 +14,9 @@ namespace r5_pipeline
 	void BeginFrame();
 	void EndFrame();
 
-	// 全屏三角形 pass
+	// M2: 全屏三角形 pass
 	void DrawFullscreenTriangle();
+
+	// M3c: MVP 立方体 pass
+	void DrawCube(float timeSec);
 }

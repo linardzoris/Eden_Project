@@ -3,6 +3,7 @@
 #include "r5_rendertarget.h"
 #include "r5_stubs.h"
 #include "r5_pipeline.h"
+#include "r5_resources.h"
 
 // ---------------------------------------------------------------------------
 // FactoryPtr<IUIShader> 显式实例化（共享层 RenderFactory.cpp 提供，R5 自包含需自行提供）
@@ -448,6 +449,12 @@ void CRender::create()
 {
 	Target = new CRenderTarget();
 
+	// M3a: 资源基础设施（描述符堆 + 上传环形缓冲）
+	if (!r5_res::Init())
+	{
+		Msg("! R5: resources init failed");
+	}
+
 	// M1: 初始化渲染管线（根签名 + PSO）
 	if (!r5_pipeline::Init())
 	{
@@ -458,6 +465,7 @@ void CRender::create()
 void CRender::destroy()
 {
 	r5_pipeline::Shutdown();
+	r5_res::Shutdown();
 	xr_delete(Target);
 }
 
@@ -477,8 +485,9 @@ void CRender::Calculate()
 
 void CRender::Render()
 {
-	// M1: 帧管理 + M2: 全屏三角形
+	// M1: 帧管理 + M2: 全屏三角形 + M3c: 立方体
 	r5_pipeline::BeginFrame();
+	r5_res::BeginFrame();
 
 	// 清屏（M0 验证用，后续由具体 pass 替代）
 	ID3D12GraphicsCommandList* cmd = dx12::GetCmdList();
@@ -488,6 +497,9 @@ void CRender::Render()
 
 	// M2: 全屏三角形
 	r5_pipeline::DrawFullscreenTriangle();
+
+	// M3c: 旋转立方体（时间从引擎全局时钟取）
+	r5_pipeline::DrawCube(Device.fTimeGlobal);
 
 	r5_pipeline::EndFrame();
 }
