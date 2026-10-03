@@ -5,6 +5,7 @@
 #include "r5_pipeline.h"
 #include "r5_resources.h"
 #include "r5_dxr.h"
+#include "r5_visual.h"
 
 // ---------------------------------------------------------------------------
 // FactoryPtr<IUIShader> 显式实例化（共享层 RenderFactory.cpp 提供，R5 自包含需自行提供）
@@ -461,6 +462,18 @@ void CRender::create()
 	{
 		Msg("! R5: pipeline init failed");
 	}
+
+	// M5: 加载一个静态物体作为验证（真实 OGF -> DX12 VB/IB -> G-buffer）
+	R5Visual* testV = new R5Visual();
+	if (testV->Load("dynamics\\weapons\\wpn_ak74\\wpn_ak74_hud1"))
+	{
+		r5_visual::AddVisual(testV);
+		Msg("* R5: static test model 'wpn_ak74_hud1' loaded for verification");
+	}
+	else
+	{
+		xr_delete(testV);
+	}
 }
 
 void CRender::destroy()
@@ -507,8 +520,17 @@ void CRender::Render()
 	}
 	else
 	{
-		// M4a/M4c 回退：光栅立方体 -> G-buffer（MRT），采样测试纹理
-		r5_pipeline::DrawCube(Device.fTimeGlobal);
+		// M5: 渲染收集到的静态视觉（真实 OGF）；无则回退硬编码立方体
+		xr_vector<R5Visual*> vis;
+		if (r5_visual::LockAndSnapshot(vis) > 0)
+		{
+			for (size_t i = 0; i < vis.size(); ++i)
+				r5_pipeline::DrawVisual(*vis[i], Device.fTimeGlobal);
+		}
+		else
+		{
+			r5_pipeline::DrawCube(Device.fTimeGlobal);
+		}
 	}
 
 	// G-buffer 合成 -> backbuffer
@@ -549,6 +571,32 @@ IRender_Glow* CRender::glow_create()
 void CRender::glow_destroy(IRender_Glow* p_)
 {
 	xr_delete(p_);
+}
+
+IRenderVisual* CRender::model_Create(LPCSTR name, IReader* data)
+{
+	if (!name || !name[0])
+		return nullptr;
+	R5Visual* v = new R5Visual();
+	if (!v->Load(name))
+	{
+		Msg("! R5: model_Create(%s) failed", name);
+		xr_delete(v);
+		return nullptr;
+	}
+	r5_visual::AddVisual(v);
+	return v;
+}
+
+void CRender::model_Delete(IRenderVisual* & V, BOOL bDiscard)
+{
+	if (V)
+	{
+		R5Visual* v = dynamic_cast<R5Visual*>(V);
+		if (v)
+			r5_visual::RemoveVisual(v);
+		xr_delete(V);
+	}
 }
 
 void CRender::Copy(IRenderDeviceRender& _in)

@@ -2,6 +2,7 @@
 #include "r5_pipeline.h"
 #include "r5_resources.h"
 #include "r5_dxr.h"
+#include "r5_visual.h"
 #include "r5_texture.h"
 
 #include <d3d12.h>
@@ -678,26 +679,9 @@ void r5_pipeline::DrawFullscreenTriangle()
 	cmd->DrawInstanced(3, 1, 0, 0);
 }
 
-void r5_pipeline::DrawCube(float timeSec)
+// 写入 cube 常量缓冲：mvp@0, world@64, color@128
+static void WriteCubeCB(const float model[16], float timeSec)
 {
-	ID3D12GraphicsCommandList* cmd = dx12::GetCmdList();
-	if (!cmd || !g_cubePSO || !g_cubeCBPtr || !g_gbufRT[0])
-		return;
-
-	// 首帧：在打开的命令列表上录制纹理上传（Init 阶段命令列表关闭，命令会被丢弃）
-	r5_texture::UploadFirstFrame(cmd);
-
-	// 模型矩阵（旋转 Y）
-	float angle = timeSec * 1.0f;
-	float c = _cos(angle), s = _sin(angle);
-
-	float model[16] = {
-		c, 0, -s, 0,
-		0, 1, 0, 0,
-		s, 0, c, 0,
-		0, 0, 0, 1
-	};
-
 	// 透视投影
 	float fov = 60.0f * (3.14159265f / 180.0f);
 	float aspect = (float)Device.TargetWidth / (float)Device.TargetHeight;
@@ -733,12 +717,15 @@ void r5_pipeline::DrawCube(float timeSec)
 			for (int k = 0; k < 4; ++k)
 				finalMvp[i * 4 + j] += model[i * 4 + k] * vp[k * 4 + j];
 
-	// 写入 CB：mvp@0, world@64, color@128
 	float color[4] = { _cos(timeSec * 2.0f) * 0.5f + 0.5f, _sin(timeSec * 3.0f) * 0.5f + 0.5f, 0.8f, 1.0f };
 	memcpy((u8*)g_cubeCBPtr, finalMvp, 64);
 	memcpy((u8*)g_cubeCBPtr + 64, model, 64);
 	memcpy((u8*)g_cubeCBPtr + 128, color, 16);
+}
 
+// 把 G-buffer 从 PS SRV 切换为 RT 并清空（每个绘制批次开始一次）
+static void PrepareGBuffer(ID3D12GraphicsCommandList* cmd)
+{
 	D3D12_CPU_DESCRIPTOR_HANDLE dsv = dx12::GetCurrentDSV();
 
 	// G-buffer：PS SRV -> RT（两张一起屏障）
@@ -770,18 +757,51 @@ void r5_pipeline::DrawCube(float timeSec)
 	cmd->ClearRenderTargetView(g_gbufRTV[1], clearNormal, 0, nullptr);
 	cmd->ClearDepthStencilView(dsv, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
-	// 绑定 GPU 描述符堆（M4c: SRV 表）
+	// 绑定 GPU 描述符堆 + cube 管线 + CB + 纹理
 	ID3D12DescriptorHeap* heaps[] = { r5_res::g_gpuHeap.Heap() };
 	cmd->SetDescriptorHeaps(1, heaps);
-
 	cmd->SetPipelineState(g_cubePSO.Get());
 	cmd->SetGraphicsRootSignature(g_cubeRootSig.Get());
-
-	// 绑定 CBV（root CBV，无需描述符表）
 	cmd->SetGraphicsRootConstantBufferView(0, g_cubeCBV);
-
-	// M4c: 直接绑定 GPU 堆槽位 0 的 SRV（已在 Init 时创建，G-buffer 从槽位 1 开始）
 	cmd->SetGraphicsRootDescriptorTable(1, r5_texture::GetTestSRV());
+	cmd->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+}
+
+// 绘制后 G-buffer：RT -> PS SRV（供合成 pass 采样）
+static void EndGBufferToSRV(ID3D12GraphicsCommandList* cmd)
+{
+	D3D12_RESOURCE_BARRIER toSRV[2] = {};
+	for (int i = 0; i < 2; ++i)
+	{
+		toSRV[i].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+		toSRV[i].Transition.pResource = g_gbufRT[i].Get();
+		toSRV[i].Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+		toSRV[i].Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+	}
+	cmd->ResourceBarrier(2, toSRV);
+}
+
+void r5_pipeline::DrawCube(float timeSec)
+{
+	ID3D12GraphicsCommandList* cmd = dx12::GetCmdList();
+	if (!cmd || !g_cubePSO || !g_cubeCBPtr || !g_gbufRT[0])
+		return;
+
+	// 首帧：在打开的命令列表上录制纹理上传（Init 阶段命令列表关闭，命令会被丢弃）
+	r5_texture::UploadFirstFrame(cmd);
+
+	// 模型矩阵（旋转 Y）
+	float angle = timeSec * 1.0f;
+	float c = _cos(angle), s = _sin(angle);
+	float model[16] = {
+		c, 0, -s, 0,
+		0, 1, 0, 0,
+		s, 0, c, 0,
+		0, 0, 0, 1
+	};
+
+	WriteCubeCB(model, timeSec);
+	PrepareGBuffer(cmd);
 
 	// 顶点/索引缓冲（静态，使用记录的 GPU 地址）
 	D3D12_VERTEX_BUFFER_VIEW vbv = {};
@@ -796,19 +816,57 @@ void r5_pipeline::DrawCube(float timeSec)
 	ibv.Format = DXGI_FORMAT_R16_UINT;
 	cmd->IASetIndexBuffer(&ibv);
 
-	cmd->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	cmd->DrawIndexedInstanced(36, 1, 0, 0, 0);
+	EndGBufferToSRV(cmd);
+}
 
-	// G-buffer：RT -> PS SRV（供合成 pass 采样）
-	D3D12_RESOURCE_BARRIER toSRV[2] = {};
-	for (int i = 0; i < 2; ++i)
+void r5_pipeline::DrawVisual(const R5Visual& v, float timeSec)
+{
+	ID3D12GraphicsCommandList* cmd = dx12::GetCmdList();
+	if (!cmd || !g_cubePSO || !g_cubeCBPtr || !g_gbufRT[0] || v.m_meshes.empty())
+		return;
+
+	r5_texture::UploadFirstFrame(cmd);
+
+	// 模型矩阵：包围球居中 + 归一化（半径缩放到 1） + 绕 Y 轴旋转
+	// 骨架网格绑定姿势常远离原点（如 stick_bred 从 z=0.36 延伸到 z=1.84），不处理会显得异常拉长
+	const Fsphere& s = v.m_vis.sphere;
+	float sr = s.R > 0.0001f ? s.R : 1.0f;
+	float sc = 1.0f / sr;
+
+	float ang = timeSec * 1.5f;	// 慢速自转便于观察
+	float cosA = _cos(ang), sinA = _sin(ang);
+	float cx = s.P.x, cy = s.P.y, cz = s.P.z;
+
+	// M = R_y * S * T(-c)：3x3 = 缩放旋转，平移 = R * (-sc*c)
+	float model[16] = {
+		sc * cosA, 0, -sc * sinA, 0,
+		0, sc, 0, 0,
+		sc * sinA, 0, sc * cosA, 0,
+		-sc * (cosA * cx - sinA * cz), -sc * cy, -sc * (sinA * cx + cosA * cz), 1
+	};
+
+	WriteCubeCB(model, timeSec);
+	PrepareGBuffer(cmd);
+
+	// 逐个绘制子网格（每个自带 stride/顶点格式）
+	for (const R5Visual::SubMesh& sm : v.m_meshes)
 	{
-		toSRV[i].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		toSRV[i].Transition.pResource = g_gbufRT[i].Get();
-		toSRV[i].Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-		toSRV[i].Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+		D3D12_VERTEX_BUFFER_VIEW vbv = {};
+		vbv.BufferLocation = sm.VB;
+		vbv.SizeInBytes = (UINT64)sm.vCount * sm.stride;
+		vbv.StrideInBytes = sm.stride;
+		cmd->IASetVertexBuffers(0, 1, &vbv);
+
+		D3D12_INDEX_BUFFER_VIEW ibv = {};
+		ibv.BufferLocation = sm.IB;
+		ibv.SizeInBytes = (UINT64)sm.iCount * 2;
+		ibv.Format = DXGI_FORMAT_R16_UINT;
+		cmd->IASetIndexBuffer(&ibv);
+
+		cmd->DrawIndexedInstanced(sm.iCount, 1, 0, 0, 0);
 	}
-	cmd->ResourceBarrier(2, toSRV);
+	EndGBufferToSRV(cmd);
 }
 
 // ---------------------------------------------------------------------------

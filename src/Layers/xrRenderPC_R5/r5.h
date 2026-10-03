@@ -32,6 +32,10 @@ public:
 	virtual IRender_Glow*			glow_create() override;
 	virtual void					glow_destroy(IRender_Glow* p_) override;
 
+	// M5: 静态物体
+	virtual IRenderVisual*			model_Create(LPCSTR name, IReader* data = 0) override;
+	virtual void					model_Delete(IRenderVisual* & V, BOOL bDiscard) override;
+
 	// IRenderDeviceRender
 	virtual void	Copy(IRenderDeviceRender& _in) override;
 
