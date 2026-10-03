@@ -8,6 +8,7 @@
 
 
 static APILevel CurrentAPILevel = APILevel::DX11;
+APILevel g_CurrentAPILevel_ForImGui = APILevel::DX11;
 
 D3D_FEATURE_LEVEL FeatureLevel = D3D_FEATURE_LEVEL::D3D_FEATURE_LEVEL_11_0;
 void* HWSwapchain = nullptr;
@@ -23,8 +24,13 @@ void* RenderDSV = nullptr;
 void* SwapChainRTV = nullptr;
 
 extern ENGINE_API BOOL g_appLoaded;
+extern APILevel g_CurrentAPILevel_ForImGui;
 void DrawMainViewport()
 {
+	// DX12 路径下 RenderSRV 不是 ImTextureID，跳过主视口图像绘制（M0 骨架）
+	if (g_CurrentAPILevel_ForImGui == APILevel::DX12)
+		return;
+
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
@@ -164,6 +170,11 @@ bool CreateD3D11();
 bool UpdateBuffersD3D11();
 void ResizeBuffersD3D11(u16 Width, u16 Height);
 void DestroyD3D11();
+
+bool CreateD3D12();
+bool UpdateBuffersD3D12();
+void ResizeBuffersD3D12(u16 Width, u16 Height);
+void DestroyD3D12();
 
 bool CRenderDevice::InitRenderDeviceEditor()
 {
@@ -330,6 +341,12 @@ bool CRenderDevice::InitRenderDevice(APILevel API)
 		}
 		break;
 
+	case APILevel::DX12:
+		if (!CreateD3D12()) {
+			return false;
+		}
+		break;
+
 #endif
 	default:
 		break;
@@ -342,6 +359,7 @@ bool CRenderDevice::InitRenderDevice(APILevel API)
 	Device.TargetWidth = psCurrentVidMode[0];
 	Device.TargetHeight = psCurrentVidMode[1];
 	CurrentAPILevel = API;
+	g_CurrentAPILevel_ForImGui = API;
 	return true;
 }
 
@@ -353,6 +371,7 @@ void CRenderDevice::DestroyRenderDevice()
 	{
 	case APILevel::DX9:  DestroyD3D9(); break;
 	case APILevel::DX11: DestroyD3D11(); break;
+	case APILevel::DX12: DestroyD3D12(); break;
 	default: break;
 	}
 
@@ -431,6 +450,7 @@ void CRenderDevice::ResizeBuffers(u32 Width, u32 Height)
 	{
 	case APILevel::DX9:  ResizeBuffersD3D9(Width, Height); break;
 	case APILevel::DX11: ResizeBuffersD3D11(Width, Height); break;
+	case APILevel::DX12: ResizeBuffersD3D12(Width, Height); break;
 	default: break;
 	}
 

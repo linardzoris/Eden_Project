@@ -153,7 +153,10 @@ int APIENTRY WinMain
 
 		{
 			PROF_EVENT("Select Render");
-	if (Core.ParamsData.test(ECoreParams::r4)) {
+	if (Core.ParamsData.test(ECoreParams::r5)) {
+		Console->Execute("renderer renderer_r5");
+	}
+	else if (Core.ParamsData.test(ECoreParams::r4)) {
 		Console->Execute("renderer renderer_r4");
 	}
 	else if (Core.ParamsData.test(ECoreParams::r2)) {

@@ -522,6 +522,7 @@ public:
 		//	4 - r3
 		psDeviceFlags.set(rsR2, std::string("renderer_r2") == tokens[renderer_value].name);
 		psDeviceFlags.set(rsR4, std::string("renderer_r4") == tokens[renderer_value].name);
+		psDeviceFlags.set(rsR5, std::string("renderer_r5") == tokens[renderer_value].name);
 	}
 
 	virtual void	Save	(IWriter *F)	

@@ -21,14 +21,15 @@ enum ECoreParams
 	nosound				= 1 << 13, // Отключить звук
 	r2					= 1 << 14, // Принудительно включить рендерер R2
 	r4					= 1 << 15, // Принудительно включить рендерер R4
+	r5					= 1 << 16, // Принудительно включить рендерер R5 (DX12)
 
 	// Render
-	nocolormap = 1<<16,
-	skinw      = 1 << 17,
-	disasm     = 1 << 18, // Enable shader disasm
-	nonvs      = 1 << 19, // No nvidia depthstencil (dx9 only)
-	tsh        = 1 << 20,
-	noshadows  = 1 << 21, // Отключить тени
+	nocolormap = 1<<17,
+	skinw      = 1 << 18,
+	disasm     = 1 << 19, // Enable shader disasm
+	nonvs      = 1 << 20, // No nvidia depthstencil (dx9 only)
+	tsh        = 1 << 21,
+	noshadows  = 1 << 22, // Отключить тени
 	//ss_tga     = 1<<22,
 	no_occq    = 1 << 23, // Отключить очередь окклюзии
 	nodistort  = 1 << 24, // Отключить искажения

@@ -23,7 +23,8 @@ union SDL_Event;
 enum class APILevel
 {
 	DX9,
-	DX11
+	DX11,
+	DX12
 };
 
 #ifdef IXR_WINDOWS
