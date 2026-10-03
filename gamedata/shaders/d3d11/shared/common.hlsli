@@ -65,8 +65,12 @@ cbuffer static_globals
     uniform float4 m_taa_jitter;
 
     // P1: x = r4_sslr_quality tier (0 perf / 1 balanced / 2 quality),
-    // y = trace-buffer resolution scale (0.5 half-res / 1.0 full-res)
+    // y = trace-buffer resolution scale (0.5 half-res / 1.0 full-res),
+    // z = r4_sslr_intensity (reflection strength, 1.0 = neutral)
     uniform float4 sslr_params;
+
+    // x = r4_vslr_intensity (cubemap reflection strength, 1.0 = neutral)
+    uniform float4 vslr_params;
 }
 
 float calc_cyclic(float x)

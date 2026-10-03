@@ -146,8 +146,13 @@ void main(PSInput I, out float4 Point : SV_Target0, out float4 Final : SV_Target
 		SSLR.w *= GetBorderAtten(PrevSpecularUV);
 	
 #ifdef USE_OFFSCREEN_REFLECTIONS
-	float3 Color = s_env.SampleLevel(smp_linear, Point.xyz, 0.0f);
+	// VSLR fallback: sample the cubemap at the roughness-appropriate mip
+	// (matches CompureSpecularIrradance's 8*Roughness LOD), so miss pixels on
+	// rough surfaces get a properly blurred environment reflection instead of
+	// aliased mip-0 noise.
+	float3 Color = s_env.SampleLevel(smp_linear, Point.xyz, 8.0f * O.Roughness);
 	Color.xyz *= rcp(1.00001f - Color.xyz);
+	Color.xyz *= vslr_params.x; // r4_vslr_intensity
 #else
 	float3 Color = Hemi.xyz;
 #endif
@@ -162,6 +167,7 @@ void main(PSInput I, out float4 Point : SV_Target0, out float4 Final : SV_Target
 	Final.xyz = lerp(Final.xyz, Hemi.xyz, Hemi.w);
 	
 	Point.w = rcp(max(0.000001f, H.w));
+	Final.xyz *= sslr_params.z; // r4_sslr_intensity
 	Final.xyz *= rcp(1.0f + Final.xyz);
 	
 	Final.w = isNotHUD;

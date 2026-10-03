@@ -161,7 +161,7 @@ float		ps_r2_ls_bloom_kernel_scale	= .7f;				// r2-only	// gauss
 float		ps_r2_ls_bloom_threshold	= 0.1f;				// r2-only
 float		ps_r2_ls_depth_scale = 0.9999f; // 1.00001f
 float		ps_r2_ls_depth_bias = 0.00001f; // -0.0001f
-float		ps_r2_ls_squality			= 6.0f;				// 1.00f
+float		ps_r2_ls_squality			= 2.0f;				// 1.00f
 
 float		ps_r2_sun_bias				= -0.01f;			// 
 float		ps_r2_sun_far				= 160.f;
@@ -186,6 +186,8 @@ float		ps_r2_slight_fade			= 0.6f;				// 1.f
 
 float		ps_r4_vslr_distance			= 0.7f;				// 1.f
 int			ps_r4_vslr_quality			= 1;				// 0=128px, 1=256px, 2=512px cube face
+float		ps_r4_sslr_intensity		= 1.0f;				// 1.0 = neutral
+float		ps_r4_vslr_intensity		= 1.0f;				// 1.0 = neutral
 
 //	x - min (0), y - focus (1.4), z - max (100)
 Fvector3	ps_r2_dof					= Fvector3().set(-1.25f, 1.4f, 600.f);
@@ -677,7 +679,7 @@ void		xrRender_initconsole	()
 	CMD4(CCC_Float,		"r2_ls_bloom_threshold",&ps_r2_ls_bloom_threshold,	0.f,	1.f		);
 	CMD4(CCC_Float,		"r2_ls_bloom_speed",	&ps_r2_ls_bloom_speed,		0.f,	100.f	);
 	CMD3(CCC_Mask,		"r2_ls_bloom_fast",		&ps_r2_ls_flags,			R2FLAG_FASTBLOOM);
-	CMD4(CCC_Float,		"r2_ls_squality",		&ps_r2_ls_squality,			.5f,	10.f		);
+	CMD4(CCC_Float,		"r2_ls_squality",		&ps_r2_ls_squality,			.5f,	2.f		);
 
 	CMD3(CCC_Mask,		"r2_zfill",				&ps_r2_ls_flags,			R2FLAG_ZFILL	);
 	CMD4(CCC_Float,		"r2_zfill_depth",		&ps_r2_zfill,				.001f,	.5f		);
@@ -780,6 +782,8 @@ void		xrRender_initconsole	()
 	CMD3(CCC_Mask, "r4_sslr_reflections", &ps_r2_ls_flags_ext, R4FLAG_SSLR_ON_WORLD);
 	CMD4(CCC_Float, "r4_cas_sharpening", &ps_r4_cas_sharpening, 0.0f, 1.0f);
 	CMD4(CCC_Integer, "r4_sslr_quality", &ps_r4_sslr_quality, 0, 2);	// vid_restart to apply
+	CMD4(CCC_Float, "r4_sslr_intensity", &ps_r4_sslr_intensity, 0.0f, 2.0f);
+	CMD4(CCC_Float, "r4_vslr_intensity", &ps_r4_vslr_intensity, 0.0f, 4.0f);
 	CMD4(CCC_Float, "r4_gtao_intensity", &ps_r4_gtao_intensity, 0.1f, 4.0f);
 	CMD4(CCC_Integer, "r4_gtao_resolution", &ps_r4_gtao_resolution, 0, 1);	// vid_restart to apply
 

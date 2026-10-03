@@ -146,7 +146,7 @@ void CRenderTarget::phase_sslr() {
 
 		//Go go power rangers
 		RCache.set_Element(s_gtao->E[2]);
-		RCache.set_c("sslr_params", float(ps_r4_sslr_quality), sslr_res_scale, 0.0f, 0.0f);
+		RCache.set_c("sslr_params", float(ps_r4_sslr_quality), sslr_res_scale, ps_r4_sslr_intensity, 0.0f);
 		RCache.set_Geometry(g_combine);
 		RCache.Render(D3DPT_TRIANGLELIST, Offset, 0, 3, 0, 1);
 	}

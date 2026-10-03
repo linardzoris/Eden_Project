@@ -71,6 +71,14 @@ static class cl_parallax		: public R_constant_setup		{	virtual void setup	(R_con
 	RCache.set_c	(C,h,-h/2.f,1.f/r_dtex_range,1.f/r_dtex_range);
 }}	binder_parallax;
 
+static class cl_vslr_params	: public R_constant_setup
+{
+	virtual void setup	(R_constant* C)
+	{
+		RCache.set_c	(C, ps_r4_vslr_intensity, 0.f, 0.f, 0.f);
+	}
+}	binder_vslr_params;
+
 static class cl_LOD		: public R_constant_setup
 {
 	virtual void setup	(R_constant* C)
@@ -212,7 +220,8 @@ void CRender::create()
 	o.dx11_enable_tessellation = RFeatureLevel >= D3D_FEATURE_LEVEL_11_0 && ps_r2_ls_flags_ext.test(R2FLAGEXT_ENABLE_TESSELLATION);
 
 	// constants
-	dxRenderDeviceRender::Instance().Resources->RegisterConstantSetup("parallax", &binder_parallax);
+	dxRenderDeviceRender::Instance().Resources->RegisterConstantSetup("parallax",				&binder_parallax);
+	dxRenderDeviceRender::Instance().Resources->RegisterConstantSetup("vslr_params",			&binder_vslr_params);
 	dxRenderDeviceRender::Instance().Resources->RegisterConstantSetup("water_intensity", &binder_water_intensity);
 	dxRenderDeviceRender::Instance().Resources->RegisterConstantSetup("sun_shafts_intensity", &binder_sun_shafts_intensity);
 	dxRenderDeviceRender::Instance().Resources->RegisterConstantSetup("m_AlphaRef", &binder_alpha_ref);
