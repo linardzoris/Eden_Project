@@ -463,17 +463,32 @@ void CRender::create()
 		Msg("! R5: pipeline init failed");
 	}
 
-	// M5: 加载一个静态物体作为验证（真实 OGF -> DX12 VB/IB -> G-buffer）
-	R5Visual* testV = new R5Visual();
-	if (testV->Load("dynamics\\weapons\\wpn_ak74\\wpn_ak74_hud1"))
+	// M5/M7: 加载多个静态物体作为验证（真实 OGF -> DX12 VB/IB -> G-buffer）
+	// 调试场景：按世界偏移摆在相机前方（模型矩阵 = T(相机+偏移)·归一化）
+	struct TestModel { const char* path; Fvector off; };
+	static const TestModel kTestModels[] = {
+		{ "dynamics\\weapons\\wpn_ak74\\wpn_ak74_hud1", { 0.0f, 0.0f, 0.0f } },
+		{ "stick_bred", { -1.6f, -0.3f, 0.0f } },
+		{ "stick_kolbasa_bred", { 1.6f, -0.3f, 0.0f } },
+	};
+	for (const auto& tm : kTestModels)
 	{
-		r5_visual::AddVisual(testV);
-		Msg("* R5: static test model 'wpn_ak74_hud1' loaded for verification");
+		R5Visual* v = new R5Visual();
+		if (v->Load(tm.path))
+		{
+			v->worldOffset = tm.off;
+			r5_visual::AddVisual(v);
+			Msg("* R5: test model '%s' loaded for verification", tm.path);
+		}
+		else
+		{
+			xr_delete(v);
+		}
 	}
-	else
-	{
-		xr_delete(testV);
-	}
+
+	// M7: 视觉几何分配在 upload ring 持久点之后，需推进保护点，
+	// 否则每帧 BeginFrame 的 Reset 会让每帧 CB 分配覆盖几何数据
+	r5_res::g_upload.MarkPersist();
 }
 
 void CRender::destroy()
@@ -520,12 +535,14 @@ void CRender::Render()
 	}
 	else
 	{
-		// M5: 渲染收集到的静态视觉（真实 OGF）；无则回退硬编码立方体
+		// M5/M7: 渲染收集到的静态视觉（真实 OGF）；无则回退硬编码立方体
 		xr_vector<R5Visual*> vis;
 		if (r5_visual::LockAndSnapshot(vis) > 0)
 		{
+			r5_pipeline::BeginScene();	// 清 G-buffer + 绑定（只一次）
 			for (size_t i = 0; i < vis.size(); ++i)
 				r5_pipeline::DrawVisual(*vis[i], Device.fTimeGlobal);
+			r5_pipeline::EndScene();	// G-buffer -> PS SRV
 		}
 		else
 		{

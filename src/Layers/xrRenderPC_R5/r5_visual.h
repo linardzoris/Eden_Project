@@ -50,6 +50,7 @@ public:
 	shared_str m_name;
 	u32 m_type = MT_NORMAL;
 	vis_data m_vis;
+	Fvector worldOffset = { 0, 0, 0 };	// M7: 相对相机的摆放偏移（调试场景）
 };
 
 namespace r5_visual

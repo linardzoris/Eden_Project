@@ -685,9 +685,39 @@ void r5_pipeline::DrawFullscreenTriangle()
 	cmd->DrawInstanced(3, 1, 0, 0);
 }
 
-// 写入 cube 常量缓冲：mvp@0, world@64, color@128
-static void WriteCubeCB(const float model[16], float timeSec)
+// 写入常量缓冲：mvp@0, world@64, color@128
+// M7: 每个视觉从每帧 upload ring 分配独立 CB（单一持久 CB 会被后写的视觉覆盖）
+// M7: 调试场景自转轨道相机（不依赖游戏相机：renderer 切换时游戏停在菜单，相机不更新）
+static D3D12_GPU_VIRTUAL_ADDRESS WriteCubeCB(const float model[16], float timeSec)
 {
+	// 相机绕原点公转（轨道展示台）
+	float a = timeSec * 0.4f;
+	float R = 4.0f;
+	float eye[3] = { R * _cos(a), 1.2f, R * _sin(a) };
+	float at[3] = { 0, 0, 0 };
+	float up[3] = { 0, 1, 0 };
+
+	// 列向量 lookAt（相机从 eye 看向 at，-Z 前向）
+	float zx = eye[0] - at[0], zy = eye[1] - at[1], zz = eye[2] - at[2];
+	float zlen = _sqrt(zx * zx + zy * zy + zz * zz);
+	zx /= zlen; zy /= zlen; zz /= zlen;
+	// x = normalize(cross(up, z))
+	float xx = up[1] * zz - up[2] * zy, xy = up[2] * zx - up[0] * zz, xz = up[0] * zy - up[1] * zx;
+	float xlen = _sqrt(xx * xx + xy * xy + xz * xz);
+	xx /= xlen; xy /= xlen; xz /= xlen;
+	// y = cross(z, x)
+	float yx = zy * xz - zz * xy, yy = zz * xx - zx * xz, yz = zx * xy - zy * xx;
+
+	float view[16] = {
+		xx, yx, zx, 0,
+		xy, yy, zy, 0,
+		xz, yz, zz, 0,
+		-(xx * eye[0] + xy * eye[1] + xz * eye[2]),
+		-(yx * eye[0] + yy * eye[1] + yz * eye[2]),
+		-(zx * eye[0] + zy * eye[1] + zz * eye[2]),
+		1
+	};
+
 	// 透视投影
 	float fov = 60.0f * (3.14159265f / 180.0f);
 	float aspect = (float)Device.TargetWidth / (float)Device.TargetHeight;
@@ -699,14 +729,6 @@ static void WriteCubeCB(const float model[16], float timeSec)
 		0, f, 0, 0,
 		0, 0, (zfar + znear) / (znear - zfar), -1,
 		0, 0, 2.0f * znear * zfar / (znear - zfar), 0
-	};
-
-	// 视图：相机在 (0, 0, -2.5)
-	float view[16] = {
-		1, 0, 0, 0,
-		0, 1, 0, 0,
-		0, 0, 1, 0,
-		0, 0, -2.5f, 1
 	};
 
 	// view * proj
@@ -724,14 +746,24 @@ static void WriteCubeCB(const float model[16], float timeSec)
 				finalMvp[i * 4 + j] += model[i * 4 + k] * vp[k * 4 + j];
 
 	float color[4] = { _cos(timeSec * 2.0f) * 0.5f + 0.5f, _sin(timeSec * 3.0f) * 0.5f + 0.5f, 0.8f, 1.0f };
-	memcpy((u8*)g_cubeCBPtr, finalMvp, 64);
-	memcpy((u8*)g_cubeCBPtr + 64, model, 64);
-	memcpy((u8*)g_cubeCBPtr + 128, color, 16);
+
+	// 每帧 upload ring 分配独立 CB（视觉几何已 MarkPersist 保护，不会冲突）
+	D3D12_GPU_VIRTUAL_ADDRESS cbAddr;
+	void* cbPtr = r5_res::g_upload.Alloc(256, cbAddr);
+	memcpy((u8*)cbPtr, finalMvp, 64);
+	memcpy((u8*)cbPtr + 64, model, 64);
+	memcpy((u8*)cbPtr + 128, color, 16);
+	return cbAddr;
 }
 
 // 把 G-buffer 从 PS SRV 切换为 RT 并清空（每个绘制批次开始一次）
-static void PrepareGBuffer(ID3D12GraphicsCommandList* cmd)
+// M7: 场景开始 —— 清 G-buffer + 绑定管线（只做一次，避免多视觉互相清掉）
+void r5_pipeline::BeginScene()
 {
+	ID3D12GraphicsCommandList* cmd = dx12::GetCmdList();
+	if (!cmd || !g_cubePSO || !g_gbufRT[0])
+		return;
+
 	D3D12_CPU_DESCRIPTOR_HANDLE dsv = dx12::GetCurrentDSV();
 
 	// G-buffer：PS SRV -> RT（两张一起屏障）
@@ -763,19 +795,20 @@ static void PrepareGBuffer(ID3D12GraphicsCommandList* cmd)
 	cmd->ClearRenderTargetView(g_gbufRTV[1], clearNormal, 0, nullptr);
 	cmd->ClearDepthStencilView(dsv, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
-	// 绑定 GPU 描述符堆 + cube 管线 + CB + 纹理
+	// 绑定 GPU 描述符堆 + cube 管线 + 根签名
 	ID3D12DescriptorHeap* heaps[] = { r5_res::g_gpuHeap.Heap() };
 	cmd->SetDescriptorHeaps(1, heaps);
 	cmd->SetPipelineState(g_cubePSO.Get());
 	cmd->SetGraphicsRootSignature(g_cubeRootSig.Get());
-	cmd->SetGraphicsRootConstantBufferView(0, g_cubeCBV);
-	cmd->SetGraphicsRootDescriptorTable(1, r5_texture::GetTestSRV());
 	cmd->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 }
 
-// 绘制后 G-buffer：RT -> PS SRV（供合成 pass 采样）
-static void EndGBufferToSRV(ID3D12GraphicsCommandList* cmd)
+// M7: 场景结束 —— G-buffer RT -> PS SRV（供合成 pass 采样）
+void r5_pipeline::EndScene()
 {
+	ID3D12GraphicsCommandList* cmd = dx12::GetCmdList();
+	if (!cmd || !g_gbufRT[0])
+		return;
 	D3D12_RESOURCE_BARRIER toSRV[2] = {};
 	for (int i = 0; i < 2; ++i)
 	{
@@ -806,8 +839,10 @@ void r5_pipeline::DrawCube(float timeSec)
 		0, 0, 0, 1
 	};
 
-	WriteCubeCB(model, timeSec);
-	PrepareGBuffer(cmd);
+	D3D12_GPU_VIRTUAL_ADDRESS cbAddr = WriteCubeCB(model, timeSec);
+	BeginScene();
+	cmd->SetGraphicsRootConstantBufferView(0, cbAddr);
+	cmd->SetGraphicsRootDescriptorTable(1, r5_texture::GetTestSRV());
 
 	// 顶点/索引缓冲（静态，使用记录的 GPU 地址）
 	D3D12_VERTEX_BUFFER_VIEW vbv = {};
@@ -823,7 +858,7 @@ void r5_pipeline::DrawCube(float timeSec)
 	cmd->IASetIndexBuffer(&ibv);
 
 	cmd->DrawIndexedInstanced(36, 1, 0, 0, 0);
-	EndGBufferToSRV(cmd);
+	EndScene();
 }
 
 void r5_pipeline::DrawVisual(const R5Visual& v, float timeSec)
@@ -834,8 +869,8 @@ void r5_pipeline::DrawVisual(const R5Visual& v, float timeSec)
 
 	r5_texture::UploadFirstFrame(cmd);
 
-	// 模型矩阵：包围球居中 + 归一化（半径缩放到 1） + 绕 Y 轴旋转
-	// 骨架网格绑定姿势常远离原点（如 stick_bred 从 z=0.36 延伸到 z=1.84），不处理会显得异常拉长
+	// M7: 模型矩阵 = T(worldOffset) · (R_y · S · T(-c))
+	// 调试场景：模型摆在世界固定坐标（轨道相机绕原点公转，全部可见）
 	const Fsphere& s = v.m_vis.sphere;
 	float sr = s.R > 0.0001f ? s.R : 1.0f;
 	float sc = 1.0f / sr;
@@ -844,23 +879,25 @@ void r5_pipeline::DrawVisual(const R5Visual& v, float timeSec)
 	float cosA = _cos(ang), sinA = _sin(ang);
 	float cx = s.P.x, cy = s.P.y, cz = s.P.z;
 
-	// M = R_y * S * T(-c)：3x3 = 缩放旋转，平移 = R * (-sc*c)
+	// 3x3 = 缩放旋转；平移 = 世界偏移 + R_y·S·T(-c) 的本地平移
 	float model[16] = {
 		sc * cosA, 0, -sc * sinA, 0,
 		0, sc, 0, 0,
 		sc * sinA, 0, sc * cosA, 0,
-		-sc * (cosA * cx - sinA * cz), -sc * cy, -sc * (sinA * cx + cosA * cz), 1
+		v.worldOffset.x - sc * (cosA * cx - sinA * cz),
+		v.worldOffset.y - sc * cy,
+		v.worldOffset.z - sc * (sinA * cx + cosA * cz),
+		1
 	};
 
-	WriteCubeCB(model, timeSec);
-	PrepareGBuffer(cmd);
+	D3D12_GPU_VIRTUAL_ADDRESS cbAddr = WriteCubeCB(model, timeSec);
+	cmd->SetGraphicsRootConstantBufferView(0, cbAddr);
 
 	// 逐个绘制子网格（每个自带 stride/顶点格式/贴图）
 	for (const R5Visual::SubMesh& sm : v.m_meshes)
 	{
-		// M6: 绑定子网格自己的贴图 SRV（缺失时 PrepareGBuffer 已绑定测试纹理）
-		if (sm.texSRV.ptr != 0)
-			cmd->SetGraphicsRootDescriptorTable(1, sm.texSRV);
+		// M6: 绑定子网格自己的贴图 SRV（缺失时回退测试纹理）
+		cmd->SetGraphicsRootDescriptorTable(1, sm.texSRV.ptr != 0 ? sm.texSRV : r5_texture::GetTestSRV());
 
 		D3D12_VERTEX_BUFFER_VIEW vbv = {};
 		vbv.BufferLocation = sm.VB;
@@ -876,7 +913,6 @@ void r5_pipeline::DrawVisual(const R5Visual& v, float timeSec)
 
 		cmd->DrawIndexedInstanced(sm.iCount, 1, 0, 0, 0);
 	}
-	EndGBufferToSRV(cmd);
 }
 
 // ---------------------------------------------------------------------------

@@ -24,6 +24,10 @@ namespace r5_pipeline
 	// M3c: MVP 立方体 pass（M4a: MRT 输出 G-buffer albedo+normal）
 	void DrawCube(float timeSec);
 
+	// M7: 场景级 G-buffer 管理（清空/屏障只做一次，避免多视觉互相清掉）
+	void BeginScene();	// 清 G-buffer + 绑定管线
+	void EndScene();	// G-buffer RT -> PS SRV
+
 	// M5: 绘制一个静态视觉（复用 cube 根签名/PSO，绑定其 VB/IB）
 	void DrawVisual(const R5Visual& v, float timeSec);
 
