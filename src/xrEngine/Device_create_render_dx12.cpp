@@ -34,12 +34,16 @@ namespace dx12
 	ComPtr<IDXGISwapChain3>					Swapchain;
 	ComPtr<ID3D12Resource>					BackBuffer[NUM_BACKBUFFERS];
 	ComPtr<ID3D12DescriptorHeap>			RTVHeap;
+	ComPtr<ID3D12DescriptorHeap>			DSVHeap;
+	ComPtr<ID3D12Resource>					DepthBuffer;
 	UINT									RTVDescriptorSize = 0;
+	UINT									DSVDescriptorSize = 0;
 	UINT									FrameIndex = 0;
 
 	ComPtr<ID3D12Fence>						Fence;
 	HANDLE									FenceEvent = nullptr;
 	UINT64									FenceValue[NUM_BACKBUFFERS] = {};
+	bool									FrameInFlight = false;
 
 	bool CreateDeviceAndQueue()
 	{
@@ -155,6 +159,47 @@ namespace dx12
 			h.ptr += RTVDescriptorSize;
 		}
 
+		// 深度缓冲 + DSV 堆
+		D3D12_DESCRIPTOR_HEAP_DESC dsvHd = {};
+		dsvHd.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+		dsvHd.NumDescriptors = 1;
+		hr = D3DDevice->CreateDescriptorHeap(&dsvHd, IID_PPV_ARGS(&DSVHeap));
+		if (FAILED(hr))
+			return false;
+
+		DSVDescriptorSize = D3DDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+
+		D3D12_CLEAR_VALUE clearDepth = {};
+		clearDepth.Format = DXGI_FORMAT_D32_FLOAT;
+		clearDepth.DepthStencil.Depth = 1.0f;
+		clearDepth.DepthStencil.Stencil = 0;
+
+		D3D12_HEAP_PROPERTIES heapProps = {};
+		heapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
+
+		D3D12_RESOURCE_DESC depthDesc = {};
+		depthDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+		depthDesc.Width = width;
+		depthDesc.Height = height;
+		depthDesc.DepthOrArraySize = 1;
+		depthDesc.MipLevels = 1;
+		depthDesc.Format = DXGI_FORMAT_D32_FLOAT;
+		depthDesc.SampleDesc.Count = 1;
+		depthDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+
+		hr = D3DDevice->CreateCommittedResource(
+			&heapProps,
+			D3D12_HEAP_FLAG_NONE,
+			&depthDesc,
+			D3D12_RESOURCE_STATE_DEPTH_WRITE,
+			&clearDepth,
+			IID_PPV_ARGS(&DepthBuffer)
+		);
+		if (FAILED(hr))
+			return false;
+
+		D3DDevice->CreateDepthStencilView(DepthBuffer.Get(), nullptr, DSVHeap->GetCPUDescriptorHandleForHeapStart());
+
 		return true;
 	}
 
@@ -234,6 +279,8 @@ namespace dx12
 			CmdAlloc[i].Reset();
 		}
 
+		DepthBuffer.Reset();
+		DSVHeap.Reset();
 		RTVHeap.Reset();
 		CmdList.Reset();
 		Swapchain.Reset();
@@ -329,6 +376,37 @@ void ResizeBuffersD3D12(u16 Width, u16 Height)
 		h.ptr += dx12::RTVDescriptorSize;
 	}
 
+	// 重建深度缓冲
+	dx12::DepthBuffer.Reset();
+
+	D3D12_CLEAR_VALUE clearDepth = {};
+	clearDepth.Format = DXGI_FORMAT_D32_FLOAT;
+	clearDepth.DepthStencil.Depth = 1.0f;
+
+	D3D12_HEAP_PROPERTIES heapProps = {};
+	heapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
+
+	D3D12_RESOURCE_DESC depthDesc = {};
+	depthDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	depthDesc.Width = Width;
+	depthDesc.Height = Height;
+	depthDesc.DepthOrArraySize = 1;
+	depthDesc.MipLevels = 1;
+	depthDesc.Format = DXGI_FORMAT_D32_FLOAT;
+	depthDesc.SampleDesc.Count = 1;
+	depthDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+
+	dx12::D3DDevice->CreateCommittedResource(
+		&heapProps,
+		D3D12_HEAP_FLAG_NONE,
+		&depthDesc,
+		D3D12_RESOURCE_STATE_DEPTH_WRITE,
+		&clearDepth,
+		IID_PPV_ARGS(&dx12::DepthBuffer)
+	);
+
+	dx12::D3DDevice->CreateDepthStencilView(dx12::DepthBuffer.Get(), nullptr, dx12::DSVHeap->GetCPUDescriptorHandleForHeapStart());
+
 	UpdateBuffersD3D12();
 }
 
@@ -350,14 +428,22 @@ void DestroyD3D12()
 }
 
 // ---------------------------------------------------------------------------
-// M0 最小每帧渲染：清屏 + Present。由 R5 模块的 CRender::Begin/End 调用。
-// 为避免循环依赖，这里暴露给 xrRender_R5.dll 通过引擎全局指针间接调用。
+// M1 帧管理 + R5 模块渲染接口
 // ---------------------------------------------------------------------------
 
 namespace dx12
 {
-	extern "C" ENGINE_API void FrameClear(float r, float g, float b, float a)
+	D3D12_CPU_DESCRIPTOR_HANDLE CurrentDSV()
 	{
+		return DSVHeap->GetCPUDescriptorHandleForHeapStart();
+	}
+
+	// 开始一帧：重置命令分配器/列表，转换 backbuffer 到 RT 状态
+	extern "C" ENGINE_API void BeginFrame()
+	{
+		if (FrameInFlight)
+			return;
+
 		CmdAlloc[FrameIndex]->Reset();
 		CmdList->Reset(CmdAlloc[FrameIndex].Get(), nullptr);
 
@@ -369,9 +455,14 @@ namespace dx12
 		toRT.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 		CmdList->ResourceBarrier(1, &toRT);
 
-		D3D12_CPU_DESCRIPTOR_HANDLE rtv = CurrentRTV();
-		const float color[4] = { r, g, b, a };
-		CmdList->ClearRenderTargetView(rtv, color, 0, nullptr);
+		FrameInFlight = true;
+	}
+
+	// 结束一帧：转换到 PRESENT，关闭并执行命令列表
+	extern "C" ENGINE_API void EndFrame()
+	{
+		if (!FrameInFlight)
+			return;
 
 		D3D12_RESOURCE_BARRIER toPresent = {};
 		toPresent.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -384,6 +475,8 @@ namespace dx12
 		CmdList->Close();
 		ID3D12CommandList* lists[] = { CmdList.Get() };
 		CmdQueue->ExecuteCommandLists(1, lists);
+
+		FrameInFlight = false;
 	}
 
 	extern "C" ENGINE_API void FramePresent(bool vsync)
@@ -391,4 +484,14 @@ namespace dx12
 		Swapchain->Present(vsync ? 1 : 0, 0);
 		MoveToNextFrame();
 	}
+
+	// R5 模块资源访问
+	extern "C" ENGINE_API ID3D12Device* GetDevice() { return D3DDevice.Get(); }
+	extern "C" ENGINE_API ID3D12CommandQueue* GetCommandQueue() { return CmdQueue.Get(); }
+	extern "C" ENGINE_API ID3D12GraphicsCommandList* GetCmdList() { return CmdList.Get(); }
+	extern "C" ENGINE_API D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentRTV() { return CurrentRTV(); }
+	extern "C" ENGINE_API D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentDSV() { return CurrentDSV(); }
+	extern "C" ENGINE_API ID3D12Resource* GetCurrentBackBuffer() { return BackBuffer[FrameIndex].Get(); }
+	extern "C" ENGINE_API UINT GetFrameIndex() { return FrameIndex; }
+	extern "C" ENGINE_API UINT GetRTVDescriptorSize() { return RTVDescriptorSize; }
 }

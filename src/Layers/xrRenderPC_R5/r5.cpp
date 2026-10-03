@@ -2,6 +2,7 @@
 #include "r5.h"
 #include "r5_rendertarget.h"
 #include "r5_stubs.h"
+#include "r5_pipeline.h"
 
 // ---------------------------------------------------------------------------
 // FactoryPtr<IUIShader> 显式实例化（共享层 RenderFactory.cpp 提供，R5 自包含需自行提供）
@@ -446,10 +447,17 @@ IRender_Target* CRender::getTarget()
 void CRender::create()
 {
 	Target = new CRenderTarget();
+
+	// M1: 初始化渲染管线（根签名 + PSO）
+	if (!r5_pipeline::Init())
+	{
+		Msg("! R5: pipeline init failed");
+	}
 }
 
 void CRender::destroy()
 {
+	r5_pipeline::Shutdown();
 	xr_delete(Target);
 }
 
@@ -469,7 +477,19 @@ void CRender::Calculate()
 
 void CRender::Render()
 {
-	dx12::FrameClear(0.0f, 0.0f, 0.5f, 1.0f);
+	// M1: 帧管理 + M2: 全屏三角形
+	r5_pipeline::BeginFrame();
+
+	// 清屏（M0 验证用，后续由具体 pass 替代）
+	ID3D12GraphicsCommandList* cmd = dx12::GetCmdList();
+	D3D12_CPU_DESCRIPTOR_HANDLE rtv = dx12::GetCurrentRTV();
+	const float clearColor[4] = { 0.0f, 0.0f, 0.5f, 1.0f };
+	cmd->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
+
+	// M2: 全屏三角形
+	r5_pipeline::DrawFullscreenTriangle();
+
+	r5_pipeline::EndFrame();
 }
 
 void CRender::flush()
@@ -557,6 +577,9 @@ void CRender::OnDeviceCreate(LPCSTR shName)
 	// M0: 跳过共享层 shader 加载链，但必须初始化统计字体，
 	// 否则 CStats::Show() 中 pFont 为空导致崩溃。
 	Device.Statistic->OnDeviceCreate();
+
+	// M1: 触发渲染器资源创建（含 r5_pipeline::Init）
+	create();
 }
 
 void CRender::Create(SDL_Window* window, u32& dwWidth, u32& dwHeight, float& fWidth_2, float& fHeight_2, bool)

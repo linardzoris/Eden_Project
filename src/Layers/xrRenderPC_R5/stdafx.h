@@ -45,10 +45,16 @@ extern void* RenderRTV;
 extern void* RenderDSV;
 extern void* SwapChainRTV;
 
-// DX12 每帧渲染（引擎侧 Device_create_render_dx12.cpp 中定义）
+// DX12 帧管理 + 资源访问（引擎侧 Device_create_render_dx12.cpp 中定义）
 // extern "C" 避免 C++ 名称修饰，ENGINE_API 在 R5 中展开为 dllimport
+#include <d3d12.h>
+
 namespace dx12
 {
-	extern "C" ENGINE_API void FrameClear(float r, float g, float b, float a);
+	extern "C" ENGINE_API void BeginFrame();
+	extern "C" ENGINE_API void EndFrame();
 	extern "C" ENGINE_API void FramePresent(bool vsync);
+	extern "C" ENGINE_API ID3D12GraphicsCommandList* GetCmdList();
+	extern "C" ENGINE_API D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentRTV();
+	extern "C" ENGINE_API D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentDSV();
 }
