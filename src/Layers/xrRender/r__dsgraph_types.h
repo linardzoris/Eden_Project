@@ -104,8 +104,8 @@ namespace R_dsgraph
 	#ifdef USE_DX11	//	DX10 needs shader signature to propperly bind deometry to shader
 		using vs_type = SVS*;
 		using gs_type = ID3DGeometryShader*;
-		using hs_type = ID3D11HullShader*;
-		using ds_type = ID3D11DomainShader*;
+		using hs_type = ID3DHullShader*;
+		using ds_type = ID3DDomainShader*;
 	#else //USE_DX11
 		using vs_type = ID3DVertexShader*;
 	#endif

@@ -48,7 +48,7 @@ void _VertexStream::Destroy	()
 void* _VertexStream::Lock	( u32 vl_Count, u32 Stride, u32& vOffset )
 {
 #ifdef USE_DX11
-	D3D11_MAPPED_SUBRESOURCE MappedSubRes;
+	D3D_MAPPED_TEXTURE2D MappedSubRes;
 #endif
 
 #ifdef DEBUG
@@ -189,7 +189,7 @@ void	_IndexStream::Destroy()
 u16*	_IndexStream::Lock	( u32 Count, u32& vOffset )
 {
 #ifdef USE_DX11
-	D3D11_MAPPED_SUBRESOURCE MappedSubRes;
+	D3D_MAPPED_TEXTURE2D MappedSubRes;
 #endif
 	PGO						(Msg("PGO:IB_LOCK:%d",Count));
 	vOffset					= 0;

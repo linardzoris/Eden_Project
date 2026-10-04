@@ -10,12 +10,15 @@ void CRenderTarget::DoAsyncScreenshot()
 	//	TODO: fox that later
 	if (RImplementation.m_bMakeAsyncSS)
 	{
+#ifndef USE_DX12
 		HRESULT hr;
 		ID3DTexture2D* pBuffer = nullptr;
 		hr = RSwapchain->GetBuffer(0, IID_PPV_ARGS(&pBuffer));
 		RContext->CopyResource( t_ss_async, pBuffer );
-		
-
+		(void)hr;
+#else
+		// DX12: 异步截图后置（swapchain buffer 需通过引擎的 DX12 交换链获取）
+#endif
 		RImplementation.m_bMakeAsyncSS = false;
 	}
 }

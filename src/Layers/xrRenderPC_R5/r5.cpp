@@ -6,6 +6,10 @@
 #include "r5_resources.h"
 #include "r5_dxr.h"
 #include "r5_visual.h"
+#include "r5_level.h"
+
+// M8: 静态世界（level_Load 填充）
+static R5LevelWorld g_world;
 
 // ---------------------------------------------------------------------------
 // FactoryPtr<IUIShader> 显式实例化（共享层 RenderFactory.cpp 提供，R5 自包含需自行提供）
@@ -293,7 +297,7 @@ public:
 // Factory
 // ---------------------------------------------------------------------------
 
-class dx5RenderFactory : public IRenderFactory
+class r5RenderFactory : public IRenderFactory
 {
 #define RENDER_FACTORY_IMPLEMENT_STUB(Class) \
 	virtual I##Class* Create##Class() override { return new dx5##Class(); } \
@@ -319,13 +323,13 @@ class dx5RenderFactory : public IRenderFactory
 	RENDER_FACTORY_IMPLEMENT_STUB(FontRender)
 };
 
-dx5RenderFactory RenderFactoryImpl;
+r5RenderFactory r5RenderFactoryImpl;
 
 // ---------------------------------------------------------------------------
 // UIRender stub
 // ---------------------------------------------------------------------------
 
-class dx5UIRender : public IUIRender
+class r5UIRender : public IUIRender
 {
 public:
 	virtual void CreateUIGeom() override {}
@@ -342,13 +346,13 @@ public:
 	virtual void CacheSetCullMode(CullMode) override {}
 };
 
-dx5UIRender UIRenderImpl;
+r5UIRender r5UIRenderImpl;
 
 // ---------------------------------------------------------------------------
 // DU (DrawUtils) stub
 // ---------------------------------------------------------------------------
 
-class dx5DUInterface : public CDUInterface
+class r5DUInterface : public CDUInterface
 {
 public:
 	virtual void DrawCross(const Fvector& p, float szx1, float szy1, float szz1, float szx2, float szy2, float szz2, u32 clr, BOOL bRot45 = false) override {}
@@ -399,14 +403,14 @@ public:
 	virtual void OnDeviceDestroy() override {}
 };
 
-dx5DUInterface DUImpl;
+r5DUInterface r5DUImpl;
 
 // ---------------------------------------------------------------------------
 // DebugRender stub
 // ---------------------------------------------------------------------------
 
 #ifdef DEBUG_DRAW
-class dx5DebugRender : public IDebugRender
+class r5DebugRender : public IDebugRender
 {
 public:
 	virtual void Render() override {}
@@ -425,7 +429,7 @@ public:
 #endif
 };
 
-dx5DebugRender DebugRenderImpl;
+r5DebugRender r5DebugRenderImpl;
 #endif
 
 // ---------------------------------------------------------------------------
@@ -486,6 +490,15 @@ void CRender::create()
 		}
 	}
 
+	// M8: 直接从磁盘加载地图（绕过游戏/存档/UI，无 UI 也能看到真实世界）
+	// 启动 renderer_r5 即加载 l05_bar，配合地图轨道相机全景浏览
+	if (r5_level::LoadDirect("l05_bar", g_world))
+	{
+		Msg("* R5: direct world loaded (meshes=%u)", (u32)g_world.meshes.size());
+		// M8: 预加载全部 shader 主贴图（create 阶段/首帧前，避免渲染期 g_gpuHeap Alloc 覆盖）
+		r5_level::PreloadTextures(g_world);
+	}
+
 	// M7: 视觉几何分配在 upload ring 持久点之后，需推进保护点，
 	// 否则每帧 BeginFrame 的 Reset 会让每帧 CB 分配覆盖几何数据
 	r5_res::g_upload.MarkPersist();
@@ -496,6 +509,22 @@ void CRender::destroy()
 	r5_pipeline::Shutdown();
 	r5_res::Shutdown();
 	xr_delete(Target);
+}
+
+void CRender::level_Load(IReader* fs)
+{
+	if (!fs)
+		return;
+	Msg("* R5: level_Load begin");
+	r5_level::Load(fs, g_world);
+	// 世界几何上传 upload ring 持久区后推进保护点（每帧 CB 分配不覆盖）
+	r5_res::g_upload.MarkPersist();
+	Msg("* R5: level_Load done (meshes=%u)", (u32)g_world.meshes.size());
+}
+
+void CRender::level_Unload()
+{
+	r5_level::Clear(g_world);
 }
 
 void CRender::reset_begin()
@@ -535,18 +564,26 @@ void CRender::Render()
 	}
 	else
 	{
-		// M5/M7: 渲染收集到的静态视觉（真实 OGF）；无则回退硬编码立方体
-		xr_vector<R5Visual*> vis;
-		if (r5_visual::LockAndSnapshot(vis) > 0)
+		// M8: 世界已加载 -> 渲染真实静态世界（真实相机）；否则调试展示场景
+		if (g_world.loaded)
 		{
-			r5_pipeline::BeginScene();	// 清 G-buffer + 绑定（只一次）
-			for (size_t i = 0; i < vis.size(); ++i)
-				r5_pipeline::DrawVisual(*vis[i], Device.fTimeGlobal);
-			r5_pipeline::EndScene();	// G-buffer -> PS SRV
+			r5_pipeline::DrawLevelWorld(g_world, Device.fTimeGlobal);
 		}
 		else
 		{
-			r5_pipeline::DrawCube(Device.fTimeGlobal);
+			// M5/M7: 渲染收集到的静态视觉（真实 OGF）；无则回退硬编码立方体
+			xr_vector<R5Visual*> vis;
+			if (r5_visual::LockAndSnapshot(vis) > 0)
+			{
+				r5_pipeline::BeginScene();	// 清 G-buffer + 绑定（只一次）
+				for (size_t i = 0; i < vis.size(); ++i)
+					r5_pipeline::DrawVisual(*vis[i], Device.fTimeGlobal);
+				r5_pipeline::EndScene();	// G-buffer -> PS SRV
+			}
+			else
+			{
+				r5_pipeline::DrawCube(Device.fTimeGlobal);
+			}
 		}
 	}
 

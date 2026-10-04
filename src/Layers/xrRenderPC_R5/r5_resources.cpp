@@ -126,10 +126,10 @@ namespace r5_res
 
 		if (!g_gpuHeap.Create(dev, 4096))
 			return false;
-		if (!g_upload.Create(dev, 16 * 1024 * 1024))
+		if (!g_upload.Create(dev, 256 * 1024 * 1024))
 			return false;
 
-		Msg("* R5: resources initialized (4096 descriptors, 16MB upload ring)");
+		Msg("* R5: resources initialized (4096 descriptors, 256MB upload ring)");
 		return true;
 	}
 

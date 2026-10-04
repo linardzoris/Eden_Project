@@ -3,7 +3,11 @@
 #include "R_Backend.h"
 
 #ifdef USE_DX11
+#ifdef USE_DX12
+#include "../xrRenderDX12/dx12BufferUtils.h"
+#else
 #include "../xrRenderDX10/dx10BufferUtils.h"
+#endif
 #endif // USE_DX11
 
 CBackend			RCache;

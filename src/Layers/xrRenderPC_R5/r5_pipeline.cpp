@@ -3,6 +3,7 @@
 #include "r5_resources.h"
 #include "r5_dxr.h"
 #include "r5_visual.h"
+#include "r5_level.h"
 #include "r5_texture.h"
 
 #include <d3d12.h>
@@ -35,6 +36,12 @@ static ComPtr<ID3D12RootSignature> g_cubeRootSig;
 static ComPtr<ID3D12PipelineState> g_cubePSO;
 static D3D12_GPU_VIRTUAL_ADDRESS g_cubeCBV = 0;
 static void* g_cubeCBPtr = nullptr;
+
+// M8: 地形（BmmD）专用 PSO/根签名 + 6 贴图 SRV（base/mask/detail_rgba）
+static ComPtr<ID3D12RootSignature> g_terRootSig;
+static ComPtr<ID3D12PipelineState> g_terPSO;
+static D3D12_GPU_DESCRIPTOR_HANDLE g_terSRV[6] = {};
+static float g_terDetailScale = 100.0f;	// 来自 terrain_bar.thm 的 detail_scale（dt_params.xy）
 
 // M6: 顶点规范化布局 32B = pos + nrm + uv（与 R5Visual 子网格一致）
 struct CubeVertex { float pos[3]; float nrm[3]; float uv[2]; };
@@ -134,6 +141,75 @@ PSOut PSMain(VSOut i)
 	// M4c: BC3(DXT5) 带 alpha，采样后强制忽略 alpha 只取 RGB
 	float3 tex = g_texture.Sample(g_smp, i.uv).rgb;
 	o.albedo = float4(tex, 1.0);	// 去掉 color 调制，直接显示纹理
+	o.normal = float4(n * 0.5 + 0.5, 1.0);
+	return o;
+}
+)";
+
+// M8: 地形专用 shader —— base × (mask.RGBA 混合 4 张 detail)，输出 G-buffer
+// 对应 CBlender_BmmD：s_base + s_mask(base+"_mask") + s_dt_r/g/b/a + s_lmap
+// detail UV = base UV × detail_scale（引擎 dt_params.xy，来自 .thm 的 detail_scale）
+static const char* g_hlslTerrain = R"(
+cbuffer CB : register(b0)
+{
+	row_major float4x4 mvp;
+	row_major float4x4 world;
+	float4 color;
+	float4 params;	// x = detail_scale
+};
+
+Texture2D t_base : register(t2);
+Texture2D t_mask : register(t3);
+Texture2D t_dt_r : register(t4);
+Texture2D t_dt_g : register(t5);
+Texture2D t_dt_b : register(t6);
+Texture2D t_dt_a : register(t7);
+SamplerState g_smp : register(s0);
+
+struct VSIn
+{
+	float3 pos : POSITION;
+	float3 nrm : NORMAL;
+	float2 uv  : TEXCOORD0;
+};
+
+struct VSOut
+{
+	float4 pos : SV_POSITION;
+	float3 nrm : NORMAL;
+	float2 uv  : TEXCOORD0;
+};
+
+VSOut VSMain(VSIn i)
+{
+	VSOut o;
+	o.pos = mul(float4(i.pos, 1.0), mvp);
+	o.nrm = mul(float4(i.nrm, 0.0), world).xyz;
+	o.uv = i.uv;
+	return o;
+}
+
+struct PSOut
+{
+	float4 albedo : SV_TARGET0;
+	float4 normal : SV_TARGET1;
+};
+
+PSOut PSMain(VSOut i)
+{
+	PSOut o;
+	float4 base = t_base.Sample(g_smp, i.uv);
+	float4 mask = t_mask.Sample(g_smp, i.uv);
+	float2 tcdb = i.uv * params.x;	// detail tiling（dt_params.xy = detail_scale）
+	mask /= dot(mask, 1.0);
+	float3 detail =
+		t_dt_r.Sample(g_smp, tcdb).rgb * mask.r +
+		t_dt_g.Sample(g_smp, tcdb).rgb * mask.g +
+		t_dt_b.Sample(g_smp, tcdb).rgb * mask.b +
+		t_dt_a.Sample(g_smp, tcdb).rgb * mask.a;
+	float3 col = base.rgb * detail * 2.0;
+	o.albedo = float4(col, 1.0);
+	float3 n = normalize(i.nrm);
 	o.normal = float4(n * 0.5 + 0.5, 1.0);
 	return o;
 }
@@ -375,6 +451,157 @@ static ComPtr<ID3DBlob> CompileShaderBlob(const char* src, const char* entry, co
 }
 
 // ---------------------------------------------------------------------------
+// M8: 地形 PSO（BmmD 风格：base × mask.RGBA 混合 4 张 detail）+ 贴图预加载
+// 根签名：CBV(b0) + 6×SRV table(t2..t7) + 静态采样器 s0
+// ---------------------------------------------------------------------------
+
+static bool CreateTerrainPSO(ID3D12Device* dev)
+{
+	D3D12_ROOT_PARAMETER params[7] = {};
+	params[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+	params[0].Descriptor.ShaderRegister = 0;
+	params[0].Descriptor.RegisterSpace = 0;
+	params[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+	D3D12_DESCRIPTOR_RANGE ranges[6] = {};
+	for (int i = 0; i < 6; ++i)
+	{
+		ranges[i].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+		ranges[i].NumDescriptors = 1;
+		ranges[i].BaseShaderRegister = 2 + i;	// t2..t7
+		ranges[i].RegisterSpace = 0;
+		params[1 + i].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		params[1 + i].DescriptorTable.NumDescriptorRanges = 1;
+		params[1 + i].DescriptorTable.pDescriptorRanges = &ranges[i];
+		params[1 + i].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+	}
+
+	D3D12_STATIC_SAMPLER_DESC sampler = {};
+	sampler.Filter = D3D12_FILTER_ANISOTROPIC;
+	sampler.MaxAnisotropy = 16;
+	sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	sampler.ShaderRegister = 0;
+	sampler.RegisterSpace = 0;
+	sampler.MinLOD = 0.0f;
+	sampler.MaxLOD = FLT_MAX;
+	sampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+	D3D12_ROOT_SIGNATURE_DESC rsDesc = {};
+	rsDesc.NumParameters = 7;
+	rsDesc.pParameters = params;
+	rsDesc.NumStaticSamplers = 1;
+	rsDesc.pStaticSamplers = &sampler;
+	rsDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+
+	ComPtr<ID3DBlob> sigBlob, sigErr;
+	HRESULT hr = D3D12SerializeRootSignature(&rsDesc, D3D_ROOT_SIGNATURE_VERSION_1, &sigBlob, &sigErr);
+	if (FAILED(hr))
+	{
+		if (sigErr) Msg("! R5 terrain root sig: %s", (const char*)sigErr->GetBufferPointer());
+		return false;
+	}
+	hr = dev->CreateRootSignature(0, sigBlob->GetBufferPointer(), sigBlob->GetBufferSize(), IID_PPV_ARGS(&g_terRootSig));
+	if (FAILED(hr)) return false;
+
+	ComPtr<ID3DBlob> vs = CompileShaderBlob(g_hlslTerrain, "VSMain", "vs_5_1");
+	ComPtr<ID3DBlob> ps = CompileShaderBlob(g_hlslTerrain, "PSMain", "ps_5_1");
+	if (!vs || !ps) return false;
+
+	D3D12_INPUT_ELEMENT_DESC layout[] = {
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+	};
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
+	psoDesc.pRootSignature = g_terRootSig.Get();
+	psoDesc.VS = { vs->GetBufferPointer(), vs->GetBufferSize() };
+	psoDesc.PS = { ps->GetBufferPointer(), ps->GetBufferSize() };
+	psoDesc.InputLayout = { layout, _countof(layout) };
+	psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
+	psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+	psoDesc.RasterizerState.FrontCounterClockwise = FALSE;
+	psoDesc.RasterizerState.DepthClipEnable = TRUE;
+	psoDesc.BlendState.RenderTarget[0].BlendEnable = FALSE;
+	psoDesc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+	psoDesc.DepthStencilState.DepthEnable = TRUE;
+	psoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+	psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+	psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+	psoDesc.SampleMask = UINT_MAX;
+	psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	psoDesc.NumRenderTargets = 2;
+	psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+	psoDesc.RTVFormats[1] = DXGI_FORMAT_R8G8B8A8_UNORM;
+	psoDesc.SampleDesc.Count = 1;
+
+	hr = dev->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&g_terPSO));
+	if (FAILED(hr))
+	{
+		Msg("! R5: terrain PSO failed 0x%08x", hr);
+		return false;
+	}
+
+	// 预加载地形贴图（BmmD 约定：base = levels\<map>\terrain\<base>，mask = base+"_mask"，
+	// detail 默认 detail\detail_grnd_{grass,asphalt,earth,yantar}）
+	g_terSRV[0] = r5_texture::LoadRoot("levels\\l05_bar\\terrain\\terrain_bar");
+	g_terSRV[1] = r5_texture::Load("terrain\\terrain_bar_mask");
+	g_terSRV[2] = r5_texture::Load("detail\\detail_grnd_grass");
+	g_terSRV[3] = r5_texture::Load("detail\\detail_grnd_asphalt");
+	g_terSRV[4] = r5_texture::Load("detail\\detail_grnd_earth");
+	g_terSRV[5] = r5_texture::Load("detail\\detail_grnd_yantar");
+
+	// M8: 解析 terrain_bar.thm 的 detail_scale（THM_CHUNK_DETAIL_EXT=0x0815：
+	// stringZ detail_name + float detail_scale；引擎 cl_dt_scaler -> dt_params.xy）
+	{
+		FILE* f = nullptr;
+		if (fopen_s(&f, "gamedata\\textures\\terrain\\terrain_bar.thm", "rb") == 0 && f)
+		{
+			fseek(f, 0, SEEK_END);
+			long len = ftell(f);
+			fseek(f, 0, SEEK_SET);
+			if (len > 0)
+			{
+				xr_vector<u8> buf(len);
+				if (fread(buf.data(), 1, len, f) == (size_t)len)
+				{
+					size_t o = 0;
+					while (o + 8 <= buf.size())
+					{
+						u32 id = *(const u32*)(buf.data() + o);
+						u32 sz = *(const u32*)(buf.data() + o + 4);
+						if (o + 8 + (u64)sz > buf.size()) break;
+						if ((id & 0x7FFFFFFF) == 0x0815 && sz > 4)
+						{
+							const u8* d = buf.data() + o + 8;
+							float raw = *(const float*)(d + sz - 4);
+							// M8: base UV 跨度约 16.8（≈59m/次 base 平铺），若直接 ×102 则 detail
+							// 约 0.58m/次 → 亚像素走样（detail 被平均成中性灰 → 看不到 detail，
+							// 且 mip 跳变导致表面闪烁=“抖动”）。钳制到 32（≈1.8m/次）兼顾可见性与稳定。
+							g_terDetailScale = raw;
+							if (g_terDetailScale < 1.0f) g_terDetailScale = 1.0f;
+							if (g_terDetailScale > 32.0f) g_terDetailScale = 32.0f;
+							Msg("* R5 terrain: detail_scale raw=%g used=%g (thm)", raw, g_terDetailScale);
+							break;
+						}
+						o += 8 + (u64)sz;
+					}
+				}
+			}
+			fclose(f);
+		}
+	}
+
+	Msg("* R5: terrain PSO + textures ready (SRV base=%llu mask=%llu dR=%llu dG=%llu dB=%llu dA=%llu)",
+		(unsigned long long)g_terSRV[0].ptr, (unsigned long long)g_terSRV[1].ptr,
+		(unsigned long long)g_terSRV[2].ptr, (unsigned long long)g_terSRV[3].ptr,
+		(unsigned long long)g_terSRV[4].ptr, (unsigned long long)g_terSRV[5].ptr);
+	return true;
+}
+
+// ---------------------------------------------------------------------------
 // Init / Shutdown
 // ---------------------------------------------------------------------------
 
@@ -474,14 +701,17 @@ bool r5_pipeline::Init()
 	cubeParams[1].DescriptorTable.pDescriptorRanges = &srvRange;
 	cubeParams[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-	// 静态采样器 s0
+	// 静态采样器 s0（M8: 启用完整 mip 链 + 各向异性，避免高倍率平铺走样/闪烁）
 	D3D12_STATIC_SAMPLER_DESC sampler = {};
-	sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+	sampler.Filter = D3D12_FILTER_ANISOTROPIC;
+	sampler.MaxAnisotropy = 8;
 	sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 	sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 	sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 	sampler.ShaderRegister = 0;	// s0
 	sampler.RegisterSpace = 0;
+	sampler.MinLOD = 0.0f;
+	sampler.MaxLOD = FLT_MAX;
 	sampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 	D3D12_ROOT_SIGNATURE_DESC cubeRsDesc = {};
@@ -617,6 +847,12 @@ bool r5_pipeline::Init()
 		Msg("! R5: G-buffer / compose PSO init failed");
 	}
 
+	// M8: 地形 PSO + 贴图（必须在 G-buffer/纹理 SRV 之后分配，首帧前）
+	if (!CreateTerrainPSO(dev))
+	{
+		Msg("! R5: terrain PSO init failed");
+	}
+
 	// M4b: DXR（失败时 Ready()=false，回退光栅路径）
 	r5_dxr::Init();
 
@@ -628,6 +864,8 @@ void r5_pipeline::Shutdown()
 {
 	r5_dxr::Shutdown();
 	r5_texture::Shutdown();
+	g_terPSO.Reset();
+	g_terRootSig.Reset();
 	g_compPSO.Reset();
 	g_compRootSig.Reset();
 	g_gbufRT[0].Reset();
@@ -685,75 +923,117 @@ void r5_pipeline::DrawFullscreenTriangle()
 	cmd->DrawInstanced(3, 1, 0, 0);
 }
 
-// 写入常量缓冲：mvp@0, world@64, color@128
-// M7: 每个视觉从每帧 upload ring 分配独立 CB（单一持久 CB 会被后写的视觉覆盖）
-// M7: 调试场景自转轨道相机（不依赖游戏相机：renderer 切换时游戏停在菜单，相机不更新）
-static D3D12_GPU_VIRTUAL_ADDRESS WriteCubeCB(const float model[16], float timeSec)
+// 通用轨道相机：绕 center 水平公转（高度 orbitH），透视 znear/zfar
+// 调试场景与 M8 direct 地图全景共用；写入与 WriteCB 相同 CB 布局
+static D3D12_GPU_VIRTUAL_ADDRESS WriteCBOrbit(const float model[16], float timeSec,
+	const Fvector& center, float orbitR, float orbitH, float znear, float zfar)
 {
-	// 相机绕原点公转（轨道展示台）
 	float a = timeSec * 0.4f;
-	float R = 4.0f;
-	float eye[3] = { R * _cos(a), 1.2f, R * _sin(a) };
-	float at[3] = { 0, 0, 0 };
+	float eye[3] = { center.x + orbitR * _cos(a), center.y + orbitH, center.z + orbitR * _sin(a) };
+	float at[3] = { center.x, center.y, center.z };
 	float up[3] = { 0, 1, 0 };
 
-	// 列向量 lookAt（相机从 eye 看向 at，-Z 前向）
 	float zx = eye[0] - at[0], zy = eye[1] - at[1], zz = eye[2] - at[2];
 	float zlen = _sqrt(zx * zx + zy * zy + zz * zz);
 	zx /= zlen; zy /= zlen; zz /= zlen;
-	// x = normalize(cross(up, z))
 	float xx = up[1] * zz - up[2] * zy, xy = up[2] * zx - up[0] * zz, xz = up[0] * zy - up[1] * zx;
 	float xlen = _sqrt(xx * xx + xy * xy + xz * xz);
 	xx /= xlen; xy /= xlen; xz /= xlen;
-	// y = cross(z, x)
 	float yx = zy * xz - zz * xy, yy = zz * xx - zx * xz, yz = zx * xy - zy * xx;
 
-	float view[16] = {
-		xx, yx, zx, 0,
-		xy, yy, zy, 0,
-		xz, yz, zz, 0,
-		-(xx * eye[0] + xy * eye[1] + xz * eye[2]),
-		-(yx * eye[0] + yy * eye[1] + yz * eye[2]),
-		-(zx * eye[0] + zy * eye[1] + zz * eye[2]),
-		1
-	};
+	float view[16] = {};
+	view[0] = xx; view[1] = yx; view[2] = zx; view[3] = 0;
+	view[4] = xy; view[5] = yy; view[6] = zy; view[7] = 0;
+	view[8] = xz; view[9] = yz; view[10] = zz; view[11] = 0;
+	view[12] = -(xx * eye[0] + xy * eye[1] + xz * eye[2]);
+	view[13] = -(yx * eye[0] + yy * eye[1] + yz * eye[2]);
+	view[14] = -(zx * eye[0] + zy * eye[1] + zz * eye[2]);
+	view[15] = 1;
 
-	// 透视投影
 	float fov = 60.0f * (3.14159265f / 180.0f);
 	float aspect = (float)Device.TargetWidth / (float)Device.TargetHeight;
 	float f = 1.0f / tanf(fov * 0.5f);
-	float znear = 0.1f, zfar = 100.0f;
 
-	float proj[16] = {
-		f / aspect, 0, 0, 0,
-		0, f, 0, 0,
-		0, 0, (zfar + znear) / (znear - zfar), -1,
-		0, 0, 2.0f * znear * zfar / (znear - zfar), 0
-	};
+	float proj[16] = {};
+	proj[0] = f / aspect; proj[5] = f;
+	proj[10] = (zfar + znear) / (znear - zfar); proj[11] = -1;
+	proj[14] = 2.0f * znear * zfar / (znear - zfar);
 
-	// view * proj
 	float vp[16] = {};
 	for (int i = 0; i < 4; ++i)
 		for (int j = 0; j < 4; ++j)
 			for (int k = 0; k < 4; ++k)
 				vp[i * 4 + j] += view[i * 4 + k] * proj[k * 4 + j];
-
-	// model * vp
-	float finalMvp[16] = {};
+	float mvp[16] = {};
 	for (int i = 0; i < 4; ++i)
 		for (int j = 0; j < 4; ++j)
 			for (int k = 0; k < 4; ++k)
-				finalMvp[i * 4 + j] += model[i * 4 + k] * vp[k * 4 + j];
+				mvp[i * 4 + j] += model[i * 4 + k] * vp[k * 4 + j];
 
-	float color[4] = { _cos(timeSec * 2.0f) * 0.5f + 0.5f, _sin(timeSec * 3.0f) * 0.5f + 0.5f, 0.8f, 1.0f };
-
-	// 每帧 upload ring 分配独立 CB（视觉几何已 MarkPersist 保护，不会冲突）
 	D3D12_GPU_VIRTUAL_ADDRESS cbAddr;
 	void* cbPtr = r5_res::g_upload.Alloc(256, cbAddr);
-	memcpy((u8*)cbPtr, finalMvp, 64);
+	float color[4] = { 0.8f, 0.8f, 0.8f, 1.0f };
+	memcpy((u8*)cbPtr, mvp, 64);
 	memcpy((u8*)cbPtr + 64, model, 64);
 	memcpy((u8*)cbPtr + 128, color, 16);
 	return cbAddr;
+}
+
+// 写入常量缓冲：mvp@0, world@64, color@128
+// 每个绘制从每帧 upload ring 分配独立 CB（单一持久 CB 会被后写的覆盖）
+// engineCam=true 用引擎真实相机（世界渲染），false 用轨道展示相机（菜单调试场景）
+static D3D12_GPU_VIRTUAL_ADDRESS WriteCB(const float model[16], float timeSec, bool engineCam)
+{
+	float view[16] = {};
+	float proj[16] = {};
+
+	if (engineCam)
+	{
+		// 引擎矩阵为 D3D 行向量约定（clip = v·mView·mProject）；
+		// 本渲染器为列向量约定（clip = M·v），等价于 vp = Transpose(mProject)·Transpose(mView)
+		const Fmatrix& eV = Device.mView;
+		const Fmatrix& eP = Device.mProject;
+		float tv[16] = {};
+		for (int i = 0; i < 4; ++i)
+			for (int j = 0; j < 4; ++j)
+				tv[i * 4 + j] = eV.m[j][i];
+		float tp[16] = {};
+		for (int i = 0; i < 4; ++i)
+			for (int j = 0; j < 4; ++j)
+				tp[i * 4 + j] = eP.m[j][i];
+		// vp = mProjectᵀ · mViewᵀ
+		float vp[16] = {};
+		for (int i = 0; i < 4; ++i)
+			for (int j = 0; j < 4; ++j)
+				for (int k = 0; k < 4; ++k)
+					vp[i * 4 + j] += tp[i * 4 + k] * tv[k * 4 + j];
+		// model * vp
+		float mvp[16] = {};
+		for (int i = 0; i < 4; ++i)
+			for (int j = 0; j < 4; ++j)
+				for (int k = 0; k < 4; ++k)
+					mvp[i * 4 + j] += model[i * 4 + k] * vp[k * 4 + j];
+
+		D3D12_GPU_VIRTUAL_ADDRESS cbAddr;
+		void* cbPtr = r5_res::g_upload.Alloc(256, cbAddr);
+		float color[4] = { 0.8f, 0.8f, 0.8f, 1.0f };
+		memcpy((u8*)cbPtr, mvp, 64);
+		memcpy((u8*)cbPtr + 64, model, 64);
+		memcpy((u8*)cbPtr + 128, color, 16);
+		return cbAddr;
+	}
+
+	// 轨道展示相机（调试场景：绕原点公转，半径 4、高度 1.2）
+	{
+		Fvector c = { 0, 0, 0 };
+		return WriteCBOrbit(model, timeSec, c, 4.0f, 1.2f, 0.1f, 100.0f);
+	}
+}
+
+// M7: 调试场景（菜单）用轨道相机
+static D3D12_GPU_VIRTUAL_ADDRESS WriteCubeCB(const float model[16], float timeSec)
+{
+	return WriteCB(model, timeSec, false);
 }
 
 // 把 G-buffer 从 PS SRV 切换为 RT 并清空（每个绘制批次开始一次）
@@ -913,6 +1193,259 @@ void r5_pipeline::DrawVisual(const R5Visual& v, float timeSec)
 
 		cmd->DrawIndexedInstanced(sm.iCount, 1, 0, 0, 0);
 	}
+}
+
+// ---------------------------------------------------------------------------
+// M8: 静态世界渲染（真实相机矩阵 + 世界几何）
+// 所有 level 网格已是世界坐标，用单位模型矩阵绘制
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// M8: 自由相机（direct 模式）：WASD 平移 + Space/Ctrl 升降 + 鼠标转向
+// ---------------------------------------------------------------------------
+
+static Fvector g_flyPos = { 0, 0, 0 };
+static float g_flyYaw = 0.f;
+static float g_flyPitch = -0.35f;
+static bool g_flyInit = false;
+static float g_flyLastMX = -1.f, g_flyLastMY = -1.f;
+static float g_flySpeed = 20.f;
+static float g_flySmDX = 0.f, g_flySmDY = 0.f;	// 鼠标增量低通（消除像素步进抖动）
+
+// 每帧更新自由相机并写入 CB（view 由 pos/yaw/pitch 构建）
+static D3D12_GPU_VIRTUAL_ADDRESS UpdateFlyCam(const R5LevelWorld& world, const float model[16])
+{
+	Fvector c, dim;
+	world.aabb.get_CD(c, dim);
+	float hR = _sqrt(dim.x * dim.x + dim.z * dim.z);	// 水平半半径
+	if (hR < 1.0f) hR = 10.0f;
+
+	if (!g_flyInit)
+	{
+		// 初始位置：地图上方空中，面向 aabb 中心
+		g_flyPos.set(c.x + hR * 0.5f, c.y + dim.y * 0.8f + 3.0f, c.z + hR * 0.5f);
+		g_flyYaw = atan2f(c.x - g_flyPos.x, c.z - g_flyPos.z);
+		float dxz = _sqrt((c.x - g_flyPos.x) * (c.x - g_flyPos.x) + (c.z - g_flyPos.z) * (c.z - g_flyPos.z));
+		g_flyPitch = atan2f(c.y - g_flyPos.y, dxz);
+		g_flySpeed = hR * 0.3f;
+		g_flyInit = true;
+		g_flyLastMX = g_flyLastMY = -1.f;
+	}
+	else
+	{
+		g_flySpeed = hR * 0.3f;
+	}
+
+	float dt = Device.fTimeDelta;
+	if (dt <= 0.f || dt > 0.1f) dt = 0.016f;
+
+	const bool* keys = SDL_GetKeyboardState(nullptr);
+	float mx = 0.f, my = 0.f;
+	SDL_GetMouseState(&mx, &my);
+
+	if (keys)
+	{
+		float cy = _cos(g_flyYaw), sy = _sin(g_flyYaw);
+		float mfx = sy, mfz = cy;	// 水平前向（yaw=0 -> +Z）
+		float mrx = cy, mrz = -sy;	// 水平右向
+		if (keys[SDL_SCANCODE_W]) { g_flyPos.x += mfx * g_flySpeed * dt; g_flyPos.z += mfz * g_flySpeed * dt; }
+		if (keys[SDL_SCANCODE_S]) { g_flyPos.x -= mfx * g_flySpeed * dt; g_flyPos.z -= mfz * g_flySpeed * dt; }
+		if (keys[SDL_SCANCODE_D]) { g_flyPos.x += mrx * g_flySpeed * dt; g_flyPos.z += mrz * g_flySpeed * dt; }
+		if (keys[SDL_SCANCODE_A]) { g_flyPos.x -= mrx * g_flySpeed * dt; g_flyPos.z -= mrz * g_flySpeed * dt; }
+		if (keys[SDL_SCANCODE_SPACE]) g_flyPos.y += g_flySpeed * dt;
+		if (keys[SDL_SCANCODE_LCTRL]) g_flyPos.y -= g_flySpeed * dt;
+	}
+
+	if (g_flyLastMX >= 0.f)
+	{
+		float dx = mx - g_flyLastMX;
+		float dy = my - g_flyLastMY;
+		// M8 修复：绝对坐标差分是整数像素，高帧率下 0/1px 交替导致视角步进不均（转动抖动）。
+		// 对增量做指数平滑（低通），与引擎 input 平滑一致。
+		float a = 1.f - expf(-dt * 18.f);
+		g_flySmDX += (dx - g_flySmDX) * a;
+		g_flySmDY += (dy - g_flySmDY) * a;
+		g_flyYaw += g_flySmDX * 0.0025f;
+		g_flyPitch -= g_flySmDY * 0.0025f;
+		if (g_flyPitch > 1.55f) g_flyPitch = 1.55f;
+		if (g_flyPitch < -1.55f) g_flyPitch = -1.55f;
+	}
+	else
+	{
+		g_flySmDX = g_flySmDY = 0.f;
+	}
+	g_flyLastMX = mx;
+	g_flyLastMY = my;
+
+	// 相机基向量：fwd / right / up（up = cross(fwd, right)）
+	float cy = _cos(g_flyYaw), sy = _sin(g_flyYaw);
+	float cp = _cos(g_flyPitch), sp = _sin(g_flyPitch);
+	Fvector fwd, right, up;
+	fwd.set(sy * cp, sp, cy * cp);
+	right.set(cy, 0.f, -sy);
+	up.x = fwd.y * right.z - fwd.z * right.y;
+	up.y = fwd.z * right.x - fwd.x * right.z;
+	up.z = fwd.x * right.y - fwd.y * right.x;
+
+	float view[16] = {};
+	view[0] = right.x; view[1] = up.x; view[2] = -fwd.x; view[3] = 0;
+	view[4] = right.y; view[5] = up.y; view[6] = -fwd.y; view[7] = 0;
+	view[8] = right.z; view[9] = up.z; view[10] = -fwd.z; view[11] = 0;
+	view[12] = -(g_flyPos.x * right.x + g_flyPos.y * right.y + g_flyPos.z * right.z);
+	view[13] = -(g_flyPos.x * up.x + g_flyPos.y * up.y + g_flyPos.z * up.z);
+	view[14] = g_flyPos.x * fwd.x + g_flyPos.y * fwd.y + g_flyPos.z * fwd.z;
+	view[15] = 1;
+
+	float znear = 0.5f, zfar = hR * 6.0f;
+	float fov = 60.0f * (3.14159265f / 180.0f);
+	float aspect = (float)Device.TargetWidth / (float)Device.TargetHeight;
+	float f = 1.0f / tanf(fov * 0.5f);
+	float proj[16] = {};
+	proj[0] = f / aspect; proj[5] = f;
+	proj[10] = (zfar + znear) / (znear - zfar); proj[11] = -1;
+	proj[14] = 2.0f * znear * zfar / (znear - zfar);
+
+	float vp[16] = {};
+	for (int i = 0; i < 4; ++i)
+		for (int j = 0; j < 4; ++j)
+			for (int k = 0; k < 4; ++k)
+				vp[i * 4 + j] += view[i * 4 + k] * proj[k * 4 + j];
+	float mvp[16] = {};
+	for (int i = 0; i < 4; ++i)
+		for (int j = 0; j < 4; ++j)
+			for (int k = 0; k < 4; ++k)
+				mvp[i * 4 + j] += model[i * 4 + k] * vp[k * 4 + j];
+
+	D3D12_GPU_VIRTUAL_ADDRESS cbAddr;
+	void* cbPtr = r5_res::g_upload.Alloc(256, cbAddr);
+	float color[4] = { 0.8f, 0.8f, 0.8f, 1.0f };
+	memcpy((u8*)cbPtr, mvp, 64);
+	memcpy((u8*)cbPtr + 64, model, 64);
+	memcpy((u8*)cbPtr + 128, color, 16);
+	// M8: params.x = detail_scale（terrain shader detail tiling）
+	float params[4] = { g_terDetailScale, 0.f, 0.f, 0.f };
+	memcpy((u8*)cbPtr + 160, params, 16);
+	return cbAddr;
+}
+
+void r5_pipeline::DrawLevelWorld(const R5LevelWorld& world, float timeSec)
+{
+	ID3D12GraphicsCommandList* cmd = dx12::GetCmdList();
+	if (!cmd || !g_cubePSO || !g_gbufRT[0] || world.meshes.empty())
+		return;
+
+	r5_texture::UploadFirstFrame(cmd);
+
+	float identity[16] = {
+		1, 0, 0, 0,
+		0, 1, 0, 0,
+		0, 0, 1, 0,
+		0, 0, 0, 1
+	};
+
+	D3D12_GPU_VIRTUAL_ADDRESS cbAddr;
+	if (world.direct)
+	{
+		// M8: 自由相机（WASD 平移 + 鼠标转向）
+		cbAddr = UpdateFlyCam(world, identity);
+	}
+	else
+	{
+		// 引擎关卡：真实相机矩阵
+		cbAddr = WriteCB(identity, timeSec, true);
+	}
+
+	BeginScene();
+	cmd->SetGraphicsRootConstantBufferView(0, cbAddr);
+
+	// 判断 terrain mesh（shader 名以 'levels\' 开头，BmmD 地形）
+	auto IsTerrainMesh = [&world](const R5StaticMesh& m) -> bool
+	{
+		if (m.shader >= world.shaderNames.size()) return false;
+		const char* s = world.shaderNames[m.shader].c_str();
+		return s && _strnicmp(s, "levels\\", 7) == 0;
+	};
+
+	// pass 1: 不透明静态物体（cube PSO，逐 mesh 绑贴图）
+	for (const R5StaticMesh& m : world.meshes)
+	{
+		if (IsTerrainMesh(m)) continue;
+		const R5GeomVB& vb = world.vbs[m.vb];
+		const R5GeomIB& ib = world.ibs[m.ib];
+
+		D3D12_GPU_DESCRIPTOR_HANDLE srv = {};
+		if (m.shader < world.shaderSRVs.size() && world.shaderSRVs[m.shader].ptr)
+			srv = world.shaderSRVs[m.shader];
+		cmd->SetGraphicsRootDescriptorTable(1, srv.ptr ? srv : r5_texture::GetTestSRV());
+
+		D3D12_VERTEX_BUFFER_VIEW vbv = {};
+		vbv.BufferLocation = vb.addr + (UINT64)m.vBase * vb.stride;
+		vbv.SizeInBytes = (UINT64)m.vCount * vb.stride;
+		vbv.StrideInBytes = vb.stride;
+		cmd->IASetVertexBuffers(0, 1, &vbv);
+
+		D3D12_INDEX_BUFFER_VIEW ibv = {};
+		// M8: progressive 网格只画选中 LOD 窗口（iBase+SW.offset 起，SW.num_tris*3 个索引）
+		const UINT dIdx = (m.lodIndices != 0) ? m.lodIndices : m.iCount;
+		const UINT dOff = (m.lodIndices != 0) ? m.lodIndexOffset : 0;
+		ibv.BufferLocation = ib.addr + (UINT64)(m.iBase + dOff) * 2;
+		ibv.SizeInBytes = (UINT64)dIdx * 2;
+		ibv.Format = DXGI_FORMAT_R16_UINT;
+		cmd->IASetIndexBuffer(&ibv);
+
+		cmd->DrawIndexedInstanced(dIdx, 1, 0, 0, 0);
+	}
+
+	// pass 2: 地形（terrain PSO：base × mask.RGBA 混合 4 detail）
+	if (g_terPSO && g_terRootSig)
+	{
+		bool terBound = false;
+		static bool s_terDiagDone = false;
+		u32 terCount = 0;
+		for (const R5StaticMesh& m : world.meshes)
+		{
+			if (!IsTerrainMesh(m)) continue;
+			terCount++;
+			const R5GeomVB& vb = world.vbs[m.vb];
+			const R5GeomIB& ib = world.ibs[m.ib];
+
+			if (!terBound)
+			{
+				terBound = true;
+				cmd->SetPipelineState(g_terPSO.Get());
+				cmd->SetGraphicsRootSignature(g_terRootSig.Get());
+				cmd->SetGraphicsRootConstantBufferView(0, cbAddr);
+				for (int j = 0; j < 6; ++j)
+					cmd->SetGraphicsRootDescriptorTable(1 + j, g_terSRV[j]);
+			}
+
+			D3D12_VERTEX_BUFFER_VIEW vbv = {};
+			vbv.BufferLocation = vb.addr + (UINT64)m.vBase * vb.stride;
+			vbv.SizeInBytes = (UINT64)m.vCount * vb.stride;
+			vbv.StrideInBytes = vb.stride;
+			cmd->IASetVertexBuffers(0, 1, &vbv);
+
+			D3D12_INDEX_BUFFER_VIEW ibv = {};
+			// M8: progressive 地形只画选中 LOD 窗口（否则多 LOD 叠加 -> z-fighting）
+			const UINT dIdx = (m.lodIndices != 0) ? m.lodIndices : m.iCount;
+			const UINT dOff = (m.lodIndices != 0) ? m.lodIndexOffset : 0;
+			ibv.BufferLocation = ib.addr + (UINT64)(m.iBase + dOff) * 2;
+			ibv.SizeInBytes = (UINT64)dIdx * 2;
+			ibv.Format = DXGI_FORMAT_R16_UINT;
+			cmd->IASetIndexBuffer(&ibv);
+
+			cmd->DrawIndexedInstanced(dIdx, 1, 0, 0, 0);
+		}
+		if (!s_terDiagDone)
+		{
+			s_terDiagDone = true;
+			u32 lodCount = 0;
+			for (const R5StaticMesh& m : world.meshes)
+				if (IsTerrainMesh(m) && m.lodIndices != 0) lodCount++;
+			Msg("* R5 terrain diag: terrainMeshes=%u bound=%d lodWindows=%u", terCount, terBound ? 1 : 0, lodCount);
+		}
+	}
+	EndScene();
 }
 
 // ---------------------------------------------------------------------------

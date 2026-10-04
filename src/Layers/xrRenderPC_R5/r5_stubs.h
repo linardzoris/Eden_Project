@@ -6,16 +6,16 @@
 // 正确做法：EntryPoint.cpp 不直接引用 stub 类型，而是通过基类指针获取。
 // 因此此头文件仅保留前向声明，EntryPoint.cpp 中用 reinterpret_cast。
 
-class dx5RenderFactory;
-class dx5UIRender;
-class dx5DUInterface;
+class r5RenderFactory;
+class r5UIRender;
+class r5DUInterface;
 #ifdef DEBUG_DRAW
-class dx5DebugRender;
+class r5DebugRender;
 #endif
 
-extern dx5RenderFactory RenderFactoryImpl;
-extern dx5UIRender UIRenderImpl;
-extern dx5DUInterface DUImpl;
+extern r5RenderFactory r5RenderFactoryImpl;
+extern r5UIRender r5UIRenderImpl;
+extern r5DUInterface r5DUImpl;
 #ifdef DEBUG_DRAW
-extern dx5DebugRender DebugRenderImpl;
+extern r5DebugRender r5DebugRenderImpl;
 #endif

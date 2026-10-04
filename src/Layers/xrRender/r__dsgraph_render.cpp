@@ -289,7 +289,7 @@ void	R_dsgraph_structure::r_dsgraph_render_scope	()
 		GPU_EVENT(ZBUFFER_COPY);
 		RCache.set_ZB(NULL);
 
-		ID3D11Resource* res{};
+		ID3DResource* res{};
 		RDepth->GetResource(&res);
 
 		RContext->CopyResource(RImplementation.Target->rt_Position->pSurface, res);

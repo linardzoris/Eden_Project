@@ -23,9 +23,11 @@
 #include "../xrRender/dxRenderDeviceRender.h"
 #include "magic_enum/magic_enum.hpp"
 
+#ifndef USE_DX12
 #include "OverlayAPI\FSR2Wrapper.h"
 #include "OverlayAPI\DLSSWrapper.h"
 #include "OverlayAPI\XESSWrapper.h"
+#endif
 
 void CRenderTarget::u_setrt(const ref_rt& _1, const ref_rt& _2, const ref_rt& _3, const ref_rt& _4, ID3DDepthStencilView* zb)
 {
@@ -398,7 +400,7 @@ CRenderTarget::CRenderTarget()
 
 			DrawList.AddCallback([](const ImDrawList* parent_list, const ImDrawCmd* cmd) {
 				const float blend_factor[4] = { 0.f, 0.f, 0.f, 0.f };
-				RContext->OMSetBlendState((ID3D11BlendState*)cmd->UserCallbackData, blend_factor, 0xffffffff);
+				RContext->OMSetBlendState((ID3DBlendState*)cmd->UserCallbackData, blend_factor, 0xffffffff);
 				}, State);
 			ImGui::ImageWithBg(
 				rt->pTexture->get_SRView(),
@@ -410,12 +412,12 @@ CRenderTarget::CRenderTarget()
 				auto bd = ImGui_ImplDX11_GetBackendData();
 				if (bd != nullptr) {
 					const float blend_factor[4] = { 0.f, 0.f, 0.f, 0.f };
-					RContext->OMSetBlendState((ID3D11BlendState*)bd->pBlendState, blend_factor, 0xffffffff);
+					RContext->OMSetBlendState((ID3DBlendState*)bd->pBlendState, blend_factor, 0xffffffff);
 				}
 				}, State);
 			};
 
-		ID3D11BlendState* BlendState = nullptr;
+		ID3DBlendState* BlendState = nullptr;
 		if (!ImGui::Begin("GraphicDebug", &Engine.External.EditorStates[static_cast<std::uint8_t>(EditorUI::Shaders)], ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse)) {
 			ImGui::End();
 			return;
@@ -988,12 +990,14 @@ CRenderTarget::~CRenderTarget	()
 	xr_delete(b_gtao);
 	xr_delete(b_taa);
 
+#ifndef USE_DX12
 	g_Fsr2Wrapper.Destroy();
 	g_DLSSWrapper.Destroy();
 
 #if 0
 	g_XESSWrapper.Destroy();
 #endif
+#endif // USE_DX12
 	CImGuiManager::Instance().Unsubscribe("GraphicDebug");
 
 	if (g_debug_blend_state != nullptr) 

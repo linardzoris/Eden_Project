@@ -7,7 +7,10 @@
 #include "SH_Constant.h"
 #include "SH_RT.h"
 
-#ifdef USE_DX11
+#ifdef USE_DX12
+#include "../xrRenderDX12/dx12R_Backend_Runtime.h"
+#include "../xrRenderDX12/StateManager/dx12State.h"
+#elif defined(USE_DX11)
 #include "../xrRenderDX10/dx10R_Backend_Runtime.h"
 #include "../xrRenderDX10/StateManager/dx10State.h"
 #else //USE_DX11

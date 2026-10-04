@@ -137,19 +137,15 @@ static bool LoadDDSCommon(const wchar_t* wpath, ID3D12Resource** outRes, ID3D12R
 	return true;
 }
 
-// 通用纹理加载（缓存去重）
-D3D12_GPU_DESCRIPTOR_HANDLE r5_texture::Load(const char* relPath)
+// 通用纹理加载核心（缓存去重 + DDS 加载 + SRV 分配）
+static D3D12_GPU_DESCRIPTOR_HANDLE LoadImpl(const char* cacheKey, const char* fullPath)
 {
-	if (!relPath || !relPath[0])
-		return {};
 	for (size_t i = 0; i < g_names.size(); ++i)
-		if (g_names[i].equal(relPath))
+		if (g_names[i].equal(cacheKey))
 			return g_entries[i].gpuSRV;
 
-	char full[MAX_PATH];
-	xr_strconcat(full, "gamedata\\textures\\", relPath, ".dds");
 	wchar_t wpath[MAX_PATH];
-	MultiByteToWideChar(CP_ACP, 0, full, -1, wpath, MAX_PATH);
+	MultiByteToWideChar(CP_ACP, 0, fullPath, -1, wpath, MAX_PATH);
 
 	DirectX::TexMetadata meta;
 	xr_vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> layouts;
@@ -159,7 +155,7 @@ D3D12_GPU_DESCRIPTOR_HANDLE r5_texture::Load(const char* relPath)
 	ID3D12Resource* uploadBuf = nullptr;
 	if (!LoadDDSCommon(wpath, &res, &uploadBuf, meta, layouts, numRows, rowSizes))
 	{
-		Msg("! R5 texture: Load(%s) failed", full);
+		Msg("! R5 texture: Load(%s) failed", fullPath);
 		return {};
 	}
 
@@ -183,11 +179,33 @@ D3D12_GPU_DESCRIPTOR_HANDLE r5_texture::Load(const char* relPath)
 	srvDesc.Texture2D.MipLevels = (UINT)meta.mipLevels;
 	dx12::GetDevice()->CreateShaderResourceView(res, &srvDesc, srvCpu);
 
-	g_names.push_back(relPath);
+	g_names.push_back(cacheKey);
 	g_entries.push_back(e);
-	Msg("* R5 texture: %s loaded (%ux%u, %u mips, fmt %u), upload deferred", relPath,
+	Msg("* R5 texture: %s loaded (%ux%u, %u mips, fmt %u), upload deferred", cacheKey,
 		(UINT)meta.width, (UINT)meta.height, (UINT)meta.mipLevels, (UINT)meta.format);
 	return e.gpuSRV;
+}
+
+// 通用纹理加载（缓存去重）
+D3D12_GPU_DESCRIPTOR_HANDLE r5_texture::Load(const char* relPath)
+{
+	if (!relPath || !relPath[0])
+		return {};
+
+	char full[MAX_PATH];
+	xr_strconcat(full, "gamedata\\textures\\", relPath, ".dds");
+	return LoadImpl(relPath, full);
+}
+
+// M8: 按相对 gamedata\ 的完整路径加载（levels\... 等非标准目录）
+D3D12_GPU_DESCRIPTOR_HANDLE r5_texture::LoadRoot(const char* relRootPath)
+{
+	if (!relRootPath || !relRootPath[0])
+		return {};
+
+	char full[MAX_PATH];
+	xr_strconcat(full, "gamedata\\", relRootPath, ".dds");
+	return LoadImpl(relRootPath, full);
 }
 
 // ---------------------------------------------------------------------------

@@ -6,7 +6,10 @@ using namespace DirectX;
 
 #include "../../xrCore/Collision/Frustum.h"
 
-#ifdef USE_DX11
+#ifdef USE_DX12
+#include "../xrRenderDX12/StateManager/dx12StateManager.h"
+#include "../xrRenderDX12/StateManager/dx12ShaderResourceStateCache.h"
+#elif defined(USE_DX11)
 #include "../xrRenderDX10/StateManager/dx10StateManager.h"
 #include "../xrRenderDX10/StateManager/dx10ShaderResourceStateCache.h"
 #endif //USE_DX11
@@ -42,7 +45,9 @@ void CBackend::OnFrameBegin	()
 #endif    
 	{
 		PGO					(Msg("PGO:*****frame[%d]*****",RDEVICE.dwFrame));
-#ifdef USE_DX11
+#ifdef USE_DX12
+		Invalidate();
+#elif defined(USE_DX11)
 		Invalidate();
 		//	DX9 sets base rt nd base zb by default
 		RImplementation.rmNormal();

@@ -190,8 +190,8 @@ void dxFontRender::CreateFontAtlas(u32 width, u32 height, const char* name, void
 	descFontAtlas.SampleDesc.Quality = 0;
 	descFontAtlas.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
 	descFontAtlas.Usage = D3D_USAGE_DEFAULT;
-	descFontAtlas.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-	descFontAtlas.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	descFontAtlas.BindFlags = D3D_BIND_SHADER_RESOURCE;
+	descFontAtlas.CPUAccessFlags = D3D_CPU_ACCESS_WRITE;
 	descFontAtlas.MiscFlags = 0;
 
 	D3D_SUBRESOURCE_DATA FontData;

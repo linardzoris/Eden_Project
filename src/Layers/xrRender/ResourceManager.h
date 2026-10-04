@@ -12,7 +12,12 @@
 // refs
 struct		lua_State;
 
+#ifdef USE_DX12
+class dx12ConstantBuffer;
+typedef dx12ConstantBuffer	dx10ConstantBuffer;
+#else
 class dx10ConstantBuffer;
+#endif
 
 // defs
 class ECORE_API CResourceManager

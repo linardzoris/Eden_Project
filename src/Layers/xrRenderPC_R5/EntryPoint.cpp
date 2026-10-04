@@ -8,12 +8,12 @@ BOOL APIENTRY DllMain(HANDLE hModule, DWORD  ul_reason_for_call, LPVOID lpReserv
 	{
 	case DLL_PROCESS_ATTACH:
 		::Render = &RImplementation;
-		::RenderFactory = reinterpret_cast<IRenderFactory*>(&RenderFactoryImpl);
-		::DU = reinterpret_cast<CDUInterface*>(&DUImpl);
-		UIRender = reinterpret_cast<IUIRender*>(&UIRenderImpl);
+		::RenderFactory = reinterpret_cast<IRenderFactory*>(&r5RenderFactoryImpl);
+		::DU = reinterpret_cast<CDUInterface*>(&r5DUImpl);
+		UIRender = reinterpret_cast<IUIRender*>(&r5UIRenderImpl);
 
 #ifdef DEBUG_DRAW
-		DRender = reinterpret_cast<IDebugRender*>(&DebugRenderImpl);
+		DRender = reinterpret_cast<IDebugRender*>(&r5DebugRenderImpl);
 #endif
 		break;
 	case DLL_THREAD_ATTACH:

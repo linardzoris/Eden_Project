@@ -4,6 +4,12 @@
 
 #pragma once
 
+#ifdef USE_DX12
+// DX12 构建时，R4 渲染器源码复用 R5 的 PCH（DX12 类型/后端），
+// 使 r4.cpp / r4_rendertarget*.cpp 等可以直接以 DX12 编译。
+#include "../xrRenderPC_R5/stdafx.h"
+#else
+
 #include <d3d9.h>
 
 // DXGI joke
@@ -51,3 +57,5 @@ IC	void jitter(CBlender_Compile& C) {
 
 	C.r_dx10Sampler("smp_jitter");
 }
+
+#endif // USE_DX12

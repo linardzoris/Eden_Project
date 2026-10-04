@@ -10,9 +10,9 @@
 #include "imgui.h"
 #endif
 
-#ifdef USE_DX11
+#if defined(USE_DX11) && !defined(USE_DX12)
 #include "imgui_impl_dx11.h"
-#else
+#elif !defined(USE_DX12)
 #include "../xrRenderDX9/imgui_impl_dx9.h"
 #endif
 
@@ -22,17 +22,19 @@ dxRenderDeviceRender::dxRenderDeviceRender()
 {
 	CImGuiManager& ImUI = CImGuiManager::Instance();
 
-#ifdef USE_DX11
+#if defined(USE_DX11) && !defined(USE_DX12)
 	ImUI.HardwareInitCallback		= []() { ImGui_ImplDX11_Init(RDevice, RContext); };
 	ImUI.HardwareDrawDataCallback	= []() { ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData()); };
 	ImUI.HardwareDestroyCallback	= ImGui_ImplDX11_Shutdown;
 	ImUI.HardwareNewFrameCallback	= ImGui_ImplDX11_NewFrame;
-#else
+#elif !defined(USE_DX12)
 	ImUI.HardwareInitCallback		= []() { ImGui_ImplDX9_Init(RDevice); };
 	ImUI.HardwareDrawDataCallback	= []() { ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData()); };
 	ImUI.HardwareDestroyCallback	= ImGui_ImplDX9_Shutdown;
 	ImUI.HardwareNewFrameCallback	= ImGui_ImplDX9_NewFrame;
 	ImUI.HardwareResetCallback		= []() { ImGui_ImplDX9_InvalidateDeviceObjects(); /*ImGui_ImplDX9_CreateDeviceObjects(); */};
+#else
+	// DX12: imgui overlay 后置（阶段2只要求静态世界渲染正确）
 #endif
 }
 #else
@@ -447,7 +449,7 @@ void dxRenderDeviceRender::End()
 		MyImGui.BeginRender();
 
 #ifdef USE_DX11
-		ID3D11RenderTargetView* RTV = RSwapchainTarget;
+		ID3DRenderTargetView* RTV = RSwapchainTarget;
 		RContext->OMSetRenderTargets(1, &RTV, nullptr);
 #else
 		RDevice->SetRenderTarget(0, RSwapchainTarget);
@@ -467,7 +469,7 @@ void dxRenderDeviceRender::End()
 #else
 
 #ifdef USE_DX11
-	ID3D11RenderTargetView* RTV = RTarget;
+	ID3DRenderTargetView* RTV = RTarget;
 	RContext->OMSetRenderTargets(1, &RTV, RDepth);
 #else
 	RDevice->SetRenderTarget(0, RTarget);

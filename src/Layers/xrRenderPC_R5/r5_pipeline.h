@@ -8,6 +8,7 @@
 #include <d3d12.h>
 
 class R5Visual; // fwd
+struct R5LevelWorld; // fwd
 
 namespace r5_pipeline
 {
@@ -30,6 +31,9 @@ namespace r5_pipeline
 
 	// M5: 绘制一个静态视觉（复用 cube 根签名/PSO，绑定其 VB/IB）
 	void DrawVisual(const R5Visual& v, float timeSec);
+
+	// M8: 绘制静态世界（真实相机矩阵 + 世界几何）
+	void DrawLevelWorld(const R5LevelWorld& world, float timeSec);
 
 	// M4a: G-buffer 合成 pass（多 SRV 采样，Lambert 光照到 backbuffer）
 	void DrawCompose();

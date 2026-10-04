@@ -36,6 +36,10 @@ public:
 	virtual IRenderVisual*			model_Create(LPCSTR name, IReader* data = 0) override;
 	virtual void					model_Delete(IRenderVisual* & V, BOOL bDiscard) override;
 
+	// M8: 世界加载
+	virtual void					level_Load(IReader* fs) override;
+	virtual void					level_Unload() override;
+
 	// IRenderDeviceRender
 	virtual void	Copy(IRenderDeviceRender& _in) override;
 

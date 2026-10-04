@@ -30,7 +30,7 @@ public:
 	xr_vector<ID3DRenderTargetView*> pMippedRT;
 #ifdef USE_DX11
 	ID3DDepthStencilView*	pZRT;
-	ID3D11UnorderedAccessView*	pUAView;
+	ID3DUnorderedAccessView*	pUAView;
 #endif //USE_DX11
 	ref_texture				pTexture;
 

@@ -233,7 +233,7 @@ void	CBlender_BmmD::Compile	(CBlender_Compile& C)
 		}
 
 		uber_deffer(C, true, "deffer_base", "deffer_impl", false, oT2_Name[0] ? oT2_Name : 0, true);
-		C.RS.SetRS(D3DRS_ZFUNC, D3D11_COMPARISON_EQUAL);
+		C.RS.SetRS(D3DRS_ZFUNC, D3D_COMPARISON_EQUAL);
 
 		C.r_dx10Texture("s_lmap", C.L_textures[1]);
 

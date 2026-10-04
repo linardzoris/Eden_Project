@@ -16,7 +16,7 @@
 #include "R_Backend_hemi.h"
 #include "R_Backend_tree.h"
 
-#ifdef USE_DX11
+#if defined(USE_DX11) || defined(USE_DX12)
 #	include "..\xrRenderPC_R4\r_backend_lod.h"
 #endif
 
@@ -51,7 +51,7 @@ struct	R_statistics			{
 class  ECORE_API CBackend
 {
 public:
-#ifdef USE_DX11
+#if defined(USE_DX11) || defined(USE_DX12)
 	enum	MaxTextures
 	{
 		//	Actually these values are 128
@@ -86,11 +86,11 @@ public:
 	R_xforms						xforms;
 	R_hemi							hemi;
 	R_tree							tree;
-#ifdef USE_DX11
+#if defined(USE_DX11) || defined(USE_DX12)
 	R_LOD							LOD;
 #endif
 
-#ifdef USE_DX11
+#if defined(USE_DX11) || defined(USE_DX12)
 	ref_cbuffer						m_aVertexConstants[MaxCBuffers];
 	ref_cbuffer						m_aPixelConstants[MaxCBuffers];
 	ref_cbuffer						m_aGeometryConstants[MaxCBuffers];
@@ -109,7 +109,7 @@ private:
 	ID3DDepthStencilView*			pZB;
 
 	// Vertices/Indices/etc
-#ifdef USE_DX11
+#if defined(USE_DX11) || defined(USE_DX12)
 	SDeclaration*					decl;
 #else //USE_DX11
 	IDirect3DVertexDeclaration9*	decl;
@@ -126,17 +126,17 @@ private:
 	ID3DState*						state;
 	ID3DPixelShader*				ps;
 	ID3DVertexShader*				vs;
-#ifdef USE_DX11
+#if defined(USE_DX11) || defined(USE_DX12)
 	ID3DGeometryShader*				gs;
-	ID3D11HullShader*				hs;
-	ID3D11DomainShader*				ds;
-	ID3D11ComputeShader*			cs;
+	ID3DHullShader*					hs;
+	ID3DDomainShader*				ds;
+	ID3DComputeShader*				cs;
 #endif //USE_DX11
 
 #ifdef DEBUG
 	LPCSTR							ps_name;
 	LPCSTR							vs_name;
-#ifdef USE_DX11
+#if defined(USE_DX11) || defined(USE_DX12)
 	LPCSTR							gs_name;
 	LPCSTR							hs_name;
 	LPCSTR							ds_name;
@@ -166,7 +166,7 @@ private:
 	CTexture*						textures_ps	[mtMaxPixelShaderTextures];	// stages
 	//CTexture*						textures_vs	[5	];	// dmap + 4 vs
 	CTexture*						textures_vs	[mtMaxVertexShaderTextures];	// 4 vs
-#ifdef USE_DX11
+#if defined(USE_DX11) || defined(USE_DX12)
 	CTexture*						textures_gs	[mtMaxGeometryShaderTextures];	// 4 vs
 	CTexture*						textures_hs	[mtMaxHullShaderTextures];	// 4 vs
 	CTexture*						textures_ds	[mtMaxDomainShaderTextures];	// 4 vs
@@ -205,7 +205,7 @@ public:
 	{
 		if (stage<CTexture::rstVertex)			return textures_ps[stage];
 		else if (stage<CTexture::rstGeometry)	return textures_vs[stage-CTexture::rstVertex];
-#ifdef USE_DX11
+#if defined(USE_DX11) || defined(USE_DX12)
 		else if (stage<CTexture::rstHull)	return textures_gs[stage-CTexture::rstGeometry];
 		else if (stage<CTexture::rstDomain) return textures_hs[stage-CTexture::rstHull];
 		else if (stage<CTexture::rstCompute) return textures_ds[stage-CTexture::rstDomain];
@@ -221,7 +221,7 @@ public:
 #endif
 	}
 
-#ifdef USE_DX11
+#if defined(USE_DX11) || defined(USE_DX12)
 	IC	void						get_ConstantDirect	(shared_str& n, u32 DataSize, void** pVData, void** pGData, void** pPData);
 #else //USE_DX11
 	IC	R_constant_array&			get_ConstantCache_Vertex	()			{ return constants.a_vertex;	}
@@ -276,7 +276,7 @@ public:
 	ICF	void						set_States			(ID3DState* _state);
 	ICF	void						set_States			(ref_state& _state)					{ set_States(_state->state);	}
 
-#ifdef USE_DX11
+#if defined(USE_DX11) || defined(USE_DX12)
 	ICF  void						set_Format			(SDeclaration* _decl);
 #else //USE_DX11
 	ICF  void						set_Format			(IDirect3DVertexDeclaration9* _decl);
@@ -285,34 +285,34 @@ public:
 	ICF void						set_PS				(ID3DPixelShader* _ps, LPCSTR _n=0);
 	ICF void						set_PS				(ref_ps& _ps)						{ set_PS(_ps->ps,_ps->cName.c_str());				}
 
-#ifdef USE_DX11
+#if defined(USE_DX11) || defined(USE_DX12)
 	ICF void						set_GS				(ID3DGeometryShader* _gs, LPCSTR _n=0);
 	ICF void						set_GS				(ref_gs& _gs)						{ set_GS(_gs->gs,_gs->cName.c_str());				}
 
-	ICF void						set_HS				(ID3D11HullShader* _hs, LPCSTR _n=0);
+	ICF void						set_HS				(ID3DHullShader* _hs, LPCSTR _n=0);
 	ICF void						set_HS				(ref_hs& _hs)						{ set_HS(_hs->sh,_hs->cName.c_str());				}
 
-	ICF void						set_DS				(ID3D11DomainShader* _ds, LPCSTR _n=0);
+	ICF void						set_DS				(ID3DDomainShader* _ds, LPCSTR _n=0);
 	ICF void						set_DS				(ref_ds& _ds)						{ set_DS(_ds->sh,_ds->cName.c_str());				}
 
-	ICF void						set_CS				(ID3D11ComputeShader* _cs, LPCSTR _n=0);
+	ICF void						set_CS				(ID3DComputeShader* _cs, LPCSTR _n=0);
 	ICF void						set_CS				(ref_cs& _cs)						{ set_CS(_cs->sh,_cs->cName.c_str());				}
 
 #endif //USE_DX11
 
-#ifdef USE_DX11
+#if defined(USE_DX11) || defined(USE_DX12)
 	ICF	bool						is_TessEnabled		();
 #else
 	ICF	bool						is_TessEnabled		() {return false;}
 #endif
 
 	ICF void						set_VS				(ref_vs& _vs);
-#ifdef USE_DX11
+#if defined(USE_DX11) || defined(USE_DX12)
 	ICF void						set_VS				(SVS* _vs);
 protected:	//	In DX10 we need input shader signature which is stored in ref_vs
 #endif //USE_DX11
 	ICF void						set_VS				(ID3DVertexShader* _vs, LPCSTR _n=0);
-#ifdef USE_DX11
+#if defined(USE_DX11) || defined(USE_DX12)
 public:
 #endif //USE_DX11
 
@@ -342,7 +342,7 @@ public:
 	ICF	void						set_ca				(R_constant* C_, u32 e, const Fmatrix& A)							{ if (C_)		constants.seta(C_,e,A);				}
 	ICF	void						set_ca				(R_constant* C_, u32 e, const Fvector4& A)							{ if (C_)		constants.seta(C_,e,A);				}
 	ICF	void						set_ca				(R_constant* C_, u32 e, float x, float y, float z, float w)			{ if (C_)		constants.seta(C_,e,x,y,z,w);		}
-#ifdef USE_DX11
+#if defined(USE_DX11) || defined(USE_DX12)
 	ICF	void						set_c				(R_constant* C_, float A)											{ if (C_)		constants.set(C_,A);					}
 	ICF	void						set_c				(R_constant* C_, int A)												{ if (C_)		constants.set(C_,A);					}
 #endif //USE_DX11
@@ -355,7 +355,7 @@ public:
 	ICF	void						set_ca				(LPCSTR n, u32 e, const Fmatrix& A)									{ if(ctable)	set_ca	(&*ctable->get(n),e,A);		}
 	ICF	void						set_ca				(LPCSTR n, u32 e, const Fvector4& A)								{ if(ctable)	set_ca	(&*ctable->get(n),e,A);		}
 	ICF	void						set_ca				(LPCSTR n, u32 e, float x, float y, float z, float w)				{ if(ctable)	set_ca	(&*ctable->get(n),e,x,y,z,w);}
-#ifdef USE_DX11
+#if defined(USE_DX11) || defined(USE_DX12)
 	ICF	void						set_c				(LPCSTR n, float A)											{ if(ctable)	set_c	(&*ctable->get(n),A);		}
 	ICF	void						set_c				(LPCSTR n, int A)												{ if(ctable)	set_c	(&*ctable->get(n),A);		}
 #endif //USE_DX11
@@ -367,7 +367,7 @@ public:
 	ICF	void						set_ca				(shared_str& n, u32 e, const Fmatrix& A)							{ if(ctable)	set_ca	(&*ctable->get(n),e,A);		}
 	ICF	void						set_ca				(shared_str& n, u32 e, const Fvector4& A)							{ if(ctable)	set_ca	(&*ctable->get(n),e,A);		}
 	ICF	void						set_ca				(shared_str& n, u32 e, float x, float y, float z, float w)			{ if(ctable)	set_ca	(&*ctable->get(n),e,x,y,z,w);}
-#ifdef USE_DX11
+#if defined(USE_DX11) || defined(USE_DX12)
 	ICF	void						set_c				(shared_str& n, float A)											{ if(ctable)	set_c	(&*ctable->get(n),A);		}
 	ICF	void						set_c				(shared_str& n, int A)												{ if(ctable)	set_c	(&*ctable->get(n),A);		}
 #endif //USE_DX11
@@ -375,7 +375,7 @@ public:
 	ICF	void						Render				(D3DPRIMITIVETYPE T, u32 baseV, u32 startV, u32 countV, u32 startI, u32 PC);
 	ICF	void						Render				(D3DPRIMITIVETYPE T, u32 startV, u32 PC);
 
-#ifdef USE_DX11
+#if defined(USE_DX11) || defined(USE_DX12)
 	ICF	void						Compute				(UINT ThreadGroupCountX, UINT ThreadGroupCountY, UINT ThreadGroupCountZ);
 	ICF void						Render_noIA			(u32 iVertexCount);
 	ICF	void						RenderInstancedIndexed(D3DPRIMITIVETYPE T, u32 baseV, u32 startV, u32 countV, u32 startI, u32 PC, u32 instanceCount, u32 startInstanceLocation);	
@@ -392,7 +392,7 @@ public:
 	// Debug render
 	void dbg_DP						(D3DPRIMITIVETYPE pt, ref_geom geom, u32 vBase, u32 pc);
 	void dbg_DIP					(D3DPRIMITIVETYPE pt, ref_geom geom, u32 baseV, u32 startV, u32 countV, u32 startI, u32 PC);
-#ifdef USE_DX11
+#if defined(USE_DX11) || defined(USE_DX12)
 	//	TODO: DX10: Implement this.
 	IC void	dbg_SetRS				(D3DRENDERSTATETYPE p1, u32 p2)
 	{ VERIFY(!"Not implemented"); }
@@ -415,7 +415,7 @@ public:
 
 	CBackend()						{	Invalidate(); };
 
-#ifdef USE_DX11
+#if defined(USE_DX11) || defined(USE_DX12)
 private:
 	//	DirectX 10 internal functionality
 	//void CreateConstantBuffers();

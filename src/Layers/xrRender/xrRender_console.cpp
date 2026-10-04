@@ -221,7 +221,9 @@ int			r_debug_render_depth		= 0;
 #include "../../xrEngine/XR_IOConsole.h"
 #include	"../../xrEngine/xr_ioc_cmd.h"
 
-#ifdef USE_DX11
+#ifdef USE_DX12
+#include "../xrRenderDX12/StateManager/dx12SamplerStateCache.h"
+#elif defined(USE_DX11)
 #include "../xrRenderDX10/StateManager/dx10SamplerStateCache.h"
 #endif //USE_DX11
 

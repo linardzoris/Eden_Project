@@ -9,7 +9,9 @@
 
 #include "../xrRender/QueryHelper.h"
 
+#ifndef USE_DX12
 #include "OverlayAPI\FSR2Wrapper.h"
+#endif
 
 #include "../../xrEngine/GameFont.h"
 #include "../../xrEngine/x_ray.h"
@@ -486,8 +488,14 @@ void CRender::Render()
 
 	if(ps_r_scale_mode > 1 || ps_r2_aa_type == 3)
 	{
+#ifdef USE_DX12
+		// DX12 阶段：FSR2 抖动暂用固定相位计数（后续接入 FSR3/DLSS-DX12）
+		int32_t jitterPhaseCount = 8;
+		ps_r_taa_jitter_full.set(0.f, 0.f, 0.f);
+#else
 		int32_t jitterPhaseCount = ffxFsr2GetJitterPhaseCount((int32_t)RCache.get_width(), (int32_t)RCache.get_target_width());
 		ffxFsr2GetJitterOffset(&ps_r_taa_jitter_full.x, &ps_r_taa_jitter_full.y, Device.dwFrame, jitterPhaseCount);
+#endif
 
 		ps_r_taa_jitter_full = ps_r_taa_jitter_full.mul(ps_r_taa_jitter_scale);
 
@@ -677,7 +685,7 @@ void CRender::Render()
 		GPU_EVENT(ZBUFFER_COPY);
 		RCache.set_ZB(NULL);
 
-		ID3D11Resource* res{};
+		ID3DResource* res{};
 		RDepth->GetResource(&res);
 
 		RContext->CopyResource(Target->rt_Position->pSurface, res);

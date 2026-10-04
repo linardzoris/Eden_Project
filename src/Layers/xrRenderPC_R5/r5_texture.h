@@ -22,4 +22,8 @@ namespace r5_texture
 	// M6: 通用纹理加载（按相对 gamedata\textures 的路径，自动补 .dds，缓存去重）
 	// 返回 GPU 堆中的 SRV 句柄（供 SetGraphicsRootDescriptorTable）；失败返回 {}
 	D3D12_GPU_DESCRIPTOR_HANDLE Load(const char* relPath);
+
+	// M8: 按相对 gamedata\ 的完整路径加载（不自动加 textures\），
+	// 用于 levels\<map>\terrain\ 等非标准目录（地形 base/lmap 贴图）
+	D3D12_GPU_DESCRIPTOR_HANDLE LoadRoot(const char* relRootPath);
 }

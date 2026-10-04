@@ -20,19 +20,19 @@ public:
 
 private:
 	void Construct(
-		ID3D11ComputeShader*	cs,
+		ID3DComputeShader*	cs,
 		ref_ctable				ctable,
-		xr_vector<ID3D11SamplerState*>&			Samplers,
-		xr_vector<ID3D11ShaderResourceView*>&	Textures,
-		xr_vector<ID3D11UnorderedAccessView*>&	Outputs
+		xr_vector<ID3DSamplerState*>&			Samplers,
+		xr_vector<ID3DShaderResourceView*>&	Textures,
+		xr_vector<ID3DUnorderedAccessView*>&	Outputs
 	);
 
 private:
-	ID3D11ComputeShader*	m_cs;
+	ID3DComputeShader*	m_cs;
 	ref_ctable				m_ctable;
-	xr_vector<ID3D11SamplerState*>			m_Samplers;
-	xr_vector<ID3D11ShaderResourceView*>	m_Textures;
-	xr_vector<ID3D11UnorderedAccessView*>	m_Outputs;
+	xr_vector<ID3DSamplerState*>			m_Samplers;
+	xr_vector<ID3DShaderResourceView*>	m_Textures;
+	xr_vector<ID3DUnorderedAccessView*>	m_Outputs;
 }; // class ComputeShader
 
 #endif // #ifndef COMPUTESHADER_H_INCLUDED

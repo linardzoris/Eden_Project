@@ -58,7 +58,7 @@ namespace r5_res
 	};
 
 	extern GpuDescriptorHeap g_gpuHeap;	// 4096 CBV/SRV/UAV
-	extern UploadRing g_upload;			// 16 MB
+	extern UploadRing g_upload;			// 256 MB（M8: 容纳地图 VB/IB 池，l05_bar 约 50MB）
 
 	bool Init();
 	void Shutdown();
