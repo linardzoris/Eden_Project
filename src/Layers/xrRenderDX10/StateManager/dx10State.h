@@ -1,6 +1,10 @@
 #ifndef	dx10State_included
 #define	dx10State_included
 #pragma once
+#ifdef USE_DX12
+#include "../xrRenderDX12/StateManager/dx12State.h"
+#else
+
 
 class SimulatorStates;
 
@@ -51,3 +55,5 @@ private:
 };
 
 #endif	//	dx10State_included
+
+#endif // USE_DX12

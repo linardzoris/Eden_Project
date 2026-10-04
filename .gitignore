@@ -89,3 +89,8 @@ _profiles/
 bins/
 *.zip
 dxc_2026_09_29/
+gamedata/fonts
+*.png
+*.jpg
+*.ps1
+*.txt

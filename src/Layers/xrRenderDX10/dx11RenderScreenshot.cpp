@@ -19,7 +19,12 @@ void CRender::ScreenshotImpl(ScreenshotMode mode, LPCSTR name, CMemoryWriter* me
     ScratchImage scratchImage = {}, smallScratchImage = {};
     Blob saved = {};
 
+#ifdef USE_DX12
+    // DX12：截图 readback 后置实现（当前直接走失败分支返回）
+    HRESULT hr = E_FAIL;
+#else
     HRESULT hr = CaptureTexture(RDevice, RContext, pSrcTexture, scratchImage);
+#endif
     if (FAILED(hr))
     {
         Msg("[ScreenshotImpl] CaptureTexture failed with HRESULT: 0x%08X", hr);

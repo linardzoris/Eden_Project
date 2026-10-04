@@ -91,7 +91,8 @@ void CImGuiManager::InitPlatform()
 
 void CImGuiManager::InitHardware()
 {
-	HardwareInitCallback();
+	if (HardwareInitCallback)
+		HardwareInitCallback();
 }
 
 void CImGuiManager::Reset()
@@ -106,7 +107,8 @@ void CImGuiManager::Destroy(bool HardwareOnly)
 {
 	if (HardwareOnly)
 	{
-		HardwareDestroyCallback();
+		if (HardwareDestroyCallback)
+			HardwareDestroyCallback();
 
 		HardwareInitCallback = nullptr;
 		HardwareResetCallback = nullptr;
@@ -174,7 +176,8 @@ void CImGuiManager::Unsubscribe(shared_str Name)
 
 void CImGuiManager::BeginRender()
 {
-	HardwareNewFrameCallback();
+	if (HardwareNewFrameCallback)
+		HardwareNewFrameCallback();
 }
 
 void CImGuiManager::AfterRender()
@@ -219,7 +222,8 @@ void CImGuiManager::Render()
 
 	ImGui::Render();
 
-	HardwareDrawDataCallback();
+	if (HardwareDrawDataCallback)
+		HardwareDrawDataCallback();
 }
 
 void CImGuiManager::UpdateCapture()
@@ -275,7 +279,8 @@ void CImGuiManager::NewPlatformFrame() const
 
 void CImGuiManager::NewHardwareFrame() const
 {
-	HardwareNewFrameCallback();
+	if (HardwareNewFrameCallback)
+		HardwareNewFrameCallback();
 }
 
 CImGuiManager& CImGuiManager::Instance()

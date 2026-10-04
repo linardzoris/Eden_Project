@@ -18,9 +18,9 @@ struct gpu_event_state
     u32 parent;
     u32 stack_idx;
     shared_str name;
-    ComPtr<ID3D11Query> disjoint;
-    ComPtr<ID3D11Query> begin;
-    ComPtr<ID3D11Query> end;
+    ComPtr<ID3DQuery> disjoint;
+    ComPtr<ID3DQuery> begin;
+    ComPtr<ID3DQuery> end;
 };
 
 struct gpu_frame_state 
@@ -52,7 +52,7 @@ InvalidateQueries()
                 auto& event = state.events[i];
 
                 D3D11_QUERY_DESC desc = { D3D11_QUERY_TIMESTAMP_DISJOINT };
-                ID3D11Query* query = nullptr;
+                ID3DQuery* query = nullptr;
 
                 R_CHK(RDevice->CreateQuery(&desc, event.disjoint.GetAddressOf()));
                 desc.Query = D3D11_QUERY_TIMESTAMP;

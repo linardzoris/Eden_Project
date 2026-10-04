@@ -23,6 +23,10 @@
 #define ENGINE_BUILD
 #endif	//	XRRENDER_R1_EXPORTS
 
+#ifdef XRRENDER_R5_EXPORTS
+#define ENGINE_BUILD
+#endif	//	XRRENDER_R5_EXPORTS
+
 #if !defined(ENGINE_BUILD) && !defined(_EDITOR)
 	#include "ai_space.h"
 #endif

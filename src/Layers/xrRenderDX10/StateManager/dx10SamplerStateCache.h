@@ -1,6 +1,10 @@
 #ifndef	dx10SamplerStateCache_included
 #define	dx10SamplerStateCache_included
 #pragma once
+#ifdef USE_DX12
+#include "../xrRenderDX12/StateManager/dx12SamplerStateCache.h"
+#else
+
 
 
 class dx10SamplerStateCache
@@ -76,3 +80,5 @@ private:
 extern	dx10SamplerStateCache	SSManager;
 
 #endif	//	dx10SamplerStateCache_included
+
+#endif // USE_DX12

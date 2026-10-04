@@ -1,6 +1,10 @@
 #ifndef	dx10ShaderResourceStateCache_included
 #define	dx10ShaderResourceStateCache_included
 #pragma once
+#ifdef USE_DX12
+#include "../xrRenderDX12/StateManager/dx12ShaderResourceStateCache.h"
+#else
+
 
 class dx10ShaderResourceStateCache
 {
@@ -55,3 +59,5 @@ private:
 extern	dx10ShaderResourceStateCache	SRVSManager;
 
 #endif	//	dx10ShaderResourceStateCache_included
+
+#endif // USE_DX12

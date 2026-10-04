@@ -375,6 +375,16 @@ u32 dxRenderDeviceRender::GetCacheStatPolys()
 #endif
 }
 
+#ifdef USE_DX12
+// 引擎设备层（xrAbstractions）每帧主命令列表生命周期导出。
+// R5 = R4 外壳以 USE_DX12 编译，共享层自身不录制命令列表，故必须在设备帧
+// 边界统一打开/关闭/提交，否则列表自初始化 Close 后再无 Reset，全部绘制落在
+// closed list（调试层报 "API cannot be called on a closed command list"）并黑屏。
+extern "C" ENGINE_API void	BeginFrame();
+extern "C" ENGINE_API void	EndFrame();
+extern "C" ENGINE_API void	FramePresent(bool vsync);
+#endif
+
 void dxRenderDeviceRender::Begin()
 {
 #ifndef _EDITOR
@@ -382,8 +392,11 @@ void dxRenderDeviceRender::Begin()
 	CHK_DX					(RDevice->BeginScene());
 #else
 #endif //USE_DX11
-	
+
 	RCache.OnFrameBegin		();
+#ifdef USE_DX12
+	::BeginFrame			();		// Reset allocator/list，backbuffer PRESENT->RT
+#endif
 	RCache.set_CullMode		(CULL_CW);
 	RCache.set_CullMode		(CULL_CCW);
 	RCache.set_Z			(TRUE);
@@ -446,17 +459,22 @@ void dxRenderDeviceRender::End()
 	{
 		PROF_EVENT("ImGui EndRender");
 		CImGuiManager& MyImGui = CImGuiManager::Instance();
-		MyImGui.BeginRender();
+		// DX12 尚未注册 ImGui 硬件后端（见本文件构造函数）；此时调用 NewFrame 会因字体图集 Builder
+		// 为空而触发致命错误，故在有真正的 DrawData 后端前跳过 overlay（游戏自身 CUI 菜单不受影响）。
+		if (MyImGui.HardwareDrawDataCallback)
+		{
+			MyImGui.BeginRender();
 
 #ifdef USE_DX11
-		ID3DRenderTargetView* RTV = RSwapchainTarget;
-		RContext->OMSetRenderTargets(1, &RTV, nullptr);
+			ID3DRenderTargetView* RTV = RSwapchainTarget;
+			RContext->OMSetRenderTargets(1, &RTV, nullptr);
 #else
-		RDevice->SetRenderTarget(0, RSwapchainTarget);
+			RDevice->SetRenderTarget(0, RSwapchainTarget);
 #endif
 
-		MyImGui.Render();
-		MyImGui.AfterRender();
+			MyImGui.Render();
+			MyImGui.AfterRender();
+		}
 
 		DebugRenderImpl.m_lines.resize(0);
 #if defined(USE_DX11) && defined(DEBUG_DRAW)
@@ -477,8 +495,14 @@ void dxRenderDeviceRender::End()
 
 #endif
 
+#ifdef USE_DX12
+	::EndFrame			();		// backbuffer RT->PRESENT，Close + ExecuteCommandLists
+#endif
+
 	PROF_EVENT("Present");
-#ifdef USE_DX11
+#ifdef USE_DX12
+	::FramePresent		(psDeviceFlags.test(rsVSync));	// Present + 推进 backbuffer/fence
+#elif defined(USE_DX11)
 	RSwapchain->Present(psDeviceFlags.test(rsVSync) ? 1 : 0, 0);
 #else
 	CHK_DX				(RDevice->EndScene());

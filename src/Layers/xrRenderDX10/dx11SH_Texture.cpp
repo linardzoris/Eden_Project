@@ -229,6 +229,17 @@ void CTexture::ProcessStaging()
 
 void CTexture::Apply(u32 dwStage)
 {
+#ifdef USE_DX12
+	// [fontbind] 临时：前 80 次 Apply 的 stage/srv 身份
+	{
+		static int s_applyLog = 0;
+		if (s_applyLog < 80)
+		{
+			++s_applyLog;
+			Msg("* [fontbind] CTexture::Apply stage=%u srv=%p tex=%p", dwStage, m_pSRView, this);
+		}
+	}
+#endif
 	if (flags.bLoadedAsStaging)
 		ProcessStaging();
 

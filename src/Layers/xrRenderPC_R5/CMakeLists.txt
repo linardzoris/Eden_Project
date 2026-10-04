@@ -27,7 +27,22 @@ file(GLOB_RECURSE XRR5_SOURCE_DX12_FILES CONFIGURE_DEPENDS
     "../xrRenderDX12/*.h"
 )
 
+# 可复用的 DX10/DX11 后端实现（以 DX12 类型编译；状态机/CB/BufferUtils/资源创建
+# 已由 xrRenderDX12 提供，故排除对应实现文件与 3DFluid、设备创建）
+file(GLOB_RECURSE XRR5_SOURCE_DX10_FILES CONFIGURE_DEPENDS
+    "../xrRenderDX10/*.cpp"
+    "../xrRenderDX10/*.h"
+)
+list(FILTER XRR5_SOURCE_DX10_FILES EXCLUDE REGEX "xrRenderDX10/(StateManager/|3DFluid/|dx11HW\\.cpp$|dx11GPUEvents\\.cpp$|dx11GPUEventWrapper\\.cpp$|dx10BufferUtils\\.cpp$|dx10ConstantBuffer\\.cpp$|dx10r_constants_cache\\.cpp$|dx10r_constants\\.cpp$|dx11ResourceManager_Resources\\.cpp$)")
+list(FILTER XRR5_SOURCE_DX10_FILES EXCLUDE REGEX "\\.h$")
+
 file(GLOB_RECURSE XRR5_SOURCE_INCL_FILES CONFIGURE_DEPENDS "../../Include/*.h")
+
+# xrEngine 的 Lua 脚本支持（ResourceManager 的脚本绑定需要）
+file(GLOB_RECURSE XRR5_SOURCE_LUA_FILES CONFIGURE_DEPENDS
+    "../../xrEngine/ai_script_lua*.cpp"
+    "../../xrEngine/ai_script_lua*.h"
+)
 
 source_group("render/src" FILES ${XRR5_SOURCE_ALL_FILES})
 source_group("layers" FILES ${XRR5_SOURCE_COMP_FILES})
@@ -39,6 +54,8 @@ list(APPEND XRR5_SRC_FILES ${XRR5_SOURCE_ALL_FILES})
 list(APPEND XRR5_SRC_FILES ${XRR5_SOURCE_COMP_FILES})
 list(APPEND XRR5_SRC_FILES ${XRR5_SOURCE_R4_FILES})
 list(APPEND XRR5_SRC_FILES ${XRR5_SOURCE_DX12_FILES})
+list(APPEND XRR5_SRC_FILES ${XRR5_SOURCE_DX10_FILES})
+list(APPEND XRR5_SRC_FILES ${XRR5_SOURCE_LUA_FILES})
 list(APPEND XRR5_SRC_FILES ${XRR5_SOURCE_INCL_FILES})
 
 add_library(xrRender_R5 SHARED ${XRR5_SRC_FILES})

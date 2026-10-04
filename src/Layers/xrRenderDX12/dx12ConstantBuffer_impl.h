@@ -5,7 +5,13 @@
 IC Fvector4* dx12ConstantBuffer::Access(u16 offset)
 {
 	m_bChanged = true;
-	VERIFY(offset < (int)m_uiBufferSize);
+	if (!m_pBufferData || offset >= (int)m_uiBufferSize)
+	{
+		static int s_accWarn = 0;	// [cbdiag] 临时诊断（日志禁用 %s，避免 shared_str 悬垂）
+		if (s_accWarn++ < 8)
+			Msg("! [cbdiag] Access bad: size=%u data=%p offset=%u", m_uiBufferSize, m_pBufferData, (u32)offset);
+		return nullptr;
+	}
 	BYTE* res = ((BYTE*)m_pBufferData) + offset;
 	return (Fvector4*)res;
 }
@@ -14,6 +20,7 @@ IC void dx12ConstantBuffer::set(R_constant* C, R_constant_load& L, const Fmatrix
 {
 	VERIFY(RC_float == C->type);
 	Fvector4* it = Access(L.index);
+	if (!it) return;
 	switch (L.cls)
 	{
 	case RC_2x4:
@@ -49,6 +56,7 @@ IC void dx12ConstantBuffer::set(R_constant* C, R_constant_load& L, const Fvector
 	VERIFY(RC_1x4 == L.cls || RC_1x3 == L.cls || RC_1x2 == L.cls);
 	VERIFY(u32((u32)L.index + lineSize) <= m_uiBufferSize);
 	float* it = (float*)Access(L.index);
+	if (!it) return;
 	size_t count = 4;
 	switch (L.cls)
 	{

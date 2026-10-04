@@ -91,7 +91,7 @@ ICF void CBackend::set_GS(ID3DGeometryShader* _gs, LPCSTR _n)
 }
 
 
-ICF void CBackend::set_HS(ID3D11HullShader* _hs, LPCSTR _n)
+ICF void CBackend::set_HS(ID3DHullShader* _hs, LPCSTR _n)
 {
 	if (hs!=_hs)
 	{
@@ -107,7 +107,7 @@ ICF void CBackend::set_HS(ID3D11HullShader* _hs, LPCSTR _n)
 	}
 }
 
-ICF void CBackend::set_DS(ID3D11DomainShader* _ds, LPCSTR _n)
+ICF void CBackend::set_DS(ID3DDomainShader* _ds, LPCSTR _n)
 {
 	if (ds!=_ds)
 	{
@@ -123,7 +123,7 @@ ICF void CBackend::set_DS(ID3D11DomainShader* _ds, LPCSTR _n)
 	}
 }
 
-ICF void CBackend::set_CS(ID3D11ComputeShader* _cs, LPCSTR _n)
+ICF void CBackend::set_CS(ID3DComputeShader* _cs, LPCSTR _n)
 {
 	if (cs!=_cs)
 	{

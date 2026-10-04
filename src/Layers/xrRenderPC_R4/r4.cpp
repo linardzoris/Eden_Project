@@ -12,7 +12,9 @@
 #include "../xrRender/dxUIShader.h"
 #include "../../xrCore/git_version.h"
 
+#ifndef USE_DX12
 #include "../xrRenderDX10/3DFluid/dx103DFluidManager.h"
+#endif
 #include "../xrRender/ShaderResourceTraits.h"
 
 #include "../../xrParticles/ParticlesAsyncManager.h"
@@ -248,8 +250,10 @@ void CRender::create()
 	xrRender_apply_tf();
 	::PortalTraverser.initialize();
 
+#ifndef USE_DX12
 	FluidManager.Initialize(70, 70, 70);
 	FluidManager.SetScreenSize((u32)RCache.get_width(), (u32)RCache.get_height());
+#endif
 
 	Device.ModelDefferClear = xr_make_delegate(Models, &CModelPool::DeleteQueuedDeffer);
 }
@@ -257,7 +261,9 @@ void CRender::create()
 void CRender::destroy() 
 {
 	m_bMakeAsyncSS = false;
+#ifndef USE_DX12
 	FluidManager.Destroy();
+#endif
 	::PortalTraverser.destroy();
 
 	HWOCC.occq_destroy();
@@ -313,7 +319,9 @@ void CRender::reset_end() {
 	Target = new CRenderTarget();
 
 	xrRender_apply_tf();
+#ifndef USE_DX12
 	FluidManager.SetScreenSize((u32)RCache.get_width(), (u32)RCache.get_height());
+#endif
 
 	// Set this flag true to skip the first render frame,
 	// that some data is not ready in the first frame (for example device camera position)

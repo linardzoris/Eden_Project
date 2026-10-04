@@ -65,8 +65,13 @@ dx12State* dx12State::Create(SimulatorStates& state_code)
 	pState->m_BDesc.AlphaToCoverageEnable = FALSE;
 	pState->m_BDesc.IndependentBlendEnable = FALSE;
 
-	// TODO(阶段1): 解析 state_code 中 D3DRS_* 项，完善混合/深度/模板/剔除映射。
-	(void)state_code;
+	// 解析 state_code 中烘焙的 D3DRS_* 状态（对齐 DX11 dx10StateCache 路径：
+	// 先设 D3D11 默认值，再用 SimulatorStates 覆盖混合/深度/光栅描述）。
+	// 之前完全忽略 state_code 导致 BlendEnable 恒为 FALSE（ONE/ZERO），
+	// UI/字体的 alpha 混合全部失效 → 字体四边形渲染为实心白块。
+	state_code.UpdateDesc(pState->m_RDesc);
+	state_code.UpdateDesc(pState->m_DSDesc);
+	state_code.UpdateDesc(pState->m_BDesc);
 
 	return pState;
 }

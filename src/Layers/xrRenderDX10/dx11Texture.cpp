@@ -2,6 +2,9 @@
 
 #include <memory>
 #include <DirectXTex.h>
+#ifdef USE_DX12
+#include "../xrRenderDX12/dx12TextureUtils.h"
+#endif
 #include <magic_enum/magic_enum.hpp>
 
 using namespace DirectX;
@@ -269,8 +272,13 @@ ID3DBaseTexture* CRender::texture_load(LPCSTR fRName, u32& ret_msize, bool bStag
 
 				return nullptr;
 			}
+#ifdef USE_DX12
+			(void)usage; (void)bindFlags; (void)cpuAccessFlags; (void)miscFlags;
+			hr = dx12TextureUtils::CreateTexture2DFromScratch(scratchImage, imageInfo, 0, &pTexture2D);
+#else
 			hr = CreateTextureEx(RDevice, scratchImage.GetImages(), scratchImage.GetImageCount(), imageInfo, usage,
 				bindFlags, cpuAccessFlags, miscFlags, CREATETEX_FLAGS::CREATETEX_DEFAULT, &pTexture2D);
+#endif
 			scratchImage.Release();
 
 			if (FAILED(hr) || pTexture2D == nullptr)
@@ -324,8 +332,13 @@ ID3DBaseTexture* CRender::texture_load(LPCSTR fRName, u32& ret_msize, bool bStag
 				mip_lod = oldMipmapCnt - imageInfo.mipLevels;
 			}
 
+#ifdef USE_DX12
+			(void)usage; (void)bindFlags; (void)cpuAccessFlags; (void)miscFlags;
+			hr = dx12TextureUtils::CreateTexture2DFromScratch(scratchImage, imageInfo, (size_t)mip_lod, &pTexture2D);
+#else
 			hr = CreateTextureEx(RDevice, scratchImage.GetImages() + mip_lod, scratchImage.GetImageCount(), imageInfo,
 				usage, bindFlags, cpuAccessFlags, miscFlags, CREATETEX_FLAGS::CREATETEX_DEFAULT, &pTexture2D);
+#endif
 			FS.r_close(reader);
 			scratchImage.Release();
 

@@ -579,7 +579,7 @@ public:
 };
 
 //	Allow real-time fog config reload
-#if defined(USE_DX11) && defined(DEBUG_DRAW)
+#if defined(USE_DX11) && defined(DEBUG_DRAW) && !defined(USE_DX12)
 #include "../xrRenderDX10/3DFluid/dx103DFluidManager.h"
 
 class CCC_Fog_Reload : public IConsole_Command
@@ -805,7 +805,9 @@ void		xrRender_initconsole	()
 	CMD1(CCC_RenderDocCaptureStart, "rdoc_start");
 	CMD1(CCC_RenderDocCaptureEnd, "rdoc_end");
 	//	Allow real-time fog config reload
+#ifndef USE_DX12
 	CMD1(CCC_Fog_Reload, "r3_fog_reload");
+#endif
 #endif
 
 	CMD3(CCC_Mask, "r4_wireframe", &ps_r2_ls_flags_ext, R2FLAGEXT_WIREFRAME);//Need restart

@@ -98,10 +98,11 @@ void	SimulatorStates::clear	()
 	States.clear();
 }
 
-#if defined(USE_DX11) && !defined(USE_DX12)
+#if defined(USE_DX11)
 
 #include "../xrRenderDX10/dx10StateUtils.h"
 
+#if !defined(USE_DX12)
 void SimulatorStates::UpdateState( dx10State &state) const
 {
 	for (u32 it=0; it<States.size(); it++)
@@ -121,6 +122,7 @@ void SimulatorStates::UpdateState( dx10State &state) const
 		}
 	}
 }
+#endif //!USE_DX12
 
 void SimulatorStates::UpdateDesc( D3D_RASTERIZER_DESC &desc ) const
 {
@@ -267,7 +269,7 @@ void SimulatorStates::UpdateDesc( D3D_DEPTH_STENCIL_DESC &desc ) const
 	}
 }
 
-#if defined(USE_DX11) && !defined(USE_DX12)
+#if defined(USE_DX11)
 void SimulatorStates::UpdateDesc( D3D_BLEND_DESC &desc ) const
 {
 	for (u32 it=0; it<States.size(); it++)

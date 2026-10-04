@@ -21,7 +21,10 @@ void CBackend::OnFrameEnd	()
 	if (!g_dedicated_server)
 #endif    
 	{
-#ifdef USE_DX11
+#ifdef USE_DX12
+		Invalidate();
+		dx12::BackendEndFrame();
+#elif defined(USE_DX11)
 		Invalidate			();
 #else //USE_DX11
 
@@ -47,6 +50,8 @@ void CBackend::OnFrameBegin	()
 		PGO					(Msg("PGO:*****frame[%d]*****",RDEVICE.dwFrame));
 #ifdef USE_DX12
 		Invalidate();
+		// 每帧重置描述符堆与上传环（钉住静态数据由 MarkPersist 保护）
+		dx12::BackendBeginFrame();
 #elif defined(USE_DX11)
 		Invalidate();
 		//	DX9 sets base rt nd base zb by default

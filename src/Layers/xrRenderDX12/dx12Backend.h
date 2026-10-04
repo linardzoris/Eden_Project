@@ -17,6 +17,7 @@
 #include <wrl/client.h>
 #include <unordered_map>
 #include <vector>
+#include <mutex>
 
 namespace dx12
 {
@@ -89,16 +90,55 @@ namespace dx12
 		// PSO 缓存：key 由状态 hash + shader 指针 + 输入布局 hash 组成
 		std::unordered_map<UINT64, ComPtr<ID3D12PipelineState>> psoCache;
 
+		// 1x1 黑色占位纹理的 SRV（persistent 堆）：FlushPipeline 为无效/未绑定的 SRV 槽
+		// 填充此描述符，避免描述符堆中残留上 Draw 的旧描述符导致采样错纹理。
+		D3D12_CPU_DESCRIPTOR_HANDLE	dummySrvCpu = {};
+		ComPtr<ID3D12Resource>		dummyTex;
+
 		UINT			rtvDescriptorSize = 0;
 		UINT			dsvDescriptorSize = 0;
 
+		// 一次性上传通道（默认堆纹理初始化 / 3D 纹理上传用）
+		ComPtr<ID3D12CommandQueue>			uploadQueue;
+		ComPtr<ID3D12CommandAllocator>		uploadAlloc;
+		ComPtr<ID3D12GraphicsCommandList>	uploadList;
+		ComPtr<ID3D12Fence>					uploadFence;
+		UINT64								uploadFenceValue = 0;
+		void*								uploadEvent = nullptr;
+
 		bool			valid = false;
+		bool			frameActive = false;	// 主命令列表正在录制（BeginFrame..EndFrame）
+		// 串行化所有立即型 GPU 工作（上传/初始化清屏）：启动期多线程并发
+		// 加载纹理会同时操作同一个上传命令列表，D3D12 要求外部同步
+		std::mutex		gpuWorkMutex;
 	};
 
 	extern Backend	g_backend;
 
+	// 惰性初始化：首次分配描述符/上传环时按需建立堆与根签名
+	void	Ensure();
+
+	// 把 CPU 数据上传到默认堆纹理的子资源 0（内部走一次性命令列表 + 围栏等待），
+	// 并在完成后把资源转为 ALL_SHADER_RESOURCE 状态。
+	void	UploadTextureSubresource(ID3D12Resource* dst, UINT subresourceIndex, const void* src, UINT srcRowPitch,
+		UINT width, UINT height, UINT depth, DXGI_FORMAT fmt, DXGI_FORMAT footprintFormat);
+
+	// 把默认堆纹理的子资源读回 CPU（D3D12 的 READBACK 堆不能承载纹理）：
+	// 内部 CopyTextureRegion → READBACK 缓冲 + 围栏等待，返回映射指针与行间距。
+	// 缓冲按 (resource,subresource) 缓存在后端，下次读回时复用。
+	// curState：纹理当前状态（读回期间 curState→COPY_SOURCE→curState）。
+	void*	ReadbackTextureSubresource(ID3D12Resource* src, UINT subresourceIndex,
+		UINT width, UINT height, DXGI_FORMAT fmt, UINT& outRowPitch,
+		D3D12_RESOURCE_STATES curState = D3D12_RESOURCE_STATE_COPY_DEST);
+
 	bool	Init(ID3D12Device* dev);
 	void	Shutdown();
+
+	// 诊断：打印 GetDeviceRemovedReason 与 debug layer info queue 中存储的错误消息
+	void	DumpDeviceErrors(const char* tag);
+
+	// 主帧未开启时（设备初始化期）在一次性 direct 队列上立即清 RTV
+	void	ClearRTVImmediate(D3D12_CPU_DESCRIPTOR_HANDLE rtv, const FLOAT color[4]);
 	void	BackendBeginFrame();		// Reset 描述符堆 + 上传环
 	void	BackendEndFrame();
 

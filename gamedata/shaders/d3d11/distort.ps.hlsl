@@ -7,13 +7,11 @@ struct v2p
 
 Texture2D s_distort;
 
-// Pixel
+// Pixel  [R5 diag] R = s_base luminance, G/B = s_distort.rg (nominal ~0.498 gray)
 float4 main(v2p I) : SV_Target
 {
-    float2 distort = s_distort.Sample(smp_rtlinear, I.tc).xy;
-    float2 offset = (distort - 127.0f / 255.0f) * def_distort;
-    float3 image = s_base.Sample(smp_rtlinear, I.tc + offset).xyz;
-
-    return float4(image, 1);
+    float3 base = s_base.Sample(smp_rtlinear, I.tc).xyz;
+    float2 dist = s_distort.Sample(smp_rtlinear, I.tc).xy;
+    float l = dot(base, float3(0.3, 0.59, 0.11));
+    return float4(l, dist.x, dist.y, 1.0);
 }
-

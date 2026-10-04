@@ -4,6 +4,12 @@
 #include "StateManager/dx12StateManager.h"
 #include "StateManager/dx12ShaderResourceStateCache.h"
 
+// [fontbind] 临时诊断：atlas 身份记录定义在 dxFontRender.cpp
+extern ID3DShaderResourceView*	g_r5LastAtlasSrv;
+extern ID3D12Resource*			g_r5LastAtlasRes;
+extern u32						g_r5LastAtlasW, g_r5LastAtlasH;
+extern char						g_r5LastAtlasName[128];
+
 dx12Device	DX12Device;
 dx12Context	DX12Context;
 
@@ -22,27 +28,64 @@ UINT64 dx12RasterizerState::Hash() const	{ return FNV(&desc, sizeof(desc)); }
 UINT64 dx12DepthStencilState::Hash() const	{ UINT64 h = FNV(&desc, sizeof(desc)); h = FNV(&stencilRef, sizeof(stencilRef), h); return h; }
 UINT64 dx12BlendState::Hash() const			{ UINT64 h = FNV(&desc, sizeof(desc)); h = FNV(&mask, sizeof(mask), h); return h; }
 
-static UINT AlignRowPitch(UINT width, UINT bpp)
+//------------------------------------------------------------------------------
+// 资源状态跟踪：D3D11 由驱动自动管理同一资源在 RTV/DSV/SRV 间的状态，
+// D3D12 则需要显式 transition barrier。这里以资源指针为键记录当前状态，
+// 在资源创建时注册、在 RTV/DSV/SRV 绑定点按需转换。
+//------------------------------------------------------------------------------
+namespace
 {
-	UINT pitch = width * bpp;
-	return (pitch + (D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1)) & ~(D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1);
+	std::mutex												g_r5ResStateMutex;
+	std::unordered_map<ID3D12Resource*, D3D12_RESOURCE_STATES>	g_r5ResStates;
+
+	void R5_TrackResource(ID3D12Resource* r, D3D12_RESOURCE_STATES s)
+	{
+		if (!r) return;
+		std::lock_guard<std::mutex> g(g_r5ResStateMutex);
+		g_r5ResStates[r] = s;
+	}
+
+	void R5_TransitionResource(ID3D12GraphicsCommandList* cl, ID3D12Resource* r, D3D12_RESOURCE_STATES to)
+	{
+		if (!cl || !r) return;
+
+		D3D12_RESOURCE_STATES from;
+		{
+			std::lock_guard<std::mutex> g(g_r5ResStateMutex);
+			auto it = g_r5ResStates.find(r);
+			from = (it != g_r5ResStates.end()) ? it->second : D3D12_RESOURCE_STATE_COMMON;
+		}
+		if (from == to) return;
+
+		D3D12_RESOURCE_BARRIER b = {};
+		b.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+		b.Transition.pResource = r;
+		b.Transition.StateBefore = from;
+		b.Transition.StateAfter = to;
+		b.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+		cl->ResourceBarrier(1, &b);
+
+		std::lock_guard<std::mutex> g(g_r5ResStateMutex);
+		g_r5ResStates[r] = to;
+	}
 }
 
-static UINT BytesPerPixel(DXGI_FORMAT fmt)
+// 对外暴露的注册入口（供 dx12TextureUtils 等其他创建路径调用）
+void R5RegisterResourceState(ID3D12Resource* r, D3D12_RESOURCE_STATES s)
+{
+	R5_TrackResource(r, s);
+}
+
+// D3D12 深度模板资源必须提供具体的 ClearValue 格式（TYPELESS 需映射到 D/S 格式）
+static DXGI_FORMAT DSVFormat(DXGI_FORMAT fmt)
 {
 	switch (fmt)
 	{
-	case DXGI_FORMAT_R8G8B8A8_UNORM: case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
-	case DXGI_FORMAT_B8G8R8A8_UNORM: case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB: return 4;
-	case DXGI_FORMAT_R8_UNORM: return 1;
-	case DXGI_FORMAT_R16G16B16A16_FLOAT: return 8;
-	case DXGI_FORMAT_R16_FLOAT: return 2;
-	case DXGI_FORMAT_BC1_UNORM: case DXGI_FORMAT_BC1_UNORM_SRGB:
-	case DXGI_FORMAT_BC4_UNORM: return 0;	// 压缩格式不走行拷贝
-	case DXGI_FORMAT_BC2_UNORM: case DXGI_FORMAT_BC2_UNORM_SRGB:
-	case DXGI_FORMAT_BC3_UNORM: case DXGI_FORMAT_BC3_UNORM_SRGB:
-	case DXGI_FORMAT_BC5_UNORM: return 0;
-	default: return 4;
+	case DXGI_FORMAT_R24G8_TYPELESS:	return DXGI_FORMAT_D24_UNORM_S8_UINT;
+	case DXGI_FORMAT_R32G8X24_TYPELESS:	return DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
+	case DXGI_FORMAT_R32_TYPELESS:		return DXGI_FORMAT_D32_FLOAT;
+	case DXGI_FORMAT_R16_TYPELESS:		return DXGI_FORMAT_D16_UNORM;
+	default:							return fmt;
 	}
 }
 
@@ -157,8 +200,17 @@ HRESULT dx12Device::CreateTexture2D(const D3D_TEXTURE2D_DESC* pDesc, const D3D_S
 	dx12Texture* tex = new dx12Texture();
 	tex->desc = *pDesc;
 
+	const bool bRT = (pDesc->BindFlags & D3D_BIND_RENDER_TARGET) != 0;
+	const bool bDS = (pDesc->BindFlags & D3D_BIND_DEPTH_STENCIL) != 0;
+	const bool bUAV = (pDesc->BindFlags & D3D_BIND_UNORDERED_ACCESS) != 0;
+	const bool bStagingRead = (pDesc->Usage == D3D_USAGE_STAGING) && ((pDesc->CPUAccessFlags & D3D_CPU_ACCESS_READ) != 0);
+
+	// D3D12 堆选择：READBACK 堆不能承载纹理，故 STAGING+READ 纹理也放 DEFAULT 堆
+	// （读回由 Map → ReadbackTextureSubresource 完成）；CPU 写的 buffer 型资源走 UPLOAD。
+	// NOTE: 纹理一律 DEFAULT 堆，上传走 UploadTextureSubresource。
 	D3D12_HEAP_PROPERTIES heap = {};
-	heap.Type = D3D12_HEAP_TYPE_UPLOAD;
+	heap.Type = D3D12_HEAP_TYPE_DEFAULT;
+	tex->stagingRead = bStagingRead;
 
 	D3D12_RESOURCE_DESC rd = {};
 	rd.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
@@ -170,33 +222,57 @@ HRESULT dx12Device::CreateTexture2D(const D3D_TEXTURE2D_DESC* pDesc, const D3D_S
 	rd.SampleDesc = pDesc->SampleDesc;
 	rd.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
 	rd.Flags = D3D12_RESOURCE_FLAG_NONE;
-	if (pDesc->BindFlags & D3D_BIND_RENDER_TARGET) rd.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-	if (pDesc->BindFlags & D3D_BIND_DEPTH_STENCIL) rd.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-	if (pDesc->BindFlags & D3D_BIND_UNORDERED_ACCESS) rd.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	if (bRT) rd.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+	if (bDS) rd.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+	if (bUAV) rd.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
-	HRESULT hr = dev->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &rd,
-		D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&tex->resource));
-	if (FAILED(hr)) { Msg("! DX12: CreateTexture2D failed 0x%08x", hr); tex->Release(); return hr; }
+	D3D12_RESOURCE_STATES initState;
+	if (bStagingRead)		initState = D3D12_RESOURCE_STATE_COPY_DEST;
+	else if (bRT)			initState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+	else if (bUAV)			initState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+	else if (bDS)			initState = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+	else					initState = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE;
 
-	tex->state = D3D12_RESOURCE_STATE_GENERIC_READ;
-
-	if (pInit && pInit->pSysMem)
+	// 深度模板资源在 D3D12 下必须带具体格式的 ClearValue；RT 也传 ClearValue 以消除性能告警
+	D3D12_CLEAR_VALUE clear = {};
+	const D3D12_CLEAR_VALUE* pClear = nullptr;
+	if (bDS)
 	{
-		UINT bpp = BytesPerPixel(pDesc->Format);
-		D3D12_RANGE rr = { 0, 0 };
-		void* dst = nullptr;
-		if (SUCCEEDED(tex->resource->Map(0, &rr, &dst)) && dst && bpp)
-		{
-			UINT dstPitch = AlignRowPitch(pDesc->Width, bpp);
-			const u8* src = (const u8*)pInit->pSysMem;
-			UINT srcPitch = pInit->SysMemPitch ? pInit->SysMemPitch : pDesc->Width * bpp;
-			UINT rows = pDesc->Height;
-			for (UINT y = 0; y < rows; ++y)
-				memcpy((u8*)dst + (size_t)y * dstPitch, src + (size_t)y * srcPitch, pDesc->Width * bpp);
-			tex->resource->Unmap(0, nullptr);
-		}
+		clear.Format = DSVFormat(pDesc->Format);
+		clear.DepthStencil.Depth = 1.0f;
+		clear.DepthStencil.Stencil = 0;
+		pClear = &clear;
+	}
+	else if (bRT)
+	{
+		clear.Format = pDesc->Format;
+		clear.Color[0] = 0.f; clear.Color[1] = 0.f; clear.Color[2] = 0.f; clear.Color[3] = 0.f;
+		pClear = &clear;
 	}
 
+	HRESULT hr = dev->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &rd,
+		initState, pClear, IID_PPV_ARGS(&tex->resource));
+	if (FAILED(hr))
+	{
+		Msg("! DX12: CreateTexture2D failed 0x%08x (fmt=%d %ux%u mip=%u ss=%u bind=%u flags=%u)",
+			hr, (int)pDesc->Format, pDesc->Width, pDesc->Height, pDesc->MipLevels,
+			pDesc->SampleDesc.Count, pDesc->BindFlags, (unsigned)rd.Flags);
+		dx12::DumpDeviceErrors("create_tex2d");
+		tex->Release();
+		return hr;
+	}
+
+	tex->state = initState;
+
+	if (pInit && pInit->pSysMem && !bStagingRead)
+	{
+		// 纹理一律 DEFAULT 堆：走一次性上传通道（内部完成 COPY_DEST↔ALL_SHADER_RESOURCE 转换）
+		dx12::UploadTextureSubresource(tex->resource.Get(), 0, pInit->pSysMem, pInit->SysMemPitch,
+			pDesc->Width, pDesc->Height, 1, pDesc->Format, pDesc->Format);
+		tex->state = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE;
+	}
+
+	R5_TrackResource(tex->resource.Get(), tex->state);
 	*ppTexture = tex;
 	return S_OK;
 }
@@ -210,26 +286,40 @@ HRESULT dx12Device::CreateTexture3D(const D3D_TEXTURE3D_DESC* pDesc, const D3D_S
 	dx12Texture* tex = new dx12Texture();
 
 	D3D12_HEAP_PROPERTIES heap = {};
-	heap.Type = D3D12_HEAP_TYPE_UPLOAD;
+	heap.Type = D3D12_HEAP_TYPE_DEFAULT;
+
+	const UINT depth = pDesc->Depth ? pDesc->Depth : 1;
 
 	D3D12_RESOURCE_DESC rd = {};
 	rd.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE3D;
 	rd.Width = pDesc->Width;
 	rd.Height = pDesc->Height;
-	rd.DepthOrArraySize = (UINT16)(pDesc->Depth ? pDesc->Depth : 1);
+	rd.DepthOrArraySize = (UINT16)depth;
 	rd.MipLevels = (UINT16)(pDesc->MipLevels ? pDesc->MipLevels : 1);
 	rd.Format = pDesc->Format;
 	rd.SampleDesc.Count = 1;
 	rd.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
 
+	const D3D12_RESOURCE_STATES initState = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE;
+
 	HRESULT hr = dev->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &rd,
-		D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&tex->resource));
-	if (FAILED(hr)) { tex->Release(); return hr; }
+		initState, nullptr, IID_PPV_ARGS(&tex->resource));
+	if (FAILED(hr)) { Msg("! DX12: CreateTexture3D failed 0x%08x", hr); tex->Release(); return hr; }
 
 	tex->desc.Width = pDesc->Width;
 	tex->desc.Height = pDesc->Height;
 	tex->desc.Format = pDesc->Format;
-	(void)pInit;
+	tex->desc.MipLevels = rd.MipLevels;
+	tex->state = initState;
+
+	if (pInit && pInit->pSysMem)
+	{
+		dx12::UploadTextureSubresource(tex->resource.Get(), 0, pInit->pSysMem, pInit->SysMemPitch,
+			pDesc->Width, pDesc->Height, depth, pDesc->Format, pDesc->Format);
+		tex->state = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE;
+	}
+
+	R5_TrackResource(tex->resource.Get(), tex->state);
 	*ppTexture = tex;
 	return S_OK;
 }
@@ -255,7 +345,12 @@ HRESULT dx12Device::CreateShaderResourceView(ID3DResource* pResource, const D3D_
 	if (pDesc)
 	{
 		D3D12_SHADER_RESOURCE_VIEW_DESC d = {};
+		// D3D11 语义：SRV desc 的 Format=UNKNOWN 表示继承资源格式。
+		// D3D12 不会自动继承（纹理 SRV 传 UNKNOWN 会创建无效视图，
+		// NVIDIA 驱动对部分格式容忍、对 B8G8R8A8/R8G8B8A8 不宽容 → 字体白块/theora 黑屏）。
 		d.Format = pDesc->Format;
+		if (d.Format == DXGI_FORMAT_UNKNOWN && pResource->resource)
+			d.Format = pResource->resource->GetDesc().Format;
 		d.ViewDimension = (D3D12_SRV_DIMENSION)pDesc->ViewDimension;
 		d.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 		switch (d.ViewDimension)
@@ -271,6 +366,16 @@ HRESULT dx12Device::CreateShaderResourceView(ID3DResource* pResource, const D3D_
 		case D3D12_SRV_DIMENSION_TEXTURECUBE:
 			d.TextureCube.MostDetailedMip = pDesc->TextureCube.MostDetailedMip;
 			d.TextureCube.MipLevels = pDesc->TextureCube.MipLevels;
+			break;
+		case D3D12_SRV_DIMENSION_TEXTURE3D:
+			d.Texture3D.MostDetailedMip = pDesc->Texture3D.MostDetailedMip;
+			d.Texture3D.MipLevels = pDesc->Texture3D.MipLevels;
+			break;
+		case D3D12_SRV_DIMENSION_TEXTURE2DARRAY:
+			d.Texture2DArray.MostDetailedMip = pDesc->Texture2DArray.MostDetailedMip;
+			d.Texture2DArray.MipLevels = pDesc->Texture2DArray.MipLevels;
+			d.Texture2DArray.FirstArraySlice = pDesc->Texture2DArray.FirstArraySlice;
+			d.Texture2DArray.ArraySize = pDesc->Texture2DArray.ArraySize;
 			break;
 		default:
 			break;
@@ -290,11 +395,29 @@ HRESULT dx12Device::CreateShaderResourceView(ID3DResource* pResource, const D3D_
 			d.Buffer.FirstElement = 0;
 			d.Buffer.NumElements = (UINT)(rd.Width / 4);
 		}
+		else if (rd.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D)
+		{
+			d.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
+			d.Texture3D.MostDetailedMip = 0;
+			d.Texture3D.MipLevels = rd.MipLevels;
+		}
 		else
 		{
-			d.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-			d.Texture2D.MostDetailedMip = 0;
-			d.Texture2D.MipLevels = rd.MipLevels;
+			// 默认视图语义：2D 纹理若含多个 array slice，默认覆盖整个数组
+			if (rd.DepthOrArraySize > 1)
+			{
+				d.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
+				d.Texture2DArray.MostDetailedMip = 0;
+				d.Texture2DArray.MipLevels = rd.MipLevels;
+				d.Texture2DArray.FirstArraySlice = 0;
+				d.Texture2DArray.ArraySize = rd.DepthOrArraySize;
+			}
+			else
+			{
+				d.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+				d.Texture2D.MostDetailedMip = 0;
+				d.Texture2D.MipLevels = rd.MipLevels;
+			}
 		}
 		srv->desc = d;
 		dev->CreateShaderResourceView(srv->resource.Get(), &d, cpu);
@@ -323,7 +446,8 @@ HRESULT dx12Device::CreateRenderTargetView(ID3DResource* pResource, const D3D_RE
 		D3D12_RENDER_TARGET_VIEW_DESC d = {};
 		d.Format = pDesc->Format;
 		d.ViewDimension = (D3D12_RTV_DIMENSION)pDesc->ViewDimension;
-		memcpy(&d.Texture2D, &pDesc->Texture2D, sizeof(D3D12_TEX2D_RTV));
+		d.Texture2D.MipSlice = pDesc->Texture2D.MipSlice;
+		d.Texture2D.PlaneSlice = 0;
 		dev->CreateRenderTargetView(rtv->resource.Get(), &d, cpu);
 	}
 	else
@@ -354,7 +478,7 @@ HRESULT dx12Device::CreateDepthStencilView(ID3DResource* pResource, const D3D_DE
 		d.Format = pDesc->Format;
 		d.ViewDimension = (D3D12_DSV_DIMENSION)pDesc->ViewDimension;
 		d.Flags = D3D12_DSV_FLAG_NONE;
-		memcpy(&d.Texture2D, &pDesc->Texture2D, sizeof(D3D12_TEX2D_DSV));
+		d.Texture2D.MipSlice = pDesc->Texture2D.MipSlice;
 		dev->CreateDepthStencilView(dsv->resource.Get(), &d, cpu);
 	}
 	else
@@ -479,22 +603,83 @@ HRESULT dx12Device::CreateQuery(const D3D_QUERY_DESC* pDesc, ID3DQuery** ppQuery
 	return S_OK;
 }
 
+HRESULT dx12Device::CheckFormatSupport(DXGI_FORMAT Format, UINT* pSupport)
+{
+	if (!pSupport) return E_INVALIDARG;
+	D3D12_FEATURE_DATA_FORMAT_SUPPORT fs = {};
+	fs.Format = Format;
+	ID3D12Device* dev = Get();
+	if (!dev) return E_FAIL;
+	if (FAILED(dev->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &fs, sizeof(fs))))
+	{
+		*pSupport = 0;
+		return E_FAIL;
+	}
+	*pSupport = fs.Support1;
+	return S_OK;
+}
+
 //------------------------------------------------------------------------------
 // dx12Context
 //------------------------------------------------------------------------------
 HRESULT dx12Context::Map(ID3DResource* pResource, UINT, D3D_MAP, UINT, D3D_MAPPED_TEXTURE2D* pMapped)
 {
 	if (!pResource || !pMapped) return E_INVALIDARG;
-	pMapped->pData = pResource->resource ? nullptr : nullptr;
-	// 上传堆资源在创建时已持久映射
-	// dx12Buffer / dx12Texture 的 mapped 指针在各自创建时取得
+	pMapped->pData = nullptr;
+	pMapped->RowPitch = pMapped->DepthPitch = 0;
+
+	// STAGING+READ 纹理：内部拷回 READBACK 缓冲后返回映射指针；
+	// 普通默认堆纹理的 CPU 写入（Theora/AVI，WRITE_DISCARD）：从上传环暂存，Unmap 时拷贝回默认堆。
+	if (auto* t = dynamic_cast<dx12Texture*>(pResource))
+	{
+		if (t->stagingRead && t->resource)
+		{
+			UINT pitch = 0;
+			void* p = dx12::ReadbackTextureSubresource(t->resource.Get(), 0,
+				t->desc.Width, t->desc.Height, t->desc.Format, pitch);
+			pMapped->pData = p;
+			pMapped->RowPitch = pitch;
+			pMapped->DepthPitch = pitch * t->desc.Height;
+			return p ? S_OK : E_FAIL;
+		}
+		else if (t->resource)
+		{
+			const D3D12_RESOURCE_DESC td = t->resource->GetDesc();
+			D3D12_PLACED_SUBRESOURCE_FOOTPRINT fp = {};
+			UINT numRows = 0;
+			UINT64 rowSize = 0, totalBytes = 0;
+			dx12::GetD3D12Device()->GetCopyableFootprints(&td, 0, 1, 0, &fp, &numRows, &rowSize, &totalBytes);
+
+			ID3D12Resource* ringRes = dx12::g_backend.ring.Resource();
+			D3D12_GPU_VIRTUAL_ADDRESS ringStartVa = ringRes->GetGPUVirtualAddress();
+			D3D12_GPU_VIRTUAL_ADDRESS baseGpu = 0;
+			void* baseCpu = dx12::g_backend.ring.Alloc(totalBytes,
+				D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT, baseGpu);
+			if (!baseCpu) return E_OUTOFMEMORY;
+
+			const UINT64 fpOffset0 = fp.Offset;
+			pMapped->pData = (u8*)baseCpu + fpOffset0;
+			pMapped->RowPitch = (UINT)fp.Footprint.RowPitch;
+			pMapped->DepthPitch = (UINT)(fp.Footprint.RowPitch * numRows);
+
+			// 拷贝源用 ring 缓冲，须把已分配的 ring 偏移并入 footprint.Offset
+			fp.Offset = (UINT64)(baseGpu - ringStartVa) + fpOffset0;
+			dynTex = pResource;
+			dynFootprint = fp;
+			dynUploadGpuVA = baseGpu;
+			return S_OK;
+		}
+	}
+
 	if (auto* b = dynamic_cast<dx12Buffer*>(pResource))
 	{
 		pMapped->pData = b->mapped;
 		pMapped->RowPitch = b->size;
 		pMapped->DepthPitch = b->size;
+		return S_OK;
 	}
-	else if (pResource->resource)
+
+	if (pResource->resource)
 	{
 		D3D12_RANGE rr = { 0, 0 };
 		void* p = nullptr;
@@ -511,6 +696,54 @@ void dx12Context::Unmap(ID3DResource* pResource, UINT)
 {
 	if (!pResource) return;
 	if (dynamic_cast<dx12Buffer*>(pResource)) return;	// 持久映射，不解除
+	if (auto* t = dynamic_cast<dx12Texture*>(pResource))
+	{
+		if (t->stagingRead) return;	// 读回缓冲由后端持有，这里不解除
+
+		// 动态写入：把上传环暂存数据拷回默认堆纹理
+		if (dynTex == pResource && t->resource)
+		{
+			ID3D12GraphicsCommandList* cl = Get();
+			if (cl)
+			{
+				static bool s_theoraDiagOnce = false;	// [theoradiag] 临时诊断
+				if (!s_theoraDiagOnce)
+				{
+					s_theoraDiagOnce = true;
+					Msg("* [theoradiag] Unmap copy on main cl: %ux%u fmt=%d ringOff=%llu",
+						t->desc.Width, t->desc.Height, (int)t->desc.Format,
+						(unsigned long long)(dynFootprint.Offset));
+				}
+				// 用纹理真实状态做转换：SRV 纹理是 ALL_SHADER_RESOURCE，
+				// 之前写死 GENERIC_READ 属非法 barrier，驱动可导致 device removed
+				const D3D12_RESOURCE_STATES cur = t->state;
+				D3D12_RESOURCE_BARRIER b = {};
+				b.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+				b.Transition.pResource = t->resource.Get();
+				b.Transition.Subresource = 0;
+				b.Transition.StateBefore = cur;
+				b.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
+				cl->ResourceBarrier(1, &b);
+
+				D3D12_TEXTURE_COPY_LOCATION src = {};
+				src.pResource = dx12::g_backend.ring.Resource();
+				src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+				src.PlacedFootprint = dynFootprint;
+
+				D3D12_TEXTURE_COPY_LOCATION dst = {};
+				dst.pResource = t->resource.Get();
+				dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+				dst.SubresourceIndex = 0;
+
+				cl->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+
+				std::swap(b.Transition.StateBefore, b.Transition.StateAfter);
+				cl->ResourceBarrier(1, &b);
+			}
+			dynTex = nullptr;
+			return;
+		}
+	}
 	if (pResource->resource) pResource->resource->Unmap(0, nullptr);
 }
 
@@ -550,15 +783,33 @@ void dx12Context::CopyResource(ID3DResource* pDst, ID3DResource* pSrc)
 void dx12Context::ClearRenderTargetView(ID3DRenderTargetView* pRTV, const FLOAT color[4])
 {
 	if (!pRTV || !pRTV->valid) return;
+	if (!dx12::g_backend.frameActive)
+	{
+		// 设备初始化期（主命令列表未打开）：立即通道，避免 closed-list 调用
+		dx12::ClearRTVImmediate(pRTV->cpu, color);
+		return;
+	}
 	ID3D12GraphicsCommandList* cl = Get();
-	if (cl) cl->ClearRenderTargetView(pRTV->cpu, color, 0, nullptr);
+	if (cl)
+	{
+		auto* rv = dynamic_cast<dx12RenderTargetView*>(pRTV);
+		if (rv && rv->resource)
+			R5_TransitionResource(cl, rv->resource.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+		cl->ClearRenderTargetView(pRTV->cpu, color, 0, nullptr);
+	}
 }
 
 void dx12Context::ClearDepthStencilView(ID3DDepthStencilView* pDSV, UINT flags, FLOAT depth, UINT8 stencil)
 {
 	if (!pDSV || !pDSV->valid) return;
 	ID3D12GraphicsCommandList* cl = Get();
-	if (cl) cl->ClearDepthStencilView(pDSV->cpu, (D3D12_CLEAR_FLAGS)flags, depth, stencil, 0, nullptr);
+	if (cl)
+	{
+		auto* dv = dynamic_cast<dx12DepthStencilView*>(pDSV);
+		if (dv && dv->resource)
+			R5_TransitionResource(cl, dv->resource.Get(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
+		cl->ClearDepthStencilView(pDSV->cpu, (D3D12_CLEAR_FLAGS)flags, depth, stencil, 0, nullptr);
+	}
 }
 
 void dx12Context::OMSetRenderTargets(UINT num, ID3DRenderTargetView* const* ppRTV, ID3DDepthStencilView* pDSV)
@@ -573,10 +824,55 @@ void dx12Context::OMSetRenderTargets(UINT num, ID3DRenderTargetView* const* ppRT
 	if (!cl) return;
 	D3D12_CPU_DESCRIPTOR_HANDLE handles[4] = {};
 	UINT n = 0;
+	LONG scW = 0, scH = 0;
 	for (UINT i = 0; i < num; ++i)
-		if (ppRTV[i] && ppRTV[i]->valid) handles[n++] = ppRTV[i]->cpu;
+	{
+		if (ppRTV[i] && ppRTV[i]->valid)
+		{
+			handles[n++] = ppRTV[i]->cpu;
+			auto* rv = dynamic_cast<dx12RenderTargetView*>(ppRTV[i]);
+			if (rv && rv->resource)
+			{
+				R5_TransitionResource(cl, rv->resource.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+				if (scW == 0)
+				{
+					D3D12_RESOURCE_DESC rd0 = rv->resource->GetDesc();
+					scW = (LONG)rd0.Width;
+					scH = (LONG)rd0.Height;
+				}
+			}
+		}
+	}
 	D3D12_CPU_DESCRIPTOR_HANDLE dsv = (pDSV && pDSV->valid) ? pDSV->cpu : D3D12_CPU_DESCRIPTOR_HANDLE{ 0 };
+	if (pDSV && pDSV->valid)
+	{
+		auto* dv = dynamic_cast<dx12DepthStencilView*>(pDSV);
+		if (dv && dv->resource)
+			R5_TransitionResource(cl, dv->resource.Get(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
+	}
 	cl->OMSetRenderTargets(n, n ? handles : nullptr, FALSE, (pDSV && pDSV->valid) ? &dsv : nullptr);
+
+	// 模拟 D3D11 默认 ScissorEnable=FALSE（不裁剪）：绑定 RT 后给一个覆盖该 RT 的
+	// 默认全屏 scissor。命令分配器每帧重置后 scissor 为空，而 D3D12 scissor test
+	// 始终开启——若不补，从未显式 set_Scissor 的 Draw 会被空矩形裁掉全部像素。
+	// 引擎需要裁剪时会在 Draw 前调用 set_Scissor(R) 覆盖此默认值。
+	if (scW > 0)
+	{
+		D3D12_RECT fullR = { 0, 0, scW, scH };
+		cl->RSSetScissorRects(1, &fullR);
+	}
+}
+
+void dx12Context::BindBackbufferRTV(D3D12_CPU_DESCRIPTOR_HANDLE rtv, UINT width, UINT height)
+{
+	ID3D12GraphicsCommandList* cl = Get();
+	if (!cl || !width || !height) return;
+
+	D3D12_VIEWPORT vp = { 0.f, 0.f, float(width), float(height), 0.f, 1.f };
+	D3D12_RECT	 sr = { 0, 0, LONG(width), LONG(height) };
+	cl->RSSetViewports(1, &vp);
+	cl->RSSetScissorRects(1, &sr);
+	cl->OMSetRenderTargets(1, &rtv, FALSE, nullptr);
 }
 
 void dx12Context::OMSetBlendState(ID3DBlendState* pBlendState, const FLOAT BlendFactor[4], UINT SampleMask)
@@ -687,10 +983,65 @@ void dx12Context::End(ID3DQuery*) {}
 //------------------------------------------------------------------------------
 // PSO 合成 + 描述符绑定
 //------------------------------------------------------------------------------
+// 调试层在参数错误时会同步 RaiseException 触发断点且不自行恢复；
+// 用 SEH 包住，使调用无论返回错误还是抛异常都能继续读取 InfoQueue。
+static HRESULT SafeCreateGraphicsPSO(ID3D12Device* dev,
+	const D3D12_GRAPHICS_PIPELINE_STATE_DESC* d, ID3D12PipelineState** out)
+{
+	__try
+	{
+		return dev->CreateGraphicsPipelineState(d, IID_PPV_ARGS(out));
+	}
+	__except (EXCEPTION_EXECUTE_HANDLER)
+	{
+		return E_FAIL;
+	}
+}
+
 void dx12Context::FlushPipeline()
 {
 	ID3D12GraphicsCommandList* cl = Get();
-	if (!cl || !dx12::g_backend.valid) return;
+	if (!cl) return;
+	dx12::Ensure();
+	if (!dx12::g_backend.valid) return;
+
+	// [fontbind] Draw 时 slot0 SRV 身份/描述诊断（身份变化或每500 draw，上限80条）
+	{
+		static ID3DShaderResourceView* s_lastS0 = reinterpret_cast<ID3DShaderResourceView*>(1);
+		static int s_logCount = 0;
+		static int s_drawCount = 0;
+		++s_drawCount;
+		ID3DShaderResourceView* s0 = SRVSManager.GetPS(0);
+		if (((s0 != s_lastS0) || (s_drawCount % 500) == 0) && s_logCount < 80)
+		{
+			s_lastS0 = s0;
+			++s_logCount;
+			auto* dv = dynamic_cast<dx12ShaderResourceView*>(s0);
+			ID3D12Resource* rr0 = (dv && dv->resource) ? dv->resource.Get() : nullptr;
+			const auto& bd0 = StateManager.m_BDesc.RenderTarget[0];
+			Msg("* [fontbind] draw#%d vs=%p ps=%p s0=%p valid=%d cpu=%llu fmt=%d dim=%d res=%p matchSrv=%d matchRes=%d blend[en=%d src=%d dst=%d] zEn=%d zWr=%d cull=%d | atlas '%s' %ux%u srv=%p res=%p",
+				s_drawCount, vs, ps, s0, dv ? (int)dv->valid : -1,
+				dv ? (unsigned long long)dv->cpu.ptr : 0ull,
+				dv ? (int)dv->desc.Format : -1,
+				dv ? (int)dv->desc.ViewDimension : -1,
+				rr0,
+				(int)(s0 == g_r5LastAtlasSrv),
+				(int)(rr0 == g_r5LastAtlasRes),
+				(int)bd0.BlendEnable, (int)bd0.SrcBlend, (int)bd0.DestBlend,
+				(int)StateManager.m_DSDesc.DepthEnable,
+				(int)StateManager.m_DSDesc.DepthWriteMask,
+				(int)StateManager.m_RDesc.CullMode,
+				g_r5LastAtlasName[0] ? g_r5LastAtlasName : "?",
+				g_r5LastAtlasW, g_r5LastAtlasH, g_r5LastAtlasSrv, g_r5LastAtlasRes);
+			char slotMap[128]; slotMap[0] = 0; int used = 0;
+			for (UINT q = 0; q < 16 && used < 110; ++q)
+			{
+				if (SRVSManager.GetPS(q))
+					used += xr_sprintf(slotMap + used, sizeof(slotMap) - used, "%u ", q);
+			}
+			Msg("* [fontbind]   non-null PS slots: [%s]", slotMap);
+		}
+	}
 
 	// ---- PSO key ----
 	UINT64 key = (UINT64)(UINT_PTR)vs * 1000003ull;
@@ -747,13 +1098,21 @@ void dx12Context::FlushPipeline()
 
 		if (layout) d.InputLayout = layout->Desc();
 
-		ComPtr<ID3D12PipelineState> newPso;
-		HRESULT hr = dx12::GetD3D12Device()->CreateGraphicsPipelineState(&d, IID_PPV_ARGS(&newPso));
+		ID3D12PipelineState* rawPso = nullptr;
+		HRESULT hr = SafeCreateGraphicsPSO(dx12::GetD3D12Device(), &d, &rawPso);
 		if (FAILED(hr))
 		{
 			Msg("! DX12: CreateGraphicsPipelineState failed 0x%08x (vs=%p ps=%p lay=%p)", hr, vs, ps, layout);
+			Msg("    PSO rtCount=%u NumRT=%u topoType=%d topo=%d DSV=%d RTV=[%d,%d,%d,%d] vsLen=%u psLen=%u layElems=%u",
+				rtCount, d.NumRenderTargets, (int)d.PrimitiveTopologyType, (int)topology, (int)d.DSVFormat,
+				(int)d.RTVFormats[0], (int)d.RTVFormats[1], (int)d.RTVFormats[2], (int)d.RTVFormats[3],
+				(unsigned)d.VS.BytecodeLength, (unsigned)d.PS.BytecodeLength,
+				layout ? layout->Desc().NumElements : 0u);
+			dx12::DumpDeviceErrors("pso");
+			if (rawPso) rawPso->Release();
 			return;
 		}
+		ComPtr<ID3D12PipelineState> newPso = rawPso;
 		pso = newPso.Get();
 		dx12::g_backend.psoCache.emplace(key, newPso);
 	}
@@ -799,7 +1158,15 @@ void dx12Context::FlushPipeline()
 			ID3DShaderResourceView* srv = SRVSManager.GetPS(i);
 			if (srv && srv->valid)
 			{
+				auto* dv = dynamic_cast<dx12ShaderResourceView*>(srv);
+				if (dv && dv->resource)
+					R5_TransitionResource(cl, dv->resource.Get(), D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
 				dx12::GetD3D12Device()->CopyDescriptorsSimple(1, dst, srv->cpu, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			}
+			else if (dx12::g_backend.dummySrvCpu.ptr)
+			{
+				// 填充无效槽：防止描述符堆残留上一 Draw 的纹理（避免 shniaga 采样错纹理）
+				dx12::GetD3D12Device()->CopyDescriptorsSimple(1, dst, dx12::g_backend.dummySrvCpu, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 			}
 		}
 		cl->SetGraphicsRootDescriptorTable(1, srvGpu);

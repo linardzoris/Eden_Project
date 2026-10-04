@@ -1,6 +1,10 @@
 #ifndef	dx10StateManager_included
 #define	dx10StateManager_included
 #pragma once
+#ifdef USE_DX12
+#include "../xrRenderDX12/StateManager/dx12StateManager.h"
+#else
+
 
 class dx10StateManager
 {
@@ -93,3 +97,5 @@ private:
 extern	dx10StateManager	StateManager;
 
 #endif	//	dx10StateManager_included
+
+#endif // USE_DX12

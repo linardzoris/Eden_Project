@@ -86,6 +86,7 @@ public:
 	virtual ~dx12ResourceBase() {}
 
 	ID3D12Resource*	GetResource() { return resource.Get(); }
+	virtual void	GetType(D3D_RESOURCE_DIMENSION* p) { if (p) *p = D3D_RESOURCE_DIMENSION_TEXTURE2D; }
 };
 
 //------------------------------------------------------------------------------
@@ -103,6 +104,7 @@ public:
 	void*					mapped = nullptr;	// 上传堆/持久映射指针
 
 	ID3D12Resource*	GetResource() { return resource.Get(); }
+	void	GetType(D3D_RESOURCE_DIMENSION* p) override { if (p) *p = D3D_RESOURCE_DIMENSION_BUFFER; }
 	void	GetDesc(D3D_BUFFER_DESC* d) const
 	{
 		if (!d) return;
@@ -122,12 +124,56 @@ public:
 	D3D_TEXTURE2D_DESC		desc = {};
 	ComPtr<ID3D12Resource>	staging;		// 上传用
 	D3D12_RESOURCE_STATES	state = D3D12_RESOURCE_STATE_COMMON;
+	// D3D11 的 STAGING+CPUAccess_READ：D3D12 的 READBACK 堆不能放纹理，
+	// 故建在 DEFAULT 堆，Map 时内部拷到 READBACK 缓冲。
+	bool					stagingRead = false;
 
 	UINT	Width() const { return desc.Width; }
 	UINT	Height() const { return desc.Height; }
 	DXGI_FORMAT	Format() const { return desc.Format; }
 	ID3D12Resource* GetResource() { return resource.Get(); }
+
+	// 如实返回资源维度（基类默认 TEXTURE2D，3D 纹理必须覆盖，
+	// 否则 CTexture::surface_set 会按 2D 建 SRV，触发设备移除）
+	void	GetType(D3D_RESOURCE_DIMENSION* p) override
+	{
+		if (!p) return;
+		const D3D12_RESOURCE_DIMENSION d = resource
+			? resource->GetDesc().Dimension
+			: D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+		switch (d)
+		{
+		case D3D12_RESOURCE_DIMENSION_TEXTURE1D:
+			*p = D3D_RESOURCE_DIMENSION_TEXTURE1D;
+			break;
+		case D3D12_RESOURCE_DIMENSION_TEXTURE3D:
+			*p = D3D_RESOURCE_DIMENSION_TEXTURE3D;
+			break;
+		default:
+			*p = D3D_RESOURCE_DIMENSION_TEXTURE2D;
+			break;
+		}
+	}
 	void	GetDesc(D3D_TEXTURE2D_DESC* d) const { if (d) *d = desc; }
+	void	GetDesc(D3D_TEXTURE3D_DESC* d) const
+	{
+		if (!d) return;
+		ZeroMemory(d, sizeof(*d));
+		d->Width = desc.Width;
+		d->Height = desc.Height;
+		d->Depth = 1;
+		d->MipLevels = desc.MipLevels;
+		d->Format = desc.Format;
+	}
+	void	GetDesc(D3D_TEXTURE1D_DESC* d) const
+	{
+		if (!d) return;
+		ZeroMemory(d, sizeof(*d));
+		d->Width = desc.Width;
+		d->MipLevels = desc.MipLevels;
+		d->ArraySize = desc.ArraySize;
+		d->Format = desc.Format;
+	}
 };
 
 //------------------------------------------------------------------------------
@@ -151,6 +197,22 @@ public:
 	ComPtr<ID3D12Resource>		resource;
 	D3D12_CPU_DESCRIPTOR_HANDLE	cpu = {};
 	bool						valid = false;
+
+	void	GetResource(ID3DResource** pp)
+	{
+		dx12Texture* t = new dx12Texture();
+		t->resource = resource;
+		if (resource)
+		{
+			D3D12_RESOURCE_DESC rd = resource->GetDesc();
+			t->desc.Width = (UINT)rd.Width;
+			t->desc.Height = rd.Height;
+			t->desc.Format = rd.Format;
+			t->desc.MipLevels = rd.MipLevels;
+			t->desc.ArraySize = rd.DepthOrArraySize;
+		}
+		*pp = t;
+	}
 };
 
 class dx12DepthStencilView : public dx12RefCounted
@@ -274,6 +336,7 @@ public:
 		const void* pShaderBytecodeWithInputSignature, SIZE_T BytecodeLength, ID3DInputLayout** ppInputLayout);
 
 	HRESULT	CreateQuery(const D3D_QUERY_DESC* pQueryDesc, ID3DQuery** ppQuery);
+	HRESULT	CheckFormatSupport(DXGI_FORMAT Format, UINT* pSupport);
 
 	void	EvictManagedResources() {}
 };
@@ -297,6 +360,8 @@ public:
 	void	ClearRenderTargetView(ID3DRenderTargetView* pRenderTargetView, const FLOAT ColorRGBA[4]);
 	void	ClearDepthStencilView(ID3DDepthStencilView* pDepthStencilView, UINT ClearFlags, FLOAT Depth, UINT8 Stencil);
 	void	OMSetRenderTargets(UINT NumViews, ID3DRenderTargetView* const* ppRenderTargetViews, ID3DDepthStencilView* pDepthStencilView);
+	// 绑定裸 swapchain backbuffer RTV（引擎设备层持有其描述符），并设置全屏 viewport/scissor。
+	void	BindBackbufferRTV(D3D12_CPU_DESCRIPTOR_HANDLE rtv, UINT width, UINT height);
 	void	OMSetBlendState(ID3DBlendState* pBlendState, const FLOAT BlendFactor[4], UINT SampleMask);
 	void	RSSetViewports(UINT NumViewports, const D3D_VIEWPORT* pViewports);
 	void	RSSetScissorRects(UINT NumRects, const RECT* pRects);
@@ -369,7 +434,16 @@ public:
 
 	D3D12_VIEWPORT		viewport = {};
 	bool				viewportSet = false;
+
+	// 动态纹理 Map(WRITE_DISCARD) 的上传暂存信息（引擎同一时刻只映射一个纹理）
+	ID3DResource*						dynTex = nullptr;
+	D3D12_PLACED_SUBRESOURCE_FOOTPRINT	dynFootprint = {};
+	D3D12_GPU_VIRTUAL_ADDRESS			dynUploadGpuVA = 0;
 };
 
 extern dx12Device		DX12Device;
 extern dx12Context		DX12Context;
+
+// 资源状态跟踪（实现见 dx12Types.cpp）：供 dx12TextureUtils 等其他纹理创建路径
+// 注册资源初始状态，保证 RTV/DSV/SRV 自动 transition barrier 的跟踪表完整。
+void R5RegisterResourceState(ID3D12Resource* pResource, D3D12_RESOURCE_STATES initial);

@@ -1,0 +1,1 @@
+.\bins\MixedAVX\xrEngine.exe -fs fsgame.ltx -dxdebug

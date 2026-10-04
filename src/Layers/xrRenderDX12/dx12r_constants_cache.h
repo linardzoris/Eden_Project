@@ -76,40 +76,41 @@ public:
 private:
 	void					set(R_constant* C, R_constant_load& L, const Fmatrix& A, BufferType BType)
 	{
-		dx12ConstantBuffer& Buffer = GetCBuffer(C, BType);
-		Buffer.set(C, L, A);
+		dx12ConstantBuffer* Buffer = GetCBuffer(C, BType);
+		if (Buffer) Buffer->set(C, L, A);
 	}
 	void					set(R_constant* C, R_constant_load& L, const Fvector4& A, BufferType BType)
 	{
-		dx12ConstantBuffer& Buffer = GetCBuffer(C, BType);
-		Buffer.set(C, L, A);
+		dx12ConstantBuffer* Buffer = GetCBuffer(C, BType);
+		if (Buffer) Buffer->set(C, L, A);
 	}
 	void					set(R_constant* C, R_constant_load& L, float A, BufferType BType)
 	{
-		dx12ConstantBuffer& Buffer = GetCBuffer(C, BType);
-		Buffer.set(C, L, A);
+		dx12ConstantBuffer* Buffer = GetCBuffer(C, BType);
+		if (Buffer) Buffer->set(C, L, A);
 	}
 	void					set(R_constant* C, R_constant_load& L, int A, BufferType BType)
 	{
-		dx12ConstantBuffer& Buffer = GetCBuffer(C, BType);
-		Buffer.set(C, L, A);
+		dx12ConstantBuffer* Buffer = GetCBuffer(C, BType);
+		if (Buffer) Buffer->set(C, L, A);
 	}
 	void					seta(R_constant* C, R_constant_load& L, u32 e, const Fmatrix& A, BufferType BType)
 	{
-		dx12ConstantBuffer& Buffer = GetCBuffer(C, BType);
-		Buffer.seta(C, L, e, A);
+		dx12ConstantBuffer* Buffer = GetCBuffer(C, BType);
+		if (Buffer) Buffer->seta(C, L, e, A);
 	}
 	void					seta(R_constant* C, R_constant_load& L, u32 e, const Fvector4& A, BufferType BType)
 	{
-		dx12ConstantBuffer& Buffer = GetCBuffer(C, BType);
-		Buffer.seta(C, L, e, A);
+		dx12ConstantBuffer* Buffer = GetCBuffer(C, BType);
+		if (Buffer) Buffer->seta(C, L, e, A);
 	}
 	void					access_direct(R_constant* C, R_constant_load& L, void** ppData, u32 DataSize, BufferType BType)
 	{
-		dx12ConstantBuffer& Buffer = GetCBuffer(C, BType);
-		*ppData = Buffer.AccessDirect(L, DataSize);
+		dx12ConstantBuffer* Buffer = GetCBuffer(C, BType);
+		*ppData = Buffer ? Buffer->AccessDirect(L, DataSize) : nullptr;
 	}
 
-	dx12ConstantBuffer&		GetCBuffer(R_constant* C, BufferType BType);
+	// 返回 nullptr 表示该常量槽位当前未绑定 cbuffer（跳过写入并打日志）
+	dx12ConstantBuffer*		GetCBuffer(R_constant* C, BufferType BType);
 };
 #endif	//	dx12r_constants_cacheH

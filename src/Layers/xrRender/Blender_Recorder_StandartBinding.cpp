@@ -154,12 +154,11 @@ class cl_fog_plane	: public R_constant_setup {
 	Fvector4	result;
 	virtual void setup(R_constant* C)
 	{
-#ifdef _EDITOR
+		// CurrentEnv 在引擎首帧（Environment::load 之前）可能为 null，gamma/UI pass 也会触发这些 binder
 		if (!g_pGamePersistent || !g_pGamePersistent->Environment().CurrentEnv) {
 			RCache.set_c(C, 0, 0, 0.0f, 0.0f);
 			return;
 		}
-#endif
 		if (marker!=Device.dwFrame)
 		{
 			// Plane
@@ -188,12 +187,11 @@ class cl_fog_params	: public R_constant_setup {
 	Fvector4	result;
 	virtual void setup(R_constant* C)
 	{
-#ifdef _EDITOR
+		// CurrentEnv 在引擎首帧（Environment::load 之前）可能为 null，gamma/UI pass 也会触发这些 binder
 		if (!g_pGamePersistent || !g_pGamePersistent->Environment().CurrentEnv) {
 			RCache.set_c(C, 0, 0, 0.0f, 0.0f);
 			return;
 		}
-#endif
 		if (marker!=Device.dwFrame)
 		{
 			// Near/Far
@@ -211,12 +209,11 @@ class cl_fog_color	: public R_constant_setup {
 	u32			marker;
 	Fvector4	result;
 	virtual void setup	(R_constant* C)	{
-#ifdef _EDITOR
+		// CurrentEnv 在引擎首帧（Environment::load 之前）可能为 null，gamma/UI pass 也会触发这些 binder
 		if (!g_pGamePersistent || !g_pGamePersistent->Environment().CurrentEnv) {
 			RCache.set_c(C, 0, 0, 0.0f, 0.0f);
 			return;
 		}
-#endif
 		if (marker!=Device.dwFrame)	{
 			CEnvDescriptor&	desc	= *g_pGamePersistent->Environment().CurrentEnv;
 #if RENDER == R_R1
@@ -296,12 +293,11 @@ class cl_sun0_color : public R_constant_setup {
 	u32 marker;
 	Fvector4 result;
 	virtual void setup(R_constant* C) {
-#ifdef _EDITOR
+		// CurrentEnv 在引擎首帧（Environment::load 之前）可能为 null，gamma/UI pass 也会触发这些 binder
 		if (!g_pGamePersistent || !g_pGamePersistent->Environment().CurrentEnv) {
 			RCache.set_c(C, 0, 0, 0.0f, 0.0f);
 			return;
 		}
-#endif
 		if (marker != Device.dwFrame) {
 			CEnvDescriptor& desc = *g_pGamePersistent->Environment().CurrentEnv;
 #if defined(_EDITOR) || RENDER != R_R1
@@ -318,12 +314,11 @@ class cl_sun0_dir_w : public R_constant_setup {
 	u32			marker;
 	Fvector4	result;
 	virtual void setup(R_constant* C) {
-#ifdef _EDITOR
+		// CurrentEnv 在引擎首帧（Environment::load 之前）可能为 null，gamma/UI pass 也会触发这些 binder
 		if (!g_pGamePersistent || !g_pGamePersistent->Environment().CurrentEnv) {
 			RCache.set_c(C, 0, 0, 0.0f, 0.0f);
 			return;
 		}
-#endif
 		if (marker != Device.dwFrame) {
 			CEnvDescriptor& desc = *g_pGamePersistent->Environment().CurrentEnv;
 			result.set(desc.sun_dir.x, desc.sun_dir.y, desc.sun_dir.z, 0);
@@ -336,12 +331,11 @@ class cl_sun0_dir_e : public R_constant_setup {
 	u32			marker;
 	Fvector4	result;
 	virtual void setup(R_constant* C) {
-#ifdef _EDITOR
+		// CurrentEnv 在引擎首帧（Environment::load 之前）可能为 null，gamma/UI pass 也会触发这些 binder
 		if (!g_pGamePersistent || !g_pGamePersistent->Environment().CurrentEnv) {
 			RCache.set_c(C, 0, 0, 0.0f, 0.0f);
 			return;
 		}
-#endif
 		if (marker != Device.dwFrame) {
 			Fvector D;
 			CEnvDescriptor& desc = *g_pGamePersistent->Environment().CurrentEnv;
@@ -357,12 +351,11 @@ class cl_amb_color : public R_constant_setup {
 	u32			marker;
 	Fvector4	result;
 	virtual void setup(R_constant* C) {
-#ifdef _EDITOR
+		// CurrentEnv 在引擎首帧（Environment::load 之前）可能为 null，gamma/UI pass 也会触发这些 binder
 		if (!g_pGamePersistent || !g_pGamePersistent->Environment().CurrentEnv) {
 			RCache.set_c(C, 0, 0, 0.0f, 0.0f);
 			return;
 		}
-#endif
 		if (marker != Device.dwFrame) {
 			CEnvDescriptorMixer& desc = *g_pGamePersistent->Environment().CurrentEnv;
 
@@ -381,12 +374,11 @@ class cl_hemi_color : public R_constant_setup {
 	u32			marker;
 	Fvector4	result;
 	virtual void setup(R_constant* C) {
-#ifdef _EDITOR
+		// CurrentEnv 在引擎首帧（Environment::load 之前）可能为 null，gamma/UI pass 也会触发这些 binder
 		if (!g_pGamePersistent || !g_pGamePersistent->Environment().CurrentEnv) {
 			RCache.set_c(C, 0, 0, 0.0f, 0.0f);
 			return;
 		}
-#endif
 		if (marker != Device.dwFrame) {
 			CEnvDescriptorMixer& desc = *g_pGamePersistent->Environment().CurrentEnv;
 #if defined(_EDITOR) || RENDER != R_R1
@@ -405,12 +397,11 @@ class cl_sky_color : public R_constant_setup {
 	u32 marker;
 	Fvector4 result;
 	virtual void setup(R_constant* C) {
-#ifdef _EDITOR
+		// CurrentEnv 在引擎首帧（Environment::load 之前）可能为 null，gamma/UI pass 也会触发这些 binder
 		if (!g_pGamePersistent || !g_pGamePersistent->Environment().CurrentEnv) {
 			RCache.set_c(C, 0, 0, 0.0f, 0.0f);
 			return;
 		}
-#endif
 		if (marker != Device.dwFrame) {
 			CEnvDescriptorMixer& desc = *g_pGamePersistent->Environment().CurrentEnv;
 #if defined(_EDITOR) || RENDER != R_R1
@@ -473,12 +464,11 @@ static class cl_rain_params : public R_constant_setup {
 
 	virtual void setup(R_constant* C)
 	{
-#ifdef _EDITOR
+		// CurrentEnv 在引擎首帧（Environment::load 之前）可能为 null，gamma/UI pass 也会触发这些 binder
 		if (!g_pGamePersistent || !g_pGamePersistent->Environment().CurrentEnv) {
 			RCache.set_c(C, 0, 0, 0.0f, 0.0f);
 			return;
 		}
-#endif
 		float rainDensity = g_pGamePersistent->Environment().CurrentEnv->rain_density;
 		float rainWetness = g_pGamePersistent->Environment().wetness_factor;
 		RCache.set_c(C, rainDensity, rainWetness, 0.0f, (float)g_pGameLevel->UseSnowmask);

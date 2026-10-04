@@ -314,7 +314,12 @@ IC void	CBackend::set_Scissor(Irect* R)
 	else
 	{
 		StateManager.EnableScissoring(FALSE);
-		DX12Context.RSSetScissorRects(0, 0);
+		// D3D12 的 scissor test 无法关闭（与 D3D11 的 ScissorEnable=FALSE 不同）：
+		// 绑定 0 个矩形会使当前 scissor 退化为空矩形，Draw 的所有像素都被裁掉。
+		// 用覆盖最大范围的矩形（D3D12 scissor 最大边长 16384）实现"不裁剪"语义；
+		// 超出 RT 的部分 GPU 会按渲染目标边界自行裁剪。
+		static const RECT fullClip = { 0, 0, 16384, 16384 };
+		DX12Context.RSSetScissorRects(1, &fullClip);
 	}
 }
 
@@ -337,8 +342,12 @@ IC void CBackend::ApplyVertexLayout()
 	if (it == decl->vs_to_layout.end())
 	{
 		dx12InputLayout* pLayout = new dx12InputLayout();
-		pLayout->elements.resize(decl->dx10_dcl_code.size());
-		for (size_t i = 0; i < decl->dx10_dcl_code.size(); ++i)
+		// dx10_dcl_code 末尾带有一个全零的 D3DDECL_END 哨兵（见 ConvertVertexDeclaration），
+		// DX11 用 size()-1 创建布局；DX12 也必须排除该哨兵，否则末元素 SemanticName=NULL 导致建布局失败。
+		const size_t elemCount = decl->dx10_dcl_code.empty()
+			? 0 : decl->dx10_dcl_code.size() - 1;
+		pLayout->elements.resize(elemCount);
+		for (size_t i = 0; i < elemCount; ++i)
 		{
 			const D3D_INPUT_ELEMENT_DESC& s = decl->dx10_dcl_code[i];
 			D3D12_INPUT_ELEMENT_DESC& d = pLayout->elements[i];

@@ -50,7 +50,7 @@ void CDetailManager::hw_Load_Shaders()
 		//Buffer
 		bufferDesc.ByteWidth = bufferSizes[i] * sizeof(InstanceData);
 
-		ID3D11Buffer* buffer = NULL;
+		ID3DBuffer* buffer = NULL;
         R_CHK(RDevice->CreateBuffer(&bufferDesc, NULL, &buffer));
 
 		if(buffer)
@@ -59,7 +59,7 @@ void CDetailManager::hw_Load_Shaders()
 		//SRV
         srvDesc.Buffer.ElementWidth = bufferSizes[i];
 
-		ID3D11ShaderResourceView* srv = NULL;
+		ID3DShaderResourceView* srv = NULL;
         R_CHK(RDevice->CreateShaderResourceView(buffer, &srvDesc, &srv));
 
 		if(srv)
@@ -143,8 +143,8 @@ void CDetailManager::hw_Render_dump(const Fvector4& consts, const Fvector4& wave
 
 		//Current buffer size and resources
 		u32 currentSize = it->first;
-		ID3D11Buffer* currentBuffer = it->second;
-		ID3D11ShaderResourceView* currentSRV = detailSRV_map.find(currentSize)->second;
+		ID3DBuffer* currentBuffer = it->second;
+		ID3DShaderResourceView* currentSRV = detailSRV_map.find(currentSize)->second;
 
 		//Bind (current) buffer SRV
 		SRVSManager.SetVSResource(0, currentSRV);

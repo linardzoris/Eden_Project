@@ -11,7 +11,9 @@
 #include "../xrRender/dxRenderDeviceRender.h"
 
 #include "../xrRenderDX10/dx10BufferUtils.h"
+#ifndef USE_DX12
 #include "../xrRenderDX10/3DFluid/dx103DFluidVolume.h"
+#endif
 
 #include "../xrRender/FHierrarhyVisual.h"
 
@@ -474,6 +476,10 @@ void CRender::LoadSWIs(CStreamReader* base_fs)
 
 void CRender::Load3DFluid()
 {
+#ifdef USE_DX12
+	// DX12: 3DFluid 体渲染后置
+	return;
+#else
 	if (!RImplementation.o.volumetricfog)
 		return;
 
@@ -507,4 +513,5 @@ void CRender::Load3DFluid()
 
 		FS.r_close(F);
 	}
+#endif // USE_DX12
 }

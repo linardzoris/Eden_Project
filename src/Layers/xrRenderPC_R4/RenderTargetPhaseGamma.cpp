@@ -2,6 +2,10 @@
 
 #include "../xrRender/dxRenderDeviceRender.h"
 
+#if defined(USE_DX12)
+extern "C" ENGINE_API D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentRTV();
+#endif
+
 void CRenderTarget::PhaseGammaApply()
 {
 	float w = float(Device.TargetWidth);
@@ -17,7 +21,11 @@ void CRenderTarget::PhaseGammaApply()
 	contrast = contrast * 0.5f + 0.5f;
 	gamma = 1.0f / _max(EPS_S, gamma);
 
-#if defined(USE_DX11)
+#if defined(USE_DX12)
+	// DX12：最终输出直接绑引擎设备层的当前 swapchain backbuffer RTV。
+	// s_gamma 采样 rt_BackbufferLUT（菜单即渲染于此），输出到真正的呈现目标。
+	RContext->BindBackbufferRTV(GetCurrentRTV(), Device.TargetWidth, Device.TargetHeight);
+#elif defined(USE_DX11)
 	u_setrt(w, h, RTarget, nullptr, nullptr, nullptr);
 #endif
 

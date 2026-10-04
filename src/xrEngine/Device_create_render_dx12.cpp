@@ -45,10 +45,31 @@ namespace dx12
 	UINT64									FenceValue[NUM_BACKBUFFERS] = {};
 	bool									FrameInFlight = false;
 
+	const char* VendorLabel(UINT vid)
+	{
+		switch (vid)
+		{
+		case 0x10DE: return "NVIDIA";
+		case 0x8086: return "Intel";
+		case 0x1002: return "AMD";
+		case 0x1414: return "Microsoft";
+		default:      return "Other";
+		}
+	}
+
+	void LogAdapter(const char* tag, const DXGI_ADAPTER_DESC1& d)
+	{
+		char name[128] = {};
+		::WideCharToMultiByte(CP_UTF8, 0, d.Description, -1, name, (int)sizeof(name), nullptr, nullptr);
+		const u32 vidMB = (u32)(d.DedicatedVideoMemory / (1024ull * 1024ull));
+		Msg("* DX12: %s '%s' %s ven=0x%04x dev=0x%04x vidmem=%u MB",
+			tag, name, VendorLabel(d.VendorId), d.VendorId, d.DeviceId, vidMB);
+	}
+
 	bool CreateDeviceAndQueue()
 	{
-		// 调试层：-dxdebug，或 M4b 排障期对 DX12 无条件启用（之后可还原）
-		const bool dxdebug = Core.ParamsData.test(ECoreParams::dxdebug) || true;
+		// 调试层：仅在 -dxdebug 时开启（强制开启会导致跨适配器呈现路径异常）
+		const bool dxdebug = Core.ParamsData.test(ECoreParams::dxdebug);
 		if (dxdebug)
 		{
 			ComPtr<ID3D12Debug> dbg;
@@ -56,7 +77,17 @@ namespace dx12
 			if (SUCCEEDED(hrDbg) && dbg)
 			{
 				dbg->EnableDebugLayer();
-				Msg("* DX12: debug layer enabled");
+
+				// GPU-Based Validation：在 GPU 上检测非法操作（失效描述符、越界访问、
+				// 资源状态错误等），立即产出明确错误，而不是等到 TDR 触发 DEVICE_HUNG。
+				// 必须在 D3D12CreateDevice 之前设置。
+				ComPtr<ID3D12Debug1> dbg1;
+				if (SUCCEEDED(dbg.As(&dbg1)) && dbg1)
+				{
+					dbg1->SetEnableGPUBasedValidation(TRUE);
+					dbg1->SetEnableSynchronizedCommandQueueValidation(TRUE);
+				}
+				Msg("* DX12: debug layer enabled (GPU-based validation on)");
 			}
 			else
 			{
@@ -75,26 +106,92 @@ namespace dx12
 			return false;
 		}
 
-		ComPtr<IDXGIAdapter1> adapter;
-		for (UINT i = 0; factory->EnumAdapters1(i, &adapter) != DXGI_ERROR_NOT_FOUND; ++i)
+		// 记录所有硬件适配器（跳过软件/WARP）
+		for (UINT i = 0; ; ++i)
 		{
-			DXGI_ADAPTER_DESC1 desc;
-			adapter->GetDesc1(&desc);
-			if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
-				continue;
-
-			hr = D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&D3DDevice));
-			if (SUCCEEDED(hr))
-			{
-				FeatureLevel = D3D_FEATURE_LEVEL_11_0;
+			ComPtr<IDXGIAdapter1> a;
+			if (factory->EnumAdapters1(i, &a) == DXGI_ERROR_NOT_FOUND)
 				break;
+			DXGI_ADAPTER_DESC1 d{};
+			a->GetDesc1(&d);
+			if (d.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+				continue;
+			LogAdapter("adapter", d);
+		}
+
+		ComPtr<IDXGIAdapter1> adapter;
+
+		// 混合显卡笔记本：优先高性能独显（NVIDIA RTX 4060），避免误选 Intel 核显。
+		// 旧版 Intel UMD 在 IGC 编译 / 多线程 DDI 路径会抛内部异常（msg_end）并崩溃。
+		hr = factory->EnumAdapterByGpuPreference(
+			0, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&adapter));
+		if (SUCCEEDED(hr) && adapter)
+		{
+			DXGI_ADAPTER_DESC1 d{};
+			adapter->GetDesc1(&d);
+			if (d.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+				adapter.Reset();
+			else
+				LogAdapter("prefer-high-performance", d);
+		}
+
+		auto tryCreateDevice = [&](IDXGIAdapter1* a) -> bool
+		{
+			const HRESULT hc = D3D12CreateDevice(a, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&D3DDevice));
+			return SUCCEEDED(hc) && D3DDevice;
+		};
+
+		if (adapter)
+			tryCreateDevice(adapter.Get());
+
+		// 回退：按枚举顺序选第一个能成功创建 D3D12 设备的硬件适配器
+		if (!D3DDevice)
+		{
+			adapter.Reset();
+			for (UINT i = 0; factory->EnumAdapters1(i, &adapter) != DXGI_ERROR_NOT_FOUND; ++i)
+			{
+				DXGI_ADAPTER_DESC1 d{};
+				adapter->GetDesc1(&d);
+				if (d.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+					continue;
+				if (tryCreateDevice(adapter.Get()))
+					break;
 			}
 		}
 
 		if (!D3DDevice)
 		{
-			Msg("! DX12: D3D12CreateDevice failed");
+			Msg("! DX12: D3D12CreateDevice failed on all adapters");
 			return false;
+		}
+
+		// 配置 InfoQueue：存储损坏/错误/警告（含 GBV 产出），不限制条数，
+		// 由 DrainInfoQueue() 每帧转储到游戏日志。
+		if (dxdebug)
+		{
+			ComPtr<ID3D12InfoQueue> iq;
+			if (SUCCEEDED(D3DDevice->QueryInterface(IID_PPV_ARGS(&iq))) && iq)
+			{
+				iq->SetMessageCountLimit(-1);
+
+				static D3D12_MESSAGE_SEVERITY sevs[] = {
+					D3D12_MESSAGE_SEVERITY_CORRUPTION,
+					D3D12_MESSAGE_SEVERITY_ERROR,
+					D3D12_MESSAGE_SEVERITY_WARNING
+				};
+				D3D12_INFO_QUEUE_FILTER filter = {};
+				filter.AllowList.NumSeverities = _countof(sevs);
+				filter.AllowList.pSeverityList = sevs;
+				iq->AddStorageFilterEntries(&filter);
+				iq->SetMuteDebugOutput(FALSE);
+			}
+		}
+
+		FeatureLevel = D3D_FEATURE_LEVEL_11_0;
+		{
+			DXGI_ADAPTER_DESC1 chosen{};
+			adapter->GetDesc1(&chosen);
+			LogAdapter("selected", chosen);
 		}
 
 		D3D12_COMMAND_QUEUE_DESC qd = {};
@@ -120,7 +217,7 @@ namespace dx12
 		sd.BufferCount = NUM_BACKBUFFERS;
 		sd.Width = width;
 		sd.Height = height;
-		sd.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		sd.Format = DXGI_FORMAT_R10G10B10A2_UNORM;	// 与 r4 rt_BackbufferLUT 一致，避免 gamma 输出 PSO/RTV 格式不匹配
 		sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 		sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 		sd.SampleDesc.Count = 1;
@@ -446,9 +543,43 @@ namespace dx12
 		return DSVHeap->GetCPUDescriptorHandleForHeapStart();
 	}
 
+	// 把 InfoQueue 中缓存的调试消息（含 GBV 检测到的 GPU 非法操作）转储到游戏日志
+	void DrainInfoQueue()
+	{
+		if (!D3DDevice) return;
+
+		ComPtr<ID3D12InfoQueue> iq;
+		if (FAILED(D3DDevice->QueryInterface(IID_PPV_ARGS(&iq))) || !iq) return;
+
+		const UINT64 n = iq->GetNumStoredMessages();
+		for (UINT64 i = 0; i < n; ++i)
+		{
+			SIZE_T len = 0;
+			if (FAILED(iq->GetMessage(i, nullptr, &len)) || !len) continue;
+
+			xr_vector<u8> buf(len);
+			D3D12_MESSAGE* m = (D3D12_MESSAGE*)buf.data();
+			if (SUCCEEDED(iq->GetMessage(i, m, &len)) && m->pDescription)
+			{
+				const char* tag = "warn";
+				switch (m->Severity)
+				{
+				case D3D12_MESSAGE_SEVERITY_CORRUPTION: tag = "CORRUPT"; break;
+				case D3D12_MESSAGE_SEVERITY_ERROR:      tag = "GBV-ERR"; break;
+				case D3D12_MESSAGE_SEVERITY_WARNING:    tag = "warn"; break;
+				default: break;
+				}
+				Msg("! DX12 [%s] f%u: %s", tag, Device.dwFrame, m->pDescription);
+			}
+		}
+		if (n) iq->ClearStoredMessages();
+	}
+
 	// 开始一帧：重置命令分配器/列表，转换 backbuffer 到 RT 状态
 	extern "C" ENGINE_API void BeginFrame()
 	{
+		DrainInfoQueue();
+
 		if (FrameInFlight)
 			return;
 
@@ -462,6 +593,13 @@ namespace dx12
 		toRT.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
 		toRT.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 		CmdList->ResourceBarrier(1, &toRT);
+
+		// D3D12 scissor test 始终开启，命令列表 reset 后 scissor 为空；而 D3D11 默认
+		// ScissorEnable=FALSE（不裁剪）本应无需调用者干预。每帧先绑定一个最大范围
+		// scissor 作为默认"不裁剪"状态，引擎需要裁剪时再经 set_Scissor(R) 覆盖。
+		// 这样即便在未绑定 RT 的早期 Draw 上也不会被空矩形裁掉像素。
+		static const D3D12_RECT defaultScissor = { 0, 0, 16384, 16384 };
+		CmdList->RSSetScissorRects(1, &defaultScissor);
 
 		FrameInFlight = true;
 	}
@@ -483,6 +621,10 @@ namespace dx12
 		CmdList->Close();
 		ID3D12CommandList* lists[] = { CmdList.Get() };
 		CmdQueue->ExecuteCommandLists(1, lists);
+
+		// GBV 的部分错误在 ExecuteCommandLists 后同步产出，立即转储，
+		// 确保即便本帧随后崩溃也不会丢失关键信息。
+		DrainInfoQueue();
 
 		FrameInFlight = false;
 	}

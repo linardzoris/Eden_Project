@@ -338,8 +338,10 @@ u32 CRenderTarget::get_target_height()
 	return (u32)RCache.get_target_height();
 }
 
+#ifndef USE_DX12
 #include "imgui_impl_dx11.h"
 ImGui_ImplDX11_Data* ImGui_ImplDX11_GetBackendData();
+#endif
 
 xr_map<xr_string, float> PowerMap;
 
@@ -409,11 +411,13 @@ CRenderTarget::CRenderTarget()
 			);
 
 			DrawList.AddCallback([](const ImDrawList* parent_list, const ImDrawCmd* cmd) {
+#ifndef USE_DX12
 				auto bd = ImGui_ImplDX11_GetBackendData();
 				if (bd != nullptr) {
 					const float blend_factor[4] = { 0.f, 0.f, 0.f, 0.f };
 					RContext->OMSetBlendState((ID3DBlendState*)bd->pBlendState, blend_factor, 0xffffffff);
 				}
+#endif
 				}, State);
 			};
 
