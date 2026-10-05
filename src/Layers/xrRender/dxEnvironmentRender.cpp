@@ -212,6 +212,10 @@ void dxEnvironmentRender::OnUnload() {}
 
 void dxEnvironmentRender::RenderSky(CEnvironment& env) {
 	PROF_EVENT("EnvironmentRender::RenderSky");
+#if defined(USE_DX12)
+	// GPU 面包屑：进关卡首帧的 6 连 Draw 卡死排查（天空/环境立方体渲染路径）
+	dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("sky:box"));
+#endif
 	if(env.bNeed_re_create_env) {
 		OnDeviceDestroy();
 		OnDeviceCreate();

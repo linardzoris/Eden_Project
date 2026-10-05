@@ -88,7 +88,19 @@ namespace dx12
 	extern "C" ENGINE_API void EndFrame();
 	extern "C" ENGINE_API void FramePresent(bool vsync);
 	extern "C" ENGINE_API ID3D12GraphicsCommandList* GetCmdList();
+	extern "C" ENGINE_API ID3D12CommandQueue* GetCommandQueue();
+	extern "C" ENGINE_API UINT GetFrameIndex();
+	extern "C" ENGINE_API bool IsFrameRecording();
+	extern "C" ENGINE_API ID3D12Resource* GetCurrentBackBuffer();
+	// GPU 面包屑（设备层实现）：阶段名注册 / 写入命令列表 / 挂起后读回
+	extern "C" ENGINE_API UINT RegisterBreadcrumbName(const char* name);
+	extern "C" ENGINE_API void WriteBreadcrumb(UINT value);
+	extern "C" ENGINE_API void DumpBreadcrumb(const char* tag);
 	extern "C" ENGINE_API D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentRTV();
 	extern "C" ENGINE_API D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentDSV();
+	// 异步纹理上传的帧首排空（xrRenderDX12/dx12Backend.cpp 实现，与本层同属 xrRender_R5）：
+	// dxRenderDeviceRender::Begin 在 ::BeginFrame 之后调用，把加载线程积压的上传
+	//（暂存字节 → 上传环 + 共享跟踪器屏障 + CopyTextureRegion）录进本帧主命令列表
+	void ProcessPendingTextureUploads();
 	extern "C" ENGINE_API void SetRenderDSV(void* dsv);
 }

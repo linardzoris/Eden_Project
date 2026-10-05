@@ -6,6 +6,10 @@
 
 #pragma comment(lib, "dbghelp.lib")
 
+// dx12Types.h 的导出（资源状态跟踪器）：本文件不 include dx12Types.h（避免循环），
+// 异步上传排空用它走共享状态账本（注意：定义在全局命名空间，声明须一致）
+void R5TransitionResourceTracked(ID3D12GraphicsCommandList* cl, ID3D12Resource* r, D3D12_RESOURCE_STATES to);
+
 namespace dx12
 {
 	Backend g_backend;
@@ -261,10 +265,123 @@ namespace dx12
 		return dx12::GetCmdList();
 	}
 
+	// 上传 / 回读 / 立即清屏统一走主渲染队列（单队列串行化）。
+	// 原先用独立 upload 队列：进关卡时纹理惰性上传会与渲染队列并发访问同一批纹理
+	//（上传队列写 COPY_DEST、渲染队列同时按 ALL_SHADER_RESOURCE 采样），跨队列资源
+	// 状态冲突会让命令处理器停在队列边界——此后所有命令列表都不再执行、围栏永不 signal，
+	// 表现为"提交边界挂起"。GBV 只做队列内校验、-dxdebug 又因太慢而不重叠，两者都看不到。
+	ID3D12CommandQueue* WorkQueue()
+	{
+		ID3D12CommandQueue* q = dx12::GetCommandQueue();
+		return q ? q : g_backend.uploadQueue.Get();
+	}
+
 	void Ensure()
 	{
 		if (g_backend.valid) return;
 		Init(GetD3D12Device());
+	}
+
+	//--------------------------------------------------------------------------
+	// 设备挂起取证（DRED）
+	// GPU 面包屑（RegisterBreadcrumbName / WriteBreadcrumb / DumpBreadcrumb）
+	// 已迁移到设备层实现并导出，声明见 xrRenderPC_R5/stdafx.h
+	//--------------------------------------------------------------------------
+	static bool						s_dredDumped = false;
+
+	static const char* BreadcrumbOpName(D3D12_AUTO_BREADCRUMB_OP op)
+	{
+		switch (op)
+		{
+		case D3D12_AUTO_BREADCRUMB_OP_SETMARKER: return " SetMarker";
+		case D3D12_AUTO_BREADCRUMB_OP_BEGINEVENT: return " BeginEvent";
+		case D3D12_AUTO_BREADCRUMB_OP_ENDEVENT: return " EndEvent";
+		case D3D12_AUTO_BREADCRUMB_OP_DRAWINSTANCED: return " Draw";
+		case D3D12_AUTO_BREADCRUMB_OP_DRAWINDEXEDINSTANCED: return " DrawIndexed";
+		case D3D12_AUTO_BREADCRUMB_OP_EXECUTEINDIRECT: return " ExecuteIndirect";
+		case D3D12_AUTO_BREADCRUMB_OP_DISPATCH: return " Dispatch";
+		case D3D12_AUTO_BREADCRUMB_OP_COPYBUFFERREGION: return " CopyBuffer";
+		case D3D12_AUTO_BREADCRUMB_OP_COPYTEXTUREREGION: return " CopyTexture";
+		case D3D12_AUTO_BREADCRUMB_OP_COPYRESOURCE: return " CopyResource";
+		case D3D12_AUTO_BREADCRUMB_OP_RESOLVESUBRESOURCE: return " ResolveSubres";
+		case D3D12_AUTO_BREADCRUMB_OP_CLEARRENDERTARGETVIEW: return " ClearRTV";
+		case D3D12_AUTO_BREADCRUMB_OP_CLEARUNORDEREDACCESSVIEW: return " ClearUAV";
+		case D3D12_AUTO_BREADCRUMB_OP_CLEARDEPTHSTENCILVIEW: return " ClearDSV";
+		case D3D12_AUTO_BREADCRUMB_OP_RESOURCEBARRIER: return " Barrier";
+		case D3D12_AUTO_BREADCRUMB_OP_EXECUTEBUNDLE: return " ExecuteBundle";
+		case D3D12_AUTO_BREADCRUMB_OP_PRESENT: return " PRESENT";
+		case D3D12_AUTO_BREADCRUMB_OP_RESOLVEQUERYDATA: return " ResolveQuery";
+		case D3D12_AUTO_BREADCRUMB_OP_BEGINSUBMISSION: return " BeginSubmission";
+		case D3D12_AUTO_BREADCRUMB_OP_ENDSUBMISSION: return " EndSubmission";
+		default: return " Op(?)";
+		}
+	}
+
+	// DRED：设备移除后的自动面包屑（最后完成的命令序号）与页错误分配信息。
+	// 无调试层时这是唯一能指出"哪个命令/哪块内存出了问题"的手段。
+	static void DumpDRED(ID3D12Device* dev, const char* tag)
+	{
+		if (s_dredDumped || !dev) return;
+		s_dredDumped = true;
+
+		ComPtr<ID3D12DeviceRemovedExtendedData> dred;
+		if (FAILED(dev->QueryInterface(IID_PPV_ARGS(&dred))) || !dred)
+		{
+			Msg("! DX12 [%s]: DRED 不可用（设备/SDK 不支持）", tag ? tag : "?");
+			return;
+		}
+
+		D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT bc = {};
+		if (SUCCEEDED(dred->GetAutoBreadcrumbsOutput(&bc)))
+		{
+			for (const D3D12_AUTO_BREADCRUMB_NODE* n = bc.pHeadAutoBreadcrumbNode; n; n = n->pNext)
+			{
+				const char* listName = (n->pCommandListDebugNameA && n->pCommandListDebugNameA[0])
+					? n->pCommandListDebugNameA : "(unnamed cmdlist)";
+				const UINT last = (n->pLastBreadcrumbValue && n->BreadcrumbCount) ? *n->pLastBreadcrumbValue : 0;
+				Msg("! DX12 [%s]: DRED %s: breadcrumb %u / %u ops, cmdlist=%p",
+					tag ? tag : "?", listName, last, (unsigned)n->BreadcrumbCount, (void*)n->pCommandList);
+
+				// 逐操作历史：同时给出两种下标解读（DRED 文档用指针差；实测值可能不等于下标），
+// 哪一种与帧号面包屑吻合就采用哪一种 —— 唯一能"说出卡在哪条操作上"的手段
+				if (n->pCommandHistory && n->BreadcrumbCount)
+				{
+					const UINT* ph = (const UINT*)n->pCommandHistory;
+					const UINT* pv = (const UINT*)n->pLastBreadcrumbValue;
+					const UINT byVal = pv ? *pv : 0;
+					const UINT byPtr = (pv && ph && pv >= ph && (UINT)(pv - ph) < n->BreadcrumbCount)
+						? (UINT)(pv - ph) : UINT_MAX;
+
+					auto dumpWindow = [&](const char* how, UINT idx)
+					{
+						if (idx == UINT_MAX || idx >= n->BreadcrumbCount) return;
+						const UINT from = (idx > 4) ? (idx - 4) : 0;
+						const UINT to = (idx + 4 < n->BreadcrumbCount) ? (idx + 4) : (n->BreadcrumbCount - 1);
+						xr_string ops;
+						for (UINT i = from; i <= to; ++i)
+						{
+							ops += (i == idx) ? " [卡住->]" : "";
+							ops += BreadcrumbOpName(n->pCommandHistory[i]);
+						}
+						Msg("! DX12 [%s]: DRED ops(%s)[%u..%u]:%s", tag ? tag : "?", how, from, to, ops.c_str());
+					};
+					dumpWindow("byPtr", byPtr);
+					dumpWindow("byVal", byVal);
+				}
+			}
+		}
+
+		D3D12_DRED_PAGE_FAULT_OUTPUT pf = {};
+		if (SUCCEEDED(dred->GetPageFaultAllocationOutput(&pf)))
+		{
+			Msg("! DX12 [%s]: DRED page fault VA=0x%llx", tag ? tag : "?", (unsigned long long)pf.PageFaultVA);
+			for (const D3D12_DRED_ALLOCATION_NODE* a = pf.pHeadExistingAllocationNode; a; a = a->pNext)
+				Msg("! DX12 [%s]: DRED alloc (in use) type=%d name='%s'",
+					tag ? tag : "?", (int)a->AllocationType, a->ObjectNameA ? a->ObjectNameA : "?");
+			for (const D3D12_DRED_ALLOCATION_NODE* a = pf.pHeadRecentFreedAllocationNode; a; a = a->pNext)
+				Msg("! DX12 [%s]: DRED alloc (RECENTLY FREED) type=%d name='%s'",
+					tag ? tag : "?", (int)a->AllocationType, a->ObjectNameA ? a->ObjectNameA : "?");
+		}
 	}
 
 	//--------------------------------------------------------------------------
@@ -277,7 +394,12 @@ namespace dx12
 
 		const HRESULT drr = dev->GetDeviceRemovedReason();
 		if (FAILED(drr))
+		{
 			Msg("! DX12 [%s]: device removed reason 0x%08x", tag ? tag : "", (unsigned)drr);
+			// 首次发现移除：输出 GPU 侧取证（面包屑 + DRED）
+			DumpBreadcrumb(tag);
+			DumpDRED(dev, tag);
+		}
 
 		ComPtr<ID3D12InfoQueue> iq;
 		if (FAILED(dev->QueryInterface(IID_PPV_ARGS(&iq))) || !iq) return;
@@ -316,10 +438,10 @@ namespace dx12
 		list->Close();
 
 		ID3D12CommandList* lists[] = { list };
-		g_backend.uploadQueue->ExecuteCommandLists(1, lists);
+		WorkQueue()->ExecuteCommandLists(1, lists);
 		DumpDeviceErrors("clear_rtv_imm");
 		g_backend.uploadFenceValue++;
-		g_backend.uploadQueue->Signal(g_backend.uploadFence.Get(), g_backend.uploadFenceValue);
+		WorkQueue()->Signal(g_backend.uploadFence.Get(), g_backend.uploadFenceValue);
 		if (g_backend.uploadFence->GetCompletedValue() < g_backend.uploadFenceValue && g_backend.uploadEvent)
 		{
 			g_backend.uploadFence->SetEventOnCompletion(g_backend.uploadFenceValue, (HANDLE)g_backend.uploadEvent);
@@ -477,10 +599,10 @@ namespace dx12
 		list->Close();
 
 		ID3D12CommandList* lists[] = { list };
-		g_backend.uploadQueue->ExecuteCommandLists(1, lists);
+		WorkQueue()->ExecuteCommandLists(1, lists);
 		DumpDeviceErrors("upload");
 		g_backend.uploadFenceValue++;
-		g_backend.uploadQueue->Signal(g_backend.uploadFence.Get(), g_backend.uploadFenceValue);
+		WorkQueue()->Signal(g_backend.uploadFence.Get(), g_backend.uploadFenceValue);
 		if (g_backend.uploadFence->GetCompletedValue() < g_backend.uploadFenceValue && g_backend.uploadEvent)
 		{
 			g_backend.uploadFence->SetEventOnCompletion(g_backend.uploadFenceValue, (HANDLE)g_backend.uploadEvent);
@@ -499,6 +621,205 @@ namespace dx12
 			width, height, depth, (int)fmt);
 		throw;
 	}
+	}
+
+	//--------------------------------------------------------------------------
+	// 异步纹理上传：加载线程入队 → 渲染线程帧首排空到主命令列表
+	//
+	// 即使上传统一到了主队列（WorkQueue），旧路径仍是"每张纹理一条独立的一次性
+	// 命令列表"，在加载高峰期产生数千条列表，与帧列表交错提交；其屏障用的是调用方
+	// 传入的 curState 参数而非共享状态跟踪器，与渲染列表的屏障簿记是两套账本。
+	// 这里把加载路径的上传改为：入队（持 dst 引用 + 暂存字节）→ 帧首（主列表刚
+	// Reset 后）字节进上传环、屏障走共享跟踪器、CopyTextureRegion 录进本帧主列表。
+	// 上传与帧内绘制同列表按序执行，GPU 侧不再存在"帧间插入的独立列表"，
+	// 状态账本唯一，dst 生命周期由 ComPtr 引用保证。
+	//--------------------------------------------------------------------------
+	struct PendingTextureUpload
+	{
+		ComPtr<ID3D12Resource>	dst;
+		UINT					subresource = 0;
+		u8*						data = nullptr;		// 暂存字节（按对齐 pitch 排布）
+		UINT64					bytes = 0;
+		UINT					rowPitch = 0;		// data 内的行距（256 对齐）
+		UINT					width = 0, height = 0, depth = 1;
+		DXGI_FORMAT				footprintFmt = DXGI_FORMAT_UNKNOWN;
+	};
+	static std::mutex						s_upMutex;
+	static xr_vector<PendingTextureUpload>	s_uploads;
+	static size_t							s_upHead = 0;	// FIFO 游标（避免 erase O(n²)）
+	static UINT64							s_uploadPendingBytes = 0;
+
+	// 与 UploadTextureSubresource 相同的布局计算（行距 256 对齐）
+	static void UploadLayoutCalc(DXGI_FORMAT fmt, UINT width, UINT height, UINT depth,
+		UINT& srcRowBytes, UINT& copyRows, UINT& pitch)
+	{
+		const UINT blockSize = BlockCompressedSize(fmt);
+		if (blockSize)
+		{
+			const UINT blockW = (width + 3) / 4;
+			const UINT blockH = (height + 3) / 4;
+			srcRowBytes = blockW * blockSize;
+			copyRows = blockH * depth;
+		}
+		else
+		{
+			UINT bpp = 4;
+			switch (fmt)
+			{
+			case DXGI_FORMAT_R8_UNORM: case DXGI_FORMAT_R8_SNORM: case DXGI_FORMAT_A8_UNORM: bpp = 1; break;
+			case DXGI_FORMAT_R8G8_UNORM: case DXGI_FORMAT_R8G8_SNORM: bpp = 2; break;
+			case DXGI_FORMAT_R16G16B16A16_FLOAT: case DXGI_FORMAT_R16G16B16A16_UNORM:
+			case DXGI_FORMAT_R32G32_FLOAT: bpp = 8; break;
+			case DXGI_FORMAT_R32G32B32A32_FLOAT: case DXGI_FORMAT_R32G32B32A32_UINT:
+			case DXGI_FORMAT_R32G32B32A32_SINT: bpp = 16; break;
+			default: bpp = 4; break;
+			}
+			srcRowBytes = width * bpp;
+			copyRows = height * depth;
+		}
+		pitch = (srcRowBytes + (D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1)) & ~(D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1);
+	}
+
+	void EnqueueTextureUpload(ID3D12Resource* dst, UINT subresourceIndex, const void* src, UINT srcRowPitch,
+		UINT width, UINT height, UINT depth, DXGI_FORMAT fmt, DXGI_FORMAT footprintFormat)
+	{
+		if (!dst || !src) return;
+		// 帧循环未启动（初始化期）或后端异常时退回同步路径。
+		// 帧录制中途（IsFrameRecording）也必须走同步：排空只在帧首执行，中途入队的
+		// 上传最早也要到下一帧才落账，而本帧后续录制中的 Draw 可能已经把这张新纹理
+		// 的 SRV 绑上去采样——"先采样后上传"读的是未初始化目标（实测页错误在目标
+		// 纹理 VA 一带）。同步路径在本帧提交前就执行完拷贝并围栏等待，无此窗口。
+		if (!g_backend.valid || g_backend.frameSerial == 0 || IsFrameRecording())
+		{
+			UploadTextureSubresource(dst, subresourceIndex, src, srcRowPitch, width, height, depth, fmt, footprintFormat);
+			return;
+		}
+		if (depth == 0) depth = 1;
+
+		// 与同步路径相同的护栏：引擎存在"源 mip 与目标 subresource 尺寸不匹配"的纹理
+		//（LOD 缩减的 _DDS_2D Reduce 等），越界拷贝会让 GPU 沿目标分配之外写 —— 实测
+		// 页错误落在目标纹理 VA 之外数百 MB（0x30b3b0000，环形时间线 + DRED 卡在排空区
+		// 第 9 个 CopyTexture 三元组）。这里提前拦截并打印上下文，跳过该子资源。
+		{
+			const D3D12_RESOURCE_DESC dd = dst->GetDesc();
+			const UINT mips = dd.MipLevels ? dd.MipLevels : 1;
+			const UINT slices = dd.DepthOrArraySize ? dd.DepthOrArraySize : 1;
+			const UINT mip = subresourceIndex % mips;
+			const UINT dstW = (UINT)(dd.Width >> mip) ? (UINT)(dd.Width >> mip) : 1u;
+			const UINT dstH = dd.Height ? ((UINT)(dd.Height >> mip) ? (UINT)(dd.Height >> mip) : 1u) : 1u;
+			if (subresourceIndex >= mips * slices || width > dstW || height > dstH)
+			{
+				Msg("! DX12: async upload size mismatch sub=%u fmt=%d rd=%llux%u mips=%u arr=%u mip=%u dst=%ux%u src=%ux%u d=%u -> skip",
+					subresourceIndex, (int)fmt, (unsigned long long)dd.Width, (UINT)dd.Height,
+					mips, slices, mip, dstW, dstH, width, height, depth);
+				return;
+			}
+		}
+
+		UINT srcRowBytes = 0, copyRows = 0, pitch = 0;
+		UploadLayoutCalc(fmt, width, height, depth, srcRowBytes, copyRows, pitch);
+		const UINT64 total = (UINT64)pitch * copyRows;
+		if (!total || total > (256ull << 20))	// 单个子资源 >256MB 属异常，走同步路径兜底
+		{
+			UploadTextureSubresource(dst, subresourceIndex, src, srcRowPitch, width, height, depth, fmt, footprintFormat);
+			return;
+		}
+
+		PendingTextureUpload u;
+		u.dst = dst;							// 持引用：排空前纹理被销毁也安全
+		u.subresource = subresourceIndex;
+		u.bytes = total;
+		u.rowPitch = pitch;
+		u.width = width; u.height = height; u.depth = depth;
+		u.footprintFmt = footprintFormat;
+		u.data = new u8[(size_t)total];
+		const UINT sp = srcRowPitch ? srcRowPitch : srcRowBytes;
+		for (UINT y = 0; y < copyRows; ++y)
+			memcpy(u.data + (size_t)y * pitch, (const u8*)src + (size_t)y * sp, srcRowBytes);
+
+		// 内存护栏：积压过大时退回同步上传，避免流送快于渲染时暂存字节无限增长
+		bool sync = false;
+		{
+			std::lock_guard<std::mutex> g(s_upMutex);
+			if (s_uploadPendingBytes + total > (768ull << 20)) sync = true;
+			else
+			{
+				s_uploads.push_back(std::move(u));
+				s_uploadPendingBytes += total;
+			}
+		}
+		if (sync)
+			UploadTextureSubresource(dst, subresourceIndex, src, srcRowPitch, width, height, depth, fmt, footprintFormat);
+	}
+
+	void ProcessPendingTextureUploads()
+	{
+		if (!g_backend.valid) return;
+		ID3D12GraphicsCommandList* cl = GetD3D12CmdList();	// ::BeginFrame 刚 Reset 过的主列表
+		if (!cl) return;
+
+		UINT n = 0;
+		UINT64 stagedBytes = 0;
+		UINT64 ringBase = 0;
+		{
+			ID3D12Resource* ringRes = g_backend.ring.Resource();
+			if (ringRes) ringBase = ringRes->GetGPUVirtualAddress();
+		}
+
+		std::lock_guard<std::mutex> g(s_upMutex);
+		while (s_upHead < s_uploads.size() && stagedBytes < (96ull << 20))
+		{
+			PendingTextureUpload& u = s_uploads[s_upHead];
+			UINT64 gpu = 0;
+			void* p = g_backend.ring.Alloc(u.bytes, 256, gpu);
+			if (!p) break;	// 本帧环段不足：留待下一帧
+
+			memcpy(p, u.data, (size_t)u.bytes);
+
+			// 屏障走共享状态跟踪器：与渲染列表同一份状态账本，StateBefore 恒真实
+			R5TransitionResourceTracked(cl, u.dst.Get(), D3D12_RESOURCE_STATE_COPY_DEST);
+
+			D3D12_TEXTURE_COPY_LOCATION dstLoc = {};
+			dstLoc.pResource = u.dst.Get();
+			dstLoc.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+			dstLoc.SubresourceIndex = u.subresource;
+
+			D3D12_TEXTURE_COPY_LOCATION srcLoc = {};
+			srcLoc.pResource = g_backend.ring.Resource();
+			srcLoc.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+			srcLoc.PlacedFootprint.Offset = gpu - ringBase;
+			srcLoc.PlacedFootprint.Footprint.Format = u.footprintFmt;
+			srcLoc.PlacedFootprint.Footprint.Width = u.width;
+			srcLoc.PlacedFootprint.Footprint.Height = u.height;
+			srcLoc.PlacedFootprint.Footprint.Depth = u.depth;
+			srcLoc.PlacedFootprint.Footprint.RowPitch = u.rowPitch;
+
+			cl->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, nullptr);
+
+			// 加载路径创建初态即 ALL_SHADER_RESOURCE，上传完成回到该状态
+			R5TransitionResourceTracked(cl, u.dst.Get(), D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
+
+			delete[] u.data; u.data = nullptr;
+			s_uploadPendingBytes -= u.bytes;
+			stagedBytes += u.bytes;
+			++s_upHead;
+			++n;
+		}
+
+		// 已消费条目回收（FIFO 游标前移后整体压实）
+		if (s_upHead == s_uploads.size())
+		{
+			s_uploads.clear();
+			s_upHead = 0;
+		}
+		else if (s_upHead > 256)
+		{
+			s_uploads.erase(s_uploads.begin(), s_uploads.begin() + s_upHead);
+			s_upHead = 0;
+		}
+
+		if (n)
+			WriteBreadcrumb(RegisterBreadcrumbName("frame:uploads"));
 	}
 
 	//--------------------------------------------------------------------------
@@ -590,9 +911,9 @@ namespace dx12
 		list->Close();
 
 		ID3D12CommandList* lists[] = { list };
-		g_backend.uploadQueue->ExecuteCommandLists(1, lists);
+		WorkQueue()->ExecuteCommandLists(1, lists);
 		g_backend.uploadFenceValue++;
-		g_backend.uploadQueue->Signal(g_backend.uploadFence.Get(), g_backend.uploadFenceValue);
+		WorkQueue()->Signal(g_backend.uploadFence.Get(), g_backend.uploadFenceValue);
 		if (g_backend.uploadFence->GetCompletedValue() < g_backend.uploadFenceValue && g_backend.uploadEvent)
 		{
 			g_backend.uploadFence->SetEventOnCompletion(g_backend.uploadFenceValue, (HANDLE)g_backend.uploadEvent);
@@ -608,11 +929,13 @@ namespace dx12
 	//--------------------------------------------------------------------------
 	// DescriptorHeap
 	//--------------------------------------------------------------------------
-	bool DescriptorHeap::Create(ID3D12Device* dev, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT capacity, bool shaderVisible)
+	bool DescriptorHeap::Create(ID3D12Device* dev, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT capacity, bool shaderVisible, UINT slots)
 	{
 		m_size = dev->GetDescriptorHandleIncrementSize(type);
 		m_capacity = capacity;
 		m_offset = 0;
+		m_slots = (slots >= 2) ? 2 : 1;
+		m_slot = 0;
 
 		D3D12_DESCRIPTOR_HEAP_DESC desc = {};
 		desc.Type = type;
@@ -620,15 +943,18 @@ namespace dx12
 		desc.Flags = shaderVisible ? D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE : D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 		desc.NodeMask = 0;
 
-		if (FAILED(dev->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_heap))))
+		for (UINT i = 0; i < m_slots; ++i)
 		{
-			Msg("! DX12: CreateDescriptorHeap failed (type=%d, count=%u)", (int)type, capacity);
-			return false;
-		}
+			if (FAILED(dev->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_heap[i]))))
+			{
+				Msg("! DX12: CreateDescriptorHeap failed (type=%d, count=%u, slot=%u)", (int)type, capacity, i);
+				return false;
+			}
 
-		m_cpuStart = m_heap->GetCPUDescriptorHandleForHeapStart();
-		if (shaderVisible)
-			m_gpuStart = m_heap->GetGPUDescriptorHandleForHeapStart();
+			m_cpuStart[i] = m_heap[i]->GetCPUDescriptorHandleForHeapStart();
+			if (shaderVisible)
+				m_gpuStart[i] = m_heap[i]->GetGPUDescriptorHandleForHeapStart();
+		}
 		return true;
 	}
 
@@ -649,6 +975,9 @@ namespace dx12
 	bool DescriptorHeap::AllocPersistent(UINT count, D3D12_CPU_DESCRIPTOR_HANDLE& cpu)
 	{
 		Ensure();
+		// 锁放在 Ensure 之后：Ensure→Init 内部也走 AllocPersistent，依赖 valid=true
+		// 已置位（Init 在堆创建完成后、首个持久分配前设置），不会重入。
+		std::lock_guard<std::mutex> g(m_persistMutex);
 		if (count == 1 && !m_persistFree.empty())
 		{
 			cpu = CPU(m_persistFree.back());
@@ -667,25 +996,26 @@ namespace dx12
 
 	void DescriptorHeap::FreePersistent(UINT index)
 	{
+		std::lock_guard<std::mutex> g(m_persistMutex);
 		if (index >= m_persistOffset) return;
 		m_persistFree.push_back(index);
 	}
 
 	UINT DescriptorHeap::IndexOf(D3D12_CPU_DESCRIPTOR_HANDLE cpu) const
 	{
-		if (!m_size || cpu.ptr < m_cpuStart.ptr) return UINT_MAX;
-		return (UINT)((cpu.ptr - m_cpuStart.ptr) / m_size);
+		if (!m_size || cpu.ptr < m_cpuStart[m_slot].ptr) return UINT_MAX;
+		return (UINT)((cpu.ptr - m_cpuStart[m_slot].ptr) / m_size);
 	}
 
 	D3D12_CPU_DESCRIPTOR_HANDLE DescriptorHeap::CPU(UINT index) const	{
-		D3D12_CPU_DESCRIPTOR_HANDLE h = m_cpuStart;
+		D3D12_CPU_DESCRIPTOR_HANDLE h = m_cpuStart[m_slot];
 		h.ptr += (SIZE_T)index * m_size;
 		return h;
 	}
 
 	D3D12_GPU_DESCRIPTOR_HANDLE DescriptorHeap::GPU(UINT index) const
 	{
-		D3D12_GPU_DESCRIPTOR_HANDLE h = m_gpuStart;
+		D3D12_GPU_DESCRIPTOR_HANDLE h = m_gpuStart[m_slot];
 		h.ptr += (UINT64)index * m_size;
 		return h;
 	}
@@ -696,6 +1026,10 @@ namespace dx12
 	bool UploadRing::Create(ID3D12Device* dev, UINT64 size)
 	{
 		m_size = size;
+		m_offset = 0;
+		m_persist = 0;
+		m_slot = 0;
+		m_segEnd = size;	// 首次 Reset 前（初始化期）可整环线性分配
 
 		D3D12_HEAP_PROPERTIES heapProps = {};
 		heapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
@@ -723,16 +1057,32 @@ namespace dx12
 			Msg("! DX12: upload ring map failed");
 			return false;
 		}
+		m_vaBegin = m_buffer->GetGPUVirtualAddress();
+		m_vaEnd = m_vaBegin + size;
 		return true;
+	}
+
+	void UploadRing::Reset()
+	{
+		std::lock_guard<std::mutex> g(m_allocMutex);
+		// 持久区 [0, m_persist) 是初始化期的静态数据（关卡 VB/IB 等），不随帧重置；
+		// 其余空间按 backbuffer 分成两段，本帧只在本段内分配。
+		const UINT64 usable = (m_size > m_persist) ? (m_size - m_persist) : 0;
+		const UINT64 seg = usable / 2;
+		m_segBase = m_persist + (UINT64)m_slot * seg;
+		m_segEnd = (m_slot == 0) ? (m_persist + seg) : m_size;
+		m_offset = m_segBase;
 	}
 
 	void* UploadRing::Alloc(UINT64 size, UINT64 align, D3D12_GPU_VIRTUAL_ADDRESS& gpuAddr)
 	{
 		Ensure();
+		std::lock_guard<std::mutex> g(m_allocMutex);
 		UINT64 offset = (m_offset + (align - 1)) & ~(align - 1);
-		if (offset + size > m_size)
+		if (offset + size > m_segEnd)
 		{
-			Msg("! DX12: upload ring overflow (%llu + %llu > %llu)", offset, size, m_size);
+			Msg("! DX12: upload ring segment overflow (%llu + %llu > %llu, slot=%u)",
+				offset, size, m_segEnd, m_slot);
 			gpuAddr = 0;
 			return nullptr;
 		}
@@ -778,9 +1128,21 @@ namespace dx12
 		// （约 29MB，每帧重置）。注意 D3D12 限制 shader-visible CBV/SRV/UAV 堆最多 1,000,000
 		// 个描述符，超过会直接 CreateDescriptorHeap 失败。容量不足时 Alloc 失败 → 根描述符表
 		// 不绑定 → Draw 读到上一 Draw 的残留描述符，表现为"花屏闪烁"。
-		if (!g_backend.cbvSrvUav.Create(dev, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 900000, true)) return false;
+		// slots=2：按 backbuffer 各一份（单堆无法容纳两份，受 1M 上限约束），
+		// 避免 CPU 录制下一帧时覆盖 GPU 仍在读的描述符。
+		if (!g_backend.cbvSrvUav.Create(dev, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 900000, true, 2)) return false;
 		if (!g_backend.sampler.Create(dev, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 256, true)) return false;
 		if (!g_backend.ring.Create(dev, 256ull * 1024 * 1024)) return false;
+		{
+			// 记录上传环 VA 区间：DRED 报告的页错误 VA 若落在该区间即可直接判定
+			// "GPU 访问了上传环"，便于解读挂起取证
+			ID3D12Resource* rr = g_backend.ring.Resource();
+			const UINT64 va = rr ? rr->GetGPUVirtualAddress() : 0;
+			Msg("* DX12: upload ring VA [0x%llx, 0x%llx)", (unsigned long long)va,
+				(unsigned long long)(va + 256ull * 1024 * 1024));
+		}
+
+		// GPU 面包屑缓冲由设备层创建（xrEngine/Device_create_render_dx12.cpp）
 
 		// 持久堆槽位当前不回收：材质系统会在画质/灯光切换时销毁重建纹理 SRV，
 		// 8192 在完整关卡几分钟内即可耗尽。放大到 65536（非 shader-visible，仅 CPU 句柄开销）。
@@ -905,9 +1267,71 @@ namespace dx12
 					sd.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 					sd.Texture2D.MipLevels = 1;
 					dev->CreateShaderResourceView(g_backend.dummyTex.Get(), &sd, g_backend.dummySrvCpu);
-				}
 			}
 		}
+	}
+
+	// ---- 各维度空描述符（null SRV，persistent 堆）：FlushPipeline 为无效槽位
+	// 按着色器反射出的维度选占位符。空描述符（pResource=nullptr）读取返回 0，
+	// 与 D3D11 未绑定的语义一致；维度必须与着色器声明匹配，否则 GBV 报
+	// "SRV resource dimensions differs from that expected by shader" 且读取为
+	// 未定义行为（SSLR-only 时 s_env 期望 cube 却被填 2D 黑纹理即此类）。 ----
+	{
+		// vid_restart 会销毁重建设备：先清空旧句柄，防止分配失败时残留
+		// 指向已销毁堆的陈旧描述符地址。
+		ZeroMemory(g_backend.nullSrvCpu, sizeof(g_backend.nullSrvCpu));
+		ZeroMemory(g_backend.fallbackCbvGpu, sizeof(g_backend.fallbackCbvGpu));
+		ZeroMemory(g_backend.fallbackSrvGpu, sizeof(g_backend.fallbackSrvGpu));
+
+		// vid_restart：丢弃引用旧设备资源的 pending 上传（其暂存字节一并释放）
+		{
+			std::lock_guard<std::mutex> g(s_upMutex);
+			for (size_t i = s_upHead; i < s_uploads.size(); ++i)
+				delete[] s_uploads[i].data;
+			s_uploads.clear();
+			s_upHead = 0;
+			s_uploadPendingBytes = 0;
+		}
+
+		for (UINT dim = 1; dim <= D3D12_SRV_DIMENSION_TEXTURECUBEARRAY; ++dim)
+		{
+			if (dim == D3D12_SRV_DIMENSION_TEXTURE2D)
+				continue;	// 2D 槽位沿用上面真实的 1x1 黑纹理（dummySrvCpu）
+
+			D3D12_CPU_DESCRIPTOR_HANDLE cpu = {};
+			if (!g_backend.persistentSrv.AllocPersistent(1, cpu) || !cpu.ptr)
+				continue;
+
+			D3D12_SHADER_RESOURCE_VIEW_DESC sd = {};
+			sd.ViewDimension = (D3D12_SRV_DIMENSION)dim;
+			if (dim == D3D12_SRV_DIMENSION_BUFFER)
+			{
+				// 结构化 buffer 的空描述符：Format 必须为 UNKNOWN 且给出非零 stride
+				sd.Format = DXGI_FORMAT_UNKNOWN;
+				sd.Buffer.FirstElement = 0;
+				sd.Buffer.NumElements = 1;
+				sd.Buffer.StructureByteStride = 16;
+			}
+			else
+			{
+				sd.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+				switch (dim)
+				{
+				case D3D12_SRV_DIMENSION_TEXTURE1D:		sd.Texture1D.MipLevels = 1; break;
+				case D3D12_SRV_DIMENSION_TEXTURE1DARRAY:	sd.Texture1DArray.MipLevels = 1; sd.Texture1DArray.ArraySize = 1; break;
+				case D3D12_SRV_DIMENSION_TEXTURE2DARRAY:	sd.Texture2DArray.MipLevels = 1; sd.Texture2DArray.ArraySize = 1; break;
+				case D3D12_SRV_DIMENSION_TEXTURE2DMSARRAY:	sd.Texture2DMSArray.ArraySize = 1; break;
+				case D3D12_SRV_DIMENSION_TEXTURE3D:		sd.Texture3D.MipLevels = 1; break;
+				case D3D12_SRV_DIMENSION_TEXTURECUBE:	sd.TextureCube.MipLevels = 1; break;
+				case D3D12_SRV_DIMENSION_TEXTURECUBEARRAY:	sd.TextureCubeArray.MipLevels = 1; sd.TextureCubeArray.NumCubes = 1; break;
+				default: break;	// TEXTURE2DMS 无字段
+				}
+			}
+			sd.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			dev->CreateShaderResourceView(nullptr, &sd, cpu);
+			g_backend.nullSrvCpu[dim] = cpu;
+		}
+	}
 
 		// ---- 全零 64KB 常量缓冲 + 其 CBV（persistent 堆），供未绑定的 CBV 槽占位 ----
 		{
@@ -947,14 +1371,115 @@ namespace dx12
 
 	void BackendBeginFrame()
 	{
+		// 本帧用哪个 backbuffer，就用哪一份描述符堆 / 上传环段；两份交替使用，
+		// 保证 CPU 录制本帧时不会覆盖 GPU 仍在读的上一帧区域。
+		// （引擎侧的围栏等待保证"上次使用该 backbuffer 的那一帧"已执行完）
+		++g_backend.frameSerial;
+		const UINT slot = dx12::GetFrameIndex() & 1;
+		g_backend.cbvSrvUav.SetSlot(slot);
 		g_backend.cbvSrvUav.Reset();
+		g_backend.sampler.SetSlot(slot);
 		g_backend.sampler.Reset();
+		g_backend.ring.SetSlot(slot);
 		g_backend.ring.Reset();
+
+		// ---- 兜底根表：堆刚 Reset 后立即分配（必然成功），本帧描述符堆耗尽导致
+		// Alloc 失败时，FlushPipeline 把这些句柄绑给该 Draw——保证 4 张根表永远有
+		// 合法句柄。若帧首首个 Draw 以零句柄执行，GPU 读描述符会页错误
+		//（DRED 实测 VA=0x0）→ 队列停摆 → TDR。 ----
+		{
+			D3D12_CPU_DESCRIPTOR_HANDLE c = {};
+			D3D12_GPU_DESCRIPTOR_HANDLE g = {};
+			const UINT ds = g_backend.cbvSrvUav.DescriptorSize();
+			if (g_backend.cbvSrvUav.Alloc(14, c, g))
+			{
+				g_backend.fallbackCbvGpu[slot] = g;
+				if (g_backend.dummyCbvCpu.ptr)
+					for (UINT i = 0; i < 14; ++i)
+					{
+						D3D12_CPU_DESCRIPTOR_HANDLE d = c;
+						d.ptr += (SIZE_T)i * ds;
+						dx12::GetD3D12Device()->CopyDescriptorsSimple(1, d, g_backend.dummyCbvCpu, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+					}
+			}
+			if (g_backend.cbvSrvUav.Alloc(16, c, g))
+			{
+				g_backend.fallbackSrvGpu[slot] = g;
+				if (g_backend.dummySrvCpu.ptr)
+					for (UINT i = 0; i < 16; ++i)
+					{
+						D3D12_CPU_DESCRIPTOR_HANDLE d = c;
+						d.ptr += (SIZE_T)i * ds;
+						dx12::GetD3D12Device()->CopyDescriptorsSimple(1, d, g_backend.dummySrvCpu, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+					}
+			}
+		}
 		g_backend.frameActive = true;
+	}
+
+	UINT FrameSerial()
+	{
+		return g_backend.frameSerial;
+	}
+
+	std::mutex& ConstantBufferMutex()
+	{
+		static std::mutex s_cbMutex;
+		return s_cbMutex;
+	}
+
+	std::recursive_mutex& LifecycleMutex()
+	{
+		static std::recursive_mutex s_lifeMutex;
+		return s_lifeMutex;
+	}
+
+	//--------------------------------------------------------------------------
+	// 缓冲存活登记 + 上传环区间判定（绑定路径的陈旧绑定防护，详见 dx12Backend.h）
+	//--------------------------------------------------------------------------
+	static std::mutex					s_liveBufMutex;
+	static std::unordered_set<const void*>	s_liveBufs;
+
+	void RegisterLiveBuffer(const void* buf)
+	{
+		if (!buf) return;
+		std::lock_guard<std::mutex> g(s_liveBufMutex);
+		s_liveBufs.insert(buf);
+	}
+
+	void UnregisterLiveBuffer(const void* buf)
+	{
+		if (!buf) return;
+		std::lock_guard<std::mutex> g(s_liveBufMutex);
+		s_liveBufs.erase(buf);
+	}
+
+	bool IsLiveBuffer(const void* buf)
+	{
+		if (!buf) return false;
+		std::lock_guard<std::mutex> g(s_liveBufMutex);
+		return s_liveBufs.find(buf) != s_liveBufs.end();
+	}
+
+	bool UploadRingContains(UINT64 va)
+	{
+		return g_backend.ring.Contains(va);
 	}
 
 	void BackendEndFrame()
 	{
+		// 容量体检：接近上限时提前暴露。描述符堆 Alloc 失败会让 Root 表保持上一次的
+		// 残留描述符（花屏）；上传环越段则退化为垃圾数据/失败回退。
+		// 只在用量偏高时输出，正常帧不产生日志。
+		const UINT descUsed = g_backend.cbvSrvUav.Used();
+		const UINT descCap = g_backend.cbvSrvUav.Capacity();
+		if (descCap && (UINT64)descUsed * 10 >= (UINT64)descCap * 8)
+			Msg("! DX12: [cap] descriptor heap usage %u / %u", descUsed, descCap);
+
+		const UINT64 ringUsed = g_backend.ring.SlotUsed();
+		if (ringUsed >= (96ull << 20))
+			Msg("! DX12: [cap] upload ring segment usage %llu MB", ringUsed >> 20);
+
 		g_backend.frameActive = false;
 	}
 

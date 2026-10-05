@@ -16,7 +16,7 @@ dx12ConstantBuffer::~dx12ConstantBuffer()
 }
 
 dx12ConstantBuffer::dx12ConstantBuffer(ID3DShaderReflectionConstantBuffer* pTable)
-	: m_bChanged(true)
+		: m_bChanged(true), m_flushSerial(0)
 {
 	D3D_SHADER_BUFFER_DESC Desc;
 	CHK_DX(pTable->GetDesc(&Desc));
@@ -65,26 +65,39 @@ bool dx12ConstantBuffer::Similar(dx12ConstantBuffer& _in)
 }
 
 void dx12ConstantBuffer::Flush()
-{
-	if (!m_bChanged) return;
-	if (!m_pBuffer || !m_pBufferData) return;
-
-	// 从上传环分配新槽位（每帧重置），避免被后续 CB 覆写
-	UINT64 gpu = 0;
-	void* p = dx12::g_backend.ring.Alloc(m_uiBufferSize, 256, gpu);
-	if (!p)
 	{
-		// 环未就绪（例如主菜单前）→ 回退到持久映射缓冲
-		if (m_pBuffer->mapped)
-		{
-			CopyMemory(m_pBuffer->mapped, m_pBufferData, m_uiBufferSize);
-			m_bChanged = false;
-		}
-		return;
-	}
+		if (!m_pBuffer || !m_pBufferData) return;
 
-	CopyMemory(p, m_pBufferData, m_uiBufferSize);
-	m_pBuffer->gpuVA = gpu;
-	m_pBuffer->size = m_uiBufferSize;
-	m_bChanged = false;
-}
+		// 每帧都要从"本帧环段"重新分配槽位并写入：即使数值没变也不能跳过。
+		// 旧实现只看 m_bChanged，数值不变的 CB 会一直沿用上一次的 gpuVA，
+		// 而那块环区域会在同 slot 的下一帧被回收复用 → 着色器读到别的 draw 的
+		// 常量（光照、循环上限全乱，甚至把 GPU 拖进 TDR → DEVICE_HUNG）。
+		const u32 serial = dx12::FrameSerial();
+		if (!m_bChanged && m_flushSerial == serial) return;
+
+		// 与建 CBV 的渲染线程互斥：gpuVA/size 是普通字段，并发写会出现撕裂值
+		//（实测 gpuVA 低字节被污染 → 非法 CBV → 调试层异常/设备移除）
+		std::lock_guard<std::mutex> cbLock(dx12::ConstantBufferMutex());
+
+		UINT64 gpu = 0;
+		void* p = dx12::g_backend.ring.Alloc(m_uiBufferSize, 256, gpu);
+		if (!p)
+		{
+			// 环不可用/已满：回退到该 CB 自身上传缓冲（内容即刻写入并同步 gpuVA，
+			// 不能只写数据不改 gpuVA——那会让 CBV 继续指向已被复用的环区域）
+			if (m_pBuffer->mapped && m_pBuffer->resource)
+			{
+				CopyMemory(m_pBuffer->mapped, m_pBufferData, m_uiBufferSize);
+				m_pBuffer->gpuVA = m_pBuffer->resource->GetGPUVirtualAddress();
+				m_bChanged = false;
+				m_flushSerial = serial;
+			}
+			return;
+		}
+
+		CopyMemory(p, m_pBufferData, m_uiBufferSize);
+		m_pBuffer->gpuVA = gpu;
+		m_pBuffer->size = m_uiBufferSize;
+		m_bChanged = false;
+		m_flushSerial = serial;
+	}

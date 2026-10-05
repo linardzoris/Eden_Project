@@ -42,6 +42,12 @@ namespace dx12
 
 	ComPtr<ID3D12Fence>						Fence;
 	HANDLE									FenceEvent = nullptr;
+	// 全局单调递增的提交序号 + 每个 backbuffer 上"最后一次提交"的序号。
+	// 命令列表是"先录制、后由 GPU 执行"：录制下一帧时会整片重写 CPU 侧共享资源
+	// （描述符堆槽、上传环段、命令分配器）。复用某个 backbuffer 的这些资源之前，
+	// 必须等上一次使用它的那一帧真正执行完，否则 GPU 读到的是下一帧的数据 →
+	// 关掉 -dxdebug（CPU/GPU 重叠更深）后出现高速花屏/闪烁。
+	UINT64									SubmitSeq = 0;
 	UINT64									FenceValue[NUM_BACKBUFFERS] = {};
 	bool									FrameInFlight = false;
 
@@ -95,11 +101,24 @@ namespace dx12
 			}
 		}
 
-		ComPtr<IDXGIFactory6> factory;
-		HRESULT hr = CreateDXGIFactory2(
-			dxdebug ? DXGI_CREATE_FACTORY_DEBUG : 0,
-			IID_PPV_ARGS(&factory)
-		);
+		// DRED：设备挂起（DEVICE_HUNG / TDR）时记录"最后执行的命令序号"与页错误分配，
+	// 是唯一能在不开 GBV 的情况下指出"哪个命令/哪块内存出事"的手段。
+	// 只需 D3D12GetDebugInterface（不需要开启调试层），必须在 D3D12CreateDevice 之前设置。
+	{
+		ComPtr<ID3D12DeviceRemovedExtendedDataSettings> dredSettings;
+		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&dredSettings))) && dredSettings)
+		{
+			dredSettings->SetAutoBreadcrumbsEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
+			dredSettings->SetPageFaultEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
+			Msg("* DX12: DRED enabled (auto breadcrumbs + page fault)");
+		}
+	}
+
+	ComPtr<IDXGIFactory6> factory;
+	HRESULT hr = CreateDXGIFactory2(
+		dxdebug ? DXGI_CREATE_FACTORY_DEBUG : 0,
+		IID_PPV_ARGS(&factory)
+	);
 		if (FAILED(hr))
 		{
 			Msg("! DX12: CreateDXGIFactory2 failed 0x%08x", hr);
@@ -221,6 +240,12 @@ namespace dx12
 		sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 		sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 		sd.SampleDesc.Count = 1;
+		// 允许撕裂：关闭 vsync 时 Present(SyncInterval=0) 需要它（窗口化下才支持）。
+		// FLIP_DISCARD 的翻转必须由显示侧在 vblank 退休；若显示侧不推进，GPU 会停在
+		// driver 追加的翻转等待上、围栏永不 signal（实测的"帧间提交边界挂起"）。
+		const bool windowed = !psDeviceFlags.is(rsFullscreen);
+		if (windowed)
+			sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
 
 		DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsd = {};
 		fsd.Windowed = !psDeviceFlags.is(rsFullscreen);
@@ -331,14 +356,114 @@ namespace dx12
 		if (FAILED(hr))
 			return false;
 
+		// 新围栏从 0 开始计数：提交序号与每 backbuffer 的登记值必须一并清零。
+		// 否则设备重建（vid_restart）后 BeginFrame 会等一个"属于旧设备的序号"——
+		// 新围栏永远 signal 不到它 → 永久阻塞（表现为重建后直接卡死/崩溃）。
+		SubmitSeq = 0;
+		for (u32 i = 0; i < NUM_BACKBUFFERS; ++i)
+			FenceValue[i] = 0;
+
 		FenceEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
 		return FenceEvent != nullptr;
 	}
 
-	void WaitForGpu()
+	// ---------------------------------------------------------------------------
+	// GPU 面包屑（设备层实现，导出给渲染层使用）
+	//
+	// WriteBufferImmediate 写进一个 READBACK 缓冲：设备挂起（TDR）后 CPU 仍能读回
+	// "GPU 最后执行到哪一步"。放在设备层是为了覆盖 EndFrame 内部的转换/提交——
+	// 实测挂起发生在帧末（渲染层的最后一个标记 'frame:tail' 之后）。
+	// ---------------------------------------------------------------------------
+	ComPtr<ID3D12Resource>		BcBuffer;
+	void*						BcMapped = nullptr;
+	static UINT					BcFrame = 0;	// 面包屑帧号（编码进写入值高 16 位）
+	// 环形时间线：256 槽，WriteBreadcrumb 按全局序号递增写槽 (BcSeq&255)。
+	// 单值版本只能看到"最后一条"，无法区分"卡在帧末标记之后"还是"卡在下一帧开头"，
+	// 更无法回溯 GPU 死前执行了哪些 pass；环形版在设备移除时回放最近 24 条，
+	// 可直接读出 GPU 最后执行的完整标记序列（配合 r4:*/frame:* 面包屑定位卡点）。
+	static volatile LONG		BcSeq = 0;
+	static constexpr UINT		kBcSlots = 256;
+	static std::vector<const char*>	s_bcNames;	// 1-based：值 N → s_bcNames[N-1]
+	static std::mutex			s_bcMutex;
+	static bool					s_dredDumped = false;
+
+	bool CreateBreadcrumbBuffer()
 	{
-		const UINT64 v = FenceValue[FrameIndex];
-		CmdQueue->Signal(Fence.Get(), v);
+		// 状态固定 COPY_DEST（WriteBufferImmediate 对目标状态的要求），且不是
+		// shader-visible 资源，无需转换
+		D3D12_HEAP_PROPERTIES hp = {}; hp.Type = D3D12_HEAP_TYPE_READBACK;
+		D3D12_RESOURCE_DESC bd = {};
+		bd.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+		bd.Width = kBcSlots * 4; bd.Height = 1; bd.DepthOrArraySize = 1; bd.MipLevels = 1;
+		bd.Format = DXGI_FORMAT_UNKNOWN; bd.SampleDesc.Count = 1;
+		bd.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+		if (FAILED(D3DDevice->CreateCommittedResource(&hp, D3D12_HEAP_FLAG_NONE, &bd,
+			D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&BcBuffer))))
+			return false;
+		D3D12_RANGE rr = { 0, kBcSlots * 4 };
+		return SUCCEEDED(BcBuffer->Map(0, &rr, &BcMapped));
+	}
+
+	extern "C" ENGINE_API UINT RegisterBreadcrumbName(const char* name)
+	{
+		if (!name) name = "?";
+		std::lock_guard<std::mutex> g(s_bcMutex);
+		for (size_t i = 0; i < s_bcNames.size(); ++i)
+			if (s_bcNames[i] == name || 0 == strcmp(s_bcNames[i], name))
+				return (UINT)(i + 1);
+		s_bcNames.push_back(name);
+		return (UINT)s_bcNames.size();
+	}
+
+	extern "C" ENGINE_API void WriteBreadcrumb(UINT value)
+	{
+		if (!BcBuffer || !FrameInFlight || !CmdList) return;
+
+		static ID3D12GraphicsCommandList2* s_cl2 = nullptr;
+		if (!s_cl2 && FAILED(CmdList->QueryInterface(IID_PPV_ARGS(&s_cl2)))) return;
+		if (!s_cl2) return;
+
+		const UINT slot = (UINT)InterlockedIncrement(&BcSeq) & (kBcSlots - 1);
+		D3D12_WRITEBUFFERIMMEDIATE_PARAMETER p = {};
+		p.Dest = BcBuffer->GetGPUVirtualAddress() + (SIZE_T)slot * 4;
+		// 高 16 位写帧号：读回时据此判断这是"本帧"还是"上一帧"的陈旧值——
+		// 帧末标记每帧都写，不打戳就无法区分"卡在帧末"与"卡在下一帧开头"。
+		p.Value = ((BcFrame & 0xFFFFu) << 16) | (value & 0xFFFFu);
+		s_cl2->WriteBufferImmediate(1, &p, nullptr);
+	}
+
+	extern "C" ENGINE_API void DumpBreadcrumb(const char* tag)
+	{
+		if (!BcMapped) return;
+
+		const LONG cpuSeq = InterlockedOr(&BcSeq, 0);
+		const volatile UINT* ring = (const volatile UINT*)BcMapped;
+
+		// 从最新往回找 GPU 已执行的最高序号（槽为 0 = 尚未执行）
+		LONG gpuSeq = 0;
+		for (LONG k = cpuSeq; k > 0 && k > cpuSeq - 1024; --k)
+		{
+			if (ring[(size_t)(k & (kBcSlots - 1))]) { gpuSeq = k; break; }
+		}
+
+		Msg("! DX12 [%s]: GPU breadcrumb 环形时间线：CPU 已录制标记 #%u，GPU 已执行到 #%u（%u 条已录未执行）",
+			tag ? tag : "?", (UINT)cpuSeq, (UINT)gpuSeq, (UINT)(cpuSeq - gpuSeq));
+
+		std::lock_guard<std::mutex> g(s_bcMutex);
+		const LONG first = gpuSeq > 24 ? gpuSeq - 24 : 1;
+		for (LONG k = first; k <= gpuSeq; ++k)
+		{
+			const UINT packed = ring[(size_t)(k & (kBcSlots - 1))];
+			const UINT marker = packed & 0xFFFFu;
+			const UINT frame = packed >> 16;
+			const char* name = (marker > 0 && marker <= s_bcNames.size()) ? s_bcNames[marker - 1] : "?";
+			Msg("! DX12 [%s]:   bc#%u = %s @帧%u", tag ? tag : "?", (UINT)k, name, frame);
+		}
+	}
+
+	void WaitFenceValue(UINT64 v)
+	{
+		if (!v || !Fence || !CmdQueue) return;
 		if (Fence->GetCompletedValue() < v)
 		{
 			Fence->SetEventOnCompletion(v, FenceEvent);
@@ -346,20 +471,18 @@ namespace dx12
 		}
 	}
 
+	void WaitForGpu()
+	{
+		CmdQueue->Signal(Fence.Get(), ++SubmitSeq);
+		WaitFenceValue(SubmitSeq);
+	}
+
+	// Present 之后只推进 backbuffer 索引；真正的等待在 BeginFrame 里
+	// （复用该 backbuffer 的资源之前等它上一次的使用者执行完），
+	// 这样 CPU/GPU 仍可重叠一帧，不必全序列化。
 	void MoveToNextFrame()
 	{
-		const UINT64 current = FenceValue[FrameIndex];
-		CmdQueue->Signal(Fence.Get(), current);
-
 		FrameIndex = Swapchain->GetCurrentBackBufferIndex();
-
-		if (Fence->GetCompletedValue() < FenceValue[FrameIndex])
-		{
-			Fence->SetEventOnCompletion(FenceValue[FrameIndex], FenceEvent);
-			WaitForSingleObject(FenceEvent, INFINITE);
-		}
-
-		FenceValue[FrameIndex] = current + 1;
 	}
 
 	D3D12_CPU_DESCRIPTOR_HANDLE CurrentRTV()
@@ -440,7 +563,10 @@ bool CreateD3D12()
 		return false;
 
 	if (!dx12::CreateFence())
-		return false;
+			return false;
+
+		if (!dx12::CreateBreadcrumbBuffer())
+			Msg("! DX12: breadcrumb buffer creation failed (GPU 取证不可用)");
 
 	if (!UpdateBuffersD3D12())
 		return false;
@@ -459,7 +585,7 @@ void ResizeBuffersD3D12(u16 Width, u16 Height)
 	for (u32 i = 0; i < dx12::NUM_BACKBUFFERS; ++i)
 	{
 		dx12::BackBuffer[i].Reset();
-		dx12::FenceValue[i] = dx12::FenceValue[dx12::FrameIndex];
+		dx12::FenceValue[i] = 0;	// WaitForGpu 已等全部提交完成，无待等待帧
 	}
 
 	DXGI_SWAP_CHAIN_DESC1 sd = {};
@@ -575,16 +701,53 @@ namespace dx12
 		if (n) iq->ClearStoredMessages();
 	}
 
+	// 设备移除（TDR / 非法访问）尽早暴露：只报一次并附上帧号与提交序号。
+	// 否则后续几十万次"创建失败"的刷屏会把真正的现场（哪一帧、GPU 落后多少）淹没。
+	void ReportDeviceLostOnce(const char* where)
+	{
+		static bool s_reported = false;
+		if (s_reported || !D3DDevice) return;
+
+		const HRESULT drr = D3DDevice->GetDeviceRemovedReason();
+		if (SUCCEEDED(drr)) return;
+
+		s_reported = true;
+		Msg("! DX12: >>> DEVICE REMOVED <<< at %s: frame=%u bb=%u submit=%llu (reason 0x%08x)",
+			where, Device.dwFrame, FrameIndex, SubmitSeq, (unsigned)drr);
+		DumpBreadcrumb(where);
+		DrainInfoQueue();
+	}
+
 	// 开始一帧：重置命令分配器/列表，转换 backbuffer 到 RT 状态
 	extern "C" ENGINE_API void BeginFrame()
 	{
 		DrainInfoQueue();
+		ReportDeviceLostOnce("BeginFrame");
 
 		if (FrameInFlight)
 			return;
 
+		// 复用该 backbuffer 的命令分配器 / 描述符堆槽 / 上传环段之前，
+		// 等上次使用它的那一帧在 GPU 上执行完毕（FenceValue 在 EndFrame 中登记）。
+		const UINT64 pending = FenceValue[FrameIndex];
+		if (pending && Fence && Fence->GetCompletedValue() < pending)
+		{
+			const ULONGLONG t0 = GetTickCount64();
+			WaitFenceValue(pending);
+			const ULONGLONG dt = GetTickCount64() - t0;
+			// 等待本身是"GPU 落后于 CPU"的证据：正常运行时该等待几乎为 0；
+			// 若频繁出现长时间等待，说明 GPU 队列积压（性能/TDR 线索）。
+			if (dt >= 8)
+				Msg("* DX12: [sync] bb=%u waited %llu ms for submit=%llu (queue=%llu)",
+					FrameIndex, (unsigned long long)dt, (unsigned long long)pending,
+					(unsigned long long)(SubmitSeq - Fence->GetCompletedValue()));
+		}
+
 		CmdAlloc[FrameIndex]->Reset();
 		CmdList->Reset(CmdAlloc[FrameIndex].Get(), nullptr);
+
+		++BcFrame;
+		WriteBreadcrumb(RegisterBreadcrumbName("beginframe:pre_barrier"));
 
 		D3D12_RESOURCE_BARRIER toRT = {};
 		toRT.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -594,6 +757,8 @@ namespace dx12
 		toRT.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 		CmdList->ResourceBarrier(1, &toRT);
 
+		WriteBreadcrumb(RegisterBreadcrumbName("beginframe:post_barrier"));
+
 		// D3D12 scissor test 始终开启，命令列表 reset 后 scissor 为空；而 D3D11 默认
 		// ScissorEnable=FALSE（不裁剪）本应无需调用者干预。每帧先绑定一个最大范围
 		// scissor 作为默认"不裁剪"状态，引擎需要裁剪时再经 set_Scissor(R) 覆盖。
@@ -602,6 +767,7 @@ namespace dx12
 		CmdList->RSSetScissorRects(1, &defaultScissor);
 
 		FrameInFlight = true;
+		WriteBreadcrumb(RegisterBreadcrumbName("beginframe:ready"));
 	}
 
 	// 结束一帧：转换到 PRESENT，关闭并执行命令列表
@@ -609,6 +775,10 @@ namespace dx12
 	{
 		if (!FrameInFlight)
 			return;
+
+		// 帧末三段取证：转换前 / 转换后 / 提交后，用于区分挂起发生在
+		// backbuffer RT->PRESENT 转换、命令列表提交，还是提交之后的呈现/翻转
+		WriteBreadcrumb(RegisterBreadcrumbName("endframe:enter"));
 
 		D3D12_RESOURCE_BARRIER toPresent = {};
 		toPresent.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -618,9 +788,19 @@ namespace dx12
 		toPresent.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 		CmdList->ResourceBarrier(1, &toPresent);
 
+		WriteBreadcrumb(RegisterBreadcrumbName("endframe:barrier"));
+
 		CmdList->Close();
 		ID3D12CommandList* lists[] = { CmdList.Get() };
 		CmdQueue->ExecuteCommandLists(1, lists);
+
+		// 登记本帧提交：下一个复用该 backbuffer 的帧会等这个序号完成
+		++SubmitSeq;
+		CmdQueue->Signal(Fence.Get(), SubmitSeq);
+		FenceValue[FrameIndex] = SubmitSeq;
+
+		// 设备移除现场：本帧刚提交完是最早能发现"上一帧把设备干掉了"的时刻
+		ReportDeviceLostOnce("EndFrame");
 
 		// GBV 的部分错误在 ExecuteCommandLists 后同步产出，立即转储，
 		// 确保即便本帧随后崩溃也不会丢失关键信息。
@@ -631,7 +811,25 @@ namespace dx12
 
 	extern "C" ENGINE_API void FramePresent(bool vsync)
 	{
-		Swapchain->Present(vsync ? 1 : 0, 0);
+		// 窗口化 + 允许撕裂时，关闭 vsync 走 tearing present：翻转立即退休，不依赖
+		// 显示侧的 vblank 推进（避免"GPU 停在 driver 追加的翻转等待、围栏不 signal"）。
+		UINT flags = 0;
+		if (!vsync)
+		{
+			DXGI_SWAP_CHAIN_DESC1 sd = {};
+			if (SUCCEEDED(Swapchain->GetDesc1(&sd)) && (sd.Flags & DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING))
+				flags = DXGI_PRESENT_ALLOW_TEARING;
+		}
+
+		const HRESULT hr = Swapchain->Present(vsync ? 1 : 0, flags);
+		// 非 S_OK 状态（OCCLUDED / MODE_CHANGED 等成功状态码也在内）同样记录：
+		// 窗口被遮挡时翻转会被跳过，是"帧间提交边界挂起"的可疑触发条件
+		if (hr != S_OK)
+		{
+			static int s_reported = 0;
+			if (++s_reported <= 8)
+				Msg("! DX12: Present(vsync=%d flags=0x%x) -> 0x%08x", vsync ? 1 : 0, flags, (unsigned)hr);
+		}
 		MoveToNextFrame();
 	}
 
@@ -639,6 +837,9 @@ namespace dx12
 	extern "C" ENGINE_API ID3D12Device* GetDevice() { return D3DDevice.Get(); }
 	extern "C" ENGINE_API ID3D12CommandQueue* GetCommandQueue() { return CmdQueue.Get(); }
 	extern "C" ENGINE_API ID3D12GraphicsCommandList* GetCmdList() { return CmdList.Get(); }
+	// 命令列表是否处于录制中（BeginFrame..EndFrame）：GPU 面包屑写入前必须确认，
+	// 否则会往已 Close 的列表里写 WriteBufferImmediate（非法调用）
+	extern "C" ENGINE_API bool IsFrameRecording() { return FrameInFlight; }
 	extern "C" ENGINE_API D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentRTV() { return CurrentRTV(); }
 	extern "C" ENGINE_API D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentDSV() { return CurrentDSV(); }
 	// 交换链 backbuffer 格式（R10G10B10A2_UNORM）：供 R5 在裸 RTV 绑定时合成匹配的 PSO

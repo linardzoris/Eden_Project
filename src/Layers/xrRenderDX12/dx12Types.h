@@ -54,6 +54,18 @@ public:
 		if (blob) { bc.pShaderBytecode = blob->GetBufferPointer(); bc.BytecodeLength = blob->GetBufferSize(); }
 		return bc;
 	}
+
+	// t 槽位（0..15）期望的 SRV 维度；首次调用时 D3DReflect 解析 DXBC 并缓存。
+	// FlushPipeline 为无效槽位按它挑选维度匹配的占位描述符：cube/3D/2DArray 槽位
+	// 若填 2D 占位，GBV 会报 "SRV resource dimensions differs from that expected
+	// by shader"（SSLR-only 的 s_env、vid_restart 后首帧的 sky_s0/env_s0 均属此类），
+	// 实机读取为未定义行为。
+	D3D_SRV_DIMENSION	SlotSrvDimension(UINT slot);
+
+private:
+	// 0 = D3D_SRV_DIMENSION_UNKNOWN（槽位未使用 / 解析失败）
+	D3D_SRV_DIMENSION	m_slotDims[16] = {};
+	bool				m_slotDimsParsed = false;
 };
 
 //------------------------------------------------------------------------------
@@ -104,6 +116,22 @@ public:
 	bool					isConstant = false;
 	bool					immutable = false;
 	void*					mapped = nullptr;	// 上传堆/持久映射指针
+	// 结构化 SRV 缓冲的「动态重命名」：Map(WRITE_DISCARD) 时从每帧上传环分配新区域，
+	// 这里记录本次区域在环内的 GPU 地址（0 = 无效）。字段默认不会清零（xr_malloc 语义），
+	// 故显式初始化。详见 dx12Context::Map。
+	UINT64					dynVA = 0;
+	// 动态 VB/IB 流的「改名缓冲」：Map(WRITE_DISCARD) 时从本帧上传环段分配整块新区域
+	// 作为本帧的缓冲内容（等价 D3D11 的 rename），本帧后续 NO_OVERWRITE 追加沿用同一区域；
+	// dynFrame 记录该区域所属帧，跨帧即失效（防止绑定到已被复用的环区域）。
+	void*					dynCPU = nullptr;
+	UINT					dynFrame = 0;
+
+	~dx12Buffer()
+	{
+		// 注销存活登记：vid_restart 后 CBackend/dx12Context 可能仍缓存着本对象的
+		// 原始指针（陈旧绑定），绑定路径靠该登记识别并跳过（详见 dx12Backend.h）
+		dx12::UnregisterLiveBuffer(this);
+	}
 
 	ID3D12Resource*	GetResource() { return resource.Get(); }
 	void	GetType(D3D_RESOURCE_DIMENSION* p) override { if (p) *p = D3D_RESOURCE_DIMENSION_BUFFER; }
@@ -192,6 +220,10 @@ public:
 	bool								valid = false;
 	// persistentSrv 中的槽位号：释放时归还，避免堆随帧数单调耗尽（见 DescriptorHeap::FreePersistent）
 	UINT								descIndex = 0xFFFFFFFFu;
+	// 若本 SRV 来自 buffer（D3D12_SRV_DIMENSION_BUFFER），回指源 buffer：
+	// 绘制时若该 buffer 有新的动态区域（dynVA），需要按新区域原地重写描述符，
+	// 否则只会读到 Map 时那块越写越乱的内存。
+	dx12Buffer*							srcBuffer = nullptr;
 
 	~dx12ShaderResourceView();
 };
@@ -447,10 +479,25 @@ public:
 	D3D12_VIEWPORT		viewport = {};
 	bool				viewportSet = false;
 
+	// D3D11 用光栅化状态的 ScissorEnable 决定是否裁剪（默认 FALSE = 不裁剪），
+	// 而 D3D12 的 scissor 始终生效。D3D12 里没有 ScissorEnable 字段，所以必须在
+	// 每个 Draw 前按 m_RDesc.ScissorEnable 二选一：
+	//   关 → 覆盖当前 RT 的默认全屏矩形（defScissor）
+	//   开 → 引擎 set_Scissor 设的矩形（userScissor）
+	// 否则光源体积 pass 设的屏幕矩形会一直粘着，把后续 Draw 裁成碎片。
+	D3D12_RECT			defScissor = {};
+	D3D12_RECT			userScissor = {};
+	bool				userScissorValid = false;
+
 	// 动态纹理 Map(WRITE_DISCARD) 的上传暂存信息（引擎同一时刻只映射一个纹理）
 	ID3DResource*						dynTex = nullptr;
 	D3D12_PLACED_SUBRESOURCE_FOOTPRINT	dynFootprint = {};
 	D3D12_GPU_VIRTUAL_ADDRESS			dynUploadGpuVA = 0;
+
+	// FlushPipeline 判定"本次 Draw 绑定不可用"（VB/IB 是已释放的陈旧指针、
+	// 或 VA 既不在上传环也不等于资源自身 VA）时置位；Draw* 包装据此跳过本次绘制，
+	// 避免用垃圾 VA 去装配顶点/索引触发 GPU 页错误 → TDR。
+	bool				skipDraw = false;
 };
 
 extern dx12Device		DX12Device;
@@ -459,6 +506,10 @@ extern dx12Context		DX12Context;
 // 资源状态跟踪（实现见 dx12Types.cpp）：供 dx12TextureUtils 等其他纹理创建路径
 // 注册资源初始状态，保证 RTV/DSV/SRV 自动 transition barrier 的跟踪表完整。
 void R5RegisterResourceState(ID3D12Resource* pResource, D3D12_RESOURCE_STATES initial);
+
+// 走共享状态跟踪器的 transition barrier：帧首纹理上传排空（dx12Backend.cpp）与
+// 渲染列表共用同一份状态账本，StateBefore 始终与真实状态一致
+void R5TransitionResourceTracked(ID3D12GraphicsCommandList* cl, ID3D12Resource* r, D3D12_RESOURCE_STATES to);
 
 // [sky diag] 临时诊断：打印 SRV 的 valid/维度/格式/尺寸/资源指针（纯 CPU 读取，不做 GPU 同步）
 void R5DebugLogSRV(const char* tag, ID3DShaderResourceView* pSrv);

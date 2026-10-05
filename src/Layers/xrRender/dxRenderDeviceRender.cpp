@@ -16,6 +16,9 @@
 #include "../xrRenderDX9/imgui_impl_dx9.h"
 #endif
 
+#ifdef USE_DX12
+#endif
+
 dxRenderDeviceRender::dxRenderDeviceRender()
 #ifndef _EDITOR
 	:	Resources(0)
@@ -396,6 +399,11 @@ void dxRenderDeviceRender::Begin()
 	RCache.OnFrameBegin		();
 #ifdef USE_DX12
 	::BeginFrame			();		// Reset allocator/list，backbuffer PRESENT->RT
+	dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("frame:begin"));
+	// 帧首排空异步纹理上传：主列表刚 Reset，此处把加载线程积压的上传
+	//（字节进上传环 + 共享跟踪器屏障 + CopyTextureRegion）录进本帧列表，
+	// 与帧内绘制同列表按序执行——取代"每张纹理一条一次性列表"的旧路径
+	dx12::ProcessPendingTextureUploads();
 #endif
 	RCache.set_CullMode		(CULL_CW);
 	RCache.set_CullMode		(CULL_CCW);
@@ -496,6 +504,7 @@ void dxRenderDeviceRender::End()
 #endif
 
 #ifdef USE_DX12
+	dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("frame:tail"));
 	::EndFrame			();		// backbuffer RT->PRESENT，Close + ExecuteCommandLists
 #endif
 

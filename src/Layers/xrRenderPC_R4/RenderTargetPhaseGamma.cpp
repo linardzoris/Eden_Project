@@ -26,6 +26,7 @@ void CRenderTarget::PhaseGammaApply()
 	// DX12：最终输出直接绑引擎设备层的当前 swapchain backbuffer RTV。
 	// s_gamma 采样 rt_BackbufferLUT（菜单即渲染于此），输出到真正的呈现目标。
 	RContext->BindBackbufferRTV(GetCurrentRTV(), Device.TargetWidth, Device.TargetHeight, (DXGI_FORMAT)GetBackbufferFormat());
+	dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("gamma:bind"));
 #elif defined(USE_DX11)
 	u_setrt(w, h, RTarget, nullptr, nullptr, nullptr);
 #endif
@@ -47,5 +48,11 @@ void CRenderTarget::PhaseGammaApply()
 	RCache.set_c("color_grading", color_grading.r, color_grading.g, color_grading.b, 0.0f);
 
 	RCache.set_Geometry(g_combine);
+#if defined(USE_DX12)
+	dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("gamma:draw"));
+#endif
 	RCache.Render(D3DPT_TRIANGLELIST, Offset, 0, 3, 0, 1);
+#if defined(USE_DX12)
+	dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("gamma:done"));
+#endif
 }

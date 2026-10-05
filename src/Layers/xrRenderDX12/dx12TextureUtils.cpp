@@ -77,7 +77,8 @@ namespace dx12TextureUtils
 			const DirectX::Image& src = images[idx];
 			UINT subresource = m + a * mipLevels;
 
-			dx12::UploadTextureSubresource(tex->resource.Get(), subresource,
+			// 加载路径走异步上传：帧首统一录进主命令列表（帧循环未启动时自动退回同步）
+			dx12::EnqueueTextureUpload(tex->resource.Get(), subresource,
 				src.pixels, (UINT)src.rowPitch,
 				(UINT)src.width, (UINT)src.height, 1,
 				meta.format, meta.format);
@@ -162,7 +163,8 @@ R5RegisterResourceState(tex->resource.Get(), tex->state);
 			}
 
 			// 同 mip 各切片像素连续（offsets 以 slicePitch 步进），一次体上传整 mip。
-			dx12::UploadTextureSubresource(tex->resource.Get(), m,
+			// 加载路径走异步上传：帧首统一录进主命令列表
+			dx12::EnqueueTextureUpload(tex->resource.Get(), m,
 				first.pixels, (UINT)first.rowPitch,
 				w, h, slices, meta.format, meta.format);
 

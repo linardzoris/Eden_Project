@@ -47,6 +47,9 @@ private:
 	u32									m_uiBufferSize;
 	void*								m_pBufferData;
 	bool								m_bChanged;
+	// 上次写入的环代次：CBV 必须每帧重新指向本帧环段的新槽位，
+	// 否则槽位被环回收复用后着色器会读到别的 draw 的常量（光照/循环上限全乱）。
+	u32									m_flushSerial;
 
 	static const u32					lineSize = sizeof(Fvector4);
 

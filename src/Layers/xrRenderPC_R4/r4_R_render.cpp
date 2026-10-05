@@ -451,6 +451,14 @@ void CRender::Render()
 
 		for(u32 i = 0; i < 6; ++i) {
 			GPU_EVENT(FORWARD_REFLECTION_SIDE);
+#if defined(USE_DX12)
+			// 逐面 GPU 面包屑：DRED 显示卡在"6 连 Draw"上，用帧号戳标记精确指出第几面
+			{
+				static const char* kReflFace[6] = { "refl:face0", "refl:face1", "refl:face2",
+					"refl:face3", "refl:face4", "refl:face5" };
+				dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName(kReflFace[i]));
+			}
+#endif
 
 			cView.build_camera_dir(PointPos, cmDir[i], cmNorm[i]);
 			cTrans.mul(cProj, cView);
@@ -471,13 +479,25 @@ void CRender::Render()
 			RCache.set_Stencil(FALSE);
 			RCache.set_ColorWriteEnable();
 
+#if defined(USE_DX12)
+			// 细粒度取证：clear/setrt 完成、即将渲染该面内容（环形时间线可定位
+			// GPU 死在 clear、面内容绘制还是 mip 生成——00:35 复现卡在 face1 段内）
+			dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("refl:draw"));
+#endif
 			r_dsgraph_render_graph(0);
 		}
 
 		{
 			GPU_EVENT(FORWARD_REFLECTION_MIPS_GEN);
+#if defined(USE_DX12)
+			dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("refl:pre_mips"));
+#endif
 			RContext->GenerateMips(Target->rt_Reflection->pTexture->get_SRView());
 		}
+#if defined(USE_DX12)
+		// DRED 取证：标记 VSLR 六面反射全部完成的位置
+		dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("r4:vslr_done"));
+#endif
 
 		RCache.set_xform_project(Device.mProject);
 		RCache.set_xform_view(Device.mView);
@@ -537,6 +557,9 @@ void CRender::Render()
 	//******* Z-prefill calc - DEFERRER RENDERER
 	{
 		GPU_EVENT(DEFER_ZPREFILL);
+#if defined(USE_DX12)
+		dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("r4:zprefill"));
+#endif
 		if (ps_r2_ls_flags.test(R2FLAG_ZFILL))
 		{
 			Device.Statistic->RenderCALC.Begin();
@@ -578,6 +601,9 @@ void CRender::Render()
 	rmNormal();
 
 	Target->u_setrt((u32)RCache.get_width(), (u32)RCache.get_height(), nullptr, nullptr, nullptr, RDepth);
+#if defined(USE_DX12)
+	dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("r4:part0"));
+#endif
 
 	//******* Main render :: PART-0	-- first
 	if (!split_the_scene_to_minimize_wait)
@@ -791,7 +817,13 @@ void CRender::Render()
 	// Postprocess
 	{
 		GPU_EVENT(DEFER_LIGHT_COMBINE);
+#if defined(USE_DX12)
+		dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("r4:precombine"));
+#endif
 		Target->phase_combine					();
+#if defined(USE_DX12)
+		dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("r4:combine_done"));
+#endif
 	}
 
 	VERIFY	(0==mapDistort.size() + mapHUDDistort.size());

@@ -59,8 +59,72 @@ namespace
 		b.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 		cl->ResourceBarrier(1, &b);
 
+		// 诊断：backbuffer 的资源归引擎设备层管理（BeginFrame/EndFrame 直接转换，不经过本表）。
+		// 若它进了这张表，两边记录的 StateBefore 会不一致 → 非法转换（帧末/帧首挂起嫌疑）。
+		if (r == dx12::GetCurrentBackBuffer())
+		{
+			static bool s_once = false;
+			if (!s_once)
+			{
+				s_once = true;
+				Msg("! DX12: 警告：backbuffer 被渲染层状态跟踪器转换（与设备层转换可能冲突）");
+			}
+		}
+
 		std::lock_guard<std::mutex> g(g_r5ResStateMutex);
 		g_r5ResStates[r] = to;
+	}
+
+	// 结构化动态缓冲：Map(WRITE_DISCARD) 之后，要把该 buffer 的 SRV 描述符
+	// 原地重定向到本帧上传环里的新区域 —— 这等价于 D3D11 驱动内部的 buffer rename。
+	// 描述符是持久槽位、每个 draw 都会拷进 shader-visible 表，所以原地覆盖即可生效。
+	void R5_RefreshDynamicBufferSrv(dx12ShaderResourceView* dv)
+	{
+		if (!dv || !dv->valid || !dv->srcBuffer || !dv->srcBuffer->dynVA) return;
+		ID3D12Resource* ringRes = dx12::g_backend.ring.Resource();
+		if (!ringRes) return;
+		dx12Buffer* b = dv->srcBuffer;
+		UINT stride = dv->desc.Buffer.StructureByteStride;
+		if (!stride) stride = b->structureByteStride;
+		if (!stride) stride = 4;
+		D3D12_SHADER_RESOURCE_VIEW_DESC d = dv->desc;
+		d.Buffer.FirstElement = (UINT)((b->dynVA - ringRes->GetGPUVirtualAddress()) / stride);
+		d.Buffer.NumElements = (UINT)(b->size / stride);
+		dx12::GetD3D12Device()->CreateShaderResourceView(ringRes, &d, dv->cpu);
+	}
+
+	// TYPELESS → 可采样（typed）格式。
+	// D3D11 允许 SRV 的 Format=UNKNOWN 表示"继承资源格式"，而 TYPELESS 资源在 D3D11 下
+	// 仍能建视图；D3D12 则必须给出具体格式——把 TYPELESS 原样交给
+	// CreateShaderResourceView 会得到非法/不可采样的视图（采样值全 0 或垃圾）。
+	// 引擎侧 dx11SH_Texture.cpp 只映射了 R24G8/R32 两种，其余 TYPELESS 会漏到
+	// "继承资源格式"分支，必须在这里兜住。
+	DXGI_FORMAT R5ConcreteSrvFormat(DXGI_FORMAT f)
+	{
+		switch (f)
+		{
+		case DXGI_FORMAT_R24G8_TYPELESS:			return DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+		case DXGI_FORMAT_R32G8X24_TYPELESS:			return DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
+		case DXGI_FORMAT_R32_TYPELESS:				return DXGI_FORMAT_R32_FLOAT;
+		case DXGI_FORMAT_R16_TYPELESS:				return DXGI_FORMAT_R16_UNORM;
+		case DXGI_FORMAT_R8_TYPELESS:				return DXGI_FORMAT_R8_UNORM;
+		case DXGI_FORMAT_R16G16_TYPELESS:			return DXGI_FORMAT_R16G16_UNORM;
+		case DXGI_FORMAT_R16G16B16A16_TYPELESS:		return DXGI_FORMAT_R16G16B16A16_FLOAT;
+		case DXGI_FORMAT_R8G8B8A8_TYPELESS:			return DXGI_FORMAT_R8G8B8A8_UNORM;
+		case DXGI_FORMAT_B8G8R8A8_TYPELESS:			return DXGI_FORMAT_B8G8R8A8_UNORM;
+		case DXGI_FORMAT_R10G10B10A2_TYPELESS:		return DXGI_FORMAT_R10G10B10A2_UNORM;
+		case DXGI_FORMAT_R11G11B10_FLOAT:			return DXGI_FORMAT_R11G11B10_FLOAT;
+		case DXGI_FORMAT_R32G32_TYPELESS:			return DXGI_FORMAT_R32G32_FLOAT;
+		case DXGI_FORMAT_R32G32B32A32_TYPELESS:		return DXGI_FORMAT_R32G32B32A32_FLOAT;
+		case DXGI_FORMAT_BC1_TYPELESS:				return DXGI_FORMAT_BC1_UNORM;
+		case DXGI_FORMAT_BC2_TYPELESS:				return DXGI_FORMAT_BC2_UNORM;
+		case DXGI_FORMAT_BC3_TYPELESS:				return DXGI_FORMAT_BC3_UNORM;
+		case DXGI_FORMAT_BC4_TYPELESS:				return DXGI_FORMAT_BC4_UNORM;
+		case DXGI_FORMAT_BC5_TYPELESS:				return DXGI_FORMAT_BC5_UNORM;
+		case DXGI_FORMAT_BC6H_TYPELESS:				return DXGI_FORMAT_BC6H_UF16;
+		case DXGI_FORMAT_BC7_TYPELESS:				return DXGI_FORMAT_BC7_UNORM;
+		default:									return f;
+		}
 	}
 }
 
@@ -68,6 +132,13 @@ namespace
 void R5RegisterResourceState(ID3D12Resource* r, D3D12_RESOURCE_STATES s)
 {
 	R5_TrackResource(r, s);
+}
+
+// 对外暴露的跟踪器屏障：帧首纹理上传排空（dx12Backend.cpp）用它与主渲染列表
+// 共享同一份资源状态账本，避免两套屏障簿记各说各话 → 非法 StateBefore → GPU 卡死
+void R5TransitionResourceTracked(ID3D12GraphicsCommandList* cl, ID3D12Resource* r, D3D12_RESOURCE_STATES to)
+{
+	R5_TransitionResource(cl, r, to);
 }
 
 // [sky diag] 临时诊断：纯 CPU 读取，不做 GPU 同步，不会引发跨队列竞态。
@@ -196,6 +267,7 @@ HRESULT dx12Device::CreateBuffer(const D3D_BUFFER_DESC* pDesc, const D3D_SUBRESO
 	if (!dev) { Msg("! DX12: CreateBuffer with null device"); return E_FAIL; }
 
 	dx12Buffer* buf = new dx12Buffer();
+	dx12::RegisterLiveBuffer(buf);
 	buf->size = pDesc->ByteWidth;
 	buf->immutable = (pDesc->Usage == D3D_USAGE_IMMUTABLE);
 	buf->isConstant = (pDesc->BindFlags & D3D_BIND_CONSTANT_BUFFER) != 0;
@@ -397,7 +469,7 @@ HRESULT dx12Device::CreateShaderResourceView(ID3DResource* pResource, const D3D_
 		// NVIDIA 驱动对部分格式容忍、对 B8G8R8A8/R8G8B8A8 不宽容 → 字体白块/theora 黑屏）。
 		d.Format = pDesc->Format;
 		if (d.Format == DXGI_FORMAT_UNKNOWN && pResource->resource)
-			d.Format = pResource->resource->GetDesc().Format;
+			d.Format = R5ConcreteSrvFormat(pResource->resource->GetDesc().Format);
 		d.ViewDimension = (D3D12_SRV_DIMENSION)pDesc->ViewDimension;
 		d.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 		switch (d.ViewDimension)
@@ -412,6 +484,9 @@ HRESULT dx12Device::CreateShaderResourceView(ID3DResource* pResource, const D3D_
 			pResource->GetType(&dim);
 			if (dim == D3D_RESOURCE_DIMENSION_BUFFER)
 				pBuf = static_cast<dx12Buffer*>(pResource);
+			// 回指源 buffer：绘制时若它刚被 Map(WRITE_DISCARD) 到新的上传环区域，
+			// 需要按新区域原地重写本描述符（见 SRV 表填充）。
+			srv->srcBuffer = pBuf;
 
 			d.Format = pDesc->Format;
 			d.Buffer.FirstElement = pDesc->Buffer.FirstElement;
@@ -470,7 +545,7 @@ HRESULT dx12Device::CreateShaderResourceView(ID3DResource* pResource, const D3D_
 	{
 		D3D12_SHADER_RESOURCE_VIEW_DESC d = {};
 		d.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		d.Format = pResource->resource->GetDesc().Format;
+		d.Format = R5ConcreteSrvFormat(pResource->resource->GetDesc().Format);
 		D3D12_RESOURCE_DESC rd = srv->resource->GetDesc();
 		if (rd.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
 		{
@@ -551,7 +626,7 @@ HRESULT dx12Device::CreateRenderTargetView(ID3DResource* pResource, const D3D_RE
 	if (pDesc)
 	{
 		D3D12_RENDER_TARGET_VIEW_DESC d = {};
-		d.Format = pDesc->Format;
+		d.Format = R5ConcreteSrvFormat(pDesc->Format);	// TYPELESS 视图格式在 D3D12 非法
 		d.ViewDimension = (D3D12_RTV_DIMENSION)pDesc->ViewDimension;
 		if (d.ViewDimension == D3D12_RTV_DIMENSION_TEXTURE2DARRAY)
 		{
@@ -596,7 +671,7 @@ HRESULT dx12Device::CreateDepthStencilView(ID3DResource* pResource, const D3D_DE
 	if (pDesc)
 	{
 		D3D12_DEPTH_STENCIL_VIEW_DESC d = {};
-		d.Format = pDesc->Format;
+		d.Format = DSVFormat(pDesc->Format);	// TYPELESS 深度格式必须映射到具体 D/S 格式
 		d.ViewDimension = (D3D12_DSV_DIMENSION)pDesc->ViewDimension;
 		d.Flags = D3D12_DSV_FLAG_NONE;
 		if (d.ViewDimension == D3D12_DSV_DIMENSION_TEXTURE2DARRAY)
@@ -754,7 +829,7 @@ HRESULT dx12Device::CheckFormatSupport(DXGI_FORMAT Format, UINT* pSupport)
 //------------------------------------------------------------------------------
 // dx12Context
 //------------------------------------------------------------------------------
-HRESULT dx12Context::Map(ID3DResource* pResource, UINT, D3D_MAP, UINT, D3D_MAPPED_TEXTURE2D* pMapped)
+HRESULT dx12Context::Map(ID3DResource* pResource, UINT, D3D_MAP MapType, UINT, D3D_MAPPED_TEXTURE2D* pMapped)
 {
 	if (!pResource || !pMapped) return E_INVALIDARG;
 	pMapped->pData = nullptr;
@@ -805,6 +880,60 @@ HRESULT dx12Context::Map(ID3DResource* pResource, UINT, D3D_MAP, UINT, D3D_MAPPE
 
 	if (auto* b = dynamic_cast<dx12Buffer*>(pResource))
 	{
+		// 结构化 SRV 缓冲：D3D11 的 Map(WRITE_DISCARD) 由驱动做 buffer rename，
+		// 每次都返回新指针；D3D12 必须自己实现。否则同一帧内多次
+		// Map→写实例数据→Unmap→Draw 全落在同一块内存上，而命令列表是"先录制、
+		// 后由 GPU 执行"，GPU 只会读到最后一次写入的数据 —— 草/细节对象成片
+		// 消失、出现、位置错乱；同时 CPU 与 GPU 竞争导致闪烁/抽搐（关掉 -dxdebug
+		// 后 CPU/GPU 重叠更深，症状被放大）。
+		// 做法：每次 Map 从每帧上传环分配新区域，绘制时按 dynVA 原地重写该 buffer
+		// 的 SRV 描述符（见 dx12Context 的 SRV 表填充）。detail 路径每次都是
+		// Map 紧跟 Draw，所以不存在"读到上一帧环区域"的窗口。
+		if ((b->miscFlags & D3D_RESOURCE_MISC_BUFFER_STRUCTURED) != 0 && b->size)
+		{
+			UINT64 gpu = 0;
+			void* p = dx12::g_backend.ring.Alloc(b->size, 256, gpu);
+			if (p)
+			{
+				b->dynVA = gpu;
+				pMapped->pData = p;
+				pMapped->RowPitch = b->size;
+				pMapped->DepthPitch = b->size;
+				return S_OK;
+			}
+		}
+		else if (!b->isConstant && b->size &&
+			(MapType == D3D_MAP_WRITE_DISCARD || MapType == D3D_MAP_WRITE_NO_OVERWRITE))
+		{
+			// 动态 VB/IB 流（HUD/字体/UI/雨/天空…）同样需要自己实现 buffer rename：
+			// 若原地写回 b->mapped，GPU 执行上一帧时读到的就是本帧录制期间写入的数据
+			// → 顶点/索引乱码（关掉 -dxdebug 后 CPU/GPU 重叠更深，闪烁被放大）。
+			// DISCARD = "整块重写"：从本帧上传环段取一整块新区域当本帧的改名缓冲；
+			// 本帧后续 NO_OVERWRITE 追加沿用同一区域（引擎按 vOffset 写入，偏移不变）。
+			// 每帧 OnFrameBegin 都 Flush 流缓冲 → 帧首必有一次 DISCARD，
+			// 所以改名区域每帧独立、不会跨帧互相踩。
+			// 有效期用环代次（FrameSerial）判定，不能用 Device.dwFrame：
+			// 后者不保证每帧递增，初始化期可能长期为 0，会把陈旧区域误判为"本帧有效"。
+			const UINT serial = dx12::FrameSerial();
+			if (MapType == D3D_MAP_WRITE_DISCARD || !b->dynCPU || b->dynFrame != serial)
+			{
+				UINT64 gpu = 0;
+				void* p = dx12::g_backend.ring.Alloc(b->size, 256, gpu);
+				if (p)
+				{
+					b->dynCPU = p;
+					b->dynVA = gpu;
+					b->dynFrame = serial;
+				}
+			}
+			if (b->dynCPU && b->dynFrame == serial)
+			{
+				pMapped->pData = b->dynCPU;
+				pMapped->RowPitch = b->size;
+				pMapped->DepthPitch = b->size;
+				return S_OK;
+			}
+		}
 		pMapped->pData = b->mapped;
 		pMapped->RowPitch = b->size;
 		pMapped->DepthPitch = b->size;
@@ -980,7 +1109,19 @@ void dx12Context::OMSetRenderTargets(UINT num, ID3DRenderTargetView* const* ppRT
 	{
 		auto* dv = dynamic_cast<dx12DepthStencilView*>(pDSV);
 		if (dv && dv->resource)
+		{
 			R5_TransitionResource(cl, dv->resource.Get(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
+			// 深度-only 绑定（阴影 pass 就是这种：u_setrt(nullptr,nullptr,nullptr, rt_smap_depth->pZRT)）
+			// 没有任何 RTV，scissor 尺寸必须退回从 DSV 取。否则下面的
+			// "if (scW > 0) 设默认全屏 scissor" 整段被跳过，scissor 沿用上一次
+			// set_Scissor 留下的矩形，把整张 shadow map 裁掉大半 → 阴影投射错误。
+			if (scW == 0)
+			{
+				D3D12_RESOURCE_DESC rd = dv->resource->GetDesc();
+				scW = (LONG)rd.Width;
+				scH = (LONG)rd.Height;
+			}
+		}
 	}
 	cl->OMSetRenderTargets(n, n ? handles : nullptr, FALSE, (pDSV && pDSV->valid) ? &dsv : nullptr);
 
@@ -991,6 +1132,7 @@ void dx12Context::OMSetRenderTargets(UINT num, ID3DRenderTargetView* const* ppRT
 	if (scW > 0)
 	{
 		D3D12_RECT fullR = { 0, 0, scW, scH };
+		defScissor = fullR;			// 供每个 Draw 按 ScissorEnable 选用
 		cl->RSSetScissorRects(1, &fullR);
 	}
 }
@@ -1038,8 +1180,22 @@ void dx12Context::RSSetViewports(UINT, const D3D_VIEWPORT* pViewports)
 
 void dx12Context::RSSetScissorRects(UINT num, const RECT* pRects)
 {
+	// 只登记引擎矩形；真正下发放到每个 Draw 提交时，按光栅化状态的 ScissorEnable
+	// 在 defScissor / userScissor 之间二选一（D3D12 的 scissor 永远生效，
+	// 不能像 D3D11 那样靠 ScissorEnable 关闭）。
+	if (num && pRects)
+	{
+		userScissor = *(const D3D12_RECT*)pRects;
+		userScissorValid = true;
+	}
+	else
+	{
+		userScissor = {};
+		userScissorValid = false;
+	}
+
 	ID3D12GraphicsCommandList* cl = Get();
-	if (cl) cl->RSSetScissorRects(num, (const D3D12_RECT*)pRects);
+	if (cl && userScissorValid) cl->RSSetScissorRects(1, &userScissor);
 }
 
 void dx12Context::VSSetShader(ID3DVertexShader* s, ID3D11ClassInstance* const*, UINT) { vs = s; }
@@ -1084,6 +1240,7 @@ void dx12Context::IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY t) { topology = 
 void dx12Context::DrawIndexed(UINT IndexCount, UINT StartIndexLocation, INT BaseVertexLocation)
 {
 	FlushPipeline();
+	if (skipDraw) return;	// VB/IB 是陈旧绑定或垃圾 VA：跳过本次绘制（现场已记日志）
 	ID3D12GraphicsCommandList* cl = Get();
 	if (cl) cl->DrawIndexedInstanced(IndexCount, 1, StartIndexLocation, BaseVertexLocation, 0);
 }
@@ -1091,6 +1248,7 @@ void dx12Context::DrawIndexed(UINT IndexCount, UINT StartIndexLocation, INT Base
 void dx12Context::Draw(UINT VertexCount, UINT StartVertexLocation)
 {
 	FlushPipeline();
+	if (skipDraw) return;
 	ID3D12GraphicsCommandList* cl = Get();
 	if (cl) cl->DrawInstanced(VertexCount, 1, StartVertexLocation, 0);
 }
@@ -1098,6 +1256,7 @@ void dx12Context::Draw(UINT VertexCount, UINT StartVertexLocation)
 void dx12Context::DrawIndexedInstanced(UINT IndexCountPerInstance, UINT InstanceCount, UINT StartIndexLocation, INT BaseVertexLocation, UINT StartInstanceLocation)
 {
 	FlushPipeline();
+	if (skipDraw) return;
 	ID3D12GraphicsCommandList* cl = Get();
 	if (cl) cl->DrawIndexedInstanced(IndexCountPerInstance, InstanceCount, StartIndexLocation, BaseVertexLocation, StartInstanceLocation);
 }
@@ -1138,12 +1297,96 @@ static HRESULT SafeCreateGraphicsPSO(ID3D12Device* dev,
 	}
 }
 
+//------------------------------------------------------------------------------
+// dx12Shader：反射 DXBC，取得每个 t 槽位（0..15）期望的 SRV 维度（惰性缓存）。
+// FlushPipeline 为无效槽位选占位描述符时使用：cube/3D/2DArray/buffer 槽位若填
+// 2D 占位纹理，维度错配会被 GBV 报 "SRV resource dimensions differs from that
+// expected by shader"，实机读取为未定义行为。
+//------------------------------------------------------------------------------
+D3D_SRV_DIMENSION dx12Shader::SlotSrvDimension(UINT slot)
+{
+	if (slot >= 16 || !blob) return D3D_SRV_DIMENSION_UNKNOWN;
+
+	if (!m_slotDimsParsed)
+	{
+		ID3DShaderReflection* refl = nullptr;
+		if (SUCCEEDED(D3DReflect(blob->GetBufferPointer(), blob->GetBufferSize(),
+			IID_ID3DShaderReflection, (void**)&refl)) && refl)
+		{
+			D3D11_SHADER_DESC desc = {};
+			if (SUCCEEDED(refl->GetDesc(&desc)))
+			{
+				for (UINT i = 0; i < desc.BoundResources; ++i)
+				{
+					D3D_SHADER_INPUT_BIND_DESC bd = {};
+					if (FAILED(refl->GetResourceBindingDesc(i, &bd)) || bd.BindPoint >= 16)
+						continue;
+					if (bd.Type == D3D_SIT_TEXTURE)
+						m_slotDims[bd.BindPoint] = bd.Dimension;
+					else if (bd.Type == D3D_SIT_STRUCTURED || bd.Type == D3D_SIT_BYTEADDRESS)
+						m_slotDims[bd.BindPoint] = D3D_SRV_DIMENSION_BUFFER;
+				}
+			}
+			refl->Release();
+		}
+		m_slotDimsParsed = true;
+	}
+	return m_slotDims[slot];
+}
+
+// 无效槽位的占位描述符：按着色器反射出的维度选择维度匹配的 null SRV（读取返回
+// 0，与 D3D11 未绑定行为一致）。2D 槽位 / 反射失败的槽位沿用 1x1 黑纹理占位。
+static D3D12_CPU_DESCRIPTOR_HANDLE PlaceholderSrvFor(dx12Shader* sh, UINT slot)
+{
+	D3D12_CPU_DESCRIPTOR_HANDLE h = {};
+	const D3D_SRV_DIMENSION dim = sh ? sh->SlotSrvDimension(slot) : D3D_SRV_DIMENSION_UNKNOWN;
+	if (dim > 0 && dim <= D3D12_SRV_DIMENSION_TEXTURECUBEARRAY)
+		h = dx12::g_backend.nullSrvCpu[dim];
+	if (!h.ptr)
+		h = dx12::g_backend.dummySrvCpu;
+	return h;
+}
+
+// 描述符回读：全零 = 视图创建曾静默失败（CreateShaderResourceView 等 void API 不返
+// 回错误，未写入的堆内存初值为零）。全零 SRV 绑进根表 = GPU 沿资源指针 0 访问 →
+// 页错误（DRED 实测 VA=0x0）→ 队列停摆 → TDR；全零 CBV = BufferLocation 0 同理。
+// 描述符堆的 CPU 侧内存可读，这里按堆的描述符尺寸逐 DWORD 检查。
+static bool IsZeroDescriptor(D3D12_CPU_DESCRIPTOR_HANDLE cpu)
+{
+	if (!cpu.ptr) return true;
+	const UINT ds = dx12::g_backend.persistentSrv.DescriptorSize()
+		? dx12::g_backend.persistentSrv.DescriptorSize() : 32u;
+	const UINT32* p = (const UINT32*)(cpu.ptr);
+	for (UINT i = 0; i < ds / 4; ++i)
+		if (p[i]) return false;
+	return true;
+}
+
+// 检测到全零描述符时的替换 + 取证（限前 6 条避免刷屏）。返回 true 表示已替换。
+static bool FixZeroSrvInTable(D3D12_CPU_DESCRIPTOR_HANDLE dst, dx12Shader* sh,
+	UINT slot, const char* stage, ID3DShaderResourceView* srv)
+{
+	static int s_zeroWarn = 0;
+	if (++s_zeroWarn <= 6)
+		Msg("! DX12: %s t%u 的 SRV 描述符为全零（视图创建曾静默失败）：srv=%p cpu=0x%llx"
+			"—— 已替换为维度匹配占位符（若频繁出现说明某处 CreateShaderResourceView 被驱动拒绝）",
+			stage, slot, (void*)srv, (unsigned long long)(srv ? srv->cpu.ptr : 0));
+	D3D12_CPU_DESCRIPTOR_HANDLE fill = PlaceholderSrvFor(sh, slot);
+	if (!fill.ptr) return false;
+	dx12::GetD3D12Device()->CopyDescriptorsSimple(1, dst, fill, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	return true;
+}
+
 void dx12Context::FlushPipeline()
 {
+	skipDraw = false;
 	ID3D12GraphicsCommandList* cl = Get();
 	if (!cl) return;
 	dx12::Ensure();
 	if (!dx12::g_backend.valid) return;
+
+	// 兜底根表所在堆 slot（与 BackendBeginFrame 分配时一致）
+	const UINT fbSlot = dx12::GetFrameIndex() & 1;
 
 	// ---- PSO key ----
 	UINT64 key = (UINT64)(UINT_PTR)vs * 1000003ull;
@@ -1272,6 +1515,65 @@ void dx12Context::FlushPipeline()
 	// 常量会被同索引的 VS 常量顶掉——例如 phase_luminance 中 PS bloom_luminance_3
 	// 的 MiddleGray 被 VS stub_notransform_filter 的 screen_res 覆盖，曝光 scale
 	// 变成天文数字，整屏纯白。故按 visibility 拆成 [0]=PS、[3]=VS 两张表。
+	// CBV 合法性自检（两层，命中都会把现场写进日志）：
+	//  1) 缓冲存活：vid_restart 会销毁重建渲染层的着色器/常量缓冲，但 CBackend 的
+	//     cbPS/cbVS 原始指针缓存不会随之清空。指向已析构 dx12Buffer 的"陈旧绑定"
+	//     读到的是堆回收后的垃圾字段（实测 gpuVA=0x40000004d）。这类指针一律不再
+	//     解引用，直接按未绑定处理。
+	//  2) VA 合法：D3D12 要求 BufferLocation 256 对齐、SizeInBytes 为 256 倍数且
+	//     不超过 65536；且本工程的 CBV VA 只可能来自上传环或缓冲自身资源。
+	//     注意 gpuVA==0 也是"256 对齐"的——旧检查会放行它，生成 BufferLocation=0
+	//     的 CBV，着色器读常量即触发 GPU 页错误（DRED 实测 VA=0x0）→ 队列停摆 →
+	//     TDR（DEVICE_HUNG 0x887a0006）。这里把 0 与两个来源之外的值一并判为非法。
+	// 非法槽位改填全零占位 CBV：既保住进程与画面，又让问题可定位。
+	auto LogBadBinding = [](const char* kind, const char* stage, UINT slot,
+		ID3DBuffer* b, UINT64 va, bool alive, UINT64 ownVA) -> void
+	{
+		// 同一 (缓冲, 槽位) 只报一次，最多 16 条，避免每 Draw 刷屏
+		static std::mutex s_m;
+		static std::vector<std::pair<const void*, UINT>> s_seen;
+		std::lock_guard<std::mutex> g(s_m);
+		if (s_seen.size() >= 16) return;
+		for (size_t k = 0; k < s_seen.size(); ++k)
+			if (s_seen[k].first == (const void*)b && s_seen[k].second == slot) return;
+		s_seen.push_back(std::make_pair((const void*)b, slot));
+
+		if (!alive)
+			Msg("! DX12: 陈旧绑定 %s（%s b%u）：buf=%p 已不在存活登记中（vid_restart 后残留的原始指针）"
+				"—— 不解引用，CBV 槽用占位符 / VB/IB 跳过本次 Draw",
+				kind, stage, slot, (void*)b);
+		else
+			Msg("! DX12: 非法 %s（%s b%u）：buf=%p VA=0x%llx 资源自身VA=0x%llx size=%u"
+				"（VA=0、或既不在上传环内也不等于资源自身 VA）—— CBV 槽用占位符 / VB/IB 跳过本次 Draw",
+				kind, stage, slot, (void*)b, (unsigned long long)va, (unsigned long long)ownVA, b->size);
+	};
+
+	auto MakeCBVChecked = [&](ID3D12Device* dev, D3D12_CPU_DESCRIPTOR_HANDLE dst,
+		ID3DBuffer* b, const char* stage, UINT slot) -> bool
+	{
+		if (!dev || !b || !b->resource) return false;
+
+		// 与 CB 的 Flush 互斥：字段是普通变量，跨线程并发时会出现撕裂的 gpuVA
+		std::lock_guard<std::mutex> cbLock(dx12::ConstantBufferMutex());
+
+		const UINT64 ownVA = b->resource->GetGPUVirtualAddress();
+		const UINT64 va = b->gpuVA;
+		const UINT sz = (b->size + 255u) & ~255u;
+		const bool vaOk = (va != 0) && ((va & 255ull) == 0)
+			&& (dx12::UploadRingContains(va) || va == ownVA);
+		if (!vaOk || sz == 0 || sz > 65536u)
+		{
+			LogBadBinding("CBV", stage, slot, b, va, true, ownVA);
+			return false;
+		}
+
+		D3D12_CONSTANT_BUFFER_VIEW_DESC cbd = {};
+		cbd.BufferLocation = va;
+		cbd.SizeInBytes = sz;
+		dev->CreateConstantBufferView(&cbd, dst);
+		return true;
+	};
+
 	{
 		D3D12_CPU_DESCRIPTOR_HANDLE cbvCpu = {};
 		D3D12_GPU_DESCRIPTOR_HANDLE cbvGpu = {};
@@ -1282,12 +1584,18 @@ void dx12Context::FlushPipeline()
 			{
 				D3D12_CPU_DESCRIPTOR_HANDLE dst = cbvCpu; dst.ptr += (SIZE_T)i * size;
 				ID3DBuffer* b = cbPS[i];
+				// 陈旧绑定（对象已释放）：登记后按未绑定处理，绝不解引用其字段
+				if (b && !dx12::IsLiveBuffer(b))
+				{
+					LogBadBinding("CBV", "PS", i, b, 0, false, 0);
+					b = nullptr;
+				}
 				if (b && b->resource)
 				{
-					D3D12_CONSTANT_BUFFER_VIEW_DESC cbd = {};
-					cbd.BufferLocation = b->gpuVA;
-					cbd.SizeInBytes = (b->size + 255) & ~255u;
-					dx12::GetD3D12Device()->CreateConstantBufferView(&cbd, dst);
+					if (!MakeCBVChecked(dx12::GetD3D12Device(), dst, b, "PS", i)
+						&& dx12::g_backend.dummyCbvCpu.ptr)
+						dx12::GetD3D12Device()->CopyDescriptorsSimple(1, dst,
+							dx12::g_backend.dummyCbvCpu, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 				}
 				else if (dx12::g_backend.dummyCbvCpu.ptr)
 				{
@@ -1299,6 +1607,15 @@ void dx12Context::FlushPipeline()
 				}
 			}
 			cl->SetGraphicsRootDescriptorTable(0, cbvGpu);
+		}
+		else if (dx12::g_backend.fallbackCbvGpu[fbSlot].ptr)
+		{
+			// 堆耗尽兜底：全零常量表。绝不能跳过 Set——根表保持零句柄时
+			// GPU 沿句柄 0 读描述符 → 页错误 VA=0x0 → TDR
+			static int s_fbPsCbv = 0;
+			if (++s_fbPsCbv <= 4)
+				Msg("! DX12: 描述符堆耗尽：本 Draw 的 PS 常量表改用全零兜底表（该 Draw 画面降级，不崩溃）");
+			cl->SetGraphicsRootDescriptorTable(0, dx12::g_backend.fallbackCbvGpu[fbSlot]);
 		}
 	}
 
@@ -1313,12 +1630,18 @@ void dx12Context::FlushPipeline()
 			{
 				D3D12_CPU_DESCRIPTOR_HANDLE dst = cbvCpu; dst.ptr += (SIZE_T)i * size;
 				ID3DBuffer* b = cbVS[i];
+				// 陈旧绑定（对象已释放）：登记后按未绑定处理，绝不解引用其字段
+				if (b && !dx12::IsLiveBuffer(b))
+				{
+					LogBadBinding("CBV", "VS", i, b, 0, false, 0);
+					b = nullptr;
+				}
 				if (b && b->resource)
 				{
-					D3D12_CONSTANT_BUFFER_VIEW_DESC cbd = {};
-					cbd.BufferLocation = b->gpuVA;
-					cbd.SizeInBytes = (b->size + 255) & ~255u;
-					dx12::GetD3D12Device()->CreateConstantBufferView(&cbd, dst);
+					if (!MakeCBVChecked(dx12::GetD3D12Device(), dst, b, "VS", i)
+						&& dx12::g_backend.dummyCbvCpu.ptr)
+						dx12::GetD3D12Device()->CopyDescriptorsSimple(1, dst,
+							dx12::g_backend.dummyCbvCpu, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 				}
 				else if (dx12::g_backend.dummyCbvCpu.ptr)
 				{
@@ -1327,6 +1650,13 @@ void dx12Context::FlushPipeline()
 				}
 			}
 			cl->SetGraphicsRootDescriptorTable(3, cbvGpu);
+		}
+		else if (dx12::g_backend.fallbackCbvGpu[fbSlot].ptr)
+		{
+			static int s_fbVsCbv = 0;
+			if (++s_fbVsCbv <= 4)
+				Msg("! DX12: 描述符堆耗尽：本 Draw 的 VS 常量表改用全零兜底表（该 Draw 画面降级，不崩溃）");
+			cl->SetGraphicsRootDescriptorTable(3, dx12::g_backend.fallbackCbvGpu[fbSlot]);
 		}
 	}
 
@@ -1345,15 +1675,29 @@ void dx12Context::FlushPipeline()
 				auto* dv = dynamic_cast<dx12ShaderResourceView*>(srv);
 				if (dv && dv->resource)
 					R5_TransitionResource(cl, dv->resource.Get(), D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
-				dx12::GetD3D12Device()->CopyDescriptorsSimple(1, dst, srv->cpu, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+				R5_RefreshDynamicBufferSrv(dv);	// 动态结构化 buffer → 指向本帧 Map 的新区域
+				if (IsZeroDescriptor(srv->cpu))
+					FixZeroSrvInTable(dst, ps, i, "PS", srv);	// 视图创建静默失败 → 占位符
+				else
+					dx12::GetD3D12Device()->CopyDescriptorsSimple(1, dst, srv->cpu, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 			}
 			else if (dx12::g_backend.dummySrvCpu.ptr)
 			{
-				// 填充无效槽：防止描述符堆残留上一 Draw 的纹理（避免 shniaga 采样错纹理）
-				dx12::GetD3D12Device()->CopyDescriptorsSimple(1, dst, dx12::g_backend.dummySrvCpu, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+				// 填充无效槽：防止描述符堆残留上一 Draw 的纹理（避免 shniaga 采样错纹理）。
+				// 按着色器反射的维度选占位符：cube 槽位填 2D 会维度错配（GBV 报错 + 读取 UB）
+				D3D12_CPU_DESCRIPTOR_HANDLE fill = PlaceholderSrvFor(ps, i);
+				if (fill.ptr)
+					dx12::GetD3D12Device()->CopyDescriptorsSimple(1, dst, fill, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 			}
 		}
 		cl->SetGraphicsRootDescriptorTable(1, srvGpu);
+	}
+	else if (dx12::g_backend.fallbackSrvGpu[fbSlot].ptr)
+	{
+		static int s_fbPsSrv = 0;
+		if (++s_fbPsSrv <= 4)
+			Msg("! DX12: 描述符堆耗尽：本 Draw 的 PS 纹理表改用黑纹理兜底表（该 Draw 画面降级，不崩溃）");
+		cl->SetGraphicsRootDescriptorTable(1, dx12::g_backend.fallbackSrvGpu[fbSlot]);
 	}
 
 	// ---- SRV 表（顶点阶段 t0..t15）----
@@ -1374,36 +1718,108 @@ void dx12Context::FlushPipeline()
 					auto* dv = dynamic_cast<dx12ShaderResourceView*>(srv);
 					if (dv && dv->resource)
 						R5_TransitionResource(cl, dv->resource.Get(), D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
-					dx12::GetD3D12Device()->CopyDescriptorsSimple(1, dst, srv->cpu, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+					R5_RefreshDynamicBufferSrv(dv);	// 动态结构化 buffer → 指向本帧 Map 的新区域
+					if (IsZeroDescriptor(srv->cpu))
+						FixZeroSrvInTable(dst, vs, i, "VS", srv);	// 视图创建静默失败 → 占位符
+					else
+						dx12::GetD3D12Device()->CopyDescriptorsSimple(1, dst, srv->cpu, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 				}
 				else if (dx12::g_backend.dummySrvCpu.ptr)
 				{
-					dx12::GetD3D12Device()->CopyDescriptorsSimple(1, dst, dx12::g_backend.dummySrvCpu, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+					// 无效槽位同样按维度选占位符（顶点阶段草实例的 StructuredBuffer 期望 buffer 维度）
+					D3D12_CPU_DESCRIPTOR_HANDLE fill = PlaceholderSrvFor(vs, i);
+					if (fill.ptr)
+						dx12::GetD3D12Device()->CopyDescriptorsSimple(1, dst, fill, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 				}
 			}
 			cl->SetGraphicsRootDescriptorTable(2, srvGpu);
+		}
+		else if (dx12::g_backend.fallbackSrvGpu[fbSlot].ptr)
+		{
+			static int s_fbVsSrv = 0;
+			if (++s_fbVsSrv <= 4)
+				Msg("! DX12: 描述符堆耗尽：本 Draw 的 VS 纹理表改用黑纹理兜底表（该 Draw 画面降级，不崩溃）");
+			cl->SetGraphicsRootDescriptorTable(2, dx12::g_backend.fallbackSrvGpu[fbSlot]);
 		}
 	}
 
 	// ---- IA ----
 	// DX12 的输入布局内置于 PSO，无需 IASetInputLayout
+	const UINT vbSerial = dx12::FrameSerial();
+	// VB/IB 与 CBV 同属"陈旧绑定/垃圾 VA"高危面：用垃圾 VA 装配顶点/索引会让
+	// GPU 直接页错误（VA=0 时 DRED 实测 PageFaultVA=0x0）→ 队列停摆 → TDR。
+	// 因此这里判定失败时不再绑定，并置 skipDraw 跳过本次绘制。
+	if (vb && !dx12::IsLiveBuffer(vb))
+	{
+		LogBadBinding("VB", "-", 0, vb, 0, false, 0);
+		vb = nullptr;
+		skipDraw = true;
+	}
+	if (vb && !vb->resource)
+	{
+		// resource 为空的 buffer：IASetVertexBuffers 跳过后若不跳过 Draw，
+		// GPU 会用零顶点缓冲装配 → 从 VA=0 取顶点 → 页错误。一律跳过该 Draw。
+		LogBadBinding("VB", "-", 0, vb, 0, true, 0);
+		skipDraw = true;
+	}
 	if (vb && vb->resource)
 	{
 		D3D12_VERTEX_BUFFER_VIEW vbv = {};
-		vbv.BufferLocation = vb->gpuVA;
+		// 动态流缓冲：Map 时已改名为本帧上传环区域，必须按新区域绑定
+		//（引擎在 Lock 里按 vOffset 写入，偏移相对改名区域起点，保持不变）
+		vbv.BufferLocation = (vb->dynCPU && vb->dynFrame == vbSerial) ? vb->dynVA : vb->gpuVA;
 		vbv.SizeInBytes = vb->size;
 		vbv.StrideInBytes = vbStride;
-		cl->IASetVertexBuffers(0, 1, &vbv);
+		const UINT64 ownVA = vb->resource->GetGPUVirtualAddress();
+		if (vbv.BufferLocation == 0
+			|| !(dx12::UploadRingContains(vbv.BufferLocation) || vbv.BufferLocation == ownVA))
+		{
+			LogBadBinding("VB", "-", 0, vb, vbv.BufferLocation, true, ownVA);
+			skipDraw = true;
+		}
+		else
+			cl->IASetVertexBuffers(0, 1, &vbv);
+	}
+	if (ib && !dx12::IsLiveBuffer(ib))
+	{
+		LogBadBinding("IB", "-", 0, ib, 0, false, 0);
+		ib = nullptr;
+		skipDraw = true;
+	}
+	if (ib && !ib->resource)
+	{
+		LogBadBinding("IB", "-", 0, ib, 0, true, 0);
+		skipDraw = true;
 	}
 	if (ib && ib->resource)
 	{
 		D3D12_INDEX_BUFFER_VIEW ibv = {};
-		ibv.BufferLocation = ib->gpuVA;
+		ibv.BufferLocation = (ib->dynCPU && ib->dynFrame == vbSerial) ? ib->dynVA : ib->gpuVA;
 		ibv.SizeInBytes = ib->size;
 		ibv.Format = ibFormat;
-		cl->IASetIndexBuffer(&ibv);
+		const UINT64 ownVA = ib->resource->GetGPUVirtualAddress();
+		if (ibv.BufferLocation == 0
+			|| !(dx12::UploadRingContains(ibv.BufferLocation) || ibv.BufferLocation == ownVA))
+		{
+			LogBadBinding("IB", "-", 0, ib, ibv.BufferLocation, true, ownVA);
+			skipDraw = true;
+		}
+		else
+			cl->IASetIndexBuffer(&ibv);
 	}
 	cl->IASetPrimitiveTopology((D3D12_PRIMITIVE_TOPOLOGY)topology);
+
+	// D3D11 的 ScissorEnable 语义：关（默认）→ 不裁剪，开 → 用引擎矩形。
+	// D3D12 没有该字段且 scissor 始终生效，所以每个 Draw 都要显式二选一；
+	// 否则光源体积 pass（accum_spot/accum_point 会 set_Scissor 屏幕矩形）设的矩形
+	// 会一直粘着，把后续不开 scissor 的 Draw 裁成碎片（表现为光照被切成好几块、
+	// AO/阴影大面积缺失）。
+	if (StateManager.m_RDesc.ScissorEnable && userScissorValid)
+		cl->RSSetScissorRects(1, &userScissor);
+	else if (defScissor.right > defScissor.left && defScissor.bottom > defScissor.top)
+		cl->RSSetScissorRects(1, &defScissor);
+	else if (userScissorValid)
+		cl->RSSetScissorRects(1, &userScissor);
 
 	if (viewportSet) cl->RSSetViewports(1, &viewport);
 }
