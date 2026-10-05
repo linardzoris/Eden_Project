@@ -17,4 +17,12 @@ namespace dx12TextureUtils
 		const DirectX::TexMetadata& meta,
 		size_t firstSubresource,
 		ID3DTexture2D** ppTexture);
+
+	// 3D 体纹理：本包 DirectXTex 把 TEXTURE3D 展开为"每深度切片一个 Image"，
+	// 按 mip 顺序连续排列（每 mip 的切片数 = max(1, depth>>mip)），且同 mip 内
+	// 各切片像素连续。创建 TEXTURE3D 资源并逐 mip 整体上传（subresource=mip）。
+	HRESULT	CreateTexture3DFromScratch(const DirectX::ScratchImage& image,
+		const DirectX::TexMetadata& meta,
+		size_t firstSubresource,
+		ID3DTexture3D** ppTexture);
 }

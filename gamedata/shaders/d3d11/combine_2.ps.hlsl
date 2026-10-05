@@ -14,6 +14,7 @@ float3 main(v2p_aa_AA I) : SV_Target
 #endif
 	
     float Scale = s_tonemap.Sample(smp_nofilter, float2(0.5f, 0.5f)).x;
+
     Color = tonemap(Color, Scale);
 
     Color = combine_bloom(Color, Bloom).xyz;
@@ -28,4 +29,3 @@ float3 main(v2p_aa_AA I) : SV_Target
 
 	return Color;
 }
-

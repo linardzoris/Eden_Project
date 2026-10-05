@@ -50,6 +50,8 @@ namespace dx12TextureUtils
 		tex->desc.SampleDesc.Count = 1;
 		tex->desc.Usage = D3D_USAGE_DEFAULT;
 		tex->desc.BindFlags = D3D_BIND_SHADER_RESOURCE;
+		if (bCube)
+			tex->desc.MiscFlags |= D3D_RESOURCE_MISC_TEXTURECUBE;
 		tex->state = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE;
 
 		const size_t totalImages = image.GetImageCount();
@@ -64,10 +66,6 @@ namespace dx12TextureUtils
 	const DirectX::Image* images = allImages + baseIdx;
 	const size_t imageCount = totalImages - baseIdx;
 
-	Msg("* [lodr] firstSub=%u total=%u base=%u meta=%ux%u mips=%u cube=%d picked0=%ux%u",
-		(u32)firstSubresource, (u32)totalImages, (u32)baseIdx,
-		(u32)meta.width, (u32)meta.height, (u32)mipLevels, (int)bCube,
-		imageCount ? (u32)images[0].width : 0, imageCount ? (u32)images[0].height : 0);
 
 	for (UINT a = 0; a < arraySize; ++a)
 	{
@@ -89,5 +87,90 @@ namespace dx12TextureUtils
 R5RegisterResourceState(tex->resource.Get(), tex->state);
 	*ppTexture = tex;
 	return S_OK;
+	}
+
+	HRESULT	CreateTexture3DFromScratch(const DirectX::ScratchImage& image,
+		const DirectX::TexMetadata& meta,
+		size_t firstSubresource,
+		ID3DTexture3D** ppTexture)
+	{
+		if (!ppTexture) return E_INVALIDARG;
+		*ppTexture = nullptr;
+		ID3D12Device* dev = dx12::GetD3D12Device();
+		if (!dev) return E_FAIL;
+
+		const UINT mipLevels = (UINT)(meta.mipLevels ? meta.mipLevels : 1);
+		const UINT depth0 = (UINT)(meta.depth ? meta.depth : 1);
+
+		dx12Texture* tex = new dx12Texture();
+		tex->volDepth = depth0;
+
+		D3D12_HEAP_PROPERTIES heap = {};
+		heap.Type = D3D12_HEAP_TYPE_DEFAULT;
+
+		D3D12_RESOURCE_DESC rd = {};
+		rd.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE3D;
+		rd.Width = meta.width;
+		rd.Height = (UINT)meta.height;
+		rd.DepthOrArraySize = (UINT16)depth0;
+		rd.MipLevels = (UINT16)mipLevels;
+		rd.Format = meta.format;
+		rd.SampleDesc.Count = 1;
+		rd.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+
+		HRESULT hr = dev->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &rd,
+			D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE, nullptr, IID_PPV_ARGS(&tex->resource));
+		if (FAILED(hr)) { Msg("! DX12: texture3d create failed 0x%08x", hr); dx12::DumpDeviceErrors("tex_utils_create3d"); tex->Release(); return hr; }
+
+		tex->desc.Width = (UINT)meta.width;
+		tex->desc.Height = (UINT)meta.height;
+		tex->desc.MipLevels = mipLevels;
+		tex->desc.Format = meta.format;
+		tex->desc.SampleDesc.Count = 1;
+		tex->desc.Usage = D3D_USAGE_DEFAULT;
+		tex->desc.BindFlags = D3D_BIND_SHADER_RESOURCE;
+		tex->state = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE;
+
+		const size_t totalImages = image.GetImageCount();
+		const DirectX::Image* allImages = image.GetImages();
+
+		// 体纹理不走 LOD Reduce（_DDS_CUBE 无 Reduce），firstSubresource 保留形参一致性
+		const size_t baseIdx = (firstSubresource < totalImages) ? firstSubresource : 0;
+		const DirectX::Image* images = allImages + baseIdx;
+		const size_t imageCount = totalImages - baseIdx;
+
+		size_t imgCursor = 0;
+		for (UINT m = 0; m < mipLevels; ++m)
+		{
+			const UINT w = (UINT)(meta.width >> m) ? (UINT)(meta.width >> m) : 1u;
+			const UINT h = (UINT)(meta.height >> m) ? (UINT)(meta.height >> m) : 1u;
+			const UINT d = depth0 >> m;
+			const UINT slices = d ? d : 1u;
+
+			if (imgCursor + slices > imageCount)
+			{
+				Msg("! DX12: texture3d images exhausted mip=%u need=%u have=%u total=%u -> stop",
+					m, slices, (UINT)(imageCount - imgCursor), (UINT)imageCount);
+				break;
+			}
+			const DirectX::Image& first = images[imgCursor];
+			if ((UINT)first.width != w || (UINT)first.height != h)
+			{
+				Msg("! DX12: texture3d slice dim mismatch mip=%u expect=%ux%u got=%ux%u -> stop",
+					m, w, h, (UINT)first.width, (UINT)first.height);
+				break;
+			}
+
+			// 同 mip 各切片像素连续（offsets 以 slicePitch 步进），一次体上传整 mip。
+			dx12::UploadTextureSubresource(tex->resource.Get(), m,
+				first.pixels, (UINT)first.rowPitch,
+				w, h, slices, meta.format, meta.format);
+
+			imgCursor += slices;
+		}
+
+		R5RegisterResourceState(tex->resource.Get(), tex->state);
+		*ppTexture = tex;
+		return S_OK;
 	}
 }

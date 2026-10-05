@@ -98,6 +98,8 @@ public:
 	D3D12_GPU_VIRTUAL_ADDRESS	gpuVA = 0;
 	UINT					size = 0;
 	UINT					stride = 0;
+	UINT					structureByteStride = 0;
+	UINT					miscFlags = 0;
 	bool					isIndex = false;
 	bool					isConstant = false;
 	bool					immutable = false;
@@ -127,6 +129,8 @@ public:
 	// D3D11 的 STAGING+CPUAccess_READ：D3D12 的 READBACK 堆不能放纹理，
 	// 故建在 DEFAULT 堆，Map 时内部拷到 READBACK 缓冲。
 	bool					stagingRead = false;
+	// TEXTURE3D 的体深度（2D desc 无 Depth 字段，单独保存供 GetDesc(3D) 使用）
+	UINT					volDepth = 1;
 
 	UINT	Width() const { return desc.Width; }
 	UINT	Height() const { return desc.Height; }
@@ -161,7 +165,7 @@ public:
 		ZeroMemory(d, sizeof(*d));
 		d->Width = desc.Width;
 		d->Height = desc.Height;
-		d->Depth = 1;
+		d->Depth = volDepth;
 		d->MipLevels = desc.MipLevels;
 		d->Format = desc.Format;
 	}
@@ -186,6 +190,10 @@ public:
 	D3D12_SHADER_RESOURCE_VIEW_DESC		desc = {};
 	D3D12_CPU_DESCRIPTOR_HANDLE			cpu = {};
 	bool								valid = false;
+	// persistentSrv 中的槽位号：释放时归还，避免堆随帧数单调耗尽（见 DescriptorHeap::FreePersistent）
+	UINT								descIndex = 0xFFFFFFFFu;
+
+	~dx12ShaderResourceView();
 };
 
 //------------------------------------------------------------------------------
@@ -361,7 +369,7 @@ public:
 	void	ClearDepthStencilView(ID3DDepthStencilView* pDepthStencilView, UINT ClearFlags, FLOAT Depth, UINT8 Stencil);
 	void	OMSetRenderTargets(UINT NumViews, ID3DRenderTargetView* const* ppRenderTargetViews, ID3DDepthStencilView* pDepthStencilView);
 	// 绑定裸 swapchain backbuffer RTV（引擎设备层持有其描述符），并设置全屏 viewport/scissor。
-	void	BindBackbufferRTV(D3D12_CPU_DESCRIPTOR_HANDLE rtv, UINT width, UINT height);
+	void	BindBackbufferRTV(D3D12_CPU_DESCRIPTOR_HANDLE rtv, UINT width, UINT height, DXGI_FORMAT fmt);
 	void	OMSetBlendState(ID3DBlendState* pBlendState, const FLOAT BlendFactor[4], UINT SampleMask);
 	void	RSSetViewports(UINT NumViewports, const D3D_VIEWPORT* pViewports);
 	void	RSSetScissorRects(UINT NumRects, const RECT* pRects);
@@ -431,6 +439,10 @@ public:
 	ID3DRenderTargetView*	rt[4] = {};
 	ID3DDepthStencilView*	zb = nullptr;
 	UINT				rtCount = 1;
+	// 裸 backbuffer RTV 绑定状态（BindBackbufferRTV）：此时 rt[] 为空，
+	// PSO 需要用交换链格式而非残留 rt[] 推导 RTVFormats。
+	bool				bbBound = false;
+	DXGI_FORMAT			bbFormat = DXGI_FORMAT_UNKNOWN;
 
 	D3D12_VIEWPORT		viewport = {};
 	bool				viewportSet = false;
@@ -447,3 +459,6 @@ extern dx12Context		DX12Context;
 // 资源状态跟踪（实现见 dx12Types.cpp）：供 dx12TextureUtils 等其他纹理创建路径
 // 注册资源初始状态，保证 RTV/DSV/SRV 自动 transition barrier 的跟踪表完整。
 void R5RegisterResourceState(ID3D12Resource* pResource, D3D12_RESOURCE_STATES initial);
+
+// [sky diag] 临时诊断：打印 SRV 的 valid/维度/格式/尺寸/资源指针（纯 CPU 读取，不做 GPU 同步）
+void R5DebugLogSRV(const char* tag, ID3DShaderResourceView* pSrv);

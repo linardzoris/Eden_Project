@@ -90,4 +90,5 @@ namespace dx12
 	extern "C" ENGINE_API ID3D12GraphicsCommandList* GetCmdList();
 	extern "C" ENGINE_API D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentRTV();
 	extern "C" ENGINE_API D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentDSV();
+	extern "C" ENGINE_API void SetRenderDSV(void* dsv);
 }

@@ -317,6 +317,7 @@ namespace dx12
 
 		ID3D12CommandList* lists[] = { list };
 		g_backend.uploadQueue->ExecuteCommandLists(1, lists);
+		DumpDeviceErrors("clear_rtv_imm");
 		g_backend.uploadFenceValue++;
 		g_backend.uploadQueue->Signal(g_backend.uploadFence.Get(), g_backend.uploadFenceValue);
 		if (g_backend.uploadFence->GetCompletedValue() < g_backend.uploadFenceValue && g_backend.uploadEvent)
@@ -349,7 +350,8 @@ namespace dx12
 	// 默认堆纹理的一次性上传（子资源 0）：暂存缓冲 + CopyTextureRegion + 围栏等待
 	//--------------------------------------------------------------------------
 	void UploadTextureSubresource(ID3D12Resource* dst, UINT subresourceIndex, const void* src, UINT srcRowPitch,
-		UINT width, UINT height, UINT depth, DXGI_FORMAT fmt, DXGI_FORMAT footprintFormat)
+		UINT width, UINT height, UINT depth, DXGI_FORMAT fmt, DXGI_FORMAT footprintFormat,
+		D3D12_RESOURCE_STATES curState)
 	{
 	try {
 		UploadPathGate gate;
@@ -395,6 +397,23 @@ namespace dx12
 			pitch = (srcRowBytes + (D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1)) & ~(D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1);
 		}
 
+		// 校验：源图尺寸不得超过目标子资源的 mip 尺寸。D3D12 下越界拷贝会被判为非法调用并
+		// 移除设备（且错误信息只在 device removed 后才可见）。这里提前拦截并打印上下文，
+		// 避免设备移除，同时暴露源 mip 与目标 subresource 不匹配的真实纹理。
+		{
+			const D3D12_RESOURCE_DESC dd = dst->GetDesc();
+			const UINT mip = dd.MipLevels ? (subresourceIndex % dd.MipLevels) : 0;
+			const UINT dstW = (UINT)(dd.Width >> mip) ? (UINT)(dd.Width >> mip) : 1u;
+			const UINT dstH = (UINT)(dd.Height >> mip) ? (UINT)(dd.Height >> mip) : 1u;
+			if (width > dstW || height > dstH)
+			{
+				Msg("! DX12: upload size mismatch sub=%u fmt=%d rd=%llux%u mips=%u arr=%u mip=%u dst=%ux%u src=%ux%u d=%u -> skip",
+					subresourceIndex, (int)fmt, (unsigned long long)dd.Width, (UINT)dd.Height,
+					(UINT)dd.MipLevels, (UINT)dd.DepthOrArraySize, mip, dstW, dstH, width, height, depth);
+				return;
+			}
+		}
+
 		const UINT64 total = (UINT64)pitch * copyRows;
 
 		D3D12_HEAP_PROPERTIES hp = {};
@@ -426,11 +445,11 @@ namespace dx12
 			Msg("! DX12: upload reset failed alloc=0x%08x list=0x%08x (%ux%u d=%u fmt=%d)",
 				(unsigned)hrA, (unsigned)hrL, width, height, depth, (int)fmt);
 
-		// 目标资源当前为 ALL_SHADER_RESOURCE → COPY_DEST
+		// 目标资源当前状态 curState → COPY_DEST
 		D3D12_RESOURCE_BARRIER b = {};
 		b.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 		b.Transition.pResource = dst;
-		b.Transition.StateBefore = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE;
+		b.Transition.StateBefore = curState;
 		b.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
 		b.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 		list->ResourceBarrier(1, &b);
@@ -453,7 +472,7 @@ namespace dx12
 		list->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, nullptr);
 
 		b.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-		b.Transition.StateAfter = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE;
+		b.Transition.StateAfter = curState;
 		list->ResourceBarrier(1, &b);
 		list->Close();
 
@@ -531,6 +550,10 @@ namespace dx12
 		e.pitch = pitch;
 		outRowPitch = pitch;
 
+		// 与 UploadTextureSubresource / ClearRTVImmediate 共用同一个上传命令列表与分配器，
+		// 必须持同一把锁串行化：启动期预取线程并发上传纹理时，若不锁会与读回同时
+		// Reset 同一 allocator/list，D3D12 判为非法调用并移除设备（0x887A0001）。
+		std::lock_guard<std::mutex> glock(g_backend.gpuWorkMutex);
 		ID3D12CommandAllocator* alloc = g_backend.uploadAlloc.Get();
 		ID3D12GraphicsCommandList* list = g_backend.uploadList.Get();
 		alloc->Reset();
@@ -626,6 +649,12 @@ namespace dx12
 	bool DescriptorHeap::AllocPersistent(UINT count, D3D12_CPU_DESCRIPTOR_HANDLE& cpu)
 	{
 		Ensure();
+		if (count == 1 && !m_persistFree.empty())
+		{
+			cpu = CPU(m_persistFree.back());
+			m_persistFree.pop_back();
+			return true;
+		}
 		if (m_persistOffset + count > m_capacity)
 		{
 			Msg("! DX12: persistent descriptor heap overflow (%u + %u > %u)", m_persistOffset, count, m_capacity);
@@ -634,6 +663,18 @@ namespace dx12
 		cpu = CPU(m_persistOffset);
 		m_persistOffset += count;
 		return true;
+	}
+
+	void DescriptorHeap::FreePersistent(UINT index)
+	{
+		if (index >= m_persistOffset) return;
+		m_persistFree.push_back(index);
+	}
+
+	UINT DescriptorHeap::IndexOf(D3D12_CPU_DESCRIPTOR_HANDLE cpu) const
+	{
+		if (!m_size || cpu.ptr < m_cpuStart.ptr) return UINT_MAX;
+		return (UINT)((cpu.ptr - m_cpuStart.ptr) / m_size);
 	}
 
 	D3D12_CPU_DESCRIPTOR_HANDLE DescriptorHeap::CPU(UINT index) const	{
@@ -730,16 +771,23 @@ namespace dx12
 		InstallDiagVEH();
 		if (g_backend.valid) return true;
 
-		// shader-visible CBV/SRV/UAV 堆：每个 draw 需固定 14 CBV + 16 SRV 表（根签名范围固定），
-		// 4096 在单帧 ~136 draw 时即溢出；按最坏场景 ~6600 draw/帧 扩到 200000（约 6MB），每帧重置。
-		if (!g_backend.cbvSrvUav.Create(dev, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 200000, true)) return false;
+		// shader-visible CBV/SRV/UAV 堆：每个 draw 固定占用 14 像素 CBV + 14 顶点 CBV
+		// + 16 像素 SRV + 16 顶点 SRV（=60 个描述符，根签名范围固定，即使大部分槽位
+		// 填占位符也必须分配）。
+		// zaton 这类含大量草丛/细节的关卡单帧 draw 数可达 ~7000，60*7000≈42 万，故取 900000
+		// （约 29MB，每帧重置）。注意 D3D12 限制 shader-visible CBV/SRV/UAV 堆最多 1,000,000
+		// 个描述符，超过会直接 CreateDescriptorHeap 失败。容量不足时 Alloc 失败 → 根描述符表
+		// 不绑定 → Draw 读到上一 Draw 的残留描述符，表现为"花屏闪烁"。
+		if (!g_backend.cbvSrvUav.Create(dev, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 900000, true)) return false;
 		if (!g_backend.sampler.Create(dev, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 256, true)) return false;
 		if (!g_backend.ring.Create(dev, 256ull * 1024 * 1024)) return false;
 
-		if (!g_backend.persistentSrv.Create(dev, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 8192, false)) return false;
-		if (!g_backend.persistentUav.Create(dev, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 512, false)) return false;
-		if (!g_backend.persistentRtv.Create(dev, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 512, false)) return false;
-		if (!g_backend.persistentDsv.Create(dev, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 512, false)) return false;
+		// 持久堆槽位当前不回收：材质系统会在画质/灯光切换时销毁重建纹理 SRV，
+		// 8192 在完整关卡几分钟内即可耗尽。放大到 65536（非 shader-visible，仅 CPU 句柄开销）。
+		if (!g_backend.persistentSrv.Create(dev, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 65536, false)) return false;
+		if (!g_backend.persistentUav.Create(dev, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 2048, false)) return false;
+		if (!g_backend.persistentRtv.Create(dev, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 2048, false)) return false;
+		if (!g_backend.persistentDsv.Create(dev, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1024, false)) return false;
 
 		// ---- 一次性上传通道 ----
 		{
@@ -758,8 +806,8 @@ namespace dx12
 		g_backend.dsvDescriptorSize = dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 
 		// ---- 根签名 ----
-		D3D12_ROOT_PARAMETER params[2] = {};
-		// [0] CBV 描述符表：b0..b13
+		D3D12_ROOT_PARAMETER params[4] = {};
+		// [0] CBV 描述符表（像素阶段）：b0..b13
 		D3D12_DESCRIPTOR_RANGE cbvRange = {};
 		cbvRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
 		cbvRange.NumDescriptors = kNumCBVSlots;
@@ -769,8 +817,8 @@ namespace dx12
 		params[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 		params[0].DescriptorTable.NumDescriptorRanges = 1;
 		params[0].DescriptorTable.pDescriptorRanges = &cbvRange;
-		params[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-		// [1] SRV 描述符表：t0..t15
+		params[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		// [1] SRV 描述符表（像素阶段）：t0..t15
 		D3D12_DESCRIPTOR_RANGE srvRange = {};
 		srvRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
 		srvRange.NumDescriptors = kNumSRVSlots;
@@ -780,7 +828,30 @@ namespace dx12
 		params[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 		params[1].DescriptorTable.NumDescriptorRanges = 1;
 		params[1].DescriptorTable.pDescriptorRanges = &srvRange;
-		params[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+		params[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		// [2] SRV 描述符表（顶点阶段）：t0..t15
+		// D3D11 的 VS/PS 是各自独立的寄存器空间，同一 t0 可分别绑定不同资源；
+		// 例如 deffer_detail.vs 读 StructuredBuffer(t0) 做草实例，而其 PS 的 t0 是纹理。
+		// 单表(ALL) 会让 VS 拿到像素端的纹理描述符 → 实例数据全错（GBV 报
+		// "SRV Dimension Expected: BUFFER, In Descriptor: TEXTURE2D, Shader Stage: VERTEX"）。
+		D3D12_DESCRIPTOR_RANGE srvRangeVS = srvRange;
+		params[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		params[2].DescriptorTable.NumDescriptorRanges = 1;
+		params[2].DescriptorTable.pDescriptorRanges = &srvRangeVS;
+		params[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+
+		// [3] CBV 描述符表（顶点阶段）：b0..b13
+		// 与 [2] 同理：D3D11 的 VS/PS 常量缓冲是各自独立的寄存器空间，同一个 b0
+		// 在 VS 和 PS 上可以（而且经常）绑定不同的 CB。原先只有一张 visibility=ALL
+		// 的 CBV 表，绑定侧又写 cbVS[i] ? cbVS[i] : cbPS[i]，于是 PS 的 b0 被 VS 的
+		// b0 顶掉：例如 phase_luminance 中 PS bloom_luminance_3 的 MiddleGray 被
+		// VS stub_notransform_filter 的 screen_res 覆盖，曝光 scale 变成天文数字，
+		// 表现为整屏纯白。拆表后两阶段各自独立。
+		D3D12_DESCRIPTOR_RANGE cbvRangeVS = cbvRange;
+		params[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		params[3].DescriptorTable.NumDescriptorRanges = 1;
+		params[3].DescriptorTable.pDescriptorRanges = &cbvRangeVS;
+		params[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
 
 		xr_vector<D3D12_STATIC_SAMPLER_DESC> samplers;
 		samplers.reserve(kNumSRVSlots);
@@ -788,7 +859,7 @@ namespace dx12
 			samplers.push_back(GetStaticSampler(i));
 
 		D3D12_ROOT_SIGNATURE_DESC rsDesc = {};
-		rsDesc.NumParameters = 2;
+		rsDesc.NumParameters = 4;
 		rsDesc.pParameters = params;
 		rsDesc.NumStaticSamplers = (UINT)samplers.size();
 		rsDesc.pStaticSamplers = samplers.data();
@@ -834,6 +905,33 @@ namespace dx12
 					sd.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 					sd.Texture2D.MipLevels = 1;
 					dev->CreateShaderResourceView(g_backend.dummyTex.Get(), &sd, g_backend.dummySrvCpu);
+				}
+			}
+		}
+
+		// ---- 全零 64KB 常量缓冲 + 其 CBV（persistent 堆），供未绑定的 CBV 槽占位 ----
+		{
+			D3D12_HEAP_PROPERTIES hp = {}; hp.Type = D3D12_HEAP_TYPE_UPLOAD;
+			D3D12_RESOURCE_DESC bd = {};
+			bd.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+			bd.Width = 65536; bd.Height = 1; bd.DepthOrArraySize = 1; bd.MipLevels = 1;
+			bd.Format = DXGI_FORMAT_UNKNOWN; bd.SampleDesc.Count = 1; bd.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+			if (SUCCEEDED(dev->CreateCommittedResource(&hp, D3D12_HEAP_FLAG_NONE, &bd,
+				D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&g_backend.dummyCb))))
+			{
+				void* pMapped = nullptr;
+				D3D12_RANGE rr = { 0, 0 };
+				if (SUCCEEDED(g_backend.dummyCb->Map(0, &rr, &pMapped)) && pMapped)
+					memset(pMapped, 0, 65536);
+
+				D3D12_CPU_DESCRIPTOR_HANDLE cpu = {};
+				if (g_backend.persistentSrv.AllocPersistent(1, cpu) && cpu.ptr)
+				{
+					g_backend.dummyCbvCpu = cpu;
+					D3D12_CONSTANT_BUFFER_VIEW_DESC cbd = {};
+					cbd.BufferLocation = g_backend.dummyCb->GetGPUVirtualAddress();
+					cbd.SizeInBytes = 65536;
+					dev->CreateConstantBufferView(&cbd, g_backend.dummyCbvCpu);
 				}
 			}
 		}

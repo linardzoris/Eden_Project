@@ -4,12 +4,6 @@
 #include "StateManager/dx12StateManager.h"
 #include "StateManager/dx12ShaderResourceStateCache.h"
 
-// [fontbind] 临时诊断：atlas 身份记录定义在 dxFontRender.cpp
-extern ID3DShaderResourceView*	g_r5LastAtlasSrv;
-extern ID3D12Resource*			g_r5LastAtlasRes;
-extern u32						g_r5LastAtlasW, g_r5LastAtlasH;
-extern char						g_r5LastAtlasName[128];
-
 dx12Device	DX12Device;
 dx12Context	DX12Context;
 
@@ -76,6 +70,33 @@ void R5RegisterResourceState(ID3D12Resource* r, D3D12_RESOURCE_STATES s)
 	R5_TrackResource(r, s);
 }
 
+// [sky diag] 临时诊断：纯 CPU 读取，不做 GPU 同步，不会引发跨队列竞态。
+void R5DebugLogSRV(const char* tag, ID3DShaderResourceView* pSrv)
+{
+	if (!pSrv)
+	{
+		Msg("* [srv] %s: <null>", tag);
+		return;
+	}
+	auto* dv = dynamic_cast<dx12ShaderResourceView*>(pSrv);
+	if (!dv)
+	{
+		Msg("* [srv] %s: ptr=%p (not dx12ShaderResourceView)", tag, pSrv);
+		return;
+	}
+	ID3D12Resource* res = dv->resource.Get();
+	UINT w = 0, h = 0, arr = 0, mips = 0, fmt = 0;
+	if (res)
+	{
+		D3D12_RESOURCE_DESC rd = res->GetDesc();
+		w = (UINT)rd.Width; h = rd.Height; arr = rd.DepthOrArraySize; mips = rd.MipLevels; fmt = (UINT)rd.Format;
+	}
+	Msg("* [srv] %s: ptr=%p valid=%d dim=%d fmt=%d res=%p %ux%u arr=%u mips=%u descIdx=%u",
+		tag, pSrv, (int)dv->valid, (int)dv->desc.ViewDimension, (int)dv->desc.Format,
+		res, w, h, arr, mips, dv->descIndex);
+}
+
+
 // D3D12 深度模板资源必须提供具体的 ClearValue 格式（TYPELESS 需映射到 D/S 格式）
 static DXGI_FORMAT DSVFormat(DXGI_FORMAT fmt)
 {
@@ -129,6 +150,21 @@ static D3D12_DEPTH_STENCIL_DESC ConvDepthStencil(const D3D_DEPTH_STENCIL_DESC& d
 	return r;
 }
 
+// D3D12 不允许 alpha 通道使用颜色型 blend 因子（D3D11 允许）。
+// 映射规则：*_COLOR → 对应 *_ALPHA（语义最接近），SRC_ALPHA_SAT 对 alpha 恒为 1 → ONE。
+static D3D12_BLEND AlphaBlend(D3D_BLEND b)
+{
+	switch (b)
+	{
+	case D3D_BLEND_SRC_COLOR:		return D3D12_BLEND_SRC_ALPHA;
+	case D3D_BLEND_INV_SRC_COLOR:	return D3D12_BLEND_INV_SRC_ALPHA;
+	case D3D_BLEND_DEST_COLOR:		return D3D12_BLEND_DEST_ALPHA;
+	case D3D_BLEND_INV_DEST_COLOR:	return D3D12_BLEND_INV_DEST_ALPHA;
+	case D3D_BLEND_SRC_ALPHA_SAT:	return D3D12_BLEND_ONE;
+	default:						return (D3D12_BLEND)b;
+	}
+}
+
 static D3D12_BLEND_DESC ConvBlend(const D3D_BLEND_DESC& d)
 {
 	D3D12_BLEND_DESC r = {};
@@ -141,8 +177,8 @@ static D3D12_BLEND_DESC ConvBlend(const D3D_BLEND_DESC& d)
 		r.RenderTarget[i].SrcBlend = (D3D12_BLEND)d.RenderTarget[i].SrcBlend;
 		r.RenderTarget[i].DestBlend = (D3D12_BLEND)d.RenderTarget[i].DestBlend;
 		r.RenderTarget[i].BlendOp = (D3D12_BLEND_OP)d.RenderTarget[i].BlendOp;
-		r.RenderTarget[i].SrcBlendAlpha = (D3D12_BLEND)d.RenderTarget[i].SrcBlendAlpha;
-		r.RenderTarget[i].DestBlendAlpha = (D3D12_BLEND)d.RenderTarget[i].DestBlendAlpha;
+		r.RenderTarget[i].SrcBlendAlpha = AlphaBlend(d.RenderTarget[i].SrcBlendAlpha);
+		r.RenderTarget[i].DestBlendAlpha = AlphaBlend(d.RenderTarget[i].DestBlendAlpha);
 		r.RenderTarget[i].BlendOpAlpha = (D3D12_BLEND_OP)d.RenderTarget[i].BlendOpAlpha;
 		r.RenderTarget[i].LogicOp = D3D12_LOGIC_OP_NOOP;
 		r.RenderTarget[i].RenderTargetWriteMask = d.RenderTarget[i].RenderTargetWriteMask;
@@ -163,6 +199,8 @@ HRESULT dx12Device::CreateBuffer(const D3D_BUFFER_DESC* pDesc, const D3D_SUBRESO
 	buf->size = pDesc->ByteWidth;
 	buf->immutable = (pDesc->Usage == D3D_USAGE_IMMUTABLE);
 	buf->isConstant = (pDesc->BindFlags & D3D_BIND_CONSTANT_BUFFER) != 0;
+	buf->structureByteStride = pDesc->StructureByteStride;
+	buf->miscFlags = pDesc->MiscFlags;
 
 	D3D12_HEAP_PROPERTIES heap = {};
 	heap.Type = D3D12_HEAP_TYPE_UPLOAD;
@@ -266,10 +304,11 @@ HRESULT dx12Device::CreateTexture2D(const D3D_TEXTURE2D_DESC* pDesc, const D3D_S
 
 	if (pInit && pInit->pSysMem && !bStagingRead)
 	{
-		// 纹理一律 DEFAULT 堆：走一次性上传通道（内部完成 COPY_DEST↔ALL_SHADER_RESOURCE 转换）
+		// 纹理一律 DEFAULT 堆：走一次性上传通道（内部 COPY_DEST→curState 往返，上传后仍为 initState）。
+		// 传入 tex->state（= 创建时的 initState）：RT/UAV/DS 纹理的初始状态并非 ALL_SHADER_RESOURCE，
+		// 若这里硬编码会导致 ResourceBarrier StateBefore 不匹配而被判非法调用。
 		dx12::UploadTextureSubresource(tex->resource.Get(), 0, pInit->pSysMem, pInit->SysMemPitch,
-			pDesc->Width, pDesc->Height, 1, pDesc->Format, pDesc->Format);
-		tex->state = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE;
+			pDesc->Width, pDesc->Height, 1, pDesc->Format, pDesc->Format, tex->state);
 	}
 
 	R5_TrackResource(tex->resource.Get(), tex->state);
@@ -310,18 +349,25 @@ HRESULT dx12Device::CreateTexture3D(const D3D_TEXTURE3D_DESC* pDesc, const D3D_S
 	tex->desc.Height = pDesc->Height;
 	tex->desc.Format = pDesc->Format;
 	tex->desc.MipLevels = rd.MipLevels;
+	tex->volDepth = depth;
 	tex->state = initState;
 
 	if (pInit && pInit->pSysMem)
 	{
 		dx12::UploadTextureSubresource(tex->resource.Get(), 0, pInit->pSysMem, pInit->SysMemPitch,
-			pDesc->Width, pDesc->Height, depth, pDesc->Format, pDesc->Format);
-		tex->state = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE;
+			pDesc->Width, pDesc->Height, depth, pDesc->Format, pDesc->Format, tex->state);
 	}
 
 	R5_TrackResource(tex->resource.Get(), tex->state);
 	*ppTexture = tex;
 	return S_OK;
+}
+
+// 释放 SRV 时归还持久描述符槽位；否则 surface_set 之类的重建路径会持续耗尽堆。
+dx12ShaderResourceView::~dx12ShaderResourceView()
+{
+	if (descIndex != 0xFFFFFFFFu && dx12::g_backend.valid)
+		dx12::g_backend.persistentSrv.FreePersistent(descIndex);
 }
 
 HRESULT dx12Device::CreateShaderResourceView(ID3DResource* pResource, const D3D_SHADER_RESOURCE_VIEW_DESC* pDesc, ID3DShaderResourceView** ppSRView)
@@ -341,6 +387,7 @@ HRESULT dx12Device::CreateShaderResourceView(ID3DResource* pResource, const D3D_
 	}
 	srv->cpu = cpu;
 	srv->valid = true;
+	srv->descIndex = dx12::g_backend.persistentSrv.IndexOf(cpu);
 
 	if (pDesc)
 	{
@@ -356,9 +403,45 @@ HRESULT dx12Device::CreateShaderResourceView(ID3DResource* pResource, const D3D_
 		switch (d.ViewDimension)
 		{
 		case D3D12_SRV_DIMENSION_BUFFER:
+		{
+			// Buffer 资源本身 Format 恒为 UNKNOWN，不能走上面的"继承资源格式"
+			// （对 buffer 仍是 UNKNOWN）。DX12 下 buffer SRV 必须三选一：
+			//  typed(具体格式) / structured(UNKNOWN + StructureByteStride) / raw(R32_TYPELESS + RAW)。
+			dx12Buffer* pBuf = nullptr;
+			D3D_RESOURCE_DIMENSION dim = {};
+			pResource->GetType(&dim);
+			if (dim == D3D_RESOURCE_DIMENSION_BUFFER)
+				pBuf = static_cast<dx12Buffer*>(pResource);
+
+			d.Format = pDesc->Format;
 			d.Buffer.FirstElement = pDesc->Buffer.FirstElement;
 			d.Buffer.NumElements = pDesc->Buffer.NumElements;
+
+			if (d.Format != DXGI_FORMAT_UNKNOWN)
+			{
+				// typed buffer SRV：格式由调用方给出，保持原样
+				break;
+			}
+
+			const UINT stride = pBuf ? pBuf->structureByteStride : 0;
+			if (stride)
+			{
+				// structured buffer：UNKNOWN 格式必须配非零 stride
+				d.Buffer.StructureByteStride = stride;
+			}
+			else if (pBuf && (pBuf->miscFlags & D3D_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS))
+			{
+				// byte address (raw) buffer
+				d.Format = DXGI_FORMAT_R32_TYPELESS;
+				d.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
+			}
+			else
+			{
+				Msg("! DX12: buffer SRV with UNKNOWN format but no structured stride/raw flag; assuming structured stride=4");
+				d.Buffer.StructureByteStride = 4;
+			}
 			break;
+		}
 		case D3D12_SRV_DIMENSION_TEXTURE2D:
 			d.Texture2D.MostDetailedMip = pDesc->Texture2D.MostDetailedMip;
 			d.Texture2D.MipLevels = pDesc->Texture2D.MipLevels;
@@ -394,6 +477,20 @@ HRESULT dx12Device::CreateShaderResourceView(ID3DResource* pResource, const D3D_
 			d.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 			d.Buffer.FirstElement = 0;
 			d.Buffer.NumElements = (UINT)(rd.Width / 4);
+			dx12Buffer* pBuf = static_cast<dx12Buffer*>(pResource);
+			if (pBuf->structureByteStride)
+			{
+				// structured：保持 UNKNOWN 格式 + stride，元素数按 stride 计
+				d.Format = DXGI_FORMAT_UNKNOWN;
+				d.Buffer.StructureByteStride = pBuf->structureByteStride;
+				d.Buffer.NumElements = (UINT)(rd.Width / pBuf->structureByteStride);
+			}
+			else
+			{
+				// 无 stride：按 raw byte-address 视图创建
+				d.Format = DXGI_FORMAT_R32_TYPELESS;
+				d.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
+			}
 		}
 		else if (rd.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D)
 		{
@@ -403,8 +500,18 @@ HRESULT dx12Device::CreateShaderResourceView(ID3DResource* pResource, const D3D_
 		}
 		else
 		{
+			// cube 纹理（DDS cube / 环境贴图）：ArraySize 为 6 的倍数且原始 desc 带 TEXTURECUBE 标记，
+			// 必须建 TEXTURECUBE 视图，否则 shader 按 cube 采样时维度不匹配（参考 dx11SH_Texture.cpp 的 D3D11 逻辑）
+			dx12Texture* pTex = static_cast<dx12Texture*>(pResource);
+			const bool isCube = (pTex->desc.MiscFlags & D3D_RESOURCE_MISC_TEXTURECUBE) != 0;
+			if (isCube && rd.DepthOrArraySize >= 6)
+			{
+				d.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
+				d.TextureCube.MostDetailedMip = 0;
+				d.TextureCube.MipLevels = rd.MipLevels;
+			}
 			// 默认视图语义：2D 纹理若含多个 array slice，默认覆盖整个数组
-			if (rd.DepthOrArraySize > 1)
+			else if (rd.DepthOrArraySize > 1)
 			{
 				d.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
 				d.Texture2DArray.MostDetailedMip = 0;
@@ -446,8 +553,22 @@ HRESULT dx12Device::CreateRenderTargetView(ID3DResource* pResource, const D3D_RE
 		D3D12_RENDER_TARGET_VIEW_DESC d = {};
 		d.Format = pDesc->Format;
 		d.ViewDimension = (D3D12_RTV_DIMENSION)pDesc->ViewDimension;
-		d.Texture2D.MipSlice = pDesc->Texture2D.MipSlice;
-		d.Texture2D.PlaneSlice = 0;
+		if (d.ViewDimension == D3D12_RTV_DIMENSION_TEXTURE2DARRAY)
+		{
+			// 数组视图必须整体透传：原先只拷了 Texture2D.MipSlice，
+			// FirstArraySlice/ArraySize 恒为 0。ArraySize=0 在 D3D12 里是非法的
+			// 视图描述符（属非法调用，可直接移除设备，进而让 vid_restart 报
+			// "CreateTexture2D failed 0x887a0005"）；即使侥幸通过，反射 cubemap
+			// 的 6 个面也会全部指向 slice 0 而互相覆盖 —— SSLR/VSLR 因此失效。
+			d.Texture2DArray.MipSlice = pDesc->Texture2DArray.MipSlice;
+			d.Texture2DArray.FirstArraySlice = pDesc->Texture2DArray.FirstArraySlice;
+			d.Texture2DArray.ArraySize = pDesc->Texture2DArray.ArraySize;
+		}
+		else
+		{
+			d.Texture2D.MipSlice = pDesc->Texture2D.MipSlice;
+			d.Texture2D.PlaneSlice = 0;
+		}
 		dev->CreateRenderTargetView(rtv->resource.Get(), &d, cpu);
 	}
 	else
@@ -478,7 +599,18 @@ HRESULT dx12Device::CreateDepthStencilView(ID3DResource* pResource, const D3D_DE
 		d.Format = pDesc->Format;
 		d.ViewDimension = (D3D12_DSV_DIMENSION)pDesc->ViewDimension;
 		d.Flags = D3D12_DSV_FLAG_NONE;
-		d.Texture2D.MipSlice = pDesc->Texture2D.MipSlice;
+		if (d.ViewDimension == D3D12_DSV_DIMENSION_TEXTURE2DARRAY)
+		{
+			// 同 CreateRenderTargetView：数组深度视图必须整体透传，
+			// 否则 FirstArraySlice/ArraySize 恒为 0（非法描述符 / 永远只写 slice 0）。
+			d.Texture2DArray.MipSlice = pDesc->Texture2DArray.MipSlice;
+			d.Texture2DArray.FirstArraySlice = pDesc->Texture2DArray.FirstArraySlice;
+			d.Texture2DArray.ArraySize = pDesc->Texture2DArray.ArraySize;
+		}
+		else
+		{
+			d.Texture2D.MipSlice = pDesc->Texture2D.MipSlice;
+		}
 		dev->CreateDepthStencilView(dsv->resource.Get(), &d, cpu);
 	}
 	else
@@ -706,14 +838,6 @@ void dx12Context::Unmap(ID3DResource* pResource, UINT)
 			ID3D12GraphicsCommandList* cl = Get();
 			if (cl)
 			{
-				static bool s_theoraDiagOnce = false;	// [theoradiag] 临时诊断
-				if (!s_theoraDiagOnce)
-				{
-					s_theoraDiagOnce = true;
-					Msg("* [theoradiag] Unmap copy on main cl: %ux%u fmt=%d ringOff=%llu",
-						t->desc.Width, t->desc.Height, (int)t->desc.Format,
-						(unsigned long long)(dynFootprint.Offset));
-				}
 				// 用纹理真实状态做转换：SRV 纹理是 ALL_SHADER_RESOURCE，
 				// 之前写死 GENERIC_READ 属非法 barrier，驱动可导致 device removed
 				const D3D12_RESOURCE_STATES cur = t->state;
@@ -739,6 +863,7 @@ void dx12Context::Unmap(ID3DResource* pResource, UINT)
 
 				std::swap(b.Transition.StateBefore, b.Transition.StateAfter);
 				cl->ResourceBarrier(1, &b);
+				dx12::DumpDeviceErrors("unmap_copy");
 			}
 			dynTex = nullptr;
 			return;
@@ -768,16 +893,17 @@ void dx12Context::CopyResource(ID3DResource* pDst, ID3DResource* pSrc)
 	if (!pDst || !pSrc || !pDst->resource || !pSrc->resource) return;
 	ID3D12GraphicsCommandList* cl = Get();
 	if (!cl) return;
-	D3D12_RESOURCE_BARRIER b = {};
-	b.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-	b.Transition.pResource = pSrc->resource.Get();
-	b.Transition.StateBefore = D3D12_RESOURCE_STATE_GENERIC_READ;
-	b.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
-	b.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-	cl->ResourceBarrier(1, &b);
+
+	// 源与目标都必须经过状态跟踪器：
+	// 旧实现把源的 Before 写死为 GENERIC_READ、且完全不处理目标，
+	// 而这里的目标是处于 DEPTH_WRITE 的深度/位置 RT、源是处于 DEPTH_WRITE 的主深度，
+	// 于是每帧产生非法 barrier（回读状态与真实状态不符）+ 非法拷贝目标，
+	// 调试层会为每次 Draw/Copy 各报一条告警（数万~数百万条），并可能触发设备移除。
+	// 交给跟踪器后，资源留在 COPY_SOURCE/COPY_DEST，后续按需（SRV/DSV/RTV）再转换。
+	R5_TransitionResource(cl, pSrc->resource.Get(), D3D12_RESOURCE_STATE_COPY_SOURCE);
+	R5_TransitionResource(cl, pDst->resource.Get(), D3D12_RESOURCE_STATE_COPY_DEST);
 	cl->CopyResource(pDst->resource.Get(), pSrc->resource.Get());
-	std::swap(b.Transition.StateBefore, b.Transition.StateAfter);
-	cl->ResourceBarrier(1, &b);
+	dx12::DumpDeviceErrors("copy_resource");
 }
 
 void dx12Context::ClearRenderTargetView(ID3DRenderTargetView* pRTV, const FLOAT color[4])
@@ -815,9 +941,13 @@ void dx12Context::ClearDepthStencilView(ID3DDepthStencilView* pDSV, UINT flags, 
 void dx12Context::OMSetRenderTargets(UINT num, ID3DRenderTargetView* const* ppRTV, ID3DDepthStencilView* pDSV)
 {
 	if (num > 4) num = 4;
-	rtCount = num ? num : 1;
+	// rtCount 跟踪实际有效 RTV 数量（与 PSO key 对齐），空槽压缩后 n 即为有效数
+	UINT validN = 0;
+	for (UINT i = 0; i < num; ++i) if (ppRTV && ppRTV[i] && ppRTV[i]->valid) ++validN;
+	rtCount = validN;
 	for (UINT i = 0; i < 4; ++i) rt[i] = (i < num) ? ppRTV[i] : nullptr;
 	zb = pDSV;
+	bbBound = false;
 	rtDirty = true;
 
 	ID3D12GraphicsCommandList* cl = Get();
@@ -825,6 +955,8 @@ void dx12Context::OMSetRenderTargets(UINT num, ID3DRenderTargetView* const* ppRT
 	D3D12_CPU_DESCRIPTOR_HANDLE handles[4] = {};
 	UINT n = 0;
 	LONG scW = 0, scH = 0;
+	// D3D12 OMSetRenderTargets 要求所有 handle 有效（不能传 null），故压缩跳过空槽。
+	// PSO key 同步用 rtCount=n，使 RTVFormats 与实际绑定对齐。
 	for (UINT i = 0; i < num; ++i)
 	{
 		if (ppRTV[i] && ppRTV[i]->valid)
@@ -863,10 +995,18 @@ void dx12Context::OMSetRenderTargets(UINT num, ID3DRenderTargetView* const* ppRT
 	}
 }
 
-void dx12Context::BindBackbufferRTV(D3D12_CPU_DESCRIPTOR_HANDLE rtv, UINT width, UINT height)
+void dx12Context::BindBackbufferRTV(D3D12_CPU_DESCRIPTOR_HANDLE rtv, UINT width, UINT height, DXGI_FORMAT fmt)
 {
 	ID3D12GraphicsCommandList* cl = Get();
 	if (!cl || !width || !height) return;
+
+	// 更新上下文 RT 状态：PSO 合成依赖 rtCount/格式信息，裸 backbuffer 无 rt[] 包装
+	rtCount = 1;
+	for (UINT i = 0; i < 4; ++i) rt[i] = nullptr;
+	zb = nullptr;
+	bbBound = true;
+	bbFormat = fmt;
+	rtDirty = true;
 
 	D3D12_VIEWPORT vp = { 0.f, 0.f, float(width), float(height), 0.f, 1.f };
 	D3D12_RECT	 sr = { 0, 0, LONG(width), LONG(height) };
@@ -1005,44 +1145,6 @@ void dx12Context::FlushPipeline()
 	dx12::Ensure();
 	if (!dx12::g_backend.valid) return;
 
-	// [fontbind] Draw 时 slot0 SRV 身份/描述诊断（身份变化或每500 draw，上限80条）
-	{
-		static ID3DShaderResourceView* s_lastS0 = reinterpret_cast<ID3DShaderResourceView*>(1);
-		static int s_logCount = 0;
-		static int s_drawCount = 0;
-		++s_drawCount;
-		ID3DShaderResourceView* s0 = SRVSManager.GetPS(0);
-		if (((s0 != s_lastS0) || (s_drawCount % 500) == 0) && s_logCount < 80)
-		{
-			s_lastS0 = s0;
-			++s_logCount;
-			auto* dv = dynamic_cast<dx12ShaderResourceView*>(s0);
-			ID3D12Resource* rr0 = (dv && dv->resource) ? dv->resource.Get() : nullptr;
-			const auto& bd0 = StateManager.m_BDesc.RenderTarget[0];
-			Msg("* [fontbind] draw#%d vs=%p ps=%p s0=%p valid=%d cpu=%llu fmt=%d dim=%d res=%p matchSrv=%d matchRes=%d blend[en=%d src=%d dst=%d] zEn=%d zWr=%d cull=%d | atlas '%s' %ux%u srv=%p res=%p",
-				s_drawCount, vs, ps, s0, dv ? (int)dv->valid : -1,
-				dv ? (unsigned long long)dv->cpu.ptr : 0ull,
-				dv ? (int)dv->desc.Format : -1,
-				dv ? (int)dv->desc.ViewDimension : -1,
-				rr0,
-				(int)(s0 == g_r5LastAtlasSrv),
-				(int)(rr0 == g_r5LastAtlasRes),
-				(int)bd0.BlendEnable, (int)bd0.SrcBlend, (int)bd0.DestBlend,
-				(int)StateManager.m_DSDesc.DepthEnable,
-				(int)StateManager.m_DSDesc.DepthWriteMask,
-				(int)StateManager.m_RDesc.CullMode,
-				g_r5LastAtlasName[0] ? g_r5LastAtlasName : "?",
-				g_r5LastAtlasW, g_r5LastAtlasH, g_r5LastAtlasSrv, g_r5LastAtlasRes);
-			char slotMap[128]; slotMap[0] = 0; int used = 0;
-			for (UINT q = 0; q < 16 && used < 110; ++q)
-			{
-				if (SRVSManager.GetPS(q))
-					used += xr_sprintf(slotMap + used, sizeof(slotMap) - used, "%u ", q);
-			}
-			Msg("* [fontbind]   non-null PS slots: [%s]", slotMap);
-		}
-	}
-
 	// ---- PSO key ----
 	UINT64 key = (UINT64)(UINT_PTR)vs * 1000003ull;
 	key = FNV(&ps, sizeof(ps), key);
@@ -1056,7 +1158,11 @@ void dx12Context::FlushPipeline()
 	if (ds) key = FNV(&ds, sizeof(ds), key);
 	for (UINT i = 0; i < 4; ++i)
 	{
-		DXGI_FORMAT f = (rt[i] && rt[i]->resource) ? rt[i]->resource->GetDesc().Format : DXGI_FORMAT_UNKNOWN;
+		DXGI_FORMAT f = DXGI_FORMAT_UNKNOWN;
+		if (bbBound && i == 0)
+			f = bbFormat;
+		else if (rt[i] && rt[i]->resource)
+			f = rt[i]->resource->GetDesc().Format;
 		key = FNV(&f, sizeof(f), key);
 	}
 	DXGI_FORMAT dsvFmt = (zb && zb->resource) ? DXGI_FORMAT_D24_UNORM_S8_UINT : DXGI_FORMAT_UNKNOWN;
@@ -1084,8 +1190,24 @@ void dx12Context::FlushPipeline()
 		d.NodeMask = 0;
 		d.SampleDesc.Count = 1;
 		d.NumRenderTargets = rtCount;
-		for (UINT i = 0; i < 4; ++i)
-			d.RTVFormats[i] = (i < rtCount && rt[i] && rt[i]->resource) ? rt[i]->resource->GetDesc().Format : DXGI_FORMAT_UNKNOWN;
+			// D3D12 要求 i < NumRenderTargets 的 RTVFormat 不能为 UNKNOWN。
+			// backbuffer 直通时 rt[] 为空，用 bbFormat；否则用 rt[] 资源格式。
+			for (UINT i = 0; i < 4; ++i)
+			{
+				if (i >= rtCount) { d.RTVFormats[i] = DXGI_FORMAT_UNKNOWN; continue; }
+				if (bbBound && i == 0)
+					d.RTVFormats[i] = bbFormat;
+				else if (rt[i] && rt[i]->resource)
+					d.RTVFormats[i] = rt[i]->resource->GetDesc().Format;
+				else
+				{
+					// 兜底：首个有效格式或 R8G8B8A8_UNORM
+					DXGI_FORMAT fb = DXGI_FORMAT_R8G8B8A8_UNORM;
+					for (UINT j = 0; j < rtCount; ++j)
+						if (rt[j] && rt[j]->resource) { fb = rt[j]->resource->GetDesc().Format; break; }
+					d.RTVFormats[i] = fb;
+				}
+			}
 		d.DSVFormat = dsvFmt;
 
 		switch (topology)
@@ -1119,31 +1241,93 @@ void dx12Context::FlushPipeline()
 
 	if (!pso) return;
 
+	// ---- 每次 Draw 重新断言已绑定 RT/DS 的状态 ----
+	// CBackend::set_RT/set_ZB 有"值未变则不改"的早期退出（D3D11 由驱动兜底，没问题），
+	// 所以 OMSetRenderTargets 可能整帧都不被调用；而 CopyResource / SRV 绑定会改变
+	// 资源的真实状态（例如 rt_Generic_0 作为拷贝源后处于 COPY_SOURCE）。此时若仍把它
+	// 当渲染目标使用，就是非法状态——GBV 报 "COPY_SOURCE ... invalid for use as a
+	// render target"，实机上可直接挂起设备(0x887A0006)。
+	// 这里以跟踪表为准逐 Draw 校正，状态一致时 TransitionResource 会直接返回，开销可忽略。
+	for (UINT i = 0; i < rtCount; ++i)
+	{
+		auto* rv = dynamic_cast<dx12RenderTargetView*>(rt[i]);
+		if (rv && rv->resource)
+			R5_TransitionResource(cl, rv->resource.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+	}
+	{
+		auto* dv = dynamic_cast<dx12DepthStencilView*>(zb);
+		if (dv && dv->resource)
+			R5_TransitionResource(cl, dv->resource.Get(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
+	}
+
 	cl->SetPipelineState(pso);
 	cl->SetGraphicsRootSignature(dx12::GetRootSignature());
 
 	ID3D12DescriptorHeap* heaps[1] = { dx12::g_backend.cbvSrvUav.Heap() };
 	cl->SetDescriptorHeaps(1, heaps);
 
-	// ---- CBV 表（b0..b13） ----
-	D3D12_CPU_DESCRIPTOR_HANDLE cbvCpu = {};
-	D3D12_GPU_DESCRIPTOR_HANDLE cbvGpu = {};
-	if (dx12::g_backend.cbvSrvUav.Alloc(14, cbvCpu, cbvGpu))
+	// ---- CBV 表（b0..b13）：PS / VS 必须分成两张表 ----
+	// D3D11 的 VS 与 PS 常量缓冲是各自独立的寄存器空间，同一个 b0 在 VS 和 PS 上
+	// 可以绑定不同的 CB。若只填一张表（原来写 cbVS[i] ? cbVS[i] : cbPS[i]），PS 的
+	// 常量会被同索引的 VS 常量顶掉——例如 phase_luminance 中 PS bloom_luminance_3
+	// 的 MiddleGray 被 VS stub_notransform_filter 的 screen_res 覆盖，曝光 scale
+	// 变成天文数字，整屏纯白。故按 visibility 拆成 [0]=PS、[3]=VS 两张表。
 	{
-		UINT size = dx12::g_backend.cbvSrvUav.DescriptorSize();
-		for (UINT i = 0; i < 14; ++i)
+		D3D12_CPU_DESCRIPTOR_HANDLE cbvCpu = {};
+		D3D12_GPU_DESCRIPTOR_HANDLE cbvGpu = {};
+		if (dx12::g_backend.cbvSrvUav.Alloc(14, cbvCpu, cbvGpu))
 		{
-			D3D12_CPU_DESCRIPTOR_HANDLE dst = cbvCpu; dst.ptr += (SIZE_T)i * size;
-			ID3DBuffer* b = cbVS[i] ? cbVS[i] : cbPS[i];
-			if (b && b->resource)
+			UINT size = dx12::g_backend.cbvSrvUav.DescriptorSize();
+			for (UINT i = 0; i < 14; ++i)
 			{
-				D3D12_CONSTANT_BUFFER_VIEW_DESC cbd = {};
-				cbd.BufferLocation = b->gpuVA;
-				cbd.SizeInBytes = (b->size + 255) & ~255u;
-				dx12::GetD3D12Device()->CreateConstantBufferView(&cbd, dst);
+				D3D12_CPU_DESCRIPTOR_HANDLE dst = cbvCpu; dst.ptr += (SIZE_T)i * size;
+				ID3DBuffer* b = cbPS[i];
+				if (b && b->resource)
+				{
+					D3D12_CONSTANT_BUFFER_VIEW_DESC cbd = {};
+					cbd.BufferLocation = b->gpuVA;
+					cbd.SizeInBytes = (b->size + 255) & ~255u;
+					dx12::GetD3D12Device()->CreateConstantBufferView(&cbd, dst);
+				}
+				else if (dx12::g_backend.dummyCbvCpu.ptr)
+				{
+					// 本 Draw 未绑定的常量缓冲槽：填全零 CBV。
+					// 留空（复用上一 Draw 的堆内容）会让着色器读到残留常量，
+					// GBV 报 "Uninitialized descriptor accessed ... CBV ... PIXEL"。
+					dx12::GetD3D12Device()->CopyDescriptorsSimple(1, dst,
+						dx12::g_backend.dummyCbvCpu, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+				}
 			}
+			cl->SetGraphicsRootDescriptorTable(0, cbvGpu);
 		}
-		cl->SetGraphicsRootDescriptorTable(0, cbvGpu);
+	}
+
+	// ---- CBV 表（顶点阶段 b0..b13）----
+	{
+		D3D12_CPU_DESCRIPTOR_HANDLE cbvCpu = {};
+		D3D12_GPU_DESCRIPTOR_HANDLE cbvGpu = {};
+		if (dx12::g_backend.cbvSrvUav.Alloc(14, cbvCpu, cbvGpu))
+		{
+			UINT size = dx12::g_backend.cbvSrvUav.DescriptorSize();
+			for (UINT i = 0; i < 14; ++i)
+			{
+				D3D12_CPU_DESCRIPTOR_HANDLE dst = cbvCpu; dst.ptr += (SIZE_T)i * size;
+				ID3DBuffer* b = cbVS[i];
+				if (b && b->resource)
+				{
+					D3D12_CONSTANT_BUFFER_VIEW_DESC cbd = {};
+					cbd.BufferLocation = b->gpuVA;
+					cbd.SizeInBytes = (b->size + 255) & ~255u;
+					dx12::GetD3D12Device()->CreateConstantBufferView(&cbd, dst);
+				}
+				else if (dx12::g_backend.dummyCbvCpu.ptr)
+				{
+					dx12::GetD3D12Device()->CopyDescriptorsSimple(1, dst,
+						dx12::g_backend.dummyCbvCpu, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+				}
+			}
+			cl->SetGraphicsRootDescriptorTable(3, cbvGpu);
+		}
 	}
 
 	// ---- SRV 表（t0..t15） ----
@@ -1170,6 +1354,35 @@ void dx12Context::FlushPipeline()
 			}
 		}
 		cl->SetGraphicsRootDescriptorTable(1, srvGpu);
+	}
+
+	// ---- SRV 表（顶点阶段 t0..t15）----
+	// 引擎用 SRVSManager.SetVSResource 单独登记顶点阶段的 SRV（如草实例的
+	// StructuredBuffer deffer_detail.vs:t0），必须绑到独立的 VERTEX 表上。
+	{
+		D3D12_CPU_DESCRIPTOR_HANDLE srvCpu = {};
+		D3D12_GPU_DESCRIPTOR_HANDLE srvGpu = {};
+		if (dx12::g_backend.cbvSrvUav.Alloc(16, srvCpu, srvGpu))
+		{
+			UINT size = dx12::g_backend.cbvSrvUav.DescriptorSize();
+			for (UINT i = 0; i < 16; ++i)
+			{
+				D3D12_CPU_DESCRIPTOR_HANDLE dst = srvCpu; dst.ptr += (SIZE_T)i * size;
+				ID3DShaderResourceView* srv = SRVSManager.GetVS(i);
+				if (srv && srv->valid)
+				{
+					auto* dv = dynamic_cast<dx12ShaderResourceView*>(srv);
+					if (dv && dv->resource)
+						R5_TransitionResource(cl, dv->resource.Get(), D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
+					dx12::GetD3D12Device()->CopyDescriptorsSimple(1, dst, srv->cpu, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+				}
+				else if (dx12::g_backend.dummySrvCpu.ptr)
+				{
+					dx12::GetD3D12Device()->CopyDescriptorsSimple(1, dst, dx12::g_backend.dummySrvCpu, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+				}
+			}
+			cl->SetGraphicsRootDescriptorTable(2, srvGpu);
+		}
 	}
 
 	// ---- IA ----

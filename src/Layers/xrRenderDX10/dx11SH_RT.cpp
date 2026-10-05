@@ -255,6 +255,9 @@ void CRTC::create(LPCSTR Name, u32 size, DxgiFormat f, CRT::CRTCreationFlags Cre
 		desc.MipLevels = log2(dwSize) + 1;
 	}
 
+	// 失败时不要留下上一次的陈旧指针：否则后续 CreateRenderTargetView 会在旧资源上
+	// 继续建视图，把真正的错误（设备移除）掩盖成"视图维度非法"的假象。
+	pSurface = nullptr;
 	CHK_DX(RDevice->CreateTexture2D(&desc, nullptr, &pSurface));
 
 	D3D_RENDER_TARGET_VIEW_DESC descRTV{};

@@ -2,11 +2,15 @@
 #include "dx12ConstantBuffer.h"
 #include "dx12BufferUtils.h"
 #include "dx12Backend.h"
+#include "../xrRender/dxRenderDeviceRender.h"
 
 dx12ConstantBuffer::~dx12ConstantBuffer()
 {
-	// 注：不移除设备侧登记（DX12 无 dx10 的 _DeleteConstantBuffer 语义），
-	// 仅释放本对象持有的资源。
+	// 必须从资源管理器注销：与 DX10 一致（DX10 析构首行即调用此接口）。
+	// 若省略，已释放的常量缓冲仍留在 v_constant_buffer 中，后续
+	// _CreateConstantBuffer 去重遍历时会解引用悬垂指针并把它当作可复用对象
+	// 返回，最终导致 ref_cbuffer 二次释放（xr_delete<dx12ConstantBuffer> 崩溃）。
+	DEV->_DeleteConstantBuffer(this);
 	_RELEASE(m_pBuffer);
 	xr_free(m_pBufferData);
 }

@@ -505,6 +505,14 @@ CRenderTarget::CRenderTarget()
 	// NORMAL
 	{
 		rt_Position.create(r2_RT_P, s_dwWidth, s_dwHeight, DxgiFormat::DXGI_FORMAT_R24G8_TYPELESS);
+#ifdef USE_DX12
+		// DX12：主深度使用独立资源（R24G8_TYPELESS → DSV D24_UNORM_S8_UINT，
+		// 与主渲染 PSO 的 DSVFormat 一致）。这样深度目标与 rt_Position（s_position
+		// 采样源）不是同一资源，消除"同一资源同时作为 depth 与 SRV"的状态冲突；
+		// 与 DX11 相同：场景深度写入该缓冲，随后由 ZBUFFER_COPY 拷入 rt_Position。
+		rt_MainDepth.create("$user$main_depth", s_dwWidth, s_dwHeight, DxgiFormat::DXGI_FORMAT_R24G8_TYPELESS);
+		dx12::SetRenderDSV(rt_MainDepth->pZRT);
+#endif
 
 		rt_Surface.create(r2_RT_S, s_dwWidth, s_dwHeight, DxgiFormat::DXGI_FORMAT_R8G8B8A8_UNORM);
 		rt_Normal.create(r2_RT_N, s_dwWidth, s_dwHeight, DxgiFormat::DXGI_FORMAT_R16G16B16A16_UNORM);

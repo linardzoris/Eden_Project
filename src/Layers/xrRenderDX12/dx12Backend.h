@@ -35,6 +35,12 @@ namespace dx12
 		bool	Alloc(UINT count, D3D12_CPU_DESCRIPTOR_HANDLE& cpu, D3D12_GPU_DESCRIPTOR_HANDLE& gpu);
 		// 永久分配（不随帧重置）：用于纹理 SRV / RTV / DSV 等生命周期与资源一致的描述符
 		bool	AllocPersistent(UINT count, D3D12_CPU_DESCRIPTOR_HANDLE& cpu);
+		// 归还永久槽位。引擎（尤其 surface_set）会反复重建视图，D3D12 不会自动回收，
+		// 不归还则堆会随帧数单调耗尽，最终所有视图创建失败。
+		void	FreePersistent(UINT index);
+		UINT	IndexOf(D3D12_CPU_DESCRIPTOR_HANDLE cpu) const;
+		UINT	PersistUsed() const { return m_persistOffset - (UINT)m_persistFree.size(); }
+		UINT	Capacity() const { return m_capacity; }
 		D3D12_CPU_DESCRIPTOR_HANDLE CPU(UINT index) const;
 		D3D12_GPU_DESCRIPTOR_HANDLE GPU(UINT index) const;
 
@@ -48,6 +54,7 @@ namespace dx12
 		UINT							m_capacity = 0;
 		UINT							m_offset = 0;
 		UINT							m_persistOffset = 0;
+		std::vector<UINT>				m_persistFree;
 	};
 
 	//--------------------------------------------------------------------------
@@ -95,6 +102,12 @@ namespace dx12
 		D3D12_CPU_DESCRIPTOR_HANDLE	dummySrvCpu = {};
 		ComPtr<ID3D12Resource>		dummyTex;
 
+		// 全零 64KB 常量缓冲的 CBV（persistent 堆）：FlushPipeline 为"本 Draw 未绑定
+		// 常量缓冲"的槽位填充此描述符。留空会被 GBV 判为 Uninitialized descriptor，
+		// 实机上着色器读到的是上一 Draw 残留的常量（光照/环境色错乱 → 画面泛白）。
+		D3D12_CPU_DESCRIPTOR_HANDLE	dummyCbvCpu = {};
+		ComPtr<ID3D12Resource>		dummyCb;
+
 		UINT			rtvDescriptorSize = 0;
 		UINT			dsvDescriptorSize = 0;
 
@@ -120,8 +133,12 @@ namespace dx12
 
 	// 把 CPU 数据上传到默认堆纹理的子资源 0（内部走一次性命令列表 + 围栏等待），
 	// 并在完成后把资源转为 ALL_SHADER_RESOURCE 状态。
+	// curState：目标资源当前的资源状态（上传期间会临时切到 COPY_DEST，完成后恢复回 curState）。
+	// 必须与创建时使用的初始状态一致，否则 ResourceBarrier 的 StateBefore 不匹配会被 D3D12 判为
+	// 非法调用并移除设备。
 	void	UploadTextureSubresource(ID3D12Resource* dst, UINT subresourceIndex, const void* src, UINT srcRowPitch,
-		UINT width, UINT height, UINT depth, DXGI_FORMAT fmt, DXGI_FORMAT footprintFormat);
+		UINT width, UINT height, UINT depth, DXGI_FORMAT fmt, DXGI_FORMAT footprintFormat,
+		D3D12_RESOURCE_STATES curState = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
 
 	// 把默认堆纹理的子资源读回 CPU（D3D12 的 READBACK 堆不能承载纹理）：
 	// 内部 CopyTextureRegion → READBACK 缓冲 + 围栏等待，返回映射指针与行间距。

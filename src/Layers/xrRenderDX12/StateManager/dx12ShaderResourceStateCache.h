@@ -25,6 +25,7 @@ public:
 	void	SetCSResource(UINT uiSlot, ID3DShaderResourceView* pRes);
 
 	ID3DShaderResourceView*	GetPS(UINT slot) const { return (slot < kSlots) ? m_ps[slot] : nullptr; }
+	ID3DShaderResourceView*	GetVS(UINT slot) const { return (slot < kSlots) ? m_vs[slot] : nullptr; }
 
 public:
 	static const UINT	kSlots = 16;

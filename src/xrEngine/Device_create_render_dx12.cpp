@@ -641,6 +641,11 @@ namespace dx12
 	extern "C" ENGINE_API ID3D12GraphicsCommandList* GetCmdList() { return CmdList.Get(); }
 	extern "C" ENGINE_API D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentRTV() { return CurrentRTV(); }
 	extern "C" ENGINE_API D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentDSV() { return CurrentDSV(); }
+	// 交换链 backbuffer 格式（R10G10B10A2_UNORM）：供 R5 在裸 RTV 绑定时合成匹配的 PSO
+	extern "C" ENGINE_API int GetBackbufferFormat() { return (int)DXGI_FORMAT_R10G10B10A2_UNORM; }
+	// 渲染层在创建主深度（rt_Position）后回填其 DSV 包装对象指针，
+	// 使 Device.GetDepthTexture() / 全局 RDepth 宏指向有效的深度视图。
+	extern "C" ENGINE_API void SetRenderDSV(void* dsv) { RenderDSV = dsv; }
 	extern "C" ENGINE_API ID3D12Resource* GetCurrentBackBuffer() { return BackBuffer[FrameIndex].Get(); }
 	extern "C" ENGINE_API UINT GetFrameIndex() { return FrameIndex; }
 	extern "C" ENGINE_API UINT GetRTVDescriptorSize() { return RTVDescriptorSize; }

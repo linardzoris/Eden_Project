@@ -50,12 +50,16 @@ void CRenderTarget::phase_combine()
 
 	//*** exposure-pipeline
 	{
-		if (t_LUM_src != rt_LUM_pool[0]->pTexture)
+		// 注意：这里必须比较"底层 surface"，不能比较 CTexture 对象指针
+		// （t_LUM_* 与 rt_LUM_pool[].pTexture 是两个不同对象，指针恒不相等）。
+		// 若每帧无条件 surface_set，会在 DX12 下每帧重建一次 SRV 并永久占用一个
+		// 持久描述符槽（D3D12 不会自动回收视图），数千帧后堆耗尽。
+		if (t_LUM_src->pSurface != rt_LUM_pool[0]->pSurface)
 		{
 			t_LUM_src->surface_set(rt_LUM_pool[0]->pSurface);
 		}
 
-		if (t_LUM_dest != rt_LUM_pool[1]->pTexture)
+		if (t_LUM_dest->pSurface != rt_LUM_pool[1]->pSurface)
 		{
 			t_LUM_dest->surface_set(rt_LUM_pool[1]->pSurface);
 		}
@@ -186,6 +190,29 @@ void CRenderTarget::phase_combine()
 
 		RCache.set_c				("ssao_noise_tile_factor",	fSSAONoise	);
 		RCache.set_c				("ssao_kernel_size",		fSSAOKernelSize	);
+
+#ifdef USE_DX12
+		// [combine] 临时诊断（纯 CPU 读取）：打印喂给 combine_1 的光照/雾常量与原始环境描述符值。
+		// combine_1 最终色彩 = Occ*Ambient + Light，再按雾混合；若这些常量被放大了数倍，
+		// 就会表现为"几何整体泛白、天空黑"。
+		{
+			static u32 s_cdbg = 0;
+			if ((s_cdbg++ % 120) == 0)
+			{
+				Msg("* [combine] amb=(%.3f %.3f %.3f) env=(%.3f %.3f %.3f w=%.2f) fog=(%.3f %.3f %.3f) sun=(%.3f %.3f %.3f spec=%.2f)",
+					ambclr.x, ambclr.y, ambclr.z,
+					envclr.x, envclr.y, envclr.z, envclr.w,
+					fogclr.x, fogclr.y, fogclr.z,
+					sunclr.x, sunclr.y, sunclr.z, sunclr.w);
+				Msg("* [combine] envdesc ambient=(%.3f %.3f %.3f) hemi=(%.3f %.3f %.3f) sky=(%.3f %.3f %.3f) fog=(%.3f %.3f %.3f) weight=%.3f | lumscale sun=%.2f amb=%.2f hemi=%.2f sky=%.2f",
+					envdesc.ambient.x, envdesc.ambient.y, envdesc.ambient.z,
+					envdesc.hemi_color.x, envdesc.hemi_color.y, envdesc.hemi_color.z,
+					envdesc.sky_color.x, envdesc.sky_color.y, envdesc.sky_color.z,
+					envdesc.fog_color.x, envdesc.fog_color.y, envdesc.fog_color.z, envdesc.weight,
+					ps_r2_sun_lumscale, ps_r2_sun_lumscale_amb, ps_r2_sun_lumscale_hemi, ps_r2_sun_lumscale_sky);
+			}
+		}
+#endif
 
 		RCache.Render(D3DPT_TRIANGLELIST, Offset, 0, 4, 0, 2);
 	}

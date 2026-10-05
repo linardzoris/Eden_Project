@@ -62,6 +62,10 @@ public:
 	ref_rt						rt_Back_Buffer;
 	ref_rt						rt_Back_Buffer_AA;
 	ref_rt						rt_Position;		// 64bit,	fat	(x,y,z,?)				(eye-space)
+	// DX12：独立的主深度缓冲(R24G8_TYPELESS → D24_UNORM_S8_UINT)。
+	// 与 DX11 的设备深度纹素一致：场景深度写入这里，再拷贝进 rt_Position，
+	// 避免"同一资源既是深度目标又是 s_position 采样源"造成的状态别名冲突。
+	ref_rt						rt_MainDepth;
 	ref_rt						rt_Normal;			// 64bit,	fat	(x,y,z,hemi)			(eye-space)
 	ref_rt						rt_NormalTemp;		// 64bit,	fat	(x,y,z,hemi)			(eye-space)
 	ref_rt						rt_Color;			// 64/32bit,fat	(r,g,b,specular-gloss)	(or decompressed MET-8-8-8-8)

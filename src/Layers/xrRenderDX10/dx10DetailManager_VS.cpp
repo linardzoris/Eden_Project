@@ -51,7 +51,14 @@ void CDetailManager::hw_Load_Shaders()
 		bufferDesc.ByteWidth = bufferSizes[i] * sizeof(InstanceData);
 
 		ID3DBuffer* buffer = NULL;
-        R_CHK(RDevice->CreateBuffer(&bufferDesc, NULL, &buffer));
+        HRESULT hrCreate = RDevice->CreateBuffer(&bufferDesc, NULL, &buffer);
+		if (FAILED(hrCreate))
+		{
+#ifdef USE_DX12
+			dx12::DumpDeviceErrors("details_create_buffer");
+#endif
+			R_CHK(hrCreate);
+		}
 
 		if(buffer)
 			detailBuffer_map.insert({bufferSizes[i], buffer});

@@ -274,7 +274,18 @@ ID3DBaseTexture* CRender::texture_load(LPCSTR fRName, u32& ret_msize, bool bStag
 			}
 #ifdef USE_DX12
 			(void)usage; (void)bindFlags; (void)cpuAccessFlags; (void)miscFlags;
-			hr = dx12TextureUtils::CreateTexture2DFromScratch(scratchImage, imageInfo, 0, &pTexture2D);
+			if (imageInfo.dimension == TEX_DIMENSION_TEXTURE3D)
+			{
+				ID3DTexture3D* pTex3D = nullptr;
+				hr = dx12TextureUtils::CreateTexture3DFromScratch(scratchImage, imageInfo, 0, &pTex3D);
+				pTexture2D = pTex3D;
+			}
+			else
+			{
+				ID3DTexture2D* pTex2D = nullptr;
+				hr = dx12TextureUtils::CreateTexture2DFromScratch(scratchImage, imageInfo, 0, &pTex2D);
+				pTexture2D = pTex2D;
+			}
 #else
 			hr = CreateTextureEx(RDevice, scratchImage.GetImages(), scratchImage.GetImageCount(), imageInfo, usage,
 				bindFlags, cpuAccessFlags, miscFlags, CREATETEX_FLAGS::CREATETEX_DEFAULT, &pTexture2D);

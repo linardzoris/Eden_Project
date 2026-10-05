@@ -8,6 +8,11 @@
 
 #include "../../xrEngine/xr_efflensflare.h"
 
+#ifdef USE_DX12
+// [sky diag] 临时诊断（实现见 xrRenderDX12/dx12Types.cpp）
+void R5DebugLogSRV(const char* tag, ID3DShaderResourceView* pSrv);
+#endif
+
 
 //////////////////////////////////////////////////////////////////////////
 // half box def
@@ -245,6 +250,32 @@ void dxEnvironmentRender::RenderSky(CEnvironment& env) {
 
 	// Render
 	RCache.set_xform_world(mSky);
+
+#ifdef USE_DX12
+	// [sky diag] 天空黑屏排查：天空盒顶点色由 sky_color/weight 决定，纹理来自 sky_r_textures。
+	// 二者任一为 0/未绑定都会让天空变成纯黑。
+	{
+		static u32 s_skyDbg = 0;
+		if ((s_skyDbg++ % 120) == 0)
+		{
+			Msg("* [sky] sky_color=(%.3f %.3f %.3f) weight=%.3f rot=%.3f texts=%u env_texts=%u",
+				env.CurrentEnv->sky_color.x, env.CurrentEnv->sky_color.y, env.CurrentEnv->sky_color.z,
+				env.CurrentEnv->weight, env.CurrentEnv->sky_rotation,
+				(UINT)mixRen.sky_r_textures.size(), (UINT)mixRen.sky_r_textures_env.size());
+
+			for (u32 i = 0; i < mixRen.sky_r_textures.size() && i < 4; ++i)
+			{
+				CTexture* t = mixRen.sky_r_textures[i].second._get();
+				char tag[96];
+				xr_sprintf(tag, sizeof(tag), "sky_r_textures[%u] slot=%u '%s'",
+					i, mixRen.sky_r_textures[i].first, t ? t->cName.c_str() : "<null-tex>");
+				R5DebugLogSRV(tag, t ? t->get_SRView() : nullptr);
+			}
+			CTexture* tk0 = tsky0._get();
+			R5DebugLogSRV("tsky0", tk0 ? tk0->get_SRView() : nullptr);
+		}
+	}
+#endif
 
 #ifdef USE_DX11
 	RCache.set_xform_world_old(mSkyOld);

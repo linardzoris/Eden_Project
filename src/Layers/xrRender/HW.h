@@ -34,7 +34,9 @@ struct IDXGISwapChain3;
 // 阶段1 起由 r5_rendertarget 提供真实 wrapper。
 #define RSwapchainTarget ((ID3DRenderTargetView*)nullptr)
 #define RTarget ((ID3DRenderTargetView*)nullptr)
-#define RDepth ((ID3DDepthStencilView*)nullptr)
+// 主深度：由 CRenderTarget::create() 在创建 rt_Position(R24G8/D24) 后，
+// 把其 DSV 写入引擎的 RenderDSV，这里统一经 Device.GetDepthTexture() 取用。
+#define RDepth ((ID3DDepthStencilView*)Device.GetDepthTexture())
 
 #elif defined(USE_DX11)
 #define RContext ((ID3D11DeviceContext*)Device.GetRenderContext())

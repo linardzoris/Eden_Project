@@ -1,4 +1,4 @@
-﻿﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "../xrRender/r_constants_cache.h"
 
 dx12ConstantBuffer* R_constants::GetCBuffer(R_constant* C, BufferType BType)

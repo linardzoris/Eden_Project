@@ -11,13 +11,6 @@
 
 extern ENGINE_API xr_atomic_bool g_bRendering;
 
-// [fontbind] 临时诊断全局：记录最近创建的字体 atlas，dx12Types.cpp Draw 时比对
-ID3DShaderResourceView*	g_r5LastAtlasSrv		= nullptr;
-ID3D12Resource*			g_r5LastAtlasRes		= nullptr;
-u32						g_r5LastAtlasW			= 0;
-u32						g_r5LastAtlasH			= 0;
-char					g_r5LastAtlasName[128]	= {};
-
 dxFontRender::dxFontRender() {}
 
 dxFontRender::~dxFontRender() {
@@ -228,67 +221,6 @@ void dxFontRender::CreateFontAtlas(u32 width, u32 height, const char* name, void
 
 	pTexture.create(name);
 	pTexture->surface_set(pSurface);
-
-#ifdef USE_DX12
-	// [fontbind] 记录 atlas SRV/资源身份，供 Draw 时比对
-	g_r5LastAtlasSrv = pTexture->get_SRView();
-	g_r5LastAtlasW = width;
-	g_r5LastAtlasH = height;
-	if (auto* at = dynamic_cast<dx12Texture*>(pSurface))
-		g_r5LastAtlasRes = at->resource.Get();
-	{
-		size_t n = xr_strlen(name);
-		if (n >= sizeof(g_r5LastAtlasName)) n = sizeof(g_r5LastAtlasName) - 1;
-		memcpy(g_r5LastAtlasName, name, n);
-		g_r5LastAtlasName[n] = 0;
-	}
-	{
-		auto* asrv = dynamic_cast<dx12ShaderResourceView*>(g_r5LastAtlasSrv);
-		Msg("* [fontbind] atlas '%s' %ux%u srv=%p valid=%d cpu=%llu fmt=%d dim=%d mips=%u mip0=%u res=%p",
-			g_r5LastAtlasName, width, height, g_r5LastAtlasSrv,
-			asrv ? (int)asrv->valid : -1,
-			asrv ? (unsigned long long)asrv->cpu.ptr : 0ull,
-			asrv ? (int)asrv->desc.Format : -1,
-			asrv ? (int)asrv->desc.ViewDimension : -1,
-			asrv ? asrv->desc.Texture2D.MipLevels : 0,
-			asrv ? asrv->desc.Texture2D.MostDetailedMip : 0,
-			g_r5LastAtlasRes);
-	}
-#endif
-
-#ifdef USE_DX12
-	// [fontdiag] 临时诊断：读回 atlas 内容，验证一次性上传是否生效
-	{
-		dx12Texture* t = dynamic_cast<dx12Texture*>(pSurface);
-		if (t && t->resource)
-		{
-			UINT rbPitch = 0;
-			void* rb = dx12::ReadbackTextureSubresource(t->resource.Get(), 0,
-				width, height, descFontAtlas.Format, rbPitch,
-				D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
-			const u32* srcPx = (const u32*)bitmap;
-			const u32* rbPx = (const u32*)rb;
-			Msg("* [fontdiag] atlas %ux%u fmt=%d name=%s", width, height, (int)descFontAtlas.Format, name);
-			Msg("* [fontdiag] src[0..3] = %08x %08x %08x %08x", srcPx[0], srcPx[1], srcPx[2], srcPx[3]);
-			if (rbPx)
-			{
-				Msg("* [fontdiag] rb [0..3] = %08x %08x %08x %08x (pitch=%u)",
-					rbPx[0], rbPx[1], rbPx[2], rbPx[3], rbPitch);
-				const u32 midRow = height / 2;
-				const u32* srcMid = srcPx + (size_t)midRow * width;
-				const u32* rbMid = rbPx + (size_t)midRow * (rbPitch / 4);
-				Msg("* [fontdiag] src[mid] = %08x %08x %08x %08x",
-					srcMid[0], srcMid[1], srcMid[2], srcMid[3]);
-				Msg("* [fontdiag] rb [mid] = %08x %08x %08x %08x",
-					rbMid[0], rbMid[1], rbMid[2], rbMid[3]);
-			}
-			else
-				Msg("! [fontdiag] readback FAILED");
-		}
-		else
-			Msg("! [fontdiag] pSurface is not dx12Texture");
-	}
-#endif
 
 	_RELEASE(pSurface);
 }

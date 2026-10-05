@@ -70,6 +70,28 @@ void					CTexture::surface_set	(ID3DBaseTexture* surf )
 		if (D3D_RESOURCE_DIMENSION_TEXTURE2D == type )
 		{
 			D3D_SHADER_RESOURCE_VIEW_DESC ViewDesc { };
+
+#ifdef USE_DX12
+			// [cubediag] 临时诊断：cube/2D 判定的输入。MiscFlags 来自 dx12Texture 保存的
+			// 创建参数；若 DDS 是 cubemap 但这里 MiscFlags 丢了，就会按 2D 建 SRV，
+			// 而着色器按 TextureCube 采样 → 维度不匹配（环境/天空辐照全错 → 画面泛白）。
+			{
+				static int s_cubeLog = 0;
+				// 只关注可能是立方体的资源，或与天空/环境相关的名字（RT 占满了日志预算）
+				const bool bInteresting = (desc.ArraySize >= 6)
+					|| (desc.MiscFlags & D3D_RESOURCE_MISC_TEXTURECUBE)
+					|| strstr(cName.c_str(), "sky") || strstr(cName.c_str(), "env")
+					|| strstr(cName.c_str(), "af3") || strstr(cName.c_str(), "cube");
+				if (bInteresting && s_cubeLog < 60)
+				{
+					++s_cubeLog;
+					Msg("* [cubediag] '%s' res=%ux%u arr=%u mips=%u fmt=%d misc=0x%X sample=%u -> %s",
+						cName.c_str(), desc.Width, desc.Height, desc.ArraySize, desc.MipLevels,
+						(int)desc.Format, (unsigned)desc.MiscFlags, desc.SampleDesc.Count,
+						(desc.MiscFlags & D3D_RESOURCE_MISC_TEXTURECUBE) ? "TEXTURECUBE" : "TEXTURE2D/ARRAY");
+				}
+			}
+#endif
 			
 			if (desc.MiscFlags&D3D_RESOURCE_MISC_TEXTURECUBE)
 			{
@@ -229,17 +251,6 @@ void CTexture::ProcessStaging()
 
 void CTexture::Apply(u32 dwStage)
 {
-#ifdef USE_DX12
-	// [fontbind] 临时：前 80 次 Apply 的 stage/srv 身份
-	{
-		static int s_applyLog = 0;
-		if (s_applyLog < 80)
-		{
-			++s_applyLog;
-			Msg("* [fontbind] CTexture::Apply stage=%u srv=%p tex=%p", dwStage, m_pSRView, this);
-		}
-	}
-#endif
 	if (flags.bLoadedAsStaging)
 		ProcessStaging();
 
