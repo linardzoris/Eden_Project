@@ -28,14 +28,14 @@ if errorlevel 1 set "CFG=Release" & goto launch
 goto menu
 
 :launch
-set "EXE=%ROOT%bins\%CFG%\xrEngine.exe"
+set "EXE=%ROOT%bins\DXLegacy\%CFG%\xrEngine.exe"
 
 if not exist "%EXE%" (
     echo.
     echo [错误] 未找到引擎文件:
     echo        %EXE%
     echo.
-    echo 请先将 %CFG% 构建输出部署到 bins\%CFG%\ 目录。
+    echo 请先将 %CFG% 构建输出部署到 bins\DXLegacy\%CFG%\ 目录。
     echo.
     pause
     goto menu
