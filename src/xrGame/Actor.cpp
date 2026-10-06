@@ -1613,7 +1613,7 @@ void CActor::UpdateCL()
 		if(Level().CurrentEntity() && this->ID()==Level().CurrentEntity()->ID() )
 		{
 			HUD().SetCrosshairDisp(0.f);
-			HUD().ShowCrosshair(false);
+			HUD().ShowCrosshair(psCrosshair_Flags.is(CROSSHAIR_SHOW_ALWAYS));
 
 			Device.hudViewportData.renderZoomFactor = 1.0f;
 			Device.hudViewportData.renderZoomRotateFactor = 0.0f;

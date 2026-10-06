@@ -62,8 +62,38 @@ float CActor::GetWeaponAccuracy() const
 }
 
 
+SPickParam& CActor::GetPick()
+{
+	// Find a HUD item, if one exists
+	if (g_player_hud && g_player_hud->attached_item(0))
+		return g_player_hud->attached_item(0)->m_parent_hud_item->GetPick();
+	else if (g_player_hud && g_player_hud->attached_item(1))
+		return g_player_hud->attached_item(1)->m_parent_hud_item->GetPick();
+
+	return HUD().GetPick();
+}
+
 void CActor::g_fireParams(const CHudItem* pHudItem, Fvector& fire_pos, Fvector& fire_dir)
 {
+	attachable_hud_item* item_0 = g_player_hud ? g_player_hud->attached_item(0) : nullptr;
+	attachable_hud_item* item_1 = g_player_hud ? g_player_hud->attached_item(1) : nullptr;
+
+	if (item_0 || item_1)
+	{
+		// Feed the fire params from the active HUD item's pick (3D ballistics)
+		SPickParam& pp = GetPick();
+
+		if (item_0)
+			item_0->m_parent_hud_item->g_fireParams(pp);
+		else
+			item_1->m_parent_hud_item->g_fireParams(pp);
+
+		fire_pos = pp.defs.start;
+		fire_dir = pp.defs.dir;
+		return;
+	}
+
+	// Fallback: no HUD item attached, use the classic camera-based fire params
 	CWeapon* pWeap = smart_cast<CWeapon*>(pHudItem);
 	if (!IsGameTypeSingle() || HUDview() || (pWeap && pWeap->render_item_ui_query()))
 	{

@@ -835,6 +835,199 @@ float CHudItem::GetHudFov()
 	return m_nearwall_last_hud_fov * m_fHudFovFactor;
 }
 
+bool CHudItem::ParentIsActor() const
+{
+	if (!object().H_Parent())
+		return false;
+
+	return !!object().H_Parent()->cast_actor();
+}
+
+void CHudItem::OnFrame()
+{
+	// 3D ballistics is a weapon feature: every other hud item (devices, artefacts,
+	// missiles) would only pay for a pick that nobody reads.
+	if (!Uses3DBallistics())
+		return;
+
+	UpdatePick();
+}
+
+void CHudItem::net_Relcase(CObject* O)
+{
+	if (PP.result.O == O)
+		PP.result.O = NULL;
+}
+
+void CHudItem::ApplyAimModifiers(Fmatrix& matrix)
+{
+	// Fetch actor
+	const CActor* pActor = Actor();
+
+	// Fetch HUD pick
+	const SPickParam& hud_pick = HUD().GetPick();
+
+	// If firepos is disabled, use the eye position
+	bool firepos = HUD().FireposActive();
+	if (!firepos)
+	{
+		if (pActor->HUDview())
+		{
+			// If we're in first-person, use the HUD pick start position
+			matrix.c = hud_pick.defs.start;
+		}
+		else
+		{
+			// If we're in third-person, project the actor position onto the HUD pick vector
+			matrix.c = Fvector().mad(hud_pick.defs.start, hud_pick.defs.dir, Fvector().sub(pActor->Position(), hud_pick.defs.start).dotproduct(hud_pick.defs.dir));
+		}
+	}
+
+	// If aim position is disabled...
+	bool aimpos = HUD().AimposActive();
+	if (!aimpos)
+	{
+		// Cache position
+		Fvector pos = matrix.c;
+
+		// Aim toward the hud pick's endpoint
+		Fvector target = Fvector().mad(
+			hud_pick.defs.start,
+			hud_pick.defs.dir,
+			hud_pick.defs.range
+		);
+		Fvector delta = Fvector().sub(target, pos).normalize();
+
+		float h, p, b;
+		delta.getHP(h, p);
+
+		Fmatrix mInvView;
+		mInvView.invert(Device.mView);
+		float _h, _p;
+		mInvView.getHPB(_h, _p, b);
+
+		// Apply rotation
+		matrix.setHPB(h, p, b);
+
+		// Restore position
+		matrix.c = pos;
+	}
+}
+
+Fmatrix CHudItem::RayTransform()
+{
+	const attachable_hud_item* hi = HudItemData();
+	Fmatrix matrix = hi->m_item_transform;
+	matrix.mulB_43(hi->m_model->LL_GetTransform(0));
+
+	ApplyAimModifiers(matrix);
+
+	return matrix;
+}
+
+void CHudItem::Ray(SPickParam& pp)
+{
+	if (!ParentIsActor())
+		return;
+
+	pp.InitPick();
+
+	// Fetch transform, root bone matrix
+	Fmatrix matrix = RayTransform();
+	pp.barrel_matrix = matrix;
+
+	// Eden: m_item_transform is already in world space, no hud->world step needed
+
+	// Detect wall penetration
+	Fvector eye_pos;
+
+	// Start by choosing an eye position
+	if (!GetHUDmode() && HUD().FireposActive())
+	{
+		// If we're in third-person with firepos active, use the actor's head bone
+		CActor* pActor = object().H_Parent()->cast_actor();
+		eye_pos = pActor->XFORM().c;
+		auto model = pActor->Visual()->dcast_PKinematics();
+		eye_pos.add(model->LL_GetTransform(model->LL_BoneID("bip01_head")).c);
+	}
+	else
+	{
+		// Otherwise, use the camera
+		eye_pos = Device.vCameraPosition;
+	}
+
+	// Trace from eye -> barrel
+	Fvector barrel_delta = Fvector().sub(matrix.c, eye_pos);
+	float barrel_dist = barrel_delta.magnitude();
+
+	// With firepos disabled the muzzle is pinned to the eye, so this trace degenerates
+	// into a zero length ray. Normalizing a zero vector produces NaN, and a NaN
+	// direction sends the collision query over the whole level, so fall back to the
+	// camera ray instead.
+	if (barrel_dist <= 0.01f)
+	{
+		pp.defs.start = Device.vCameraPosition;
+		pp.defs.dir = Device.vCameraDirection;
+		pp.barrel_dist = 0.f;
+		pp.barrel_blocked = false;
+		return;
+	}
+
+	SPickParam pn = SPickParam(CDB::OPT_CULL | CDB::OPT_ONLYFIRST);
+	pn.defs.start = eye_pos;
+	pn.defs.dir = barrel_delta;
+	pn.defs.range = barrel_dist;
+	pn.defs.dir.normalize();
+	pp.barrel_dist = pn.defs.range;
+
+	// If the eye -> barrel vector is obstructed...
+	if (HUD().DoPick(pn))
+	{
+		pp.barrel_blocked = true;
+
+		// If we're in first person...
+		if (GetHUDmode())
+		{
+			// Use the eye -> barrel trace directly
+			pp.defs.start = pn.defs.start;
+			pp.defs.dir = pn.defs.dir;
+			pp.defs.range = pn.defs.range;
+		}
+		else
+		{
+			// Move to the intersection point
+			pn.defs.start.add(Fvector().mul(pn.defs.dir, pn.result.range * 0.99));
+
+			// Trace to the camera
+			pn.defs.dir = Fvector().sub(Device.vCameraPosition, pn.defs.start);
+			pn.defs.range = pn.defs.dir.magnitude();
+			pn.defs.dir.normalize();
+			HUD().DoPick(pn);
+
+			// Move to the intersection point and trace to the barrel
+			pp.defs.start.add(pn.defs.start, Fvector().mul(pn.defs.dir, pn.result.range * 0.99));
+			pp.defs.dir.sub(matrix.c, pp.defs.start);
+			pp.defs.range = pp.defs.dir.magnitude();
+			pp.defs.dir.normalize();
+			pp.barrel_dist = pp.defs.range;
+		}
+
+		return;
+	}
+
+	// Trace from the resulting transform
+	pp.defs.start = matrix.c;
+	pp.defs.dir = matrix.k;
+}
+
+void CHudItem::UpdatePick()
+{
+	Ray(PP);
+	HUD().DoPick(PP);
+	if (PP.barrel_blocked)
+		PP.result.range -= PP.barrel_dist;
+}
+
 void CHudItem::SetModelBoneStatus(const char* bone, BOOL show)
 {
 	if (HudItemData())

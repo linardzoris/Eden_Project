@@ -1571,6 +1571,15 @@ void angle_inertion(Fvector& c_hpb, const Fvector& t_hpb, float speed)
 
 #include "Missile.h"
 
+void player_hud::OnFrame()
+{
+	if (m_attached_items[0] && m_attached_items[0]->m_parent_hud_item)
+		m_attached_items[0]->m_parent_hud_item->OnFrame();
+
+	if (m_attached_items[1] && m_attached_items[1]->m_parent_hud_item)
+		m_attached_items[1]->m_parent_hud_item->OnFrame();
+}
+
 void player_hud::update(const Fmatrix& cam_trans)
 {
 	if(!m_attached_items[0] && !m_attached_items[1] && !m_animator_item)

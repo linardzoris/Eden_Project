@@ -16,6 +16,12 @@ enum
 	AF_INFINITEFIRE				= (1 << 13),
 	AF_INFINITEDURABILITY		= (1 << 14),
 	AF_HIT_SLOWMO				= (1 << 15),
+	// Monolith 3D ballistics flags (Eden: bits 16+ are free)
+	AF_FIREPOS					= (1 << 16), // bullets originate from the actual weapon muzzle
+	AF_FIREPOS_ZOOM				= (1 << 17),
+	AF_FIREDIR_THIRD_PERSON		= (1 << 18),
+	AF_AIMPOS					= (1 << 19),
+	AF_AIMPOS_ZOOM				= (1 << 20),
 };
 
 extern Flags32	psActorFlags;

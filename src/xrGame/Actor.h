@@ -22,6 +22,8 @@
 #include "EffectorNightVision.h"
 #include "HudAnimatorManager.h"
 
+struct SPickParam;
+
 using namespace ACTOR_DEFS;
 
 class CInfoPortion;
@@ -541,6 +543,8 @@ public:
 	void					ProcessKeys(CHudItem* itm = nullptr);
 
 public:
+	SPickParam&							GetPick				();
+
 	virtual void						g_WeaponBones		(int &L, int &R1, int &R2);
 	virtual void						g_fireParams		(const CHudItem* pHudItem, Fvector& P, Fvector& D);
 	virtual bool						g_stateFire			() {return ! ((mstate_wishful & mcLookout) && !IsGameTypeSingle() );}

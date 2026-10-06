@@ -17,19 +17,24 @@
 #include "PHDebug.h"
 #endif
 #include "../../xrUI/UIFontDefines.h"
+#include "player_hud.h"
 
 extern CUIGameCustom* CurrentGameUI() {return HUD().GetGameUI();}
 
 //--------------------------------------------------------------------
 CHUDManager::CHUDManager() : pUIGame(nullptr), m_pHUDTarget(new CHUDTarget())
-{ 
+{
+	m_firepos_frame = u32(-1);
+	m_firepos_active = false;
+	m_aimpos_frame = u32(-1);
+	m_aimpos_active = false;
 }
 //--------------------------------------------------------------------
 CHUDManager::~CHUDManager()
 {
 	OnDisconnected();
 
-	if(pUIGame)		
+	if(pUIGame)
 		pUIGame->UnLoad	();
 
 	xr_delete		(pUIGame);
@@ -39,11 +44,15 @@ CHUDManager::~CHUDManager()
 //--------------------------------------------------------------------
 void CHUDManager::OnFrame()
 {
-	if(!b_online)						
+	if(!b_online)
 		return;
 
 	PROF_EVENT("CHUDManager::OnFrame");
-	m_pHUDTarget->CursorOnFrame();
+
+	PP.CameraPick();
+	if (g_player_hud)
+		g_player_hud->OnFrame();
+	DoPick(PP);
 
 	if (Device.IsEditorMode())
 	{
@@ -206,20 +215,131 @@ void CHUDManager::OnEvent(EVENT E, u64 P1, u64 P2)
 {
 }
 
-collide::rq_result&	CHUDManager::GetCurrentRayQuery	() 
+collide::rq_result&	CHUDManager::GetCurrentRayQuery	()
 {
-	return m_pHUDTarget->GetRQ();
+	return GetPick().result;
+}
+
+bool CHUDManager::FireposActive()
+{
+	if (m_firepos_frame != Device.dwFrame)
+	{
+		m_firepos_frame = Device.dwFrame;
+		m_firepos_active = ComputeFireposActive();
+	}
+
+	return m_firepos_active;
+}
+
+bool CHUDManager::ComputeFireposActive()
+{
+	// If we have an actor...
+	CActor* pActor = smart_cast<CActor*>(Level().CurrentEntity());
+	if (!pActor)
+		return psActorFlags.test(AF_FIREPOS);
+
+	// And a weapon...
+	CWeapon* pWeapon = smart_cast<CWeapon*>(pActor->inventory().ActiveItem());
+	if (!pWeapon)
+		return psActorFlags.test(AF_FIREPOS);
+
+	if (!pWeapon->GetFirepos())
+		return false;
+
+	// Firepos is active if a setting matches its respective zoom state
+	float zFac = pWeapon->GetZRotatingFactor();
+	return (psActorFlags.test(AF_FIREPOS) && zFac < 1.f)
+		|| (psActorFlags.test(AF_FIREPOS_ZOOM) && zFac >= 1.f);
+}
+
+bool CHUDManager::AimposActive()
+{
+	if (m_aimpos_frame != Device.dwFrame)
+	{
+		m_aimpos_frame = Device.dwFrame;
+		m_aimpos_active = ComputeAimposActive();
+	}
+
+	return m_aimpos_active;
+}
+
+bool CHUDManager::ComputeAimposActive()
+{
+	// If we have an actor...
+	CActor* pActor = smart_cast<CActor*>(Level().CurrentEntity());
+	if (!pActor)
+		return psActorFlags.test(AF_AIMPOS);
+
+	// And a weapon...
+	CWeapon* pWeapon = smart_cast<CWeapon*>(pActor->inventory().ActiveItem());
+	if (!pWeapon)
+		return psActorFlags.test(AF_AIMPOS);
+
+	if (!pWeapon->GetAimpos())
+		return false;
+
+	// Aimpos is active if a setting matches its respective zoom state
+	float zFac = pWeapon->GetZRotatingFactor();
+	return (psActorFlags.test(AF_AIMPOS) && zFac < 1.f)
+		|| (psActorFlags.test(AF_AIMPOS_ZOOM) && zFac >= 1.f);
+}
+
+ICF static BOOL pick_trace_callback(collide::rq_result& result, LPVOID params)
+{
+	SPickParam*	pp			= (SPickParam*)params;
+	++pp->pass;
+
+	if(result.O)
+	{
+		pp->result			= result;
+		return FALSE;
+	}else
+	{
+		//получить треугольник и узнать его материал
+		CDB::TRI* T		= Level().ObjectSpace.GetStaticTris()+result.element;
+
+		SGameMtl* mtl = GMLib.GetMaterialByIdx(T->material);
+		pp->power		*= mtl->fVisTransparencyFactor;
+		if(pp->power>0.34f)
+		{
+			return TRUE;
+		}
+	}
+	pp->result				= result;
+	return					FALSE;
+}
+
+bool CHUDManager::DoPick(SPickParam& pp)
+{
+	VERIFY(!fis_zero(pp.defs.dir.square_magnitude()));
+
+	pp.result.set(NULL, pp.defs.range, -1);
+	pp.power = 1.0f;
+	pp.pass = 0;
+
+	// Reuse the scratch buffer: the pick runs several times per frame (camera,
+	// every attached hud item, crosshair occlusion), so allocating a fresh
+	// result buffer for each call is pure overhead.
+	RQR.r_clear();
+	return Level().ObjectSpace.RayQuery(
+		RQR,
+		pp.defs,
+		pick_trace_callback,
+		&pp,
+		nullptr,
+		Level().CurrentEntity()
+	);
 }
 
 void CHUDManager::SetCrosshairDisp	(float dispf, float disps)
-{	
-	m_pHUDTarget->GetHUDCrosshair().SetDispersion(psHUD_Flags.test(HUD_CROSSHAIR_DYNAMIC) ? dispf : disps);
+{
+	m_pHUDTarget->SetDispersion(psHUD_Flags.test(HUD_CROSSHAIR_DYNAMIC) ? dispf : disps);
 }
 
 #ifdef DEBUG
 void CHUDManager::SetFirstBulletCrosshairDisp(float fbdispf)
 {
-	m_pHUDTarget->GetHUDCrosshair().SetFirstBulletDispertion(fbdispf);
+	// The reworked crosshair system has no first-bullet debug crosshair
 }
 #endif
 
@@ -300,9 +420,9 @@ void CHUDManager::OnConnected()
 void CHUDManager::net_Relcase( CObject* obj )
 {
 	HitMarker.net_Relcase		( obj );
-	
-	VERIFY						( m_pHUDTarget );
-	m_pHUDTarget->net_Relcase	( obj );
+
+	if(PP.result.O == obj)
+		PP.result.O				= nullptr;
 #ifdef	DEBUG
 	DBG_PH_NetRelcase( obj );
 #endif

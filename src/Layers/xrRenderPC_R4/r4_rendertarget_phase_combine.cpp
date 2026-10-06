@@ -96,7 +96,10 @@ void CRenderTarget::phase_combine()
 	RCache.set_Stencil(FALSE);
 
 	// draw skybox
-	g_pGamePersistent->Environment().RenderClouds();
+	{
+		GPU_EVENT(render_clouds);
+		g_pGamePersistent->Environment().RenderClouds();
+	}
 
 	RCache.set_Stencil(TRUE, D3DCMP_LESSEQUAL, 0x01, 0xff, 0x00);	// stencil should be >= 1
 
@@ -338,7 +341,21 @@ void CRenderTarget::phase_combine()
 			{
 				if(rt_Generic->pTexture->pSurface != rt_Generic->pSurface)
 					rt_Generic->pTexture->surface_set(rt_Generic->pSurface);
-				phase_scale();
+
+				GPU_EVENT(phase_scale);
+				//	Same-size & same-format: phase_scale's copy_image is a plain 1:1
+				//	texel transfer (point / centre-aligned fetch), so a hardware copy
+				//	is equivalent and skips the full-screen draw.
+				if(rt_Generic_0->dwWidth == rt_Generic->dwWidth
+					&& rt_Generic_0->dwHeight == rt_Generic->dwHeight
+					&& rt_Generic_0->fmt == rt_Generic->fmt)
+				{
+					RContext->CopyResource(rt_Generic->pSurface, rt_Generic_0->pSurface);
+				}
+				else
+				{
+					phase_scale();
+				}
 			}
 		}
 		break;
@@ -399,7 +416,10 @@ void CRenderTarget::phase_combine()
 	RCache.set_Stencil		(FALSE);
 
 	//	if FP16-BLEND !not! supported - draw flares here, overwise they are already in the bloom target
-	g_pGamePersistent->Environment().RenderFlares();	// lens-flares
+	{
+		GPU_EVENT(render_flares);
+		g_pGamePersistent->Environment().RenderFlares();	// lens-flares
+	}
 
 	if(ps_r4_cas_sharpening > EPS) {
 		GPU_EVENT(phase_cas);

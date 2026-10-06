@@ -2,6 +2,7 @@
 
 #include "../xrEngine/CustomHUD.h"
 #include "HitMarker.h"
+#include "HUDTarget.h"
 
 class CHUDTarget;
 class CUIGameCustom;
@@ -16,13 +17,27 @@ private:
 	CHitMarker				HitMarker;
 	CHUDTarget*				m_pHUDTarget;
 	bool					b_online;
+	SPickParam				PP;
+	collide::rq_results		RQR;
+
+	// Firepos/Aimpos only depend on the actor, its active item and that item's
+	// zoom factor, all of which are constant within a frame. They are queried by
+	// the pick, the crosshair readout and every hud item, so evaluate them once
+	// per frame instead of rescanning the inventory each time.
+	u32						m_firepos_frame;
+	bool					m_firepos_active;
+	u32						m_aimpos_frame;
+	bool					m_aimpos_active;
+
+	bool					ComputeFireposActive	();
+	bool					ComputeAimposActive		();
 public:
 							CHUDManager			();
 	virtual					~CHUDManager		();
 	virtual		void		OnEvent				(EVENT E, u64 P1, u64 P2);
 
 	virtual		void		Render_First		();
-	virtual		void		Render_Last			();	   
+	virtual		void		Render_Last			();
 	virtual		void		OnFrame				();
 
 	virtual		void		OnFrameMT			();
@@ -40,13 +55,18 @@ public:
 	//текущий предмет на который смотрит HUD
 	collide::rq_result&		GetCurrentRayQuery	();
 
-
 	//устанвка внешнего вида прицела в зависимости от текущей дисперсии
 	void					SetCrosshairDisp	(float dispf, float disps = 0.f);
 #ifdef DEBUG
 	void					SetFirstBulletCrosshairDisp(float fbdispf);
 #endif
 	void					ShowCrosshair		(bool show);
+
+	bool					DoPick				(SPickParam& pp);
+	SPickParam&				GetPick				() { return PP; };
+
+	bool					FireposActive		();
+	bool					AimposActive		();
 
 	void					SetHitmarkType		( LPCSTR tex_name );
 	void					SetGrenadeMarkType	( LPCSTR tex_name );

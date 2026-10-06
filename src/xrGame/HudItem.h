@@ -26,6 +26,7 @@ class CPhysicsShellHolder;
 #include "InertionData.h"
 #include "../xrScripts/script_export_space.h"
 #include "player_hud.h"
+#include "HUDTarget.h"
 
 #include "HudTorchLight.h"
 
@@ -180,6 +181,20 @@ public:
 
 	virtual float GetHudFov();
 	virtual bool AllowBore() { return !m_bDisableBore && m_eAnimationsFlags.test(EAnimationsFlags::af_bore); }
+
+	// 3D ballistics pick (ported from Monolith)
+	virtual bool				Uses3DBallistics	() const { return false; }
+	virtual void				OnFrame				();
+	void						net_Relcase			(CObject* O);
+	bool						ParentIsActor		() const;
+	void						ApplyAimModifiers	(Fmatrix& matrix);
+	virtual Fmatrix				RayTransform		();
+	virtual void				g_fireParams		(SPickParam& pp) {};
+	void						Ray					(SPickParam& pp);
+	void						UpdatePick			();
+	SPickParam&					GetPick				() { return PP; }
+	collide::rq_result&			GetRQ				() { return GetPick().result; }
+	float						GetRQVis			() { return PP.power; }
 
 	float getLookOutSpeedKoef() const { return m_fLookOutSpeedKoef; }
 	float getLookOutAmplK() const { return m_fLookOutAmplK; }
@@ -358,6 +373,7 @@ protected:
 private:
 	CPhysicItem					*m_object;
 	CInventoryItem				*m_item;
+	SPickParam					PP;
 
 public:
 	const shared_str&			HudSection				() const		{ return hud_sect;}

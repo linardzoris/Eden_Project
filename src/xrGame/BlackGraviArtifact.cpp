@@ -75,7 +75,8 @@ struct SRP
 };
 void CBlackGraviArtefact::net_Relcase(CObject* O)
 {
-	inherited::net_Relcase(O);
+	CHudItem::net_Relcase(O);
+	CGameObject::net_Relcase(O);
 	//for vector
 	GAME_OBJECT_LIST_it I=std::remove_if(m_GameObjectList.begin(),m_GameObjectList.end(),SRP(smart_cast<CPhysicsShellHolder*>(O)));
 	m_GameObjectList.erase(I,m_GameObjectList.end());

@@ -115,6 +115,41 @@ extern	BOOL	g_b_COD_PickUpMode;
 void register_mp_console_commands();
 //-----------------------------------------------------------
 
+// Monolith: crosshair color console command (self-contained version, Eden has no CCC_IVector4)
+class CCC_Color : public IConsole_Command
+{
+	u32* color;
+public:
+	CCC_Color(LPCSTR N, u32* v) : IConsole_Command(N), color(v) {};
+
+	virtual void Execute(LPCSTR args)
+	{
+		int r = color_get_R(*color);
+		int g = color_get_G(*color);
+		int b = color_get_B(*color);
+		int a = color_get_A(*color);
+
+		sscanf(args, "%d %d %d %d", &r, &g, &b, &a);
+
+		clamp(r, 0, 255);
+		clamp(g, 0, 255);
+		clamp(b, 0, 255);
+		clamp(a, 0, 255);
+
+		*color = color_argb(a, r, g, b);
+	}
+
+	virtual void Status(TStatus& S)
+	{
+		xr_sprintf(S, sizeof(S), "%d %d %d %d", color_get_R(*color), color_get_G(*color), color_get_B(*color), color_get_A(*color));
+	}
+
+	virtual void Info(TInfo& I)
+	{
+		xr_sprintf(I, sizeof(I), "crosshair color as R G B A");
+	}
+};
+
 BOOL	g_bCheckTime = FALSE;
 int		net_cl_inputupdaterate = 50;
 Flags32	g_mt_config = { mtLevelPath | mtDetailPath | mtObjectHandler | mtSoundPlayer | mtAiVision | mtBullets | mtLUA_GC | mtLevelSounds | mtALife | mtMap };
@@ -2617,6 +2652,83 @@ void CCC_RegisterCommands()
 	CMD3(CCC_Mask, "g_dynamic_music", &psActorFlags, AF_DYNAMIC_MUSIC);
 	CMD3(CCC_Mask, "g_important_save", &psActorFlags, AF_IMPORTANT_SAVE);
 	CMD3(CCC_Mask, "g_hit_slowmo", &psActorFlags, AF_HIT_SLOWMO);
+
+	// Monolith: 3D ballistics
+	CMD3(CCC_Mask, "g_firepos", &psActorFlags, AF_FIREPOS);
+	CMD3(CCC_Mask, "g_firepos_zoom", &psActorFlags, AF_FIREPOS_ZOOM);
+	CMD3(CCC_Mask, "g_firedir_third_person", &psActorFlags, AF_FIREDIR_THIRD_PERSON);
+	CMD3(CCC_Mask, "g_aimpos", &psActorFlags, AF_AIMPOS);
+	CMD3(CCC_Mask, "g_aimpos_zoom", &psActorFlags, AF_AIMPOS_ZOOM);
+
+	// Monolith: dynamic crosshair
+	{
+		extern CrosshairSettings g_crosshair_weapon_near;
+		extern CrosshairSettings g_crosshair_weapon_far;
+		extern u32 g_crosshair_color;
+		extern float recon_show_speed;
+		extern float recon_hide_speed;
+		extern float recon_mindist;
+		extern float recon_maxdist;
+		extern float recon_minspeed;
+		extern float recon_maxspeed;
+
+#define Concat2(a, b) #a ## b
+#define Concat3(a, b, c) #a ## b ## #c
+
+#define CrosshairBaseCommands(crosshair, suffix) \
+	CMD3(CCC_Mask, Concat2(g_crosshair_, suffix), &crosshair.flags, CROSSHAIR_SHOW); \
+	CMD3(CCC_Mask, Concat3(g_crosshair_, suffix, _recon), &crosshair.flags, CROSSHAIR_RECON); \
+	CMD4(CCC_Float, Concat3(g_crosshair_, suffix, _recon_max_opacity), &crosshair.recon_max_opacity, 0.f, 1.f); \
+	CMD3(CCC_Mask, Concat3(g_crosshair_, suffix, _use_shader), &crosshair.flags, CROSSHAIR_USE_SHADER); \
+	CMD3(CCC_String, Concat3(g_crosshair_, suffix, _shader), crosshair.shader, 32); \
+	CMD3(CCC_String, Concat3(g_crosshair_, suffix, _texture), crosshair.texture, 32); \
+	CMD4(CCC_Float, Concat3(g_crosshair_, suffix, _size), &crosshair.size, 1.f, 64.f); \
+	CMD4(CCC_Float, Concat3(g_crosshair_, suffix, _depth), &crosshair.depth, 0.f, 300.f); \
+	CMD2(CCC_Color, Concat3(g_crosshair_, suffix, _color), &crosshair.color);
+
+#define CrosshairDistanceCommands(crosshair, suffix) \
+	CMD3(CCC_Mask, Concat3(g_crosshair_, suffix, _distance_lerp), &crosshair.flags, CROSSHAIR_DISTANCE_LERP); \
+	CMD4(CCC_Float, Concat3(g_crosshair_, suffix, _distance_lerp_rate), &crosshair.distance_lerp_rate, 1.f, 100.f);
+
+#define CrosshairOpacityCommands(crosshair, suffix) \
+	CMD4(CCC_Float, Concat3(g_crosshair_, suffix, _occluded_opacity), &crosshair.occluded_opacity, 0.f, 1.f); \
+	CMD4(CCC_Float, Concat3(g_crosshair_, suffix, _occlusion_fade_rate), &crosshair.occlusion_fade_rate, 1.f, 100.f);
+
+#define CrosshairLineCommands(crosshair, suffix) \
+	CMD3(CCC_Mask, Concat3(g_crosshair_, suffix, _line), &crosshair.flags, CROSSHAIR_LINE);
+
+#define CrosshairFarCommands(crosshair, suffix) \
+	CrosshairBaseCommands(crosshair, suffix); \
+	CrosshairLineCommands(crosshair, suffix)
+
+#define CrosshairNearCommands(crosshair, suffix) \
+	CrosshairBaseCommands(crosshair, suffix); \
+	CrosshairDistanceCommands(crosshair, suffix); \
+	CrosshairOpacityCommands(crosshair, suffix); \
+	CrosshairLineCommands(crosshair, suffix)
+
+		CMD3(CCC_Mask, "g_crosshair_show_always", &psCrosshair_Flags, CROSSHAIR_SHOW_ALWAYS);
+		CMD2(CCC_Color, "g_crosshair_color", &g_crosshair_color);
+
+		CrosshairNearCommands(g_crosshair_weapon_near, "weapon_near");
+		CrosshairFarCommands(g_crosshair_weapon_far, "weapon_far");
+
+		CMD4(CCC_Float, "g_recon_show_speed", &recon_show_speed, 0.f, 20.f);
+		CMD4(CCC_Float, "g_recon_hide_speed", &recon_hide_speed, 0.f, 20.f);
+		CMD4(CCC_Float, "g_recon_mindist", &recon_mindist, 0.f, 300.f);
+		CMD4(CCC_Float, "g_recon_maxdist", &recon_maxdist, 0.f, 300.f);
+		CMD4(CCC_Float, "g_recon_minspeed", &recon_minspeed, .1f, 20.f);
+		CMD4(CCC_Float, "g_recon_maxspeed", &recon_maxspeed, .1f, 20.f);
+
+#undef CrosshairNearCommands
+#undef CrosshairFarCommands
+#undef CrosshairLineCommands
+#undef CrosshairOpacityCommands
+#undef CrosshairDistanceCommands
+#undef CrosshairBaseCommands
+#undef Concat3
+#undef Concat2
+	}
 
 #ifdef DEBUG
 	CMD1(CCC_LuaHelp, "lua_help");

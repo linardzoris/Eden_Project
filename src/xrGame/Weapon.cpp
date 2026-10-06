@@ -314,7 +314,10 @@ void CWeapon::Load		(LPCSTR section)
 
 	m_zoom_inertion.OriginOffset = READ_IF_EXISTS(pSettings, r_float, hud_sect, "inertion_aim_origin_offset", ORIGIN_OFFSET * 0.5f);
 	m_zoom_inertion.TendtoSpeed = READ_IF_EXISTS(pSettings, r_float, hud_sect, "inertion_aim_tendto_speed", TENDTO_SPEED);
-	
+
+	m_firepos = READ_IF_EXISTS(pSettings, r_bool, section, "firepos", true);
+	m_aimpos = READ_IF_EXISTS(pSettings, r_bool, section, "aimpos", true);
+
 	if(pSettings->line_exist(section, "flame_particles_2"))
 		m_sFlameParticles2 = pSettings->r_string(section, "flame_particles_2");
 
@@ -3498,6 +3501,9 @@ float CWeapon::Weight() const
 extern bool hud_adj_crosshair;
 bool CWeapon::show_crosshair()
 {
+	if (psCrosshair_Flags.is(CROSSHAIR_SHOW_ALWAYS))
+		return true;
+
 	const u8 NextState = GetNextState();
 	return hud_adj_crosshair || !m_bTacticalLaserStatus && (!IsPending() || NextState == eEmptyClick || NextState == eSprintStart || NextState == eSprintEnd) && NextState != eHidden && (!IsZoomed() || !ZoomHideCrosshair());
 }
@@ -4770,9 +4776,70 @@ void CWeapon::MakeWeaponKick(Fvector& pos, Fvector& dir)
 	}
 }
 
+Fmatrix CWeapon::RayTransform()
+{
+	attachable_hud_item* hi = HudItemData();
+	hud_item_measures& measures = hi->m_measures;
+
+	Fmatrix matrix;
+
+	if (GetHUDmode())
+	{
+		// Eden convention, mirroring attachable_hud_item::setup_firedeps: the muzzle
+		// point comes from the fire bone plus its offset, while the barrel direction is
+		// the weapon's own forward axis. Taking the direction from the fire bone's
+		// rotation instead would tilt the ballistics (and the crosshair that follows it)
+		// away from where the barrel visibly points.
+		matrix = hi->m_item_transform;
+
+		Fvector muzzle = measures.m_fire_point_offset;
+		hi->m_model->LL_GetTransform(measures.m_fire_bone).transform_tiny(muzzle);
+		matrix.transform_tiny(muzzle);
+		matrix.c = muzzle;
+	}
+	else
+	{
+		// If we're in third-person, use the world item transform
+		matrix = XFORM();
+
+		if (psActorFlags.test(AF_FIREDIR_THIRD_PERSON))
+		{
+			// If firedir is enabled, override the barrel orientation with the HUD equivalent
+			Fmatrix hud_rot = hi->m_item_transform;
+
+			float h, p, b;
+			hud_rot.getHPB(h, p, b);
+
+			float _h, _p;
+			matrix.getHPB(_h, _p, b);
+
+			Fvector pos = matrix.c;
+			matrix.setHPB(h, p, b);
+			matrix.c = pos;
+		}
+		else {
+			// Otherwise, transform it by the hands' HUD orientation
+			// to account for Lua-side free aim hackery
+			Fmatrix hud_rot = hi->m_parent->GetTransform();
+			hud_rot.mulA_43(Device.mView);
+			hud_rot.c = Fvector();
+			matrix.mulB_43(hud_rot);
+		}
+
+		// Offset by the world-space fire point
+		matrix.mulB_43(Fmatrix().translate(vLoadedFirePoint));
+	}
+
+	ApplyAimModifiers(matrix);
+
+	return matrix;
+}
+
 void CWeapon::net_Relcase(CObject* object)
 {
-	inherited::net_Relcase(object);
+	CHudItem::net_Relcase(object);
+
+	CGameObject::net_Relcase(object);
 
 	if (!m_zoom_params.m_pVision)
 		return;

@@ -1,5 +1,5 @@
-// HUDCrosshair.h:  крестик прицела, отображающий текущую дисперсию
-// 
+// HUDCrosshair.h: крестик прицела, отображающий текущую дисперсию
+//
 //////////////////////////////////////////////////////////////////////
 
 #pragma once
@@ -8,34 +8,47 @@
 
 #include "../../xrUI/ui_defs.h"
 
-
-class CHUDCrosshair	
+class CHUDCrosshair
 {
 private:
-	float			cross_length_perc;
-	float			min_radius_perc;
-	float			max_radius_perc;
+	Fmatrix transform;
+	float minRadius;
+	float maxRadius;
+	float scale;
+	u32 crossColor;
 
-	//текущий радиус прицела
-	float			radius;
-	float			target_radius;
-#ifdef DEBUG
-	float			fb_radius;
-#endif
-	//ref_geom 		hGeomLine;
-	ui_shader		hShader;
+	ui_shader shaderWire;
+	ui_shader shaderCrosshair;
+
+	string32* crosshairShader;
+	string32* crosshairTexture;
+	string32 lastCrosshairShader;
+	string32 lastCrosshairTexture;
+
+	float dispersionRadius;
+
+	void PushVerts(Fvector* verts, Fvector* uvs, int count, Fmatrix mat, Fvector4 pos) const;
+
+	void InitShaderWire();
+	void DeinitShaderCrosshair();
+	bool InitShaderCrosshair();
+	void RenderShaderCrosshair();
+	void RenderWireCrosshair();
+
 public:
-	u32				cross_color;
+	CHUDCrosshair();
+	~CHUDCrosshair();
 
-					CHUDCrosshair	();
-					~CHUDCrosshair	();
+	Fmatrix GetTransform() const { return transform; };
+	u32 GetColor() const { return crossColor; };
 
-			void	OnRender		();
-			void	SetDispersion	(float disp);
-#ifdef DEBUG
-			void	SetFirstBulletDispertion(float fbdisp);
-			void	OnRenderFirstBulletDispertion();
-#endif
+	void SetTransform(const Fmatrix& m);
+	void SetScale(float s);
+	void SetColor(u32 c);
+	void SetShader(string32* shader) { crosshairShader = shader; };
+	void SetTexture(string32* texture) { crosshairTexture = texture; };
+	void SetDispersion(float d);
 
-			void	Load			();
+	void Load();
+	void OnRender(bool shader);
 };

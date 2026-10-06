@@ -476,6 +476,8 @@ protected:
 	bool m_bDisableFireModeAim = false;
 	bool m_bBlockEmptyClick = false;
 	bool m_bIsReloaded = false;
+	bool m_firepos = true;
+	bool m_aimpos = true;
 
 	void HideOneUpgradeLevel(const char* section);
 	void LoadUpgradeBonesToHide(const char* section, const char* line);
@@ -508,6 +510,15 @@ public:
 	virtual	float			CurrentZoomFactor	();
 	//показывает, что оружие находится в соостоянии поворота для приближенного прицеливания
 			bool			IsRotatingToZoom	() const		{	return (m_zoom_params.m_fZoomRotationFactor<1.f);}
+
+	IC float				GetZRotatingFactor	() const		{return m_zoom_params.m_fZoomRotationFactor;}
+	bool					GetFirepos			() const		{return m_firepos;}
+	bool					GetAimpos			() const		{return m_aimpos;}
+
+	virtual Fmatrix			RayTransform		();
+
+	// 3D ballistics applies to weapons only
+	virtual bool			Uses3DBallistics	() const override { return true; }
 
 	virtual u8 GetCurrentHudOffsetIdx() const override;
 

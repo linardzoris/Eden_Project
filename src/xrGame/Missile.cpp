@@ -795,7 +795,9 @@ void CMissile::activate_physic_shell()
 }
 void	CMissile::net_Relcase(CObject* O)
 {
-	inherited::net_Relcase(O);
+	CHudItem::net_Relcase(O);
+
+	CGameObject::net_Relcase(O);
 	if(PPhysicsShell()&&PPhysicsShell()->isActive())
 	{
 		if(O==smart_cast<CObject*>((CPhysicsShellHolder*)PPhysicsShell()->get_CallbackData()))
@@ -805,6 +807,45 @@ void	CMissile::net_Relcase(CObject* O)
 		}
 	}
 
+}
+
+Fmatrix CMissile::RayTransform()
+{
+	Fmatrix matrix;
+
+	if (GetHUDmode())
+	{
+		// First-person: base on the hud item transform (world space in Eden)
+		const attachable_hud_item* hi = HudItemData();
+		if (hi)
+		{
+			matrix = hi->m_item_transform;
+			matrix.mulB_43(hi->m_model->LL_GetTransform(0));
+		}
+		else
+		{
+			matrix = XFORM();
+		}
+	}
+	else
+	{
+		// Third-person: transform the local throw point by the parent's XFORM
+		Fmatrix parent = H_Parent() ? H_Parent()->XFORM() : Fmatrix().identity();
+		matrix = parent;
+		matrix.mulB_43(Fmatrix().translate(m_vThrowPoint));
+		float h, p;
+		m_vThrowDir.getHP(h, p);
+		matrix.mulB_43(Fmatrix().setHPB(h, p, 0));
+	}
+
+	return matrix;
+}
+
+void CMissile::g_fireParams(SPickParam& pp)
+{
+	Fmatrix matrix = RayTransform();
+	pp.defs.start = matrix.c;
+	pp.defs.dir = matrix.k;
 }
 void CMissile::create_physic_shell	()
 {

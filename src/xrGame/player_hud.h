@@ -274,7 +274,8 @@ public:
 	void			load				(const shared_str& model_name);
 	void			load_default		();
 	void			update				(const Fmatrix& trans);
-	void			render_hud			();	
+	void			OnFrame				();
+	void			render_hud			();
 	void			render_item_ui		();
 	bool			render_item_ui_query();
 
@@ -297,6 +298,7 @@ public:
 
 	void			calc_transform		(u16 attach_slot_idx, const Fmatrix& offset, Fmatrix& result);
 	void			tune				(Fvector values);
+	const Fmatrix&	GetTransform		() const { return m_transform; };
 	u32				motion_length		(const MotionID& M, const CMotionDef*& md, float speed);
 	u32				motion_length		(const shared_str& anim_name, const shared_str& hud_name, const CMotionDef*& md);
 	void			OnMovementChanged	(ACTOR_DEFS::EMoveCommand cmd)	;

@@ -57,6 +57,9 @@ public:
 	virtual bool			GetBriefInfo				(II_BriefInfo& info);
 	bool					NeedBlockSprint				() const;
 
+	virtual Fmatrix			RayTransform				();
+	virtual void			g_fireParams				(SPickParam& pp);
+
 protected:
 	virtual void			UpdateFireDependencies_internal	();
 	virtual void			UpdateXForm						();
