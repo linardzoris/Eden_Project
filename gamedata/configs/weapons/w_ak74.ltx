@@ -171,8 +171,26 @@ zoom_enabled                             = true
 zoom_rotate_time                         = 0.25
 
 [wpn_ak74_hud]:hud_base
-aim_hud_offset_pos_16x9							   = 0.006400,0.005100,0.000000
-aim_hud_offset_pos				    			   = 0.006400,0.005100,0.000000
+aim_hud_offset_pos_16x9                            = -0.059600, 0.025600, -0.043500
+aim_hud_offset_rot_16x9                            = -0.000500, -0.006500, -0.019500
+
+;-- "at ease" mode: lowering the weapon and enter at-ease mode, palyer gets minor buffs
+offset_anim_at_ease								   = true
+offset_anim_at_ease_transpos					   = 0.060000,-0.010000,0.000000
+offset_anim_at_ease_transrot					   = 0.100000,-0.500000,0.100000 ;down-up,left-right,
+offset_anim_at_ease_transpeed					   = 4.0
+offset_anim_at_ease_accbonus					   = 0.1 ;movement speed bonus, 0.1 = +10%
+offset_anim_at_ease_fovbonus					   = 0.1 ;fov bonus, 0.1 = +10%
+
+offset_anim_at_ease_usespring					   = true
+offset_anim_at_ease_springdamp					   = 0.55 ;spring damping ratio, <1 = elastic (overshoot)
+
+offset_anim_at_ease_usesway						   = false
+offset_anim_at_ease_swaytime					   = 0.6 ;settle sway length, seconds
+offset_anim_at_ease_swayscale					   = 0.06 ;share of the transpos/transrot length
+offset_anim_at_ease_swaydecay					   = 6.0 ;sway envelope decay speed
+offset_anim_at_ease_swayfreqpos					   = 3.0 ;sway frequency, hz
+offset_anim_at_ease_swayfreqrot					   = 2.2 ;sway frequency, hz
 
 anm_show										   = ak74_draw
 anm_hide                						   = ak74_hide
@@ -180,8 +198,8 @@ anm_idle                						   = ak74_idle
 anm_idle_moving_slow         					   = ak74_walk_slow
 anm_idle_moving         						   = ak74_walk
 anm_shots               						   = ak74_shoot, shoot
-anm_shots_aim              				   = ak74_aim_shoot, shoot
-anm_reload	        							   = ak74_reload, reload, 0.1
+anm_shots_aim              				           = ak74_aim_shoot, shoot
+anm_reload	        							   = ak74_reload, reload
 anm_reload_empty	        					   = ak74_reload_empty, reload_empty
 anm_reload_misfire								   = ak74_revival, revival
 anm_idle_moving_crouch  						   = ak74_walk_slow_down
@@ -196,7 +214,7 @@ anm_idle_w_gl                					   = ak74_idle_w_gl
 anm_idle_moving_slow_w_gl         				   = ak74_walk_slow_w_gl
 anm_idle_moving_w_gl         					   = ak74_walk_w_gl
 anm_shots_w_gl               					   = ak74_shoot_w_gl, shoot
-anm_shots_aim_w_gl              			   = ak74_aim_shoot_w_gl, shoot
+anm_shots_aim_w_gl              				   = ak74_aim_shoot_w_gl, shoot
 anm_reload_w_gl	        						   = ak74_reload_w_gl, reload
 anm_reload_empty_w_gl	        				   = ak74_reload_empty_w_gl, reload_empty
 anm_reload_misfire_w_gl						       = ak74_revival_w_gl, revival

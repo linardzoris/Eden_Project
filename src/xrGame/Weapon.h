@@ -403,6 +403,11 @@ protected:
 	bool m_bActorCanShoot = true;
 	bool m_bIsAimAnimationPlaying = false;
 	bool m_bBlockFiremodeinGLM = false;
+	bool m_bAtEase = false;
+	float m_fAtEaseFactor = 0.0f;
+	float m_fAtEaseVelocity = 0.0f;
+	float m_fAtEaseShakeTime = 0.0f;
+	bool m_bAtEaseSettlePending = false;
 
 	shared_str hud_silencer;
 	shared_str hud_scope;
@@ -514,6 +519,20 @@ public:
 	IC float				GetZRotatingFactor	() const		{return m_zoom_params.m_fZoomRotationFactor;}
 	bool					GetFirepos			() const		{return m_firepos;}
 	bool					GetAimpos			() const		{return m_aimpos;}
+
+	//-- "at ease" mode (weapon lowered to the LTX-configured offset)
+	bool					IsAtEase			() const		{return m_bAtEase;}
+	// at ease or still moving back - firing is not allowed yet
+	// (the threshold lets the trigger work while the spring is finishing its tail)
+	bool					IsWeaponLowered		() const		{return m_bAtEase || m_fAtEaseFactor > 0.02f;}
+	// 1.0 when the weapon is not lowered, otherwise 1 + factor * the LTX bonus
+	float					GetAtEaseFovScale	();
+	float					GetAtEaseSpeedScale	();
+	void					ToggleAtEase		();
+	void					SetAtEase			(bool state);	// smooth, the offset is interpolated
+	void					ResetAtEase			();				// instant (hidden weapon only)
+	// spring blend of the at-ease offset + the settle sway timer
+	void					UpdateAtEaseTransition(const hud_item_measures::at_ease_params& at_ease, float dt);
 
 	virtual Fmatrix			RayTransform		();
 

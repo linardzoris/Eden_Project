@@ -297,6 +297,13 @@ void CActor::g_cl_CheckControls(u32 mstate_wf, Fvector &vControlAccel, float &Ju
 						scale *= m_fWalk_StrafeFactor;
 				}
 
+				//-- "at ease" mode gives a movement speed bonus by the weapon's own LTX value
+				CWeapon* pWeapon = inventory().ActiveItem() ? inventory().ActiveItem()->cast_weapon() : nullptr;
+				if (pWeapon != nullptr)
+				{
+					scale *= pWeapon->GetAtEaseSpeedScale();
+				}
+
 				vControlAccel.mul			(scale);
 			}//scale>EPS
 		}//(mstate_real&mcAnyMove)

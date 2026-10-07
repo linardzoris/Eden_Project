@@ -166,6 +166,28 @@ struct hud_item_measures
 	inertion_params m_inertion_params; //--#SM+#--
 	weapon_inertion m_weapon_inertion;
 
+	//-- "at ease" mode (weapon lowered, cannot fire until it is back up)
+	struct at_ease_params
+	{
+		bool	enabled = false;
+		float	transpeed = 3.0f;	//share of the full offset per second
+		float	fovbonus = 0.0f;	//fov bonus while lowered (0.2 = +20%)
+		float	accbonus = 0.0f;	//movement speed bonus while lowered (0.15 = +15%)
+		Fvector	transpos;			//HUD model (hands + weapon) translation
+		Fvector	transrot;			//HUD model rotation
+
+		//-- transition: spring-damper with an elastic overshoot, or a plain linear blend
+		bool	usespring = true;
+		float	springdamp = 0.55f;	//damping ratio, < 1 = elastic
+		//-- short sway played when the transition is over (the limbs settling)
+		bool	usesway = true;
+		float	swaytime = 0.6f;	//seconds
+		float	swayscale = 0.06f;	//share of the transpos / transrot length
+		float	swaydecay = 6.0f;	//envelope decay speed
+		float	swayfreqpos = 3.0f;	//hz
+		float	swayfreqrot = 2.2f;	//hz
+	} m_at_ease;
+
 	u16								m_fire_bone;
 	Fvector							m_fire_point_offset;
 	u16								m_fire_bone2;
