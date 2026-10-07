@@ -123,6 +123,11 @@ void CRenderTarget::phase_sslr() {
 	constexpr u32 vertex_color = color_rgba(0, 0, 0, 255);
 	FVF::TL* pv = nullptr;
 
+	// P2: isolate passes for GPU timing (r4_sslr_debug): 1 = skip filter,
+	// 2 = skip temporal, 3 = skip both. Measure by difference between modes.
+	const bool sslr_skip_filter = (ps_r4_sslr_debug & 1) != 0;
+	const bool sslr_skip_temporal = (ps_r4_sslr_debug & 2) != 0;
+
 	// P1: trace + filter resolution comes from the RT allocated for the tier
   // selected by r4_sslr_quality (0/1 half-res, 2 full-res). The same value is
   // exported to shaders as sslr_params (.x = tier, .y = resolution scale).
@@ -146,11 +151,13 @@ void CRenderTarget::phase_sslr() {
 
 		//Go go power rangers
 		RCache.set_Element(s_gtao->E[2]);
-		RCache.set_c("sslr_params", float(ps_r4_sslr_quality), sslr_res_scale, ps_r4_sslr_intensity, 0.0f);
+		// .w = r4_sslr_max_dist: distance cut-off + step-budget grading in sslr_render.ps
+		RCache.set_c("sslr_params", float(ps_r4_sslr_quality), sslr_res_scale, ps_r4_sslr_intensity, ps_r4_sslr_max_dist);
 		RCache.set_Geometry(g_combine);
 		RCache.Render(D3DPT_TRIANGLELIST, Offset, 0, 3, 0, 1);
 	}
 
+	if(!sslr_skip_filter)
 	{
 		GPU_EVENT(sslr_filter);
 		u_setrt(rt_sslr_temp, nullptr, nullptr, nullptr);
@@ -167,7 +174,8 @@ void CRenderTarget::phase_sslr() {
 
 		//Go go power rangers
 		RCache.set_Element(s_gtao->E[3]);
-		RCache.set_c("sslr_params", float(ps_r4_sslr_quality), sslr_res_scale, 0.0f, 0.0f);
+		// .w = r4_sslr_max_dist: distance/roughness tap grading in sslr_filter.ps
+		RCache.set_c("sslr_params", float(ps_r4_sslr_quality), sslr_res_scale, 0.0f, ps_r4_sslr_max_dist);
 		RCache.set_Geometry(g_combine);
 		RCache.Render(D3DPT_TRIANGLELIST, Offset, 0, 3, 0, 1);
 	}
@@ -175,6 +183,12 @@ void CRenderTarget::phase_sslr() {
 	// P1: temporal runs at full resolution and performs the depth-aware
   // upsample of the half-res filtered buffer.
   sslr_set_viewport(RCache.get_width(), RCache.get_height());
+
+  // P2: r4_sslr_debug & 2 skips the whole temporal step (history swap included).
+  // The temporal block is the last thing this phase does, so a plain early-out
+  // keeps the diff minimal.
+  if(sslr_skip_temporal)
+    return;
 
   // P1: ping-pong - exchange current/history BEFORE temporal so it samples
   // last frame's result through "$sslr_old" and renders the new frame into

@@ -93,6 +93,19 @@ float4 main(PSInput I) : SV_Target
 		int2 resSize = int2(scaled_screen_res.xy * sslrScale);
 		uint numSamples = sslr_params.x >= 1.5f ? 32 : (sslr_params.x >= 0.5f ? 16 : 8);
 
+		// P2: far or rough pixels never resolve the full disk - drop to 8 taps,
+		// striding over the 4 rings so the footprint keeps its size instead of
+		// collapsing onto the inner ring. Temporal accumulation converges the
+		// remaining offset noise (the disk is golden-angle rotated per frame).
+		uint sampleStride = 1;
+		float maxDist = sslr_params.w;
+		[branch]
+		if(maxDist > 0.0f && (O.ViewDist > maxDist * 0.6f || O.Roughness > 0.5f))
+		{
+			numSamples = min(numSamples, 8);
+			sampleStride = 4;
+		}
+
 		// P1: per-frame golden-angle rotation (converged by sslr_temporal),
 		// footprint scaled by roughness.
 		uint frame = uint(m_taa_jitter.w * 512.0f) & 15;
@@ -107,7 +120,7 @@ float4 main(PSInput I) : SV_Target
 		[loop]
 		for(uint i = 0; i < numSamples; ++i)
 		{
-						float2 diskPt = mul(diskRot, Disk32_Normalized[i]);
+						float2 diskPt = mul(diskRot, Disk32_Normalized[i * sampleStride]);
 			float2 offset = diskPt * scaled_screen_res.zw * DISK32_RADIUS;
 			offset = mirror(I.texcoord.xy + offset * radiusPx);
 			

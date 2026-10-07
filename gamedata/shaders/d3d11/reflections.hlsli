@@ -47,6 +47,25 @@ float2 gbuf_unpack_uv(float3 position)
 #define SSLR_TRACE_SCALE 1.20f
 #define SSLR_TRACE_BASE  0.0008454f
 
+// P2: distance-graded march budgets for the world path (sslr_params.w =
+// r4_sslr_max_dist). Same calibration, N = 22 / 14, so the ray still covers its
+// whole screen-space length with fewer (proportionally larger) steps.
+#define SSLR_STEPS_MID   22
+#define SSLR_STEPS_FAR   14
+#define SSLR_TRACE_BASE_MID 0.0036866f
+#define SSLR_TRACE_BASE_FAR 0.0168780f
+
+// P3: low-precision budget for low-Fresnel pixels. They used to skip the trace
+// entirely, which left a hard-edged bright disc (env fallback vs. traced scene
+// reflection) around the camera on flat reflective surfaces. Tracing them keeps
+// the content continuous at ~1/4 of the full march cost.
+#define SSLR_STEPS_LOW   8
+#define SSLR_TRACE_BASE_LOW 0.0606090f
+
+// P2: a world ray whose whole folded screen-space length is below this (~1% of
+// the screen) can not produce a meaningful hit - skip it without any fetch.
+#define SSLR_TRACE_MIN_LEN 0.005f
+
 // P0: linear-depth relative thickness gate run BEFORE binary refinement.
 // If one march step lands this far (in relative linear depth) past the sampled
 // surface, the crossing is treated as a silhouette edge: refinement taps are
@@ -160,12 +179,11 @@ float4 FastViewReflections(float3 Point, float3 Reflect)
 	return float4(SamplePoint, Fade);
 }
 
-float4 FastViewReflectionsSSR(float3 Point, float3 Reflect, bool is_hud)
+float4 FastViewReflectionsSSR(float3 Point, float3 Reflect, bool is_hud, bool low_fresnel)
 {
 	float4 StartProj, EndProj;
 	float3 ReflectBase = Reflect;
 	
-	float Step = rcp(SSLR_STEPS + 1);
 	bool Fade = false;
 
 	if(is_hud) {
@@ -185,15 +203,49 @@ float4 FastViewReflectionsSSR(float3 Point, float3 Reflect, bool is_hud)
 	Reflect.xy = Reflect.xy * float2(0.5f, -0.5f);
 	
 	Reflect.xyz = normalize(Reflect.xyz);
-	Step *= GetMaxDirLength(StartProj.xyz, rcp(Reflect));
+	float RayLen = GetMaxDirLength(StartProj.xyz, rcp(Reflect));
+
+	// P2: distance-graded step budget (world path only; HUD keeps its fixed short
+	// schedule). sslr_params.w (r4_sslr_max_dist) scales both the cut-off and the
+	// budget, so one knob controls the far-field cost.
+	uint NumSteps = SSLR_STEPS;
+	float TraceBase = SSLR_TRACE_BASE;
+	[branch]
+	if(!is_hud && sslr_params.w > 0.0f)
+	{
+		float ViewDist = length(Point);
+		if(ViewDist >= sslr_params.w * 0.75f)
+		{
+			NumSteps = SSLR_STEPS_FAR;
+			TraceBase = SSLR_TRACE_BASE_FAR;
+		}
+		else if(ViewDist >= sslr_params.w * 0.4f)
+		{
+			NumSteps = SSLR_STEPS_MID;
+			TraceBase = SSLR_TRACE_BASE_MID;
+		}
+	}
+
+	// P3: low-Fresnel pixels contribute very little (F0 ~ 0.03 downstream), so a
+	// coarse schedule is enough - but they must still trace, otherwise their env
+	// fallback stands out as a hard-edged disc against the traced surroundings.
+	if(!is_hud && low_fresnel && NumSteps > SSLR_STEPS_LOW)
+	{
+		NumSteps = SSLR_STEPS_LOW;
+		TraceBase = SSLR_TRACE_BASE_LOW;
+	}
 
 	// HUD keeps its original near-linear short schedule.
 	// The world path uses exponential steps: denser near the pixel (where a linear
 	// NDC schedule undersamples), same total ray length, binary refinement still
 	// recovers the exact hit after a depth crossing.
-	Step *= is_hud ? 0.2f : (SSLR_TRACE_BASE * (SSLR_STEPS + 1));
+	float Step = rcp(NumSteps + 1) * RayLen * (is_hud ? 0.2f : (TraceBase * (NumSteps + 1)));
 	float StepScale = is_hud ? 1.095f : SSLR_TRACE_SCALE;
 	float L = is_hud ? 0.001f : 0.0f;
+
+	// P2: world rays that leave the screen within a couple of texels can not hit
+	// anything - return the miss without entering the march at all.
+	bool CanTrace = is_hud || RayLen > SSLR_TRACE_MIN_LEN;
 
 	// One jitter value per ray, animated by the frame index. Temporal accumulation
 	// in sslr_temporal converges the per-frame offsets.
@@ -202,7 +254,7 @@ float4 FastViewReflectionsSSR(float3 Point, float3 Reflect, bool is_hud)
 	float JitterAmt = lerp(0.8f, 1.2f, RayJitter01(jitterSeed));
 
 	[loop]
-	for(uint i = 0; i < SSLR_STEPS; ++i)
+	for(uint i = 0; i < NumSteps && CanTrace; ++i)
 	{
 		float JStep = Step * JitterAmt;
 		L += JStep;
@@ -210,6 +262,13 @@ float4 FastViewReflectionsSSR(float3 Point, float3 Reflect, bool is_hud)
 		Step *= StepScale;
 		
 		EndProj.xyz = StartProj.xyz + Reflect * L;
+
+		// P2: a straight ray in screen space never comes back once it left the
+		// screen - stop instead of sampling clamped edge texels for the rest of
+		// the (fixed) step budget.
+		[branch]
+		if(!is_hud && (any(EndProj.xy < 0.0f) || any(EndProj.xy > 1.0f)))
+			break;
 		
 		float HitDepth = s_position.SampleLevel(smp_nofilter, EndProj.xy, 0).x;		
 		float Delta = EndProj.z - HitDepth;

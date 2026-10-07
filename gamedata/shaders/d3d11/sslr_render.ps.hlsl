@@ -84,12 +84,18 @@ void main(PSInput I, out float4 Point : SV_Target0, out float4 Final : SV_Target
 	
 	bool isNotHUD = O.Depth >= 0.02f;
 
-	// P0 optimization: world pixels with near-perfectly rough material or negligible
-	// Fresnel reflectance skip both screen-space traces. They fall back to the
-	// env/hemisphere color below (SSLR.w fade stays 0), which is visually identical
-	// for such surfaces but avoids the 30-step dependent-depth march entirely.
+	// P0 optimization: world pixels with near-perfectly rough material keep
+	// skipping both screen-space traces - their env/hemisphere fallback is
+	// visually equivalent and this avoids the dependent-depth march entirely.
+	// P3: low-Fresnel pixels no longer skip. Skipping them made the near-nadir
+	// region of flat reflective surfaces (an iso-incidence disc centred on the
+	// camera) output only the env fallback, which stands out as a hard-edged
+	// bright disc against the traced surroundings. They now use a low-precision
+	// trace (content stays continuous, cost is ~1/4 of the full march).
 	// HUD reflections are always traced (short, cheap schedule).
 	float TraceFade = 0.0f;
+	float DistFade = 1.0f;
+	bool LowFresnel = false;
 	if(isNotHUD)
 	{
 		float NdotV = max(0.0f, -dot(O.Normal, ViewVec));
@@ -98,13 +104,27 @@ void main(PSInput I, out float4 Point : SV_Target0, out float4 Final : SV_Target
 		float OneMinusNV2 = OneMinusNV * OneMinusNV;
 		float FresnelPeak = F0 + (1.0f - F0) * OneMinusNV2 * OneMinusNV2 * OneMinusNV;
 
-		TraceFade = (O.Roughness > 0.9f || FresnelPeak < 0.04f) ? 0.0f : 1.0f;
+		TraceFade = (O.Roughness > 0.9f) ? 0.0f : 1.0f;
+		LowFresnel = FresnelPeak < 0.04f;
+
+		// P2: distance cut-off (r4_sslr_max_dist, 0 = unlimited). World pixels past
+		// the cut-off fall back to the env/hemisphere reflection - they are
+		// fog-dominated there and the trace is pure cost. The last 20% of the range
+		// blends into the fallback so the boundary does not pop.
+		float maxDist = sslr_params.w;
+		if(maxDist > 0.0f)
+		{
+			DistFade = saturate((maxDist - O.ViewDist) * rcp(maxDist * 0.2f));
+			TraceFade = O.ViewDist < maxDist ? TraceFade : 0.0f;
+		}
 
 		StartPoint += O.Normal * 0.15f;
 		
 #ifdef USE_OFFSCREEN_REFLECTIONS
+		// P3: low-Fresnel pixels keep their old behaviour here (no VSLR march) -
+		// only the fallback direction differs, and they never ran it before.
 		[branch]
-		if(TraceFade > 0.0f)
+		if(TraceFade > 0.0f && !LowFresnel)
 		{
 			float4 VSLR = FastViewReflections(StartPoint, Reflection);
 			Point.xyz = lerp(Point.xyz, VSLR.xyz, VSLR.w);
@@ -121,7 +141,7 @@ void main(PSInput I, out float4 Point : SV_Target0, out float4 Final : SV_Target
 
 	[branch]
 	if(!isNotHUD || TraceFade > 0.0f)
-		SSLR = FastViewReflectionsSSR(StartPoint, Reflection, !isNotHUD);
+		SSLR = FastViewReflectionsSSR(StartPoint, Reflection, !isNotHUD, LowFresnel);
 
 	Final = 0.0f;
 	[branch]
@@ -143,7 +163,7 @@ void main(PSInput I, out float4 Point : SV_Target0, out float4 Final : SV_Target
 	float4 Hemi = CompureSpecularIrradance(Reflection.xyz, O.Hemi, 0.0f).xyzz;
 	[branch]
 	if(SSLR.w > 0.0f)
-		SSLR.w *= GetBorderAtten(PrevSpecularUV);
+		SSLR.w *= GetBorderAtten(PrevSpecularUV) * DistFade;
 	
 #ifdef USE_OFFSCREEN_REFLECTIONS
 	// VSLR fallback: sample the cubemap at the roughness-appropriate mip

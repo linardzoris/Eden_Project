@@ -131,6 +131,15 @@ extern ECORE_API float			ps_r4_cas_sharpening;
 // Changes take effect after vid_restart (RTs are allocated with the tier).
 extern ECORE_API int			ps_r4_sslr_quality;
 
+// P2: SSLR trace cut-off distance in metres (0 = unlimited). World pixels past
+// the cut-off fall back to the env/hemisphere reflection; the last 20% of the
+// range blends smoothly. Also grades the march budget (30/22/14 steps).
+extern ECORE_API float			ps_r4_sslr_max_dist;
+
+// P2: SSLR pass isolation for GPU timing (measure by difference):
+// 0 = all passes, 1 = skip filter, 2 = skip temporal, 3 = skip filter + temporal.
+extern ECORE_API int			ps_r4_sslr_debug;
+
 // GTAO: effect strength (power curve, 1.0 = neutral) and buffer resolution
 // (0 = full-res, 1 = half-res). Resolution needs vid_restart (RT allocation).
 extern ECORE_API float			ps_r4_gtao_intensity;
