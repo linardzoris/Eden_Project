@@ -54,7 +54,7 @@ if exist "%CACHE_DIR%" (
 
 :startengine
 echo 正在启动 %CFG% ...
-start "" /D "%ROOT%" "%EXE%"
+start "" /D "%ROOT%" "%EXE%" -dbgdev
 
 rem 引擎已启动，退出控制台，不影响游戏运行
 endlocal

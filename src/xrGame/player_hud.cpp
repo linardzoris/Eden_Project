@@ -550,6 +550,23 @@ void hud_item_measures::load(const shared_str& sect_name, IKinematics* K)
 
 	m_weapon_inertion.Load(sect_name, is_16x9);
 
+	m_at_ease.enabled = READ_IF_EXISTS(pSettings, r_bool, sect_name, "offset_anim_at_ease", false);
+	m_at_ease.transpos = READ_IF_EXISTS(pSettings, r_fvector3, sect_name, "offset_anim_at_ease_transpos", zero_vel);
+	m_at_ease.transrot = READ_IF_EXISTS(pSettings, r_fvector3, sect_name, "offset_anim_at_ease_transrot", zero_vel);
+	m_at_ease.transpeed = READ_IF_EXISTS(pSettings, r_float, sect_name, "offset_anim_at_ease_transpeed", 3.0f);
+	m_at_ease.fovbonus = READ_IF_EXISTS(pSettings, r_float, sect_name, "offset_anim_at_ease_fovbonus", 0.0f);
+	m_at_ease.accbonus = READ_IF_EXISTS(pSettings, r_float, sect_name, "offset_anim_at_ease_accbonus", 0.0f);
+
+	m_at_ease.usespring = READ_IF_EXISTS(pSettings, r_bool, sect_name, "offset_anim_at_ease_usespring", true);
+	m_at_ease.springdamp = READ_IF_EXISTS(pSettings, r_float, sect_name, "offset_anim_at_ease_springdamp", 0.55f);
+
+	m_at_ease.usesway = READ_IF_EXISTS(pSettings, r_bool, sect_name, "offset_anim_at_ease_usesway", true);
+	m_at_ease.swaytime = READ_IF_EXISTS(pSettings, r_float, sect_name, "offset_anim_at_ease_swaytime", 0.6f);
+	m_at_ease.swayscale = READ_IF_EXISTS(pSettings, r_float, sect_name, "offset_anim_at_ease_swayscale", 0.06f);
+	m_at_ease.swaydecay = READ_IF_EXISTS(pSettings, r_float, sect_name, "offset_anim_at_ease_swaydecay", 6.0f);
+	m_at_ease.swayfreqpos = READ_IF_EXISTS(pSettings, r_float, sect_name, "offset_anim_at_ease_swayfreqpos", 3.0f);
+	m_at_ease.swayfreqrot = READ_IF_EXISTS(pSettings, r_float, sect_name, "offset_anim_at_ease_swayfreqrot", 2.2f);
+
 	m_prop_flags.set(e_16x9_mode_now,is_16x9);
 }
 

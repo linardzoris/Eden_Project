@@ -1405,6 +1405,7 @@ void CWeapon::OnHiddenItem ()
 	m_bBlockEmptyClick = false;
 	bWorking = false;
 	bDisablePrepareAnimation = false;
+	ResetAtEase();
 }
 
 bool CWeapon::SendDeactivateItem(bool Force)
@@ -1821,6 +1822,14 @@ bool CWeapon::Action(u16 cmd, u32 flags)
 					return false;
 				}
 
+				//-- "at ease": the trigger only raises the weapon with the same
+				//-- transition as the at-ease key, the shot is not fired
+				if ((flags & CMD_START) && IsWeaponLowered())
+				{
+					SetAtEase(false);
+					return true;
+				}
+
 				if (IsTriStateReload() && GetState() == eReload && (m_sub_state == eSubstateReloadInProcess || m_bAddCartridgeInOpen && m_sub_state == eSubstateReloadBegin) && flags & CMD_START)
 				{
 					bStopReloadSignal = true;
@@ -1842,6 +1851,14 @@ bool CWeapon::Action(u16 cmd, u32 flags)
 		case kWPN_NEXT: 
 		{
 			return SwitchAmmoType(flags);
+		}break;
+		case kWPN_AT_EASE:
+		{
+			if (flags & CMD_START)
+			{
+				ToggleAtEase();
+			}
+			return true;
 		}break;
 		case kQUICK_KICK:
 		{
@@ -1872,6 +1889,12 @@ bool CWeapon::Action(u16 cmd, u32 flags)
 		}break;
 		case kWPN_ZOOM:
 		{
+			//-- "at ease" mode disables aiming
+			if (IsAtEase())
+			{
+				return true;
+			}
+
 			if (IsZoomEnabled())
 			{
 				if (b_toggle_weapon_aim)
@@ -2711,6 +2734,12 @@ void CWeapon::InitAddons()
 
 bool CWeapon::CanAimNow()
 {
+	//-- "at ease" mode disables aiming
+	if (IsAtEase())
+	{
+		return false;
+	}
+
 	CActor* pActor = H_Parent() != nullptr ? H_Parent()->cast_actor() : nullptr;
 
 	if (pActor == nullptr)
@@ -3270,6 +3299,169 @@ u8 CWeapon::GetCurrentHudOffsetIdx() const
 	}
 }
 
+float CWeapon::GetAtEaseFovScale()
+{
+	attachable_hud_item* hi = HudItemData();
+
+	if (hi == nullptr || m_fAtEaseFactor <= 0.0f)
+	{
+		return 1.0f;
+	}
+
+	return 1.0f + m_fAtEaseFactor * hi->m_measures.m_at_ease.fovbonus;
+}
+
+float CWeapon::GetAtEaseSpeedScale()
+{
+	attachable_hud_item* hi = HudItemData();
+
+	if (hi == nullptr || m_fAtEaseFactor <= 0.0f)
+	{
+		return 1.0f;
+	}
+
+	return 1.0f + m_fAtEaseFactor * hi->m_measures.m_at_ease.accbonus;
+}
+
+void CWeapon::ToggleAtEase()
+{
+	attachable_hud_item* hi = HudItemData();
+
+	if (hi == nullptr || !hi->m_measures.m_at_ease.enabled)
+	{
+		return;
+	}
+
+	if (!m_bAtEase)
+	{
+		//-- weapon can be lowered only while it is idle and not aiming
+		if (IsZoomed() || IsPending() || GetState() != eIdle)
+		{
+			return;
+		}
+	}
+
+	SetAtEase(!m_bAtEase);
+}
+
+void CWeapon::SetAtEase(bool state)
+{
+	if (m_bAtEase == state)
+	{
+		return;
+	}
+
+	//-- only the target state is changed here, the HUD offset (and the fov /
+	//-- speed bonuses that follow it) is interpolated in UpdateHudAdditonal()
+	//-- at offset_anim_at_ease_transpeed
+	m_bAtEase = state;
+	//-- the sway belongs to the transition that is over now
+	m_fAtEaseShakeTime = 0.0f;
+	m_bAtEaseSettlePending = true;
+}
+
+void CWeapon::ResetAtEase()
+{
+	m_bAtEase = false;
+	m_fAtEaseFactor = 0.0f;
+	m_fAtEaseVelocity = 0.0f;
+	m_fAtEaseShakeTime = 0.0f;
+	m_bAtEaseSettlePending = false;
+}
+
+void CWeapon::UpdateAtEaseTransition(const hud_item_measures::at_ease_params& at_ease, float dt)
+{
+	//-- the sway is started as soon as the weapon has (almost) arrived, so it
+	//-- continues the transition instead of starting after it stopped
+	static const float arrived_eps = 0.10f;		//of the 0..1 blend
+	//-- and the blend is snapped to the exact target only when that is invisible
+	static const float snap_eps = 0.002f;
+	static const float snap_vel_eps = 0.02f;	//blend units per second
+
+	dt = _min(dt, 0.1f);
+
+	const float target = m_bAtEase ? 1.0f : 0.0f;
+
+	if (at_ease.usespring)
+	{
+		//-- spring-damper instead of a linear blend: the weapon slightly
+		//-- overshoots and swings back, which reads as a hand carrying it
+		const float omega = _max(at_ease.transpeed, 0.01f) * 3.0f;
+		const float zeta = _max(at_ease.springdamp, 0.05f);
+
+		const float accel = omega * omega * (target - m_fAtEaseFactor) - 2.0f * zeta * omega * m_fAtEaseVelocity;
+		m_fAtEaseVelocity += accel * dt;
+		m_fAtEaseFactor += m_fAtEaseVelocity * dt;
+	}
+	else
+	{
+		//-- plain linear blend, no overshoot
+		const float step = at_ease.transpeed * dt;
+
+		if (m_fAtEaseFactor < target)
+		{
+			m_fAtEaseFactor = _min(target, m_fAtEaseFactor + step);
+		}
+		else if (m_fAtEaseFactor > target)
+		{
+			m_fAtEaseFactor = _max(target, m_fAtEaseFactor - step);
+		}
+
+		m_fAtEaseVelocity = 0.0f;
+	}
+
+	if (_abs(target - m_fAtEaseFactor) < arrived_eps)
+	{
+		if (m_bAtEaseSettlePending)
+		{
+			//-- the weapon is in place, play the settle sway
+			m_bAtEaseSettlePending = false;
+			m_fAtEaseShakeTime = at_ease.usesway ? at_ease.swaytime : 0.0f;
+		}
+		else if (m_fAtEaseShakeTime > 0.0f)
+		{
+			m_fAtEaseShakeTime = _max(0.0f, m_fAtEaseShakeTime - dt);
+		}
+	}
+	else
+	{
+		m_bAtEaseSettlePending = true;
+	}
+
+	if (_abs(target - m_fAtEaseFactor) < snap_eps && _abs(m_fAtEaseVelocity) < snap_vel_eps)
+	{
+		m_fAtEaseFactor = target;
+		m_fAtEaseVelocity = 0.0f;
+	}
+}
+
+//-- damped multi-axis sway added to the at-ease offset right after the transition
+static void add_at_ease_shake(const hud_item_measures::at_ease_params& at_ease, float shake_time_left, Fvector& offs, Fvector& rot)
+{
+	const float t = at_ease.swaytime - shake_time_left;
+
+	//-- difference of exponentials: the sway grows from zero displacement, so it
+	//-- kicks in without a jerk, and its peak still matches offset_anim_at_ease_swayscale
+	static const float rise_k = 5.0f;		//the rise is 5x faster than the decay
+	static const float env_peak = 0.5824f;	//peak of (e^-x - e^-5x) over x
+
+	const float env = (expf(-t * at_ease.swaydecay) - expf(-t * at_ease.swaydecay * rise_k)) / env_peak;
+
+	const float pos_amp = at_ease.transpos.magnitude() * at_ease.swayscale;
+	const float rot_amp = at_ease.transrot.magnitude() * at_ease.swayscale;
+
+	const float w_pos = 2.0f * PI * at_ease.swayfreqpos * t;
+	const float w_rot = 2.0f * PI * at_ease.swayfreqrot * t;
+
+	offs.x += pos_amp * env * _sin(w_pos);
+	offs.y += pos_amp * env * 0.6f * _sin(w_pos + 1.7f);
+	offs.z += pos_amp * env * 0.4f * _sin(w_pos + 3.1f);
+
+	rot.x += rot_amp * env * _sin(w_rot + 0.6f);
+	rot.y += rot_amp * env * 0.7f * _sin(w_rot);
+	rot.z += rot_amp * env * 0.5f * _sin(w_rot + 2.4f);
+}
+
 void CWeapon::UpdateHudAdditonal(Fmatrix& trans)
 {
 	CActor* pActor = H_Parent() != nullptr ? H_Parent()->cast_actor() : nullptr;
@@ -3291,6 +3483,28 @@ void CWeapon::UpdateHudAdditonal(Fmatrix& trans)
 	curr_rot = hi->m_measures.m_hands_positions.hands_offsets[1][idx];//rot,aim
 	curr_offs.mul(m_zoom_params.m_fZoomRotationFactor);
 	curr_rot.mul(m_zoom_params.m_fZoomRotationFactor);
+
+	//-- "at ease" mode: blend the configured offset on top of the current ones
+	const hud_item_measures::at_ease_params& at_ease = hi->m_measures.m_at_ease;
+	if (at_ease.enabled)
+	{
+		UpdateAtEaseTransition(at_ease, Device.fTimeDelta);
+
+		Fvector at_ease_offs = at_ease.transpos;
+		at_ease_offs.mul(m_fAtEaseFactor);
+
+		Fvector at_ease_rot = at_ease.transrot;
+		at_ease_rot.mul(m_fAtEaseFactor);
+
+		//-- short sway while the limbs are settling after the transition
+		if (m_fAtEaseShakeTime > 0.0f)
+		{
+			add_at_ease_shake(at_ease, m_fAtEaseShakeTime, at_ease_offs, at_ease_rot);
+		}
+
+		curr_offs.add(at_ease_offs);
+		curr_rot.add(at_ease_rot);
+	}
 
 	Fmatrix	hud_rotation;
 	hud_rotation.identity();

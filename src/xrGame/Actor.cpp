@@ -1223,23 +1223,29 @@ float CActor::currentFOV()
 	
 	CWeapon* pWeapon = inventory().ActiveItem() ? inventory().ActiveItem()->cast_weapon() : nullptr;
 
+	float fov = g_fov;
+
 	if (eacFreeLook != cam_active && pWeapon && pWeapon->IsZoomed() && (!pWeapon->ZoomTexture() || (!pWeapon->IsRotatingToZoom() && pWeapon->ZoomTexture())))
 	{
 		static const bool isAltFovCalc = EngineExternal()[EEngineExternalGame::EnableAlternateZoomFovCalc];
 		if (isAltFovCalc)
 		{
-			float fov = (g_fov / 2.f) * PI / 180.f;
-			return (2.f * atan(tan(fov) / pWeapon->GetZoomFactor()) * 180.f / PI);
+			float half_fov = (g_fov / 2.f) * PI / 180.f;
+			fov = (2.f * atan(tan(half_fov) / pWeapon->GetZoomFactor()) * 180.f / PI);
 		}
 		else
 		{
-			return pWeapon->GetZoomFactor() * (0.75f) + SprintFov;
+			fov = pWeapon->GetZoomFactor() * (0.75f) + SprintFov;
 		}
 	}
-	else
+
+	//-- "at ease" mode widens the view by the weapon's own LTX bonus
+	if (pWeapon != nullptr)
 	{
-		return g_fov;
+		fov *= pWeapon->GetAtEaseFovScale();
 	}
+
+	return fov;
 }
 
 float	NET_Jump = 0;
