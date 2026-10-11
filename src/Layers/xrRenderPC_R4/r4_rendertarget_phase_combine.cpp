@@ -220,6 +220,9 @@ void CRenderTarget::phase_combine()
 	if(ps_r2_ls_flags_ext.test(R4FLAG_PUDDLES))
 	{
 		GPU_EVENT(Forward_rendering_puddles);
+#if defined(USE_DX12)
+		dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("cmb:puddles"));
+#endif
 		phase_puddles();
 	}
 
@@ -232,7 +235,13 @@ void CRenderTarget::phase_combine()
 		RCache.set_Stencil (FALSE);
 		RCache.set_ColorWriteEnable ();
 
+#if defined(USE_DX12)
+		dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("cmb:fwd_begin"));
+#endif
 		RImplementation.render_forward	();
+#if defined(USE_DX12)
+		dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("cmb:fwd_done"));
+#endif
 		if (g_pGamePersistent) {
 			g_pGamePersistent->OnRenderPPUI_main();	// PP-UI
 		}
@@ -241,6 +250,9 @@ void CRenderTarget::phase_combine()
 	//	Igor: for volumetric lights
 	//	combine light volume here
 	if(m_bHasActiveVolumetric) {
+#if defined(USE_DX12)
+		dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("cmb:volumetric"));
+#endif
 		phase_combine_volumetric();
 	}
 
@@ -262,7 +274,13 @@ void CRenderTarget::phase_combine()
 			RCache.set_CullMode(CULL_CCW);
 			RCache.set_Stencil(FALSE);
 			RCache.set_ColorWriteEnable();
+#if defined(USE_DX12)
+			dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("cmb:distort_geom"));
+#endif
 			RImplementation.r_dsgraph_render_distort();
+#if defined(USE_DX12)
+			dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("cmb:distort_geom_done"));
+#endif
 
 			if(g_pGamePersistent) {
 				g_pGamePersistent->OnRenderPPUI_PP();	// PP-UI
@@ -292,11 +310,20 @@ void CRenderTarget::phase_combine()
 			RCache.set_Element(s_combine->E[1]);
 			RCache.set_Geometry(g_combine);
 
+#if defined(USE_DX12)
+			dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("cmb:distort_draw"));
+#endif
 			RCache.Render(D3DPT_TRIANGLELIST, Offset, 0, 4, 0, 2);
 			RContext->CopyResource(rt_Generic_0->pSurface, rt_Generic_2->pSurface);
+#if defined(USE_DX12)
+			dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("cmb:distort_done"));
+#endif
 		}
 	}
 
+#if defined(USE_DX12)
+	dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("cmb:aa"));
+#endif
 	if(ps_r_scale_mode < 2) {
 		if(ps_r2_aa_type == 1) {
 			GPU_EVENT(phase_fxaa);

@@ -28,7 +28,7 @@ if errorlevel 1 set "CFG=Release" & goto launch
 goto menu
 
 :launch
-set "EXE=%ROOT%bins\%CFG%\xrEngine.exe"
+set "EXE=%ROOT%bins\DXLegacy\%CFG%\xrEngine.exe"
 
 if not exist "%EXE%" (
     echo.

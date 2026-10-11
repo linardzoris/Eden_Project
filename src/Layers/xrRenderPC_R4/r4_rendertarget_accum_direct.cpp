@@ -79,7 +79,15 @@ void CRenderTarget::accum_direct_cascade	( u32 sub_phase, Fmatrix& xform, Fmatri
 		RCache.set_c				("Ldynamic_dir",		dir.x,dir.y,dir.z,0		);
 
 		RCache.set_Stencil(TRUE, D3DCMP_LESSEQUAL, dwLightMarkerID, 0x01, 0xff, D3DSTENCILOP_KEEP, D3DSTENCILOP_REPLACE, D3DSTENCILOP_KEEP);
+#if defined(USE_DX12)
+		// 诊断（TODO(diag)）：WriteBufferImmediate 有写入缓冲，末尾标记可能尚不可见；
+		// 加密标记密度可把"GPU 挂在哪条 Draw"的分辨率提高一档
+		dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("sun:mask_draw"));
+#endif
 		RCache.Render(D3DPT_TRIANGLELIST, Offset, 0, 4, 0, 2);
+#if defined(USE_DX12)
+		dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("sun:mask_done"));
+#endif
 	}
 
 	// recalculate d_Z, to perform depth-clipping
@@ -94,7 +102,13 @@ void CRenderTarget::accum_direct_cascade	( u32 sub_phase, Fmatrix& xform, Fmatri
 	// Perform lighting
 	{
 		GPU_EVENT(Perform_lighting);
+#if defined(USE_DX12)
+		dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("sun:accum_begin"));
+#endif
 		phase_accumulator					()	;
+#if defined(USE_DX12)
+		dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("sun:accum_done"));
+#endif
 		RCache.set_CullMode					(CULL_CCW); //******************************************************************
 		RCache.set_ColorWriteEnable			()	;
 

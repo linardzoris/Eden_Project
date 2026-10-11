@@ -241,6 +241,10 @@ void CBackend::set_Textures			(STextureList* _T)
 				{
 					PGO					(Msg("PGO:tex%d:%s",load_id,load_surf->cName.c_str()));
 					load_surf->bind		(load_id);
+#if defined(USE_DX12)
+					// 诊断：登记槽位对应的纹理名，供 SRV 维度错配日志定位"哪张纹理"
+					SRVSManager.SetPSName(load_id, load_surf->cName.c_str());
+#endif
 //					load_surf->Apply	(load_id);
 				}
 			}

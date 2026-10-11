@@ -376,16 +376,27 @@ namespace dx12
 	// ---------------------------------------------------------------------------
 	ComPtr<ID3D12Resource>		BcBuffer;
 	void*						BcMapped = nullptr;
-	static UINT					BcFrame = 0;	// 面包屑帧号（编码进写入值高 16 位）
+	static UINT					BcFrame = 0;	// 面包屑帧号（存 CPU 侧解码表 s_bcRec）
 	// 环形时间线：256 槽，WriteBreadcrumb 按全局序号递增写槽 (BcSeq&255)。
 	// 单值版本只能看到"最后一条"，无法区分"卡在帧末标记之后"还是"卡在下一帧开头"，
-	// 更无法回溯 GPU 死前执行了哪些 pass；环形版在设备移除时回放最近 24 条，
+	// 更无法回溯 GPU 死前执行了哪些 pass；环形版在设备移除时回放最近若干条，
 	// 可直接读出 GPU 最后执行的完整标记序列（配合 r4:*/frame:* 面包屑定位卡点）。
+	//
+	// 【关键】写入值必须是序号 seq 本身。判定"GPU 是否执行过标记 #k"的唯一可靠依据是
+	// "槽 k&255 里恰好存着 k"（陈旧值只可能是 k-256/k-512…，永不等于 k）。早期实现写的是
+	// "帧号<<16|标记id"，任何非零值都被当成"已执行"——而槽里永远是非零的陈旧值，
+	// 于是每个回放都把 CPU 录制进度当成 GPU 进度（永远"0 条已录未执行"），挂点定位
+	// （据此判定的"卡在反射 pass"）因此完全失真。这里同时维护 CPU 侧解码表 s_bcRec，
+	// 使回放能给出标记名与帧号。
 	static volatile LONG		BcSeq = 0;
 	static constexpr UINT		kBcSlots = 256;
 	static std::vector<const char*>	s_bcNames;	// 1-based：值 N → s_bcNames[N-1]
 	static std::mutex			s_bcMutex;
 	static bool					s_dredDumped = false;
+
+	struct BcRec { UINT seq = 0; UINT frame = 0; UINT frameOrd = 0; const char* name = "?"; };
+	static BcRec				s_bcRec[kBcSlots];	// 槽 → 该槽最后一次录制的标记（解码用）
+	static UINT					s_frameOrd = 0;		// 本帧内第几个标记（与 DRED 的 BeginEvent 计数对齐）
 
 	bool CreateBreadcrumbBuffer()
 	{
@@ -423,13 +434,41 @@ namespace dx12
 		if (!s_cl2 && FAILED(CmdList->QueryInterface(IID_PPV_ARGS(&s_cl2)))) return;
 		if (!s_cl2) return;
 
-		const UINT slot = (UINT)InterlockedIncrement(&BcSeq) & (kBcSlots - 1);
+		const UINT seq = (UINT)InterlockedIncrement(&BcSeq);
+		const UINT slot = seq & (kBcSlots - 1);
+
+		{
+			std::lock_guard<std::mutex> g(s_bcMutex);
+			BcRec& r = s_bcRec[slot];
+			r.seq = seq;
+			r.frame = BcFrame;
+			r.frameOrd = s_frameOrd++;
+			r.name = (value > 0 && value <= s_bcNames.size()) ? s_bcNames[value - 1] : "?";
+		}
+
 		D3D12_WRITEBUFFERIMMEDIATE_PARAMETER p = {};
 		p.Dest = BcBuffer->GetGPUVirtualAddress() + (SIZE_T)slot * 4;
-		// 高 16 位写帧号：读回时据此判断这是"本帧"还是"上一帧"的陈旧值——
-		// 帧末标记每帧都写，不打戳就无法区分"卡在帧末"与"卡在下一帧开头"。
-		p.Value = ((BcFrame & 0xFFFFu) << 16) | (value & 0xFFFFu);
+		// 写序号本身（不是"帧号|标记"）：回放时"槽值 == 该序号"即证明 GPU 执行过该标记。
+		p.Value = seq;
 		s_cl2->WriteBufferImmediate(1, &p, nullptr);
+
+		// 同时发一个 BeginEvent/EndEvent：DRED 的自动面包屑会把 BEGINEVENT 记进
+		// pCommandHistory（每标记恰好一条）。据此可数出"设备挂起的那条操作之前
+		// GPU 已越过多少个标记"，与自建环形回放给出的标记位置互相校验 ——
+		// 判定 WriteBufferImmediate 到底是否领先于真实执行（这是定位卡点的关键前提）。
+		if (value > 0)
+		{
+			const char* nm = nullptr;
+			{
+				std::lock_guard<std::mutex> g(s_bcMutex);
+				if (value <= s_bcNames.size()) nm = s_bcNames[value - 1];
+			}
+			if (nm && nm[0])
+			{
+				s_cl2->BeginEvent(0, nm, (UINT)strlen(nm) + 1);
+				s_cl2->EndEvent();
+			}
+		}
 	}
 
 	extern "C" ENGINE_API void DumpBreadcrumb(const char* tag)
@@ -439,25 +478,43 @@ namespace dx12
 		const LONG cpuSeq = InterlockedOr(&BcSeq, 0);
 		const volatile UINT* ring = (const volatile UINT*)BcMapped;
 
-		// 从最新往回找 GPU 已执行的最高序号（槽为 0 = 尚未执行）
+		// 正确的 GPU 进度判定：从最新往回找第一个满足 "槽 k&255 的值 == k" 的 k。
+		// 槽只有在 GPU 执行了标记 #k 时才会被写成 k；陈旧值只可能是 k-256/k-512…，
+		// 因此不会误判。写入缓冲会让最后若干条尚未落盘，所以得到的是"至少执行到"。
 		LONG gpuSeq = 0;
-		for (LONG k = cpuSeq; k > 0 && k > cpuSeq - 1024; --k)
+		for (LONG k = cpuSeq; k > 0 && k > cpuSeq - (LONG)kBcSlots; --k)
 		{
-			if (ring[(size_t)(k & (kBcSlots - 1))]) { gpuSeq = k; break; }
+			if (ring[(size_t)(k & (kBcSlots - 1))] == (UINT)k) { gpuSeq = k; break; }
 		}
 
-		Msg("! DX12 [%s]: GPU breadcrumb 环形时间线：CPU 已录制标记 #%u，GPU 已执行到 #%u（%u 条已录未执行）",
-			tag ? tag : "?", (UINT)cpuSeq, (UINT)gpuSeq, (UINT)(cpuSeq - gpuSeq));
-
 		std::lock_guard<std::mutex> g(s_bcMutex);
+
+		const char* gpuName = "?";
+		UINT gpuFrame = 0;
+		UINT gpuOrd = 0;
+		UINT lastOrd = 0;	// 该帧最后一个标记的帧内序号（= 该帧标记总数-1）
+		if (gpuSeq > 0)
+		{
+			const BcRec& gr = s_bcRec[(size_t)(gpuSeq & (kBcSlots - 1))];
+			if (gr.seq == (UINT)gpuSeq) { gpuName = gr.name; gpuFrame = gr.frame; gpuOrd = gr.frameOrd; }
+			// 在该帧内往后找出最大的 frameOrd（即该帧最后一个标记）
+			for (LONG k = gpuSeq; k <= cpuSeq && k < gpuSeq + 128; ++k)
+			{
+				const BcRec& r = s_bcRec[(size_t)(k & (kBcSlots - 1))];
+				if (r.seq == (UINT)k && r.frame == gpuFrame && r.frameOrd > lastOrd) lastOrd = r.frameOrd;
+			}
+		}
+
+		Msg("! DX12 [%s]: GPU breadcrumb 环形时间线：CPU 已录制标记 #%u；GPU 至少执行到 #%u（%s @帧%u，该帧第%u个标记，该帧共%u个标记的末位=%u），%u 条已录未执行",
+			tag ? tag : "?", (UINT)cpuSeq, (UINT)gpuSeq, gpuName, gpuFrame, gpuOrd,
+			lastOrd + 1, lastOrd, (UINT)(cpuSeq - gpuSeq));
+
 		const LONG first = gpuSeq > 24 ? gpuSeq - 24 : 1;
 		for (LONG k = first; k <= gpuSeq; ++k)
 		{
-			const UINT packed = ring[(size_t)(k & (kBcSlots - 1))];
-			const UINT marker = packed & 0xFFFFu;
-			const UINT frame = packed >> 16;
-			const char* name = (marker > 0 && marker <= s_bcNames.size()) ? s_bcNames[marker - 1] : "?";
-			Msg("! DX12 [%s]:   bc#%u = %s @帧%u", tag ? tag : "?", (UINT)k, name, frame);
+			const BcRec& r = s_bcRec[(size_t)(k & (kBcSlots - 1))];
+			const char* name = (r.seq == (UINT)k) ? r.name : "?";
+			Msg("! DX12 [%s]:   bc#%u = %s @帧%u", tag ? tag : "?", (UINT)k, name, r.frame);
 		}
 	}
 
@@ -725,11 +782,11 @@ namespace dx12
 		ReportDeviceLostOnce("BeginFrame");
 
 		if (FrameInFlight)
-			return;
+		return;
 
-		// 复用该 backbuffer 的命令分配器 / 描述符堆槽 / 上传环段之前，
-		// 等上次使用它的那一帧在 GPU 上执行完毕（FenceValue 在 EndFrame 中登记）。
-		const UINT64 pending = FenceValue[FrameIndex];
+	// 复用该 backbuffer 的命令分配器 / 描述符堆槽 / 上传环段之前，
+	// 等上次使用它的那一帧在 GPU 上执行完毕（FenceValue 在 EndFrame 中登记）。
+	const UINT64 pending = FenceValue[FrameIndex];
 		if (pending && Fence && Fence->GetCompletedValue() < pending)
 		{
 			const ULONGLONG t0 = GetTickCount64();
@@ -747,6 +804,7 @@ namespace dx12
 		CmdList->Reset(CmdAlloc[FrameIndex].Get(), nullptr);
 
 		++BcFrame;
+		s_frameOrd = 0;
 		WriteBreadcrumb(RegisterBreadcrumbName("beginframe:pre_barrier"));
 
 		D3D12_RESOURCE_BARRIER toRT = {};

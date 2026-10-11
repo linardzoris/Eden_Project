@@ -367,6 +367,21 @@ namespace dx12
 					};
 					dumpWindow("byPtr", byPtr);
 					dumpWindow("byVal", byVal);
+
+					// 统计"挂起操作之前 GPU 已越过多少个标记"：每个面包屑都会发一对
+					// BeginEvent/EndEvent，DRED 各记一条 BEGINEVENT/ENDEVENT 操作。
+					// 与环形回放打印的"该帧最后一个标记的帧内序号"比对，即可判定
+					// WriteBufferImmediate 的可见位置是否领先于真实执行（关键前提校验）。
+					for (int pass = 0; pass < 2; ++pass)
+					{
+						const UINT idx = (pass == 0) ? byVal : byPtr;
+						if (idx == UINT_MAX || idx >= n->BreadcrumbCount) continue;
+						UINT nBeg = 0, lastBeg = UINT_MAX;
+						for (UINT i = 0; i < idx; ++i)
+							if (n->pCommandHistory[i] == D3D12_AUTO_BREADCRUMB_OP_BEGINEVENT) { ++nBeg; lastBeg = i; }
+						Msg("! DX12 [%s]: DRED %s: 挂起操作(op#%u)之前已越过 %u 个标记(BeginEvent)，最后一个在 op#%u",
+							tag ? tag : "?", (pass == 0) ? "byVal" : "byPtr", idx, nBeg, lastBeg);
+					}
 				}
 			}
 		}
@@ -395,10 +410,17 @@ namespace dx12
 		const HRESULT drr = dev->GetDeviceRemovedReason();
 		if (FAILED(drr))
 		{
-			Msg("! DX12 [%s]: device removed reason 0x%08x", tag ? tag : "", (unsigned)drr);
-			// 首次发现移除：输出 GPU 侧取证（面包屑 + DRED）
-			DumpBreadcrumb(tag);
-			DumpDRED(dev, tag);
+			// 移除只报一次：设备一旦移除，后续每次 DumpDeviceErrors 都是同一现场，
+			// 重复回放面包屑+DRED 只会刷屏。DumpDRED 自身也有一次性保护。
+			static bool s_removedDumped = false;
+			if (!s_removedDumped)
+			{
+				s_removedDumped = true;
+				Msg("! DX12 [%s]: device removed reason 0x%08x", tag ? tag : "", (unsigned)drr);
+				// 首次发现移除：输出 GPU 侧取证（面包屑 + DRED）
+				DumpBreadcrumb(tag);
+				DumpDRED(dev, tag);
+			}
 		}
 
 		ComPtr<ID3D12InfoQueue> iq;
@@ -648,6 +670,11 @@ namespace dx12
 	static xr_vector<PendingTextureUpload>	s_uploads;
 	static size_t							s_upHead = 0;	// FIFO 游标（避免 erase O(n²)）
 	static UINT64							s_uploadPendingBytes = 0;
+	// 已排空上传的目标资源保留表（帧序号 + 资源引用）。命令列表本帧 EndFrame 才提交，
+	// GPU 执行 CopyTexture 时若引擎已释放该纹理，仅靠 s_uploads 条目内的 ComPtr 会在
+	// 同帧 clear()/erase() 时被提前释放 → GPU 拷贝到已释放资源 → 页错误（DRED 实测
+	// "RECENTLY FREED"）。保留 >帧在飞数（2）的帧数后再释放。
+	static xr_vector<std::pair<UINT, ComPtr<ID3D12Resource>>>	s_upRetain;
 
 	// 与 UploadTextureSubresource 相同的布局计算（行距 256 对齐）
 	static void UploadLayoutCalc(DXGI_FORMAT fmt, UINT width, UINT height, UINT depth,
@@ -684,6 +711,9 @@ namespace dx12
 		UINT width, UINT height, UINT depth, DXGI_FORMAT fmt, DXGI_FORMAT footprintFormat)
 	{
 		if (!dst || !src) return;
+		// 给上传目标贴调试名：设备挂起时 DRED 的 RECENTLY FREED 节点会带上此名，
+		// 可直接判断页错误地址是否落在"上传目标纹理"上（否则一律 name='?'）。
+		dst->SetName(L"uploadDst");
 		// 帧循环未启动（初始化期）或后端异常时退回同步路径。
 		// 帧录制中途（IsFrameRecording）也必须走同步：排空只在帧首执行，中途入队的
 		// 上传最早也要到下一帧才落账，而本帧后续录制中的 Draw 可能已经把这张新纹理
@@ -767,6 +797,17 @@ namespace dx12
 		}
 
 		std::lock_guard<std::mutex> g(s_upMutex);
+		// 释放已确定被 GPU 执行完的保留项（保留 4 帧 > 帧在飞数 2，足够安全）
+		const UINT curSerial = FrameSerial();
+		for (size_t i = 0; i < s_upRetain.size(); )
+		{
+			if (curSerial >= s_upRetain[i].first + 4)
+			{
+				s_upRetain[i] = s_upRetain.back();
+				s_upRetain.pop_back();
+			}
+			else ++i;
+		}
 		while (s_upHead < s_uploads.size() && stagedBytes < (96ull << 20))
 		{
 			PendingTextureUpload& u = s_uploads[s_upHead];
@@ -799,6 +840,9 @@ namespace dx12
 			// 加载路径创建初态即 ALL_SHADER_RESOURCE，上传完成回到该状态
 			R5TransitionResourceTracked(cl, u.dst.Get(), D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
 
+			// 保留目标资源引用至 GPU 执行完（见 s_upRetain 说明）：本帧条目若被 clear()
+			// 会把唯一的引用释放掉，而拷贝此时还没提交
+			s_upRetain.push_back(std::make_pair(curSerial, u.dst));
 			delete[] u.data; u.data = nullptr;
 			s_uploadPendingBytes -= u.bytes;
 			stagedBytes += u.bytes;
@@ -1116,11 +1160,17 @@ namespace dx12
 		return s;
 	}
 
+	// 上传环容量。环按 backbuffer 分两段（见 UploadRing::Reset），本帧只在本段内分配，
+	// 因此实际可用空间 = kUploadRingSize/2。环承载：每帧常量缓冲、动态 VB/IB 改名区、
+	// structured SRV（草/细节实例）、以及纹理流送暂存（ProcessPendingTextureUploads
+	// 每帧上限 96MB）。256MB（段 128MB）时流送 96MB 后仅剩 32MB 给 CB/几何，实测
+	// 单帧段用量打到 ~100MB（[cap] 告警）。放大到 512MB（段 256MB）留出 2 倍余量。
+	static constexpr UINT64	kUploadRingSize = 512ull << 20;
+
 	bool Init(ID3D12Device* dev)
 	{
 		InstallDiagVEH();
 		if (g_backend.valid) return true;
-
 		// shader-visible CBV/SRV/UAV 堆：每个 draw 固定占用 14 像素 CBV + 14 顶点 CBV
 		// + 16 像素 SRV + 16 顶点 SRV（=60 个描述符，根签名范围固定，即使大部分槽位
 		// 填占位符也必须分配）。
@@ -1132,14 +1182,14 @@ namespace dx12
 		// 避免 CPU 录制下一帧时覆盖 GPU 仍在读的描述符。
 		if (!g_backend.cbvSrvUav.Create(dev, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 900000, true, 2)) return false;
 		if (!g_backend.sampler.Create(dev, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 256, true)) return false;
-		if (!g_backend.ring.Create(dev, 256ull * 1024 * 1024)) return false;
+		if (!g_backend.ring.Create(dev, kUploadRingSize)) return false;
 		{
 			// 记录上传环 VA 区间：DRED 报告的页错误 VA 若落在该区间即可直接判定
 			// "GPU 访问了上传环"，便于解读挂起取证
 			ID3D12Resource* rr = g_backend.ring.Resource();
 			const UINT64 va = rr ? rr->GetGPUVirtualAddress() : 0;
 			Msg("* DX12: upload ring VA [0x%llx, 0x%llx)", (unsigned long long)va,
-				(unsigned long long)(va + 256ull * 1024 * 1024));
+				(unsigned long long)(va + kUploadRingSize));
 		}
 
 		// GPU 面包屑缓冲由设备层创建（xrEngine/Device_create_render_dx12.cpp）
@@ -1291,6 +1341,7 @@ namespace dx12
 			s_uploads.clear();
 			s_upHead = 0;
 			s_uploadPendingBytes = 0;
+			s_upRetain.clear();		// 旧设备资源引用一并丢弃
 		}
 
 		for (UINT dim = 1; dim <= D3D12_SRV_DIMENSION_TEXTURECUBEARRAY; ++dim)
@@ -1477,8 +1528,17 @@ namespace dx12
 			Msg("! DX12: [cap] descriptor heap usage %u / %u", descUsed, descCap);
 
 		const UINT64 ringUsed = g_backend.ring.SlotUsed();
-		if (ringUsed >= (96ull << 20))
-			Msg("! DX12: [cap] upload ring segment usage %llu MB", ringUsed >> 20);
+		const UINT64 ringCap = g_backend.ring.SegCapacity();
+		// 阈值按本帧段容量的 80% 取相对值：环尺寸调整后无需改硬编码
+		if (ringCap && ringUsed * 10 >= ringCap * 8)
+			Msg("! DX12: [cap] upload ring segment usage %llu / %llu MB", ringUsed >> 20, ringCap >> 20);
+
+		// 设备挂起（TDR）取证：设备层在 BeginFrame 只回放手写环形时间线，
+		// DRED 的页错误 VA / 自动面包屑必须从渲染层查询，否则永远拿不到
+		// "GPU 访问了哪个地址、卡在哪条命令"。DumpDeviceErrors 内部对 DRED 有一次性保护。
+		if (ID3D12Device* dev = GetD3D12Device())
+			if (FAILED(dev->GetDeviceRemovedReason()))
+				DumpDeviceErrors("BackendEndFrame");
 
 		g_backend.frameActive = false;
 	}

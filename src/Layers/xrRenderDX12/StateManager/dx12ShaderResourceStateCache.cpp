@@ -44,6 +44,12 @@ void dx12ShaderResourceStateCache::Apply()
 // 持引用期间对象与 persistentSrv 槽位保证存活，UAF 从根上消除；替换绑定时
 // 归还旧引用即可。
 //------------------------------------------------------------------------------
+void dx12ShaderResourceStateCache::SetPSName(UINT uiSlot, const char* name)
+{
+	if (uiSlot >= kSlots) return;
+	strncpy_s(m_psName[uiSlot], sizeof(m_psName[uiSlot]), name ? name : "", _TRUNCATE);
+}
+
 void dx12ShaderResourceStateCache::SetPSResource(UINT uiSlot, ID3DShaderResourceView* pRes)
 {
 	if (uiSlot >= kSlots) return;

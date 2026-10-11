@@ -219,7 +219,16 @@ void CRender::create()
 		o.deffered_reflecitons = o.offscreen_reflecitons = false;
 	}
 
+#ifdef USE_DX12
+	// DX12 移植尚未实现 HS/DS：根签名只建了 PIXEL/VERTEX 可见性的 CBV/SRV 表，未绑定
+	// hull/domain 的常量与纹理；一旦启用 tessellation，uber_deffer 会走 r_TessPass 生成
+	// 曲面细分 PSO，创建时报
+	// "Root Signature doesn't match Hull Shader: Shader CBV descriptor range ... is not fully bound"（E_INVALIDARG）。
+	// 这里强制关闭，回退到非细分的 deffer pass（功能正常，仅无曲面细分）。
+	o.dx11_enable_tessellation = FALSE;
+#else
 	o.dx11_enable_tessellation = RFeatureLevel >= D3D_FEATURE_LEVEL_11_0 && ps_r2_ls_flags_ext.test(R2FLAGEXT_ENABLE_TESSELLATION);
+#endif
 
 	// constants
 	dxRenderDeviceRender::Instance().Resources->RegisterConstantSetup("parallax",				&binder_parallax);

@@ -289,7 +289,16 @@ HRESULT dx12Device::CreateBuffer(const D3D_BUFFER_DESC* pDesc, const D3D_SUBRESO
 
 	HRESULT hr = dev->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &rd,
 		D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&buf->resource));
-	if (FAILED(hr)) { Msg("! DX12: CreateBuffer CreateCommittedResource failed 0x%08x", hr); buf->Release(); return hr; }
+	if (FAILED(hr))
+	{
+		Msg("! DX12: CreateBuffer CreateCommittedResource failed 0x%08x", hr);
+		// 设备已被移除（TDR）时，这里是"创建失败"最早出现的地方；此刻转储 DRED
+		//（页错误 VA + 自动面包屑），否则设备层只打印手写环形时间线，拿不到
+		// "GPU 到底访问了哪个地址"这一关键取证。
+		dx12::DumpDeviceErrors("create_buffer");
+		buf->Release();
+		return hr;
+	}
 
 	D3D12_RANGE rr = { 0, 0 };
 	buf->resource->Map(0, &rr, &buf->mapped);
@@ -1237,11 +1246,36 @@ void dx12Context::IASetIndexBuffer(ID3DIndexBuffer* pIB, DXGI_FORMAT fmt, UINT)
 
 void dx12Context::IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY t) { topology = t; }
 
+// 诊断（TODO(diag)）：可疑的超大绘制规模。垃圾计数（陈旧/未初始化）会让 GPU 实际
+// 工作量爆炸 —— 无页错误、无校验错误、却把队列停摆数秒 → TDR，正好符合"3 秒停摆、
+// DRED PageFaultVA=0x0"的现场。阈值取得很高，正常绘制不会命中。
+static void AuditDrawSize(const char* kind, UINT64 count, UINT64 instances, UINT64 start,
+	dx12Shader* vs, dx12Shader* ps)
+{
+	if (count <= 10000000ull && instances <= 1000000ull && start <= 32000000ull) return;
+	static int s_n = 0;
+	if (++s_n <= 8)
+		Msg("! DX12: 可疑绘制规模 %s：count=%llu inst=%llu start=%llu vs=%p ps=%p"
+			"（疑似垃圾计数；若紧跟设备挂起即为工作量爆炸的元凶）",
+			kind, (unsigned long long)count, (unsigned long long)instances,
+			(unsigned long long)start, (void*)vs, (void*)ps);
+}
+
 void dx12Context::DrawIndexed(UINT IndexCount, UINT StartIndexLocation, INT BaseVertexLocation)
 {
 	FlushPipeline();
 	if (skipDraw) return;	// VB/IB 是陈旧绑定或垃圾 VA：跳过本次绘制（现场已记日志）
+	if (!ib)
+	{
+		// 未绑定索引缓冲：D3D12 命令列表 Reset 后 IB 为空（VA=0），DrawIndexed 会从 VA=0
+		// 取索引 → 页错误 → TDR（与未绑定 VB 同类）
+		static int s_nullIb = 0;
+		if (++s_nullIb <= 8)
+			Msg("! DX12: DrawIndexed 未绑定索引缓冲（ib=null）→ 跳过本次绘制（否则 GPU 从 VA=0 取索引）");
+		return;
+	}
 	ID3D12GraphicsCommandList* cl = Get();
+	AuditDrawSize("DrawIndexed", IndexCount, 1, StartIndexLocation, vs, ps);
 	if (cl) cl->DrawIndexedInstanced(IndexCount, 1, StartIndexLocation, BaseVertexLocation, 0);
 }
 
@@ -1250,6 +1284,7 @@ void dx12Context::Draw(UINT VertexCount, UINT StartVertexLocation)
 	FlushPipeline();
 	if (skipDraw) return;
 	ID3D12GraphicsCommandList* cl = Get();
+	AuditDrawSize("Draw", VertexCount, 1, StartVertexLocation, vs, ps);
 	if (cl) cl->DrawInstanced(VertexCount, 1, StartVertexLocation, 0);
 }
 
@@ -1257,7 +1292,15 @@ void dx12Context::DrawIndexedInstanced(UINT IndexCountPerInstance, UINT Instance
 {
 	FlushPipeline();
 	if (skipDraw) return;
+	if (!ib)
+	{
+		static int s_nullIbInst = 0;
+		if (++s_nullIbInst <= 8)
+			Msg("! DX12: DrawIndexedInstanced 未绑定索引缓冲（ib=null）→ 跳过本次绘制（否则 GPU 从 VA=0 取索引）");
+		return;
+	}
 	ID3D12GraphicsCommandList* cl = Get();
+	AuditDrawSize("DrawIndexedInstanced", IndexCountPerInstance, InstanceCount, StartIndexLocation, vs, ps);
 	if (cl) cl->DrawIndexedInstanced(IndexCountPerInstance, InstanceCount, StartIndexLocation, BaseVertexLocation, StartInstanceLocation);
 }
 
@@ -1377,13 +1420,60 @@ static bool FixZeroSrvInTable(D3D12_CPU_DESCRIPTOR_HANDLE dst, dx12Shader* sh,
 	return true;
 }
 
+// 维度错配：着色器反射出的期望 SRV 维度与描述符实际维度不一致（如 cube 槽位绑了 2D）。
+// 无调试层时这是**未定义读取**——实机直接把 GPU 拖挂（TDR 0x887a0006，DRED 无页错误、
+// 无非法绑定、无堆耗尽）；调试层只是报 GPU-Based-Validation 并代之以安全读取，所以
+// "-dxdebug 下不复现"正是这个原因。这里改绑维度匹配的空占位符（读取返回 0），
+// 把 UB 变成确定行为，并打印以便定位真实来源。返回 true 表示已替换。
+static bool FixMismatchedSrvInTable(D3D12_CPU_DESCRIPTOR_HANDLE dst, dx12Shader* sh,
+	UINT slot, const char* stage, dx12ShaderResourceView* dv)
+{
+	if (!sh || !dv || !dv->resource) return false;
+
+	const int expect = (int)sh->SlotSrvDimension(slot);
+	if (expect == 0) return false;						// 反射未知/该槽位未使用：不动
+	const int actual = (int)dv->desc.ViewDimension;
+	if (expect == actual) return false;
+
+	// 占位符是否真的"维度匹配"：nullSrvCpu[] 按维度在设备初始化时创建（TEXTURE2D 除外，
+	// 走 dummySrvCpu 黑纹理）。任一维度分配失败 → PlaceholderSrvFor 退回 2D 黑纹理，
+	// 换绑后仍是维度错配（UB 未消除），这一点必须在日志里看得见。
+	const bool phOk = (expect == (int)D3D12_SRV_DIMENSION_TEXTURE2D)
+		|| (expect > 0 && expect <= (int)D3D12_SRV_DIMENSION_TEXTURECUBEARRAY
+			&& dx12::g_backend.nullSrvCpu[expect].ptr != 0);
+
+	const D3D12_RESOURCE_DESC rd = dv->resource->GetDesc();
+	// 资源侧实情：区分"资源本身就是 cube/数组 → 视图维度建错了"与
+	// "资源确实是 2D 纹理 → 引擎把 2D 绑到了 cube 槽位"。
+	const bool resIsCube = (rd.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D)
+		&& rd.DepthOrArraySize >= 6 && (rd.DepthOrArraySize % 6) == 0;
+
+	static int s_mismatch = 0;
+	const int n = ++s_mismatch;
+	if (n <= 24 || (n % 1000) == 0)
+		Msg("! DX12: SRV 维度错配 #%d（%s t%u，槽位纹理='%s'）：shader 期望 dim=%d，描述符 dim=%d；"
+			"资源 %p dim=%d %ux%u arr=%u mips=%u fmt=%d；资源像 cube=%d；占位符维度匹配=%d%s",
+			n, stage, slot, (stage && stage[0] == 'P') ? SRVSManager.PSName(slot) : "-",
+			expect, actual, (void*)dv->resource.Get(), (int)rd.Dimension,
+			(UINT)rd.Width, (UINT)rd.Height, (UINT)rd.DepthOrArraySize, (UINT)rd.MipLevels, (int)rd.Format,
+			(int)resIsCube, (int)phOk,
+			resIsCube ? " —— 资源本身是 cube 却建了 2D 视图（视图创建侧问题）"
+			          : " —— 资源是 2D 纹理却绑到 cube 槽位（绑定/着色器排列侧问题）");
+
+	D3D12_CPU_DESCRIPTOR_HANDLE fill = PlaceholderSrvFor(sh, slot);
+	if (!fill.ptr) return false;
+
+	dx12::GetD3D12Device()->CopyDescriptorsSimple(1, dst, fill, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	return true;
+}
+
 void dx12Context::FlushPipeline()
 {
 	skipDraw = false;
 	ID3D12GraphicsCommandList* cl = Get();
-	if (!cl) return;
+	if (!cl) { skipDraw = true; return; }
 	dx12::Ensure();
-	if (!dx12::g_backend.valid) return;
+	if (!dx12::g_backend.valid) { skipDraw = true; return; }
 
 	// 兜底根表所在堆 slot（与 BackendBeginFrame 分配时一致）
 	const UINT fbSlot = dx12::GetFrameIndex() & 1;
@@ -1473,8 +1563,24 @@ void dx12Context::FlushPipeline()
 				(int)d.RTVFormats[0], (int)d.RTVFormats[1], (int)d.RTVFormats[2], (int)d.RTVFormats[3],
 				(unsigned)d.VS.BytecodeLength, (unsigned)d.PS.BytecodeLength,
 				layout ? layout->Desc().NumElements : 0u);
+			// 同一失败 PSO 每次 Draw 都会重试（失败不缓存）→ 只在前几次打印输入布局语义，
+			// 用于定位是哪条渲染路径（POSITION/NORMAL/TEXCOORD 等组合）导致 E_INVALIDARG。
+			static int s_psoFailDetail = 0;
+			if (++s_psoFailDetail <= 8 && layout)
+			{
+				const UINT nEl = (UINT)layout->elements.size();
+				for (UINT e = 0; e < nEl && e < 4; ++e)
+					Msg("    PSO layout[%u]: sem=%s%u fmt=%d slot=%u",
+						e, layout->elements[e].SemanticName ? layout->elements[e].SemanticName : "?",
+						layout->elements[e].SemanticIndex, (int)layout->elements[e].Format,
+						layout->elements[e].InputSlot);
+			}
 			dx12::DumpDeviceErrors("pso");
 			if (rawPso) rawPso->Release();
+			// 关键：PSO 创建失败时本次 FlushPipeline 未绑定根签名/描述符堆/根表，
+			// 若仍让调用方发起 Draw，GPU 会沿"零句柄"根表读描述符 → 页错误 VA=0x0
+			// → DEVICE_HUNG(TDR)。与 VB/IB 垃圾 VA 同样处理：跳过本次绘制。
+			skipDraw = true;
 			return;
 		}
 		ComPtr<ID3D12PipelineState> newPso = rawPso;
@@ -1482,7 +1588,8 @@ void dx12Context::FlushPipeline()
 		dx12::g_backend.psoCache.emplace(key, newPso);
 	}
 
-	if (!pso) return;
+	// 未取到有效 PSO（vs/ps 缺失或创建失败）时同样不能发起 Draw：此时根表尚未绑定。
+	if (!pso) { skipDraw = true; return; }
 
 	// ---- 每次 Draw 重新断言已绑定 RT/DS 的状态 ----
 	// CBackend::set_RT/set_ZB 有"值未变则不改"的早期退出（D3D11 由驱动兜底，没问题），
@@ -1677,9 +1784,9 @@ void dx12Context::FlushPipeline()
 					R5_TransitionResource(cl, dv->resource.Get(), D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
 				R5_RefreshDynamicBufferSrv(dv);	// 动态结构化 buffer → 指向本帧 Map 的新区域
 				if (IsZeroDescriptor(srv->cpu))
-					FixZeroSrvInTable(dst, ps, i, "PS", srv);	// 视图创建静默失败 → 占位符
-				else
-					dx12::GetD3D12Device()->CopyDescriptorsSimple(1, dst, srv->cpu, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+						FixZeroSrvInTable(dst, ps, i, "PS", srv);	// 视图创建静默失败 → 占位符
+					else if (!FixMismatchedSrvInTable(dst, ps, i, "PS", dv))
+						dx12::GetD3D12Device()->CopyDescriptorsSimple(1, dst, srv->cpu, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 			}
 			else if (dx12::g_backend.dummySrvCpu.ptr)
 			{
@@ -1721,7 +1828,7 @@ void dx12Context::FlushPipeline()
 					R5_RefreshDynamicBufferSrv(dv);	// 动态结构化 buffer → 指向本帧 Map 的新区域
 					if (IsZeroDescriptor(srv->cpu))
 						FixZeroSrvInTable(dst, vs, i, "VS", srv);	// 视图创建静默失败 → 占位符
-					else
+					else if (!FixMismatchedSrvInTable(dst, vs, i, "VS", dv))
 						dx12::GetD3D12Device()->CopyDescriptorsSimple(1, dst, srv->cpu, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 				}
 				else if (dx12::g_backend.dummySrvCpu.ptr)
@@ -1749,6 +1856,19 @@ void dx12Context::FlushPipeline()
 	// VB/IB 与 CBV 同属"陈旧绑定/垃圾 VA"高危面：用垃圾 VA 装配顶点/索引会让
 	// GPU 直接页错误（VA=0 时 DRED 实测 PageFaultVA=0x0）→ 队列停摆 → TDR。
 	// 因此这里判定失败时不再绑定，并置 skipDraw 跳过本次绘制。
+	// D3D12 命令列表 Reset 后 IA 顶点缓冲为空（VA=0）。若本 Draw 根本没绑定 VB，而 PSO 又
+	// 声明了顶点输入布局（着色器会读顶点），GPU 将从 VA=0 取顶点 → 页错误 → TDR
+	//（DRED 实测 PageFaultVA=0x0）。此前的守卫都带 `vb &&` 前提，vb==nullptr 时全部落空，
+	// 于是"未绑定 VB 的 Draw"直接放行成灾。仅靠 SV_VertexID 的全屏 pass 不带输入布局，
+	// 不受影响。
+	if (!vb && layout && !layout->elements.empty())
+	{
+		static int s_nullVb = 0;
+		if (++s_nullVb <= 8)
+			Msg("! DX12: 本 Draw 未绑定顶点缓冲（vb=null）但 PSO 声明了 %u 个顶点输入元素 → 跳过本次绘制"
+				"（否则 GPU 从 VA=0 取顶点 → 设备挂起）", (unsigned)layout->elements.size());
+		skipDraw = true;
+	}
 	if (vb && !dx12::IsLiveBuffer(vb))
 	{
 		LogBadBinding("VB", "-", 0, vb, 0, false, 0);

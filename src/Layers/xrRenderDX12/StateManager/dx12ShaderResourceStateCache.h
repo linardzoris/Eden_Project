@@ -24,6 +24,11 @@ public:
 	void	SetDSResource(UINT uiSlot, ID3DShaderResourceView* pRes);
 	void	SetCSResource(UINT uiSlot, ID3DShaderResourceView* pRes);
 
+	// 诊断：记录各 PS 槽位最近绑定的纹理名（拷贝存储，避免源串生命周期问题）。
+	// FlushPipeline 检测到 SRV 维度错配时打印，用来定位"哪张纹理被绑到了 cube 槽位"。
+	void	SetPSName(UINT uiSlot, const char* name);
+	const char*	PSName(UINT slot) const { return (slot < kSlots) ? m_psName[slot] : ""; }
+
 	ID3DShaderResourceView*	GetPS(UINT slot) const { return (slot < kSlots) ? m_ps[slot] : nullptr; }
 	ID3DShaderResourceView*	GetVS(UINT slot) const { return (slot < kSlots) ? m_vs[slot] : nullptr; }
 
@@ -36,6 +41,7 @@ public:
 	ID3DShaderResourceView*	m_hs[kSlots] = {};
 	ID3DShaderResourceView*	m_ds[kSlots] = {};
 	ID3DShaderResourceView*	m_cs[kSlots] = {};
+	char					m_psName[kSlots][64] = {};
 };
 
 extern dx12ShaderResourceStateCache	SRVSManager;

@@ -116,14 +116,23 @@ void CRenderTarget::phase_bloom	()
 		float s						= ps_r2_ls_bloom_threshold;											// scale
 		f_bloom_factor				= .9f*f_bloom_factor + .1f*ps_r2_ls_bloom_speed*Device.fTimeDelta;	// speed
 		RCache.set_Element(s_bloom->E[0]);
+#if defined(USE_DX12)
+		dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("bloom:E0"));
+#endif
 		RCache.set_c				("b_params", s,s,s,	f_bloom_factor);
 		RCache.set_Geometry		(g_bloom_build		);
 		RCache.Render				(D3DPT_TRIANGLELIST,Offset,0,4,0,2);
 	}
 
+#if defined(USE_DX12)
+	dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("bloom:lum_begin"));
+#endif
 	// Capture luminance values
 	phase_luminance					( );
 
+#if defined(USE_DX12)
+	dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("bloom:lum_done"));
+#endif
 	if (ps_r2_ls_flags.test(R2FLAG_FASTBLOOM))
 	{
 		// FAST FILTER
@@ -145,11 +154,17 @@ void CRenderTarget::phase_bloom	()
 		// P0
 		u_setrt						(rt_Bloom_2,nullptr,nullptr,nullptr);			// No need for ZBuffer at all
 		RCache.set_Element			(s_bloom->E[3]);
+#if defined(USE_DX12)
+			dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("bloom:E3"));
+#endif
 		RCache.Render				(D3DPT_TRIANGLELIST,Offset,0,4,0,2);
 
 		// P1
 		u_setrt						(rt_Bloom_1,nullptr,nullptr,nullptr);			// No need for ZBuffer at all
 		RCache.set_Element			(s_bloom->E[4]);
+#if defined(USE_DX12)
+			dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("bloom:E4"));
+#endif
 		RCache.Render				(D3DPT_TRIANGLELIST,Offset,0,4,0,2);
 	} else {
 		// SLOW FILTER
@@ -227,6 +242,9 @@ void CRenderTarget::phase_bloom	()
 			CalcGauss_wave				(w0,w1,kernel,kernel/3.f,ps_r2_ls_bloom_kernel_scale);
 			u_setrt						(rt_Bloom_2,nullptr,nullptr,nullptr);		// No need for ZBuffer at all
 			RCache.set_Element			(s_bloom->E[1]);
+#if defined(USE_DX12)
+			dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("bloom:E1"));
+#endif
 			RCache.set_ca				("weight", 0,			w0);
 			RCache.set_ca				("weight", 1,			w1);
 			RCache.set_Geometry			(g_bloom_filter);
@@ -307,6 +325,9 @@ void CRenderTarget::phase_bloom	()
 			CalcGauss_wave				(w0,w1,kernel,kernel/3.f,ps_r2_ls_bloom_kernel_scale);
 			u_setrt						(rt_Bloom_1,nullptr,nullptr,nullptr);				// No need for ZBuffer at all
 			RCache.set_Element			(s_bloom->E[2]);
+#if defined(USE_DX12)
+			dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("bloom:E2"));
+#endif
 			RCache.set_ca				("weight", 0,			w0);
 			RCache.set_ca				("weight", 1,			w1);
 			RCache.set_Geometry			(g_bloom_filter);

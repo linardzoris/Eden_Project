@@ -93,6 +93,9 @@ namespace dx12
 
 		ID3D12Resource* Resource() const { return m_buffer.Get(); }
 		UINT64	SlotUsed() const { return m_offset - m_segBase; }	// 本帧段已用字节（体检用）
+		// 本帧段容量（含静态区之外的可分配空间）：体检阈值按它取相对比例，
+		// 环尺寸调整后无需再改硬编码阈值
+		UINT64	SegCapacity() const { return (m_segEnd > m_segBase) ? (m_segEnd - m_segBase) : 0; }
 		// 环的 GPU VA 区间：绑定路径用它判定"这个 VA 是否可能来自上传环"
 		bool	Contains(UINT64 va) const { return m_vaBegin && va >= m_vaBegin && va < m_vaEnd; }
 	private:
@@ -118,7 +121,7 @@ namespace dx12
 	{
 		DescriptorHeap	cbvSrvUav;		// shader-visible，4096
 		DescriptorHeap	sampler;		// shader-visible，256
-		UploadRing		ring;			// 256MB
+		UploadRing		ring;			// 512MB（见 dx12Backend.cpp kUploadRingSize）
 
 		// 永久描述符堆（非 shader-visible），生命周期与资源一致
 		DescriptorHeap	persistentSrv;	// 纹理 SRV

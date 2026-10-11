@@ -20,7 +20,9 @@
 struct PSInput
 {
     float4 hpos : SV_POSITION;
-    float4 texcoord : TEXCOORD0;
+    // 只用到 .xy；必须与 stub_fullscreen_triangle.vs.hlsl 的输出（float2 TEXCOORD0）
+    // 分量掩码匹配——D3D12 严格要求 PS 输入掩码是 VS 输出的子集（D3D11 容忍）。
+    float2 texcoord : TEXCOORD0;
 };
 
 Texture2D<uint> t_gtao_packed;

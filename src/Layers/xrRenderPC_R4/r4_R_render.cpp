@@ -842,16 +842,34 @@ void CRender::render_forward				()
 		// level
 		r_pmask									(false,true);			// enable priority "1"
 		phase									= PHASE_NORMAL;
+#if defined(USE_DX12)
+		dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("fwd:main"));
+#endif
 		render_main								(false);//
 		//	Igor: we don't want to render old lods on next frame.
 		mapLOD.clear							();
 		CParticlesAsync::Wait();
+#if defined(USE_DX12)
+		dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("fwd:graph1"));
+#endif
 		r_dsgraph_render_graph					(1)	;					// normal level, secondary priority
+#if defined(USE_DX12)
+		dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("fwd:portal"));
+#endif
 		PortalTraverser.fade_render				()	;					// faded-portals
+#if defined(USE_DX12)
+		dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("fwd:sorted"));
+#endif
 		r_dsgraph_render_sorted					(false)	;					// strict-sorted geoms
+#if defined(USE_DX12)
+		dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("fwd:last"));
+#endif
 		g_pGamePersistent->Environment().RenderLast()	;					// rain/thunder-bolts
 
 		RContext->CopyResource(Target->rt_Accumulator->pSurface, Target->rt_Generic_0->pSurface);
+#if defined(USE_DX12)
+		dx12::WriteBreadcrumb(dx12::RegisterBreadcrumbName("fwd:hud"));
+#endif
 		r_dsgraph_render_sorted_hud();
 	}
 
