@@ -477,7 +477,7 @@ CRenderTarget::CRenderTarget()
 			ImGui::Separator();
 
 			ImGui::SliderFloat("GTAO intensity", &ps_r4_gtao_intensity, 0.1f, 4.0f);
-			ImGui::SliderInt("GTAO resolution (vid_restart)", &ps_r4_gtao_resolution, 0, 1);
+			ImGui::SliderInt("GTAO res 0=half 1=full (restart)", &ps_r4_gtao_resolution, 0, 1);
 			ImGui::SliderInt("GTAO dirs (lines)", &ps_r4_gtao_dirs, 1, 8);
 			ImGui::SliderInt("GTAO steps/dir", &ps_r4_gtao_steps, 1, 16);
 			ImGui::SliderFloat("GTAO radius (m)", &ps_r4_gtao_radius, 0.1f, 4.0f);
@@ -633,8 +633,9 @@ CRenderTarget::CRenderTarget()
 		b_gtao = new CBlender_gtao();
 		s_gtao.create(b_gtao);
 
-		// r4_gtao_resolution: 0 = full-res, 1 = half-res AO buffers
-		const u32 gtao_div = (ps_r4_gtao_resolution == 1) ? 2 : 1;
+		// r4_gtao_resolution: 0 = half-res, 1 = full-res AO buffers (matches the
+		// 0=half / 1=full convention of the other resolution settings)
+		const u32 gtao_div = (ps_r4_gtao_resolution == 0) ? 2 : 1;
 		const u32 gtao_w = s_dwWidth / gtao_div;
 		const u32 gtao_h = s_dwHeight / gtao_div;
 

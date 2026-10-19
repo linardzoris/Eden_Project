@@ -24,7 +24,7 @@ float4 main(_input I) : SV_Target
     float3 Light = s_accumulator.Load(int3(I.pos2d.xy, 0)).xyz;
 
 #ifdef USE_R2_STATIC_SUN
-    Light += O.SSS * DirectLight(Ldynamic_color, Ldynamic_dir.xyz, O.Normal, O.View.xyz, O.Color, O.Metalness, O.Roughness, O.F0);
+    Light += O.SSS * DirectLight(Ldynamic_color, Ldynamic_dir.xyz, O.Normal, O.View.xyz, O.Color, O.Metalness, O.Roughness, O.F0) * O.ParallaxShadow;
 #endif
 
     float Occ = O.AO * s_occ.SampleLevel(smp_rtlinear, I.tc0.xy, 0.0f).x;

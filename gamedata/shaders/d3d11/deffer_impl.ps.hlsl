@@ -24,6 +24,7 @@ void main(p_bumped_new I, out OutStructure O)
 	M.Metalness = 0.0f;
 	M.SSS = 0.0f;
 	M.AO = 1.0f;
+	M.ParallaxShadow = 1.0f;
 
     float4 Lmap = s_lmap.Sample(smp_base, I.tcdh.xy);
     float2 tcdbump = I.tcdh.xy * dt_params.xy;

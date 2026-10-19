@@ -207,7 +207,7 @@ float		ps_r4_cas_sharpening = 0.0f;
 int			ps_r4_sslr_quality = 1;		// 0=perf(half-res), 1=balanced(half-res), 2=quality(full-res)
 float		ps_r4_sslr_max_dist = 40.0f;	// 0 = unlimited; SSLR trace cut-off in metres
 float		ps_r4_gtao_intensity = 1.0f;	// 1.0 = neutral; >1 = darker/more visible AO
-int			ps_r4_gtao_resolution = 0;	// 0=full-res, 1=half-res (vid_restart to apply)
+int			ps_r4_gtao_resolution = 1;	// 0=half-res, 1=full-res (vid_restart to apply)
 
 int			ps_r4_gtao_dirs = 3;			// horizon search slices ("lines")
 int			ps_r4_gtao_steps = 4;			// march steps per slice
@@ -798,7 +798,7 @@ void		xrRender_initconsole	()
 	CMD4(CCC_Float, "r4_sslr_max_dist", &ps_r4_sslr_max_dist, 0.0f, 200.0f);	// 0 = unlimited
 	CMD4(CCC_Float, "r4_vslr_intensity", &ps_r4_vslr_intensity, 0.0f, 4.0f);
 	CMD4(CCC_Float, "r4_gtao_intensity", &ps_r4_gtao_intensity, 0.1f, 4.0f);
-	CMD4(CCC_Integer, "r4_gtao_resolution", &ps_r4_gtao_resolution, 0, 1);	// vid_restart to apply
+	CMD4(CCC_Integer, "r4_gtao_resolution", &ps_r4_gtao_resolution, 0, 1);	// 0=half-res, 1=full-res, vid_restart to apply
 	CMD4(CCC_Integer, "r4_gtao_dirs", &ps_r4_gtao_dirs, 1, 8);	// horizon slices
 	CMD4(CCC_Integer, "r4_gtao_steps", &ps_r4_gtao_steps, 1, 16);	// steps per slice
 	CMD4(CCC_Float, "r4_gtao_radius", &ps_r4_gtao_radius, 0.1f, 4.0f);	// world AO radius

@@ -141,7 +141,7 @@ extern ECORE_API int			ps_r4_sslr_quality;
 extern ECORE_API float			ps_r4_sslr_max_dist;
 
 // GTAO: effect strength (power curve, 1.0 = neutral) and buffer resolution
-// (0 = full-res, 1 = half-res). Resolution needs vid_restart (RT allocation).
+// (0 = half-res, 1 = full-res). Resolution needs vid_restart (RT allocation).
 extern ECORE_API float			ps_r4_gtao_intensity;
 extern ECORE_API int			ps_r4_gtao_resolution;
 

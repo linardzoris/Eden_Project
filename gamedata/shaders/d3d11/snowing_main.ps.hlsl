@@ -56,7 +56,10 @@ void main(p_shadow _I, out IXrayGbufferPack O)
     GbufferPack(O, M);
 	
 	O.Color.w = I.snow_mask;
-	O.Material.w = I.snow_mask;
+
+	// Preserve the packed Material.w (PBR flag + POM self-shadow) from the
+	// original surface instead of the raw snow mask.
+	O.Material.w = (G.F0.x > 0.015f ? 0.6f : 0.0f) + saturate(G.ParallaxShadow) * 0.4f;
 
 	O.Normal.w = 1.0f;
 }

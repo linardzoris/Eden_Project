@@ -37,6 +37,10 @@ float4 main(v2p_volume I) : SV_Target
     float3 Light = DirectLight(Ldynamic_color, Ldynamic_dir.xyz, O.Normal, O.View.xyz, O.Color, O.Metalness, O.Roughness, O.F0);
     Light += SimpleTranslucency(Ldynamic_color.xyz, Ldynamic_dir.xyz, O.Normal) * O.SSS * O.Color;
 
+    // POM self-shadowing (baked at G-buffer time, sun-direction march): only the
+    // sun consumes it, so indoor pixels (SMAP-shadowed) get no fake shadow.
+    Light *= O.ParallaxShadow;
+
 #if SUN_QUALITY == 2
     float Shadow = shadow_high(PS);
 #else

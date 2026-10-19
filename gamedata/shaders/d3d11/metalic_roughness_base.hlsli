@@ -20,8 +20,12 @@ struct IXrayMaterial
 
     float SSS;
     float AO;
-	
+
 	float SnowMask;
+
+	// POM self-shadow factor (1 = lit); packed into Material.w together with
+	// the PBR flag so only the sun accumulation consumes it.
+	float ParallaxShadow;
 };
 
 struct IXrayGbufferPack
@@ -56,6 +60,9 @@ struct IXrayGbuffer
 	float SSS;
 	float AO;
 	float SnowMask;
+
+	// POM self-shadow factor decoded from Material.w (1 = lit).
+	float ParallaxShadow;
 };
 
 float2 PackNormalVector(float3 Vector) {
@@ -113,11 +120,13 @@ void GbufferPack(inout IXrayGbufferPack O, inout IXrayMaterial M)
     O.Material.y = M.Hemi;
 
     O.Material.z = M.AO;
-	
+
+	// Material.w packing: [0, 0.4] = non-PBR + POM shadow, [0.6, 1.0] = PBR + POM
+	// shadow (the old 1-bit PBR flag plus the parallax self-shadow factor).
 #ifndef USE_PBR
-    O.Material.w = 0.0f;
+    O.Material.w = saturate(M.ParallaxShadow) * 0.4f;
 #else
-    O.Material.w = 1.0f;
+    O.Material.w = 0.6f + saturate(M.ParallaxShadow) * 0.4f;
 #endif
 }
 
@@ -189,7 +198,10 @@ void GbufferUnpack(in float2 TexCoord, in float2 HPos, inout IXrayGbuffer O)
     O.Roughness = NormalHemi.z;
 	
 	O.AO = PushGamma(Material.z);
-	O.F0 = 0.002f + 0.028f * Material.w;
+	// Material.w: [0, 0.4] = non-PBR + POM shadow, [0.6, 1.0] = PBR + POM shadow
+	bool matPBR = Material.w >= 0.5f;
+	O.F0 = 0.002f + 0.028f * (matPBR ? 1.0f : 0.0f);
+	O.ParallaxShadow = saturate((Material.w - (matPBR ? 0.6f : 0.0f)) * 2.5f);
 
 	O.SnowMask = NormalHemi.w;
 }
@@ -234,7 +246,10 @@ void GbufferUnpack(in float2 TexCoord, inout IXrayGbuffer O)
     O.Roughness = NormalHemi.z;
 	
 	O.AO = PushGamma(Material.z);
-	O.F0 = 0.002f + 0.028f * Material.w;
+	// Material.w: [0, 0.4] = non-PBR + POM shadow, [0.6, 1.0] = PBR + POM shadow
+	bool matPBR = Material.w >= 0.5f;
+	O.F0 = 0.002f + 0.028f * (matPBR ? 1.0f : 0.0f);
+	O.ParallaxShadow = saturate((Material.w - (matPBR ? 0.6f : 0.0f)) * 2.5f);
 
 	O.SnowMask = NormalHemi.w;
 }

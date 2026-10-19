@@ -37,6 +37,7 @@ void main(in p_bilbord I, out IXrayGbufferPack O)
 
     M.AO = 1.0f;
     M.SSS = 0.0f;
+    M.ParallaxShadow = 1.0f;
     M.Hemi = H.w;
 
     M.Normal = N.xyz;
