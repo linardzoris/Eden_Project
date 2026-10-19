@@ -157,7 +157,7 @@ void main(PSInput I, out float4 Point : SV_Target0, out float4 Final : SV_Target
 	}
 	
 #ifdef USE_OFFSCREEN_REFLECTIONS
-	O.Hemi = saturate(O.Hemi * 3.0f);
+	O.Hemi = saturate(O.Hemi);
 #endif
 	
 	float4 Hemi = CompureSpecularIrradance(Reflection.xyz, O.Hemi, 0.0f).xyzz;

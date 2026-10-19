@@ -89,5 +89,11 @@ float main(PSInput I) : SV_Target
 
     //Final, filtered value. Power curve scales the perceived AO strength
     //(gtao_intensity = 1.0 is mathematically identical to the original output).
-    return saturate(pow(saturate(beta * center_tap + alpha), gtao_intensity));
+    //Near-camera clamp: within 1.5 m (the weapon and close world geometry) the
+    //strength collapses to at most neutral (1.0), ramping back to the console
+    //value by 2.0 m so the boundary does not show as a visible ring.
+    //center_tap is the view-space distance in metres (packed by gtao_render).
+    float near_t = smoothstep(1.5, 2.0, center_tap);
+    float intensity = lerp(min(gtao_intensity, 1.0), gtao_intensity, near_t);
+    return saturate(pow(saturate(beta * center_tap + alpha), intensity));
 }
