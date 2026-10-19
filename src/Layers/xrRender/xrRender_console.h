@@ -140,14 +140,25 @@ extern ECORE_API int			ps_r4_sslr_quality;
 // range blends smoothly. Also grades the march budget (30/22/14 steps).
 extern ECORE_API float			ps_r4_sslr_max_dist;
 
-// P2: SSLR pass isolation for GPU timing (measure by difference):
-// 0 = all passes, 1 = skip filter, 2 = skip temporal, 3 = skip filter + temporal.
-extern ECORE_API int			ps_r4_sslr_debug;
-
 // GTAO: effect strength (power curve, 1.0 = neutral) and buffer resolution
 // (0 = full-res, 1 = half-res). Resolution needs vid_restart (RT allocation).
 extern ECORE_API float			ps_r4_gtao_intensity;
 extern ECORE_API int			ps_r4_gtao_resolution;
+
+// GTAO: fine trace settings, hot-tunable. Dirs = horizon search slices
+// ("lines"), steps = march steps per slice, radius = world-space AO radius,
+// max_dist = view distance past which AO collapses to 1 (0 = unlimited).
+extern ECORE_API int			ps_r4_gtao_dirs;
+extern ECORE_API int			ps_r4_gtao_steps;
+extern ECORE_API float			ps_r4_gtao_radius;
+extern ECORE_API float			ps_r4_gtao_max_dist;
+
+// SSLR: fine trace settings, hot-tunable. Steps = full march budget (the
+// mid/far/low tiers derive from it), thickness = linear-depth relative
+// silhouette gate, trace_scale = exponential step growth (step length).
+extern ECORE_API int			ps_r4_sslr_steps;
+extern ECORE_API float			ps_r4_sslr_thickness;
+extern ECORE_API float			ps_r4_sslr_trace_scale;
 
 // Test float exported to shaders for development
 extern  float					ps_r__test_exp_to_shaders_1;

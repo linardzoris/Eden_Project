@@ -40,37 +40,26 @@ float2 gbuf_unpack_uv(float3 position)
 #define SSLR_STEPS 30
 #define MAX_FIND_STEP 3
 
-// P0 optimization: exponential marching for the world-space SSR ray.
-// Base step is calibrated against SSLR_STEPS so the 30-step budget still covers
-// the whole ray: sum(i=0..N-1) scale^i = (scale^N - 1) / (scale - 1)
-// SSLR_TRACE_BASE = (SSLR_TRACE_SCALE - 1) / (SSLR_TRACE_SCALE^SSLR_STEPS - 1)
-#define SSLR_TRACE_SCALE 1.20f
-#define SSLR_TRACE_BASE  0.0008454f
+// Fine trace settings (r4_sslr_steps / r4_sslr_thickness / r4_sslr_trace_scale).
+// x = full march budget, y = linear-depth relative thickness gate,
+// z = exponential step growth. Only the pass that runs the SSR march
+// (sslr_render) sets it; other includers strip the unused constant.
+uniform float4 sslr_settings;
 
-// P2: distance-graded march budgets for the world path (sslr_params.w =
-// r4_sslr_max_dist). Same calibration, N = 22 / 14, so the ray still covers its
-// whole screen-space length with fewer (proportionally larger) steps.
-#define SSLR_STEPS_MID   22
-#define SSLR_STEPS_FAR   14
-#define SSLR_TRACE_BASE_MID 0.0036866f
-#define SSLR_TRACE_BASE_FAR 0.0168780f
+// Exponential-march calibration: the schedule covers the relative length
+// (scale^N - 1) / (scale - 1), so the base step that spans the whole ray with
+// N steps is (scale - 1) / (scale^N - 1). Reproduces the old baked constants
+// exactly at the defaults (scale 1.2, N = 30 / 22 / 14 / 8).
+float SslrTraceBase(uint steps, float scale)
+{
+	return (scale - 1.0f) * rcp(pow(scale, float(steps)) - 1.0f);
+}
 
 // P3: low-precision budget for low-Fresnel pixels. They used to skip the trace
 // entirely, which left a hard-edged bright disc (env fallback vs. traced scene
 // reflection) around the camera on flat reflective surfaces. Tracing them keeps
 // the content continuous at ~1/4 of the full march cost.
-#define SSLR_STEPS_LOW   8
-#define SSLR_TRACE_BASE_LOW 0.0606090f
-
-// P2: a world ray whose whole folded screen-space length is below this (~1% of
-// the screen) can not produce a meaningful hit - skip it without any fetch.
 #define SSLR_TRACE_MIN_LEN 0.005f
-
-// P0: linear-depth relative thickness gate run BEFORE binary refinement.
-// If one march step lands this far (in relative linear depth) past the sampled
-// surface, the crossing is treated as a silhouette edge: refinement taps are
-// skipped and the ray keeps marching instead of terminating on a false hit.
-#define SSLR_THICKNESS 0.25f
 
 // Cheap per-ray [0,1] random value. Replaces the per-step frac(sin()) hash,
 // which cost ~4 transcendental sin()s per march iteration.
@@ -207,32 +196,41 @@ float4 FastViewReflectionsSSR(float3 Point, float3 Reflect, bool is_hud, bool lo
 
 	// P2: distance-graded step budget (world path only; HUD keeps its fixed short
 	// schedule). sslr_params.w (r4_sslr_max_dist) scales both the cut-off and the
-	// budget, so one knob controls the far-field cost.
-	uint NumSteps = SSLR_STEPS;
-	float TraceBase = SSLR_TRACE_BASE;
+	// budget, so one knob controls the far-field cost. Tier sizes derive from
+	// r4_sslr_steps (sslr_settings.x) so one knob scales the whole schedule
+	// (30 -> 22 / 14 / 8 at the defaults).
+	uint steps_full = clamp(uint(sslr_settings.x + 0.5f), 8u, 64u);
+	uint steps_mid = max(8u, steps_full * 22u / 30u);
+	uint steps_far = max(4u, steps_full * 14u / 30u);
+	uint steps_low = max(4u, (steps_full + 2u) / 4u);
+
+	float TraceScale = max(sslr_settings.z, 1.01f);
+
+	uint NumSteps = steps_full;
+	float TraceBase = SslrTraceBase(NumSteps, TraceScale);
 	[branch]
 	if(!is_hud && sslr_params.w > 0.0f)
 	{
 		float ViewDist = length(Point);
 		if(ViewDist >= sslr_params.w * 0.75f)
 		{
-			NumSteps = SSLR_STEPS_FAR;
-			TraceBase = SSLR_TRACE_BASE_FAR;
+			NumSteps = steps_far;
+			TraceBase = SslrTraceBase(NumSteps, TraceScale);
 		}
 		else if(ViewDist >= sslr_params.w * 0.4f)
 		{
-			NumSteps = SSLR_STEPS_MID;
-			TraceBase = SSLR_TRACE_BASE_MID;
+			NumSteps = steps_mid;
+			TraceBase = SslrTraceBase(NumSteps, TraceScale);
 		}
 	}
 
 	// P3: low-Fresnel pixels contribute very little (F0 ~ 0.03 downstream), so a
 	// coarse schedule is enough - but they must still trace, otherwise their env
 	// fallback stands out as a hard-edged disc against the traced surroundings.
-	if(!is_hud && low_fresnel && NumSteps > SSLR_STEPS_LOW)
+	if(!is_hud && low_fresnel && NumSteps > steps_low)
 	{
-		NumSteps = SSLR_STEPS_LOW;
-		TraceBase = SSLR_TRACE_BASE_LOW;
+		NumSteps = steps_low;
+		TraceBase = SslrTraceBase(NumSteps, TraceScale);
 	}
 
 	// HUD keeps its original near-linear short schedule.
@@ -240,7 +238,7 @@ float4 FastViewReflectionsSSR(float3 Point, float3 Reflect, bool is_hud, bool lo
 	// NDC schedule undersamples), same total ray length, binary refinement still
 	// recovers the exact hit after a depth crossing.
 	float Step = rcp(NumSteps + 1) * RayLen * (is_hud ? 0.2f : (TraceBase * (NumSteps + 1)));
-	float StepScale = is_hud ? 1.095f : SSLR_TRACE_SCALE;
+	float StepScale = is_hud ? 1.095f : TraceScale;
 	float L = is_hud ? 0.001f : 0.0f;
 
 	// P2: world rays that leave the screen within a couple of texels can not hit
@@ -280,7 +278,7 @@ float4 FastViewReflectionsSSR(float3 Point, float3 Reflect, bool is_hud, bool lo
 			// next march step instead of paying 3+1 refinement taps on a miss.
 			float linHit = rcp(max(1.0f - HitDepth, 0.00001f));
 			float linRay = rcp(max(1.0f - EndProj.z, 0.00001f));
-			bool thicknessOK = is_hud || abs(linHit - linRay) * rcp(max(linHit, linRay)) < SSLR_THICKNESS;
+			bool thicknessOK = is_hud || abs(linHit - linRay) * rcp(max(linHit, linRay)) < max(sslr_settings.y, 0.01f);
 
 			[branch]
 			if(thicknessOK)

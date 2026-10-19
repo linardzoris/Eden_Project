@@ -27,6 +27,12 @@ struct PSInput
 
 float gtao_parameters; //Factor used to transform world space radius into screen space
 
+//Fine trace settings (r4_gtao_dirs / r4_gtao_steps / r4_gtao_radius /
+//r4_gtao_max_dist). x = horizon slices, y = steps per slice, z = world radius,
+//w = view distance cut-off (0 = unlimited). Clamped at the read sites so the
+//worst-case loop cost stays bounded.
+float4 gtao_settings;
+
 float example_how_to_not_implement_gtao(float3 view_position, float3 view_normal, float2 texcoord, float2 jitter)
 {
 	//Few constants
@@ -38,9 +44,9 @@ float example_how_to_not_implement_gtao(float3 view_position, float3 view_normal
 	const float GTAO_2_OVER_PI = 0.63661976296;
 
 	//Settings
-	int GTAO_DIRECTIONS = 3; //Direction count (3 is sufficient for low radii)
-	int GTAO_STEPS = 4; //Step count
-	float GTAO_RADIUS = 0.85; //World space radius (Keep it low. Cache-trasher. I am not joking.)
+	int GTAO_DIRECTIONS = clamp(int(gtao_settings.x), 1, 8); //Direction count (3 is sufficient for low radii)
+	int GTAO_STEPS = clamp(int(gtao_settings.y), 1, 16); //Step count
+	float GTAO_RADIUS = max(gtao_settings.z, 0.05f); //World space radius (Keep it low. Cache-trasher. I am not joking.)
 	float GTAO_NEG_1_OVER_RADIUSQR = -1.0 / (GTAO_RADIUS * GTAO_RADIUS); //Just for falloff. Hardcode it if you need to
 
 	//Bias the position to avoid numerical issues
@@ -73,6 +79,7 @@ float example_how_to_not_implement_gtao(float3 view_position, float3 view_normal
 	//Accumulated occlusion and slice weight
 	float2 occ_weight = (0.0).xx;
 
+	[loop]
 	for (int i = 0; i < GTAO_DIRECTIONS; i++)
 	{
 		//Slice direction
@@ -93,6 +100,7 @@ float example_how_to_not_implement_gtao(float3 view_position, float3 view_normal
 		float max_horizon_cos = sin_n;
 
 		//Find hot horizons in your area :flushed:
+		[loop]
 		for(int j = 0; j < GTAO_STEPS; j += 2)
 		{
 			//Ray increment
@@ -185,9 +193,11 @@ uint main(PSInput I) : SV_Target
 		Point = GbufferGetPointRealUnjitter(I.texcoord.xy, zbuffer);
     }
 
-	//Init. Don't render GTAO past 60 units. It will become a noisy mess...
+	//Init. Don't render GTAO past r4_gtao_max_dist (0 = unlimited). It will
+	//become a noisy mess...
 	//View-pos is shifted towards view normal; this eliminates self-occlusion
-	float occlusion = Point.z > 60.0 ? 1.0 : example_how_to_not_implement_gtao(Point + Normal * 0.0035, Normal, I.texcoord.xy, jitter_tex.xy);
+	bool gtao_beyond_far = gtao_settings.w > 0.0f && Point.z > gtao_settings.w;
+	float occlusion = gtao_beyond_far ? 1.0 : example_how_to_not_implement_gtao(Point + Normal * 0.0035, Normal, I.texcoord.xy, jitter_tex.xy);
 
 	//Pack the data into R32_UINT (16 bits for depth, and 16 for occlusion)
 	return asuint(f32tof16(Point.z)) | (asuint(f32tof16(occlusion)) << 16);
