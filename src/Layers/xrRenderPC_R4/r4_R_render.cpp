@@ -360,6 +360,19 @@ void CRender::render_menu() {
 
 Fvector3 ps_r_taa_jitter_full = {0,0,0};
 
+// VSLR: far distance of the reflection cubemap render. r4_vslr_hud_only caps it
+// to the near field the HUD model can plausibly reflect - rough reflections
+// sample the cubemap at 8*roughness mip, so content beyond ~20 m is a blurred,
+// fog-blended average anyway. Distant heavy geometry (forests) is frustum-culled
+// from all 6 faces, which is where the tree-driven cost spike comes from.
+ICF float vslr_cubemap_far(float env_far_plane)
+{
+	float far_plane = env_far_plane * ps_r4_vslr_distance;
+	if (ps_r4_vslr_hud_only)
+		far_plane = _min(far_plane, 20.0f);
+	return far_plane;
+}
+
 extern u32 g_r;
 bool is_render_cubemap = false;
 
@@ -413,7 +426,7 @@ void CRender::Render()
 		};
 
 		cProj.build_projection(PI_DIV_2 + 0.002f, 1.0f,
-			Device.fViewportNear, CurrentEnv.far_plane * ps_r4_vslr_distance);
+			Device.fViewportNear, vslr_cubemap_far(CurrentEnv.far_plane));
 
 		cmDir[2].mul(Device.vCameraTop, +1.0f);
 		cmDir[3].mul(Device.vCameraTop, -1.0f);

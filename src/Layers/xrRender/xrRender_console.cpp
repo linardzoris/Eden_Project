@@ -186,6 +186,7 @@ float		ps_r2_slight_fade			= 0.6f;				// 1.f
 
 float		ps_r4_vslr_distance			= 0.7f;				// 1.f
 int			ps_r4_vslr_quality			= 1;				// 0=128px, 1=256px, 2=512px cube face
+int			ps_r4_vslr_hud_only			= 0;				// cap the cubemap render at 20 m (HUD-model reflections)
 float		ps_r4_sslr_intensity		= 1.0f;				// 1.0 = neutral
 float		ps_r4_vslr_intensity		= 1.0f;				// 1.0 = neutral
 
@@ -751,6 +752,7 @@ void		xrRender_initconsole	()
 	CMD3(CCC_Mask, "r4_enable_tessellation", &ps_r2_ls_flags_ext, R2FLAGEXT_ENABLE_TESSELLATION);
 
 	CMD3(CCC_Mask, "r4_enable_vslr", &ps_r2_ls_flags_ext, R4FLAG_OFFSCREEN_REFLECTIONS);
+	CMD4(CCC_Integer, "r4_vslr_hud_only", &ps_r4_vslr_hud_only, 0, 1);	// cap cubemap render at 20 m
 	CMD4(CCC_Float, "r4_vslr_distance", &ps_r4_vslr_distance, 0.4f, 1.f);
 	// VSLR quality tier: cubemap face resolution 0 = 128px, 1 = 256px, 2 = 512px.
 	// All tiers capture all 6 faces every frame. Needs vid_restart (RT reallocation).

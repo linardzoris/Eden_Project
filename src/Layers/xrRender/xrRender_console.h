@@ -110,6 +110,10 @@ extern ECORE_API int			ps_r2_dhemi_count;			// 5
 extern ECORE_API float			ps_r2_slight_fade;			// 1.f
 extern ECORE_API float			ps_r4_vslr_distance;		// 1.f
 extern ECORE_API int			ps_r4_vslr_quality;			// 0=low, 1=medium, 2=high
+// VSLR: render the reflection cubemap only for the near field the HUD model can
+// actually reflect (far plane capped at 20 m). Distant heavy geometry (forests)
+// is frustum-culled from the 6-face render; the weapon keeps true reflections.
+extern ECORE_API int			ps_r4_vslr_hud_only;
 extern ECORE_API float			ps_r4_sslr_intensity;		// 1.0 = neutral
 extern ECORE_API float			ps_r4_vslr_intensity;		// 1.0 = neutral
 extern ECORE_API int			ps_r2_wait_sleep;
