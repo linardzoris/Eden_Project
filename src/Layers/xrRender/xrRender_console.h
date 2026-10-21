@@ -160,6 +160,14 @@ extern ECORE_API int			ps_r4_sslr_steps;
 extern ECORE_API float			ps_r4_sslr_thickness;
 extern ECORE_API float			ps_r4_sslr_trace_scale;
 
+// Parallax/POM: fine march settings, hot-tunable. min/max layers = march layer
+// count at nadir/grazing view, relief steps = binary refinement steps,
+// shadow steps = POM self-shadow march steps.
+extern ECORE_API float			ps_r4_parallax_min_layers;
+extern ECORE_API float			ps_r4_parallax_max_layers;
+extern ECORE_API int			ps_r4_parallax_relief_steps;
+extern ECORE_API int			ps_r4_pom_shadow_steps;
+
 // Test float exported to shaders for development
 extern  float					ps_r__test_exp_to_shaders_1;
 extern  float					ps_r__test_exp_to_shaders_2;

@@ -218,6 +218,11 @@ int			ps_r4_sslr_steps = 30;			// full march budget (mid/far/low derive from it)
 float		ps_r4_sslr_thickness = 0.25f;	// linear-depth relative silhouette gate
 float		ps_r4_sslr_trace_scale = 1.2f;	// exponential step growth
 
+float		ps_r4_parallax_min_layers = 8.0f;	// POM march layers at nadir view
+float		ps_r4_parallax_max_layers = 20.0f;	// POM march layers at grazing view
+int			ps_r4_parallax_relief_steps = 5;	// binary refinement steps
+int			ps_r4_pom_shadow_steps = 12;		// POM self-shadow march steps
+
 // Test float exported to shaders for development
 float		ps_r__test_exp_to_shaders_1	= 1.0f;
 float		ps_r__test_exp_to_shaders_2	= 1.0f;
@@ -806,6 +811,10 @@ void		xrRender_initconsole	()
 	CMD4(CCC_Integer, "r4_sslr_steps", &ps_r4_sslr_steps, 8, 64);	// full march budget
 	CMD4(CCC_Float, "r4_sslr_thickness", &ps_r4_sslr_thickness, 0.01f, 1.0f);	// silhouette gate
 	CMD4(CCC_Float, "r4_sslr_trace_scale", &ps_r4_sslr_trace_scale, 1.01f, 2.0f);	// step growth
+	CMD4(CCC_Float, "r4_parallax_min_layers", &ps_r4_parallax_min_layers, 1.0f, 32.0f);	// POM layers at nadir
+	CMD4(CCC_Float, "r4_parallax_max_layers", &ps_r4_parallax_max_layers, 2.0f, 64.0f);	// POM layers at grazing
+	CMD4(CCC_Integer, "r4_parallax_relief_steps", &ps_r4_parallax_relief_steps, 1, 8);	// binary refinement
+	CMD4(CCC_Integer, "r4_pom_shadow_steps", &ps_r4_pom_shadow_steps, 1, 32);	// POM shadow march
 
 	CMD3(CCC_Mask, "r4_puddles", &ps_r2_ls_flags_ext, R4FLAG_PUDDLES);
 

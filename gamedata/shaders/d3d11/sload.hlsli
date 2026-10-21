@@ -14,6 +14,12 @@ Texture2D s_snow;
 	#endif
 #endif
 
+// Fine parallax settings (r4_parallax_min_layers / r4_parallax_max_layers /
+// r4_parallax_relief_steps / r4_pom_shadow_steps). x/y = march layer count at
+// nadir/grazing, z = binary refinement steps, w = POM shadow march steps.
+// Clamped at the read sites so the worst-case cost stays bounded.
+float4 parallax_settings;
+
 #ifndef DYNAMIC_SNOW_COLOR
 #define DYNAMIC_SNOW_COLOR float3(0.75f, 0.75f, 0.75f)
 #endif
@@ -34,9 +40,9 @@ void UpdateTC(inout p_bumped_new I, inout float2 texCoord, Texture2D heightMap, 
 #ifdef ALLOW_STEEPPARALLAX
     if (I.position.z < fParallaxStopFade)
     {
-		const float minLayers = 8.0f;
-		const float maxLayers = 20.0f;
-		const uint reliefSteps = 5;
+		const float minLayers = max(parallax_settings.x, 1.0f);
+		const float maxLayers = max(parallax_settings.y, minLayers);
+		uint reliefSteps = clamp(uint(parallax_settings.z + 0.5f), 1, 8);
 
 		float numLayers = lerp(maxLayers, minLayers, abs(viewDir.z));
 		float layerDepth = rcp(numLayers);
@@ -63,7 +69,7 @@ void UpdateTC(inout p_bumped_new I, inout float2 texCoord, Texture2D heightMap, 
 		currTexCoord += texcoordDelta;
 		currLayerDepth -= layerDepth;
 
-		[unroll(reliefSteps)]
+		[loop]
 		for(uint i = 0; i < reliefSteps; ++i)
 		{
 			currDepthMapVal = 1.0f - heightMap.SampleLevel(smp_base, currTexCoord, 0.0f)[idx];
@@ -91,7 +97,7 @@ void UpdateTC(inout p_bumped_new I, inout float2 texCoord, Texture2D heightMap, 
 		float3 lightDirT = mul(transpose(TBN), -mul((float3x3)m_V, L_sun_dir_w.xyz));	// toward the sun, tangent space
 		if (lightDirT.z > 0.05f && currLayerDepth > 0.0f)
 		{
-			const uint shadowSteps = 12;
+			const uint shadowSteps = clamp(uint(parallax_settings.w + 0.5f), 1, 32);
 			const float shadowSoftness = 8.0f;	// full occlusion at ~12% height penetration
 
 			float depth = min(currLayerDepth, 1.0f);

@@ -71,6 +71,14 @@ static class cl_parallax		: public R_constant_setup		{	virtual void setup	(R_con
 	RCache.set_c	(C,h,-h/2.f,1.f/r_dtex_range,1.f/r_dtex_range);
 }}	binder_parallax;
 
+static class cl_parallax_settings : public R_constant_setup {
+	virtual void setup(R_constant* C) {
+		// x/y = march layers at nadir/grazing, z = refinement steps, w = shadow steps
+		RCache.set_c(C, ps_r4_parallax_min_layers, ps_r4_parallax_max_layers,
+			float(ps_r4_parallax_relief_steps), float(ps_r4_pom_shadow_steps));
+	}
+}	binder_parallax_settings;
+
 static class cl_vslr_params	: public R_constant_setup
 {
 	virtual void setup	(R_constant* C)
@@ -221,6 +229,7 @@ void CRender::create()
 
 	// constants
 	dxRenderDeviceRender::Instance().Resources->RegisterConstantSetup("parallax",				&binder_parallax);
+	dxRenderDeviceRender::Instance().Resources->RegisterConstantSetup("parallax_settings",		&binder_parallax_settings);
 	dxRenderDeviceRender::Instance().Resources->RegisterConstantSetup("vslr_params",			&binder_vslr_params);
 	dxRenderDeviceRender::Instance().Resources->RegisterConstantSetup("water_intensity", &binder_water_intensity);
 	dxRenderDeviceRender::Instance().Resources->RegisterConstantSetup("sun_shafts_intensity", &binder_sun_shafts_intensity);

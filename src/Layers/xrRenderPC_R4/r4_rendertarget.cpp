@@ -482,6 +482,13 @@ CRenderTarget::CRenderTarget()
 			ImGui::SliderInt("GTAO steps/dir", &ps_r4_gtao_steps, 1, 16);
 			ImGui::SliderFloat("GTAO radius (m)", &ps_r4_gtao_radius, 0.1f, 4.0f);
 			ImGui::SliderFloat("GTAO max dist (m)", &ps_r4_gtao_max_dist, 0.0f, 500.0f, "%.0f");
+
+			ImGui::Separator();
+
+			ImGui::SliderFloat("Parallax min layers (nadir)", &ps_r4_parallax_min_layers, 1.0f, 32.0f);
+			ImGui::SliderFloat("Parallax max layers (grazing)", &ps_r4_parallax_max_layers, 2.0f, 64.0f);
+			ImGui::SliderInt("Parallax relief steps", &ps_r4_parallax_relief_steps, 1, 8);
+			ImGui::SliderInt("POM shadow steps", &ps_r4_pom_shadow_steps, 1, 32);
 		}
 
 		auto& perf = GPUEvents_Statistics();
