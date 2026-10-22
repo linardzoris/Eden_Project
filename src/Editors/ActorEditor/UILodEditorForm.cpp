@@ -187,6 +187,47 @@ void UILodEditorForm::RunBatch(bool hq)
 	ELog.DlgMsg(mtInformation, "Generation successfully done!");
 }
 
+// delete the BLOD/FLOD dds+thm files (color and _nm) of every selected object
+void UILodEditorForm::ClearBatch(bool hq)
+{
+	u32 count = 0;
+	for (auto& it : items)
+	{
+		if (!it.selected)
+			continue;
+
+		// texture name derives from the object path alone, no need to load the object
+		CEditableObject* O = new CEditableObject(it.name.c_str());
+		xr_string base = hq ? O->GetLODBillboardTextureName() : O->GetLODFLODTextureName();
+		xr_delete(O);
+
+		xr_string files[4] = { base + ".dds", base + ".thm", base + "_nm.dds", base + "_nm.thm" };
+		bool deleted = false;
+		for (auto& f : files)
+		{
+			string_path full;
+			FS.update_path(full, _game_textures_, f.c_str());
+			if (FS.exist(full))
+			{
+				FS.file_delete(_game_textures_, f.c_str());
+				deleted = true;
+			}
+		}
+		if (deleted)
+		{
+			count++;
+			if (hq) it.HasHQ = false;
+			else it.HasLQ = false;
+		}
+	}
+
+	// deleted files must leave the FS cache before HasHQBillboard/HasLQTexture can see it
+	RescanFS();
+	ScanObjects();
+
+	ELog.Msg(mtInformation, "LOD Editor: %s cleared for %d object(s).", hq ? "BLOD" : "FLOD", count);
+}
+
 void UILodEditorForm::DrawObjectList()
 {
 	if (ImGui::Button("Rescan"))
@@ -226,16 +267,29 @@ void UILodEditorForm::DrawObjectList()
 			ImGui::SetTooltip("%s", it.name.c_str());
 		if (clicked)
 		{
-			if (ImGui::GetIO().KeyShift && m_LastClickIndex >= 0)
+			ImGuiIO& io = ImGui::GetIO();
+			if (io.KeyShift && m_LastClickIndex >= 0)
 			{
-				// shift+click: range select from the anchor to this row
+				// shift+click: range select from the anchor; repeat on the anchor deselects it
 				int a = _min(m_LastClickIndex, i), b = _max(m_LastClickIndex, i);
-				for (int j = a; j <= b; j++)
-					items[j].selected = true;
+				if (a == b)
+					items[i].selected = !items[i].selected;
+				else
+					for (int j = a; j <= b; j++)
+						items[j].selected = true;
+			}
+			else if (io.KeyCtrl)
+			{
+				// ctrl+click: accumulate, or toggle off an already selected item
+				it.selected = !it.selected;
+				m_LastClickIndex = i;
 			}
 			else
 			{
-				it.selected = !it.selected;
+				// plain click: select only this item
+				for (auto& other : items)
+					other.selected = false;
+				it.selected = true;
 				m_LastClickIndex = i;
 			}
 		}
@@ -325,6 +379,48 @@ void UILodEditorForm::DrawActions()
 			m_MakeHQConfirm = false;
 			ImGui::OpenPopup("Confirm generation");
 		}
+	}
+
+	ImGui::Separator();
+
+	if (ImGui::Button("ClearHQ", ImVec2(-1, 0)))
+	{
+		if (selected == 0)
+			ELog.DlgMsg(mtInformation, "LOD Editor: no objects selected.");
+		else
+		{
+			m_ClearHQConfirm = true;
+			m_ClearLQConfirm = false;
+			ImGui::OpenPopup("Confirm clear");
+		}
+	}
+	if (ImGui::Button("ClearLQ", ImVec2(-1, 0)))
+	{
+		if (selected == 0)
+			ELog.DlgMsg(mtInformation, "LOD Editor: no objects selected.");
+		else
+		{
+			m_ClearLQConfirm = true;
+			m_ClearHQConfirm = false;
+			ImGui::OpenPopup("Confirm clear");
+		}
+	}
+
+	if (ImGui::BeginPopupModal("Confirm clear", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		bool hq = m_ClearHQConfirm;
+		ImGui::Text("WARNING: Are you sure to clear %s for the %d selected object(s)?", hq ? "BLOD" : "FLOD", selected);
+		ImGui::Text("You can regenerate them later.");
+		ImGui::Separator();
+		if (ImGui::Button("Proceed", ImVec2(120, 0)))
+		{
+			ImGui::CloseCurrentPopup();
+			ClearBatch(hq);
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Cancel", ImVec2(120, 0)))
+			ImGui::CloseCurrentPopup();
+		ImGui::EndPopup();
 	}
 
 	if (ImGui::BeginPopupModal("Confirm generation", nullptr, ImGuiWindowFlags_AlwaysAutoResize))

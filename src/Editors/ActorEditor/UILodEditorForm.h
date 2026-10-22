@@ -31,6 +31,8 @@ private:
 	bool     m_ScanDone = false;
 	bool     m_MakeHQConfirm = false;   // which action the confirm popup is for
 	bool     m_MakeLQConfirm = false;
+	bool     m_ClearHQConfirm = false;
+	bool     m_ClearLQConfirm = false;
 	int      m_LastClickIndex = -1;     // shift+click range anchor
 	float    m_EstimateHQ = 4.0f;       // measured seconds per object
 	float    m_EstimateLQ = 1.0f;
@@ -41,6 +43,7 @@ private:
 	void BuildGroups();
 	void ApplyUsingLOD(bool value);
 	void RunBatch(bool hq);
+	void ClearBatch(bool hq);
 	void DrawObjectList();
 	void DrawFolderTree();
 	void DrawActions();
