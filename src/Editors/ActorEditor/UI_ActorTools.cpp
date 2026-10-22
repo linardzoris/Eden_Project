@@ -1033,8 +1033,8 @@ void CActorTools::RealGenerateLOD(bool hq)
 
 			if (hq)
 			{
-				// HQ billboard：按物体比例的高分辨率图集，输出到 _shared\billboards，编辑器/关卡直接引用
-				ImageLib.CreateBillboardTexture(O, O->GetLODBillboardTextureName().c_str(), O->Version(), 4);
+				// HQ billboard：按物体比例的高分辨率图集，输出到 _eden\_shared\billboards，编辑器/关卡直接引用
+				ImageLib.CreateBillboardTexture(O, O->GetLODBillboardTextureName().c_str(), xr_chrono_to_time_t(std::chrono::system_clock::now()), 4);
 			}
 			else
 			{

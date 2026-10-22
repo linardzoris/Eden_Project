@@ -48,7 +48,7 @@ public:
     bool		MakeGameTexture		(LPCSTR game_name, u32* data, const STextureParams& tp);
     void		CreateTextureThumbnail(ETextureThumbnail* THM, const xr_string& src_name, LPCSTR path=0, bool bSetDefParam=true);
     BOOL		CreateOBJThumbnail	(LPCSTR tex_name, CEditableObject* obj, time_t age);
-    void		CreateLODTexture	(CEditableObject* object, U32Vec& lod_pixels, U32Vec& nm_pixels, u32 cell_w, u32 cell_h, bool vertical, int quality);
+    void		CreateLODTexture	(CEditableObject* object, U32Vec& lod_pixels, U32Vec& nm_pixels, u32 cell_w, u32 cell_h, bool vertical, int quality, u32 nm_downscale=1);
     void		CreateLODTexture	(CEditableObject* object, LPCSTR tex_name, 	u32 tgt_w, u32 tgt_h, int samples, time_t age, int quality);
     void		CreateBillboardTexture	(CEditableObject* object, LPCSTR tex_name, time_t age, int quality);
     void		CreateGameTexture	(LPCSTR src_name, ETextureThumbnail* thumb=0);

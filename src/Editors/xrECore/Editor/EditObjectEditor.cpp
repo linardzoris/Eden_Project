@@ -297,7 +297,14 @@ void CEditableObject::RenderLOD(const Fmatrix& parent)
 
 xr_string CEditableObject::GetLODTextureName()
 {
-	string512 nm; 	strcpy	(nm,m_LibName.c_str()); _ChangeSymbol(nm,'\\','_');
+	// strip the objects root and file extension so the name matches the on-disk lod_* texture
+	xr_string obj_name = EFS.ChangeFileExt(m_LibName.c_str(), "");
+	string_path objs_root;
+	FS.update_path(objs_root, _objects_, "");
+	if (obj_name.find(objs_root) == 0)
+		obj_name.erase(0, xr_strlen(objs_root));
+	string512 nm;
+	xr_strcpy(nm, obj_name.c_str()); _ChangeSymbol(nm,'\\','_');
 	xr_string 	l_name;
 	l_name 			= xr_string("lod_")+nm;
 	return ImageLib.UpdateFileName(l_name);
@@ -305,7 +312,8 @@ xr_string CEditableObject::GetLODTextureName()
 
 xr_string CEditableObject::GetLODBillboardTextureName()
 {
-	return xr_string("_shared\\billboards\\")+GetLODTextureName();
+	// HQ billboards live under the project _eden folder, base name matches the LQ lod texture
+	return xr_string("_eden\\_shared\\billboards\\")+GetLODTextureName();
 }
 
 bool CEditableObject::HasHQBillboard()

@@ -152,10 +152,17 @@ void CreateLODSamples(const Fbox& bbox, U32Vec& tgt_data, u32 cell_w, u32 cell_h
     RCache.set_xform_project	(save_projection);
 }
 
-void CImageManager::CreateLODTexture(CEditableObject* OBJECT, U32Vec& lod_pixels, U32Vec& nm_pixels, u32 cell_w, u32 cell_h, bool vertical, int quality)
+void CImageManager::CreateLODTexture(CEditableObject* OBJECT, U32Vec& lod_pixels, U32Vec& nm_pixels, u32 cell_w, u32 cell_h, bool vertical, int quality, u32 nm_downscale)
 {
     u32 atlas_w = vertical ? cell_w : cell_w*LOD_SAMPLE_COUNT;
     u32 atlas_h = vertical ? cell_h*LOD_SAMPLE_COUNT : cell_h;
+
+    // normal map grid, optionally downscaled relative to the color atlas
+    if (nm_downscale < 1) nm_downscale = 1;
+    u32 nm_cw = _max(1u, cell_w / nm_downscale);
+    u32 nm_ch = _max(1u, cell_h / nm_downscale);
+    u32 nm_atlas_w = vertical ? nm_cw : nm_cw*LOD_SAMPLE_COUNT;
+    u32 nm_atlas_h = vertical ? nm_ch*LOD_SAMPLE_COUNT : nm_ch;
 
     // build hemi light
     BLVec						simple_hemi;
@@ -167,8 +174,8 @@ void CImageManager::CreateLODTexture(CEditableObject* OBJECT, U32Vec& lod_pixels
 
     // build lod normals
     lod_pixels.resize(atlas_w*atlas_h, 0);
-    nm_pixels.resize(atlas_w*atlas_h, 0);
-    U32Vec hemi_tmp(atlas_w*atlas_h, 0);
+    nm_pixels.resize(nm_atlas_w*nm_atlas_h, 0);
+    U32Vec hemi_tmp(nm_atlas_w*nm_atlas_h, 0);
     Fvector 					o_center, o_size;
     Fmatrix 					M, Mi;
     bb.getradius(o_size);
@@ -176,8 +183,8 @@ void CImageManager::CreateLODTexture(CEditableObject* OBJECT, U32Vec& lod_pixels
     SPBItem* PB = UI->ProgressStart(LOD_SAMPLE_COUNT, OBJECT->GetName());
     float viewW = 2.f*_max(o_size.x, o_size.z);		// 与捕捉正交窗口一致（getradius 为半尺寸）
     float viewH = 2.f*o_size.y;
-    float dW = viewW / cell_w;
-    float dH = viewH / cell_h;
+    float nm_dW = viewW / nm_cw;
+    float nm_dH = viewH / nm_ch;
     float dR = bb.getradius();
     float d2R = dR * 2.f;
 
@@ -211,7 +218,7 @@ void CImageManager::CreateLODTexture(CEditableObject* OBJECT, U32Vec& lod_pixels
 
         // rows are independent - process them in parallel
         // (each thread owns its collider/query buffers; shared object data is read-only here)
-        xr_parallel_for(u32(0), cell_h, [&](u32 iH)
+        xr_parallel_for(u32(0), nm_ch, [&](u32 iH)
         {
             // per-thread, reused across rows and directions
             static thread_local CDB::COLLIDER	CL;
@@ -219,15 +226,16 @@ void CImageManager::CreateLODTexture(CEditableObject* OBJECT, U32Vec& lod_pixels
             static thread_local FvectorVec		n_vec;
             static thread_local Fvector4Vec		sample_pt_vec;
 
-            float Y = (iH - (cell_h - 1) / 2) * dH;
-            for (u32 iW = 0; iW < cell_w; iW++)
+            // NOTE: cast to float BEFORE subtraction - unsigned math underflowed here
+            // and threw most of the grid to ~4e9 (rays missed -> nm content cropped to a quarter)
+            float Y = (float(iH) - float((nm_ch - 1) / 2)) * nm_dH;
+            for (u32 iW = 0; iW < nm_cw; iW++)
             {
-                float X = (iW - (cell_w) / 2) * dW;
+                float X = (float(iW) - float(nm_cw / 2)) * nm_dW;
 
-                u32 row = vertical ? sample_idx*cell_h + iH : iH;
-                u32 col = vertical ? iW : sample_idx*cell_w + iW;
-                u32 pixel = (atlas_h - row - 1) * atlas_w + col;
-                u32& tgt_c = lod_pixels[pixel];
+                u32 row = vertical ? sample_idx*nm_ch + iH : iH;
+                u32 col = vertical ? iW : sample_idx*nm_cw + iW;
+                u32 pixel = (nm_atlas_h - row - 1) * nm_atlas_w + col;
                 u32& tgt_n = nm_pixels[pixel];
                 u32& tgt_h = hemi_tmp[pixel];
 
@@ -235,10 +243,10 @@ void CImageManager::CreateLODTexture(CEditableObject* OBJECT, U32Vec& lod_pixels
                 sample_pt_vec.clear();
                 for (s32 iiH = -LOD_CALC_SAMPLES_LIM; iiH <= LOD_CALC_SAMPLES_LIM; iiH++)
                 {
-                    float dY = iiH * (dH / LOD_CALC_SAMPLES);
+                    float dY = iiH * (nm_dH / LOD_CALC_SAMPLES);
                     for (s32 iiW = -LOD_CALC_SAMPLES_LIM; iiW <= LOD_CALC_SAMPLES_LIM; iiW++)
                     {
-                        float dX = iiW * (dW / LOD_CALC_SAMPLES);
+                        float dX = iiW * (nm_dW / LOD_CALC_SAMPLES);
                         Fvector start;
                         start.set(X + dX, Y + dY, 0);
                         M.transform_tiny(start);
@@ -291,9 +299,11 @@ void CImageManager::CreateLODTexture(CEditableObject* OBJECT, U32Vec& lod_pixels
                 N.mul(0.5f);
                 N.add(0.5f);
                 N.mul(255.f);
-                tgt_n = color_rgba(iFloor(N.x), iFloor(N.y), iFloor(N.z), color_get_A(tgt_c));
+                // alpha is transient here, the hemi value replaces it after the loop
+                tgt_n = color_rgba(iFloor(N.x), iFloor(N.y), iFloor(N.z), 255);
 
-                if (0 == color_get_A(tgt_c))
+                // hemi/AO only where the rays actually hit the object
+                if (sample_pt_vec.empty())
                     continue;
 
                 // hemi/AO: evaluate once per pixel at the most opaque hit point instead of
@@ -337,7 +347,7 @@ void CImageManager::CreateLODTexture(CEditableObject* OBJECT, U32Vec& lod_pixels
                     res_transp = res_transp * (1.f - best_w) + avg_transp * best_w;
                 }
                 u8 h = (u8)iFloor(res_transp * 255.f);
-                tgt_h = color_rgba(h, h, h, color_get_A(tgt_c));
+                tgt_h = color_rgba(h, h, h, 255);
             }
         });
         PB->Inc();
@@ -345,8 +355,8 @@ void CImageManager::CreateLODTexture(CEditableObject* OBJECT, U32Vec& lod_pixels
 
     Msg("LOD pixels %u: %3.2fsec", atlas_w*atlas_h, TTotal.GetElapsed_sec());
     ImageLib.ApplyBorders(lod_pixels, atlas_w, atlas_h);
-    ImageLib.ApplyBorders(nm_pixels, atlas_w, atlas_h);
-    ImageLib.ApplyBorders(hemi_tmp, atlas_w, atlas_h);
+    ImageLib.ApplyBorders(nm_pixels, nm_atlas_w, nm_atlas_h);
+    ImageLib.ApplyBorders(hemi_tmp, nm_atlas_w, nm_atlas_h);
 
     // fill alpha to N-channel (HEMI)
     for (int px_idx = 0; px_idx<int(nm_pixels.size()); px_idx++)
@@ -390,17 +400,23 @@ void CImageManager::CreateLODTexture(CEditableObject* OBJECT, LPCSTR tex_name, u
 }
 
 //------------------------------------------------------------------------------
-// HQ billboard：按物体比例生成高分辨率 8 向图集，直接输出 tga/thm/dds 到 _shared\billboards
+// HQ billboard：按物体比例生成高分辨率 8 向图集，直接输出 tga/thm/dds 到 _eden\_shared\billboards
+// 色彩图无后缀（DXT3，alpha=透明度），法线图带 _nm 后缀（DXT5，alpha=AO），分辨率为色彩的 1/2
 //------------------------------------------------------------------------------
 void CImageManager::CreateBillboardTexture(CEditableObject* OBJECT, LPCSTR tex_name, time_t age, int quality)
 {
     u32 cell_w, cell_h, atlas_w, atlas_h;
     bool vertical;
     OBJECT->GetLODAtlasParams(cell_w, cell_h, vertical, atlas_w, atlas_h);
-    Msg("LOD billboard '%s': cell [%ux%u], atlas [%ux%u], %s", tex_name, cell_w, cell_h, atlas_w, atlas_h, vertical ? "vertical" : "horizontal");
+    // normal map atlas is half the color resolution per axis
+    u32 nm_cw = _max(1u, cell_w / 2);
+    u32 nm_ch = _max(1u, cell_h / 2);
+    u32 nm_atlas_w = vertical ? nm_cw : nm_cw*LOD_SAMPLE_COUNT;
+    u32 nm_atlas_h = vertical ? nm_ch*LOD_SAMPLE_COUNT : nm_ch;
+    Msg("LOD billboard '%s': cell [%ux%u], atlas [%ux%u], nm [%ux%u], %s", tex_name, cell_w, cell_h, atlas_w, atlas_h, nm_atlas_w, nm_atlas_h, vertical ? "vertical" : "horizontal");
 
     U32Vec lod_pixels, nm_pixels;
-    CreateLODTexture(OBJECT, lod_pixels, nm_pixels, cell_w, cell_h, vertical, quality);
+    CreateLODTexture(OBJECT, lod_pixels, nm_pixels, cell_w, cell_h, vertical, quality, 2);
 
     string_path out_name, src_name, nm_name;
     xr_strconcat(nm_name, tex_name, "_nm");
@@ -416,7 +432,7 @@ void CImageManager::CreateBillboardTexture(CEditableObject* OBJECT, LPCSTR tex_n
     strcpy(src_name, EFS.ChangeFileExt(nm_name, ".tga").c_str());
     FS.update_path(out_name, _textures_, src_name);
     VerifyPath(out_name);
-    DXTUtils::Converter::MakeTGA(atlas_w, atlas_h, nm_pixels, out_name);
+    DXTUtils::Converter::MakeTGA(nm_atlas_w, nm_atlas_h, nm_pixels, out_name);
     FS.set_file_age(out_name, age);
 
     // thm + dds：色彩 DXT3（边缘 alpha），法线 DXT5（alpha 存 hemi/AO），与批量同步参数一致
@@ -438,6 +454,9 @@ void CImageManager::CreateBillboardTexture(CEditableObject* OBJECT, LPCSTR tex_n
     THM->Save		(age);
     xr_delete		(THM);
 
+    // normal map dds + thm at its own (half) resolution
+    tp.width			= nm_atlas_w;
+    tp.height			= nm_atlas_h;
     tp.fmt				= STextureParams::tfDXT5;
     strcpy(src_name, EFS.ChangeFileExt(nm_name, ".dds").c_str());
     FS.update_path(out_name, _game_textures_, src_name);
