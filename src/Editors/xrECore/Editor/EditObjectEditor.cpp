@@ -16,8 +16,6 @@
 
 const float tex_w	= LOD_SAMPLE_COUNT*LOD_IMAGE_SIZE;
 const float tex_h	= 1*LOD_IMAGE_SIZE;
-const float half_p_x= 0.5f*(1.f/tex_w);
-const float half_p_y= 0.5f*(1.f/tex_h);
 const float offs_x 	= 1.f/tex_w;
 const float offs_y 	= 1.f/tex_h;
 
@@ -53,6 +51,12 @@ void CEditableObject::RayQuery(SPickQuery& pinf)
 {
 	for(EditMeshIt m = m_Meshes.begin();m!=m_Meshes.end();m++)
 		(*m)->RayQuery(pinf);
+}
+
+void CEditableObject::RayQuery(CDB::COLLIDER& CL, SPickQuery& pinf)
+{
+	for(EditMeshIt m = m_Meshes.begin();m!=m_Meshes.end();m++)
+		(*m)->RayQuery(CL, pinf);
 }
 
 void CEditableObject::RayQuery(const Fmatrix& parent, const Fmatrix& inv_parent, SPickQuery& pinf)
@@ -202,17 +206,18 @@ void CEditableObject::RenderSelection(const Fmatrix& parent, CEditableMesh* mesh
 	EDevice->ResetNearer();
 }
 
-IC static void CalculateLODTC(int frame, int w_cnt, int h_cnt, Fvector2& lt, Fvector2& rb)
+IC static void CalculateLODTC(int frame, int w_cnt, int h_cnt, int tex_w, int tex_h, Fvector2& lt, Fvector2& rb)
 {
-	Fvector2	ts;
+	Fvector2	ts, hp;
 	ts.set		(1.f/(float)w_cnt,1.f/(float)h_cnt);
-	lt.x        = (frame%w_cnt+0)*ts.x+half_p_x;
-	lt.y        = (frame/w_cnt+0)*ts.y+half_p_y;
-	rb.x        = (frame%w_cnt+1)*ts.x-half_p_x;
-	rb.y        = (frame/w_cnt+1)*ts.y-half_p_y;
+	hp.set		(0.5f/(float)tex_w,0.5f/(float)tex_h);
+	lt.x        = (frame%w_cnt+0)*ts.x+hp.x;
+	lt.y        = (frame/w_cnt+0)*ts.y+hp.y;
+	rb.x        = (frame%w_cnt+1)*ts.x-hp.x;
+	rb.y        = (frame/w_cnt+1)*ts.y-hp.y;
 }
 
-void CEditableObject::GetLODFrame(int frame, Fvector p[4], Fvector2 t[4], const Fmatrix* parent)
+void CEditableObject::GetLODFrame(int frame, Fvector p[4], Fvector2 t[4], const Fmatrix* parent, int w_cnt, int h_cnt)
 {
 	R_ASSERT(m_objectFlags.is(eoUsingLOD));
 	Fvector P,S;
@@ -221,14 +226,27 @@ void CEditableObject::GetLODFrame(int frame, Fvector p[4], Fvector2 t[4], const 
 	Fmatrix T,matrix,rot;
 	T.scale			(r,S.y,r);
 	T.translate_over(P);
-	if (parent) 
+	if (parent)
 		T.mulA_43(*parent);
 
 	float angle 	= frame*(PI_MUL_2/float(LOD_SAMPLE_COUNT));
 	rot.rotateY(-angle);
 	matrix.mul(T,rot);
 	Fvector2 lt, rb;
-	CalculateLODTC(frame,LOD_SAMPLE_COUNT,1,lt,rb);
+	int tex_w, tex_h;
+	if (HasHQBillboard())
+	{
+		u32 cw, ch, aw, ah; bool vert;
+		GetLODAtlasParams(cw, ch, vert, aw, ah);
+		tex_w = (int)aw;
+		tex_h = (int)ah;
+	}
+	else
+	{
+		tex_w = LOD_SAMPLE_COUNT*LOD_IMAGE_SIZE;
+		tex_h = LOD_IMAGE_SIZE;
+	}
+	CalculateLODTC(frame,w_cnt,h_cnt,tex_w,tex_h,lt,rb);
 	t[0].set(lt);
 	t[1].set(rb.x,lt.y);
 	t[2].set(rb);
@@ -267,7 +285,9 @@ void CEditableObject::RenderLOD(const Fmatrix& parent)
 	{
 		Fvector    	p[4];
 		Fvector2 	t[4];
-		GetLODFrame(max_frame,p,t);
+		int w_cnt, h_cnt;
+		GetLODGridForRender(w_cnt, h_cnt);
+		GetLODFrame(max_frame,p,t,0,w_cnt,h_cnt);
 		for (int i=0; i<4; i++){ LOD[i].p.set(p[i]); LOD[i].t.set(t[i]); }
 		RCache.set_xform_world(parent);
 		EDevice->SetShader		(m_LODShader?m_LODShader:EDevice->m_WireShader);
@@ -281,6 +301,83 @@ xr_string CEditableObject::GetLODTextureName()
 	xr_string 	l_name;
 	l_name 			= xr_string("lod_")+nm;
 	return ImageLib.UpdateFileName(l_name);
+}
+
+xr_string CEditableObject::GetLODBillboardTextureName()
+{
+	return xr_string("_shared\\billboards\\")+GetLODTextureName();
+}
+
+bool CEditableObject::HasHQBillboard()
+{
+	xr_string fname	= GetLODBillboardTextureName()+xr_string(".dds");
+	string_path full;
+	FS.update_path	(full,_game_textures_,fname.c_str());
+	return !!FS.exist(full);
+}
+
+// 单元格尺寸就近吸附到 2 的幂（64..2048），满足 DXT/mipmap 的 POT 约束
+IC static u32 SnapLODCellSize(float v)
+{
+	v	= clampr(v, 64.f, 2048.f);
+	u32 lo	= 64;
+	while (lo*2 <= v) lo *= 2;
+	u32 hi	= lo*2;
+	return (hi - v < v - lo) ? (hi <= 2048 ? hi : lo) : lo;
+}
+
+// 按物体 AABB 真实比例计算 8 向图集布局：
+//   W>H -> 8 格竖排（图集 H=8*cell_h<=2048）；W<=H -> 8 格横排（图集 W=8*cell_w<=2048）
+//   比例 r 与捕捉正交窗口一致（viewW/viewH），超限或退化时回退 1:1 cell 256x256（2048x256 横排）
+void CEditableObject::GetLODAtlasParams(u32& cell_w, u32& cell_h, bool& vertical, u32& atlas_w, u32& atlas_h)
+{
+	cell_w			= 256;
+	cell_h			= 256;
+	vertical		= false;
+	atlas_w			= LOD_SAMPLE_COUNT*cell_w;
+	atlas_h			= cell_h;
+
+	Fvector C, S;
+	m_BBox.get_CD	(C, S);					// S 为半尺寸
+	float viewW		= 2.f*_max(S.x, S.z);	// 与 CreateLODSamples 正交窗口一致
+	float viewH		= m_BBox.max.y - m_BBox.min.y;
+	if (viewW <= EPS || viewH <= EPS)
+		return;
+
+	float ratio		= viewW/viewH;			// W/H
+	vertical		= ratio > 1.f;
+	if (vertical)
+	{
+		cell_h		= 256;					// 短边固定 256
+		cell_w		= SnapLODCellSize(cell_h*ratio);
+		atlas_w		= cell_w;
+		atlas_h		= LOD_SAMPLE_COUNT*cell_h;
+	}
+	else
+	{
+		cell_w		= 256;
+		cell_h		= SnapLODCellSize(cell_w/ratio);
+		atlas_w		= LOD_SAMPLE_COUNT*cell_w;
+		atlas_h		= cell_h;
+	}
+	VERIFY(atlas_w <= 2048 && atlas_h <= 2048);
+}
+
+void CEditableObject::GetLODGridForRender(int& w_cnt, int& h_cnt)
+{
+	w_cnt	= LOD_SAMPLE_COUNT;
+	h_cnt	= 1;
+	if (HasHQBillboard())
+	{
+		u32 cw, ch, aw, ah;
+		bool vert;
+		GetLODAtlasParams(cw, ch, vert, aw, ah);
+		if (vert)
+		{
+			w_cnt	= 1;
+			h_cnt	= LOD_SAMPLE_COUNT;
+		}
+	}
 }
 
 void CEditableObject::OnDeviceCreate()
@@ -302,7 +399,7 @@ void CEditableObject::DefferedLoadRP()
 
 //*/
 	// создать LOD shader
-	xr_string l_name = GetLODTextureName();
+	xr_string l_name = HasHQBillboard() ? GetLODBillboardTextureName() : GetLODTextureName();
 	xr_string fname = xr_string(l_name)+xr_string(".dds");
 	m_LODShader.destroy();
 //    if (FS.exist(_game_textures_,fname.c_str()))

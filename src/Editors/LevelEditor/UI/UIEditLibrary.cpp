@@ -234,15 +234,25 @@ void UIEditLibrary::GenerateLOD(const RStringVec& props, bool bHighQuality)
 			pb->Inc(O->GetName());
 			BOOL bLod = O->m_objectFlags.is(CEditableObject::eoUsingLOD);
 			O->m_objectFlags.set(CEditableObject::eoUsingLOD, FALSE);
-			xr_string tex_name;
-			tex_name = EFS.ChangeFileExt(O->GetName(), "");
 
-			string_path tmp;
-			strcpy(tmp, tex_name.c_str());
-			_ChangeSymbol(tmp, '\\', '_');
-			tex_name = xr_string("lod_") + tmp;
-			tex_name = ImageLib.UpdateFileName(tex_name);
-			ImageLib.CreateLODTexture(O, tex_name.c_str(), LOD_IMAGE_SIZE, LOD_IMAGE_SIZE, LOD_SAMPLE_COUNT, xr_chrono_to_time_t(std::chrono::system_clock::now()), bHighQuality ? 4 /*7*/ : 1);
+			if (bHighQuality)
+			{
+				// HQ billboard：按物体比例的高分辨率图集，输出到 _shared\billboards
+				ImageLib.CreateBillboardTexture(O, O->GetLODBillboardTextureName().c_str(), xr_chrono_to_time_t(std::chrono::system_clock::now()), 4);
+			}
+			else
+			{
+				xr_string tex_name;
+				tex_name = EFS.ChangeFileExt(O->GetName(), "");
+
+				string_path tmp;
+				strcpy(tmp, tex_name.c_str());
+				_ChangeSymbol(tmp, '\\', '_');
+				tex_name = xr_string("lod_") + tmp;
+				tex_name = ImageLib.UpdateFileName(tex_name);
+				ImageLib.CreateLODTexture(O, tex_name.c_str(), LOD_IMAGE_SIZE, LOD_IMAGE_SIZE, LOD_SAMPLE_COUNT, xr_chrono_to_time_t(std::chrono::system_clock::now()), 4);
+			}
+
 			O->OnDeviceDestroy();
 			O->m_objectFlags.set(CEditableObject::eoUsingLOD, bLod);
 			ELog.Msg(mtInformation, "+ LOD for object '%s' successfully created.", O->GetName());

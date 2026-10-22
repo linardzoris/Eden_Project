@@ -204,6 +204,8 @@ void EDetailManager::UpdateSlotBBox(int sx, int sz, DetailSlot& slot)
 
 bool EDetailManager::UpdateSlots()
 {
+	// Background UpdateVisibleM/cache_Decompress may be reading dtSlots right now
+	Device.details_task.wait	();
 	// clear previous slots
     xr_free				(dtSlots);
     dtSlots				= xr_alloc<DetailSlot>(dtH.size_x*dtH.size_z);
@@ -398,6 +400,8 @@ bool EDetailManager::UpdateSlotObjects(int x, int z){
 
 bool EDetailManager::UpdateObjects(bool bUpdateTex, bool bUpdateSelectedOnly)
 {
+	// Rewrite of dtSlots ids/palettes must not race with background cache_Decompress
+	Device.details_task.wait	();
 	m_Base.ReloadImage();
 	if (!m_Base.Valid()){ 
     	ELog.DlgMsg(mtError,"Invalid base texture!");
@@ -437,8 +441,13 @@ EDetail* EDetailManager::FindDOByName(LPCSTR name)
 
 bool EDetailManager::RemoveDO(LPCSTR name)
 {
+	// objects vector is iterated and indexed by slot ids on a background thread
+	Device.details_task.wait	();
     DetailIt it = FindDOByNameIt(name);
     if (it!=objects.end()){
+        // Drop dangling pointers to this object from the color index map
+        for (auto& pair : m_ColorIndices)
+            pair.second.erase(std::remove(pair.second.begin(), pair.second.end(), (CDetail*)*it), pair.second.end());
         xr_delete		(*it);
         objects.erase	(it);
         InvalidateSlots	();
@@ -448,6 +457,8 @@ bool EDetailManager::RemoveDO(LPCSTR name)
 
 EDetail* EDetailManager::AppendDO(LPCSTR name, bool bTestUnique)
 {
+	// objects push_back may reallocate the vector while a background task iterates it
+	Device.details_task.wait	();
     EDetail* D=0;
 	if (bTestUnique&&(0!=(D=FindDOByName(name)))) return D;
 
@@ -463,6 +474,8 @@ EDetail* EDetailManager::AppendDO(LPCSTR name, bool bTestUnique)
 
 void EDetailManager::InvalidateSlots()
 {
+	// dtSlots ids are rewritten here; background cache_Decompress reads them
+	Device.details_task.wait	();
 	int slot_cnt = dtH.size_x*dtH.size_z;
 	for (int k=0; k<slot_cnt; k++){
     	DetailSlot* it = &dtSlots[k];
@@ -476,6 +489,8 @@ void EDetailManager::InvalidateSlots()
 
 int EDetailManager::RemoveDOs()
 {
+	// objects are deleted here; background task may still reference them
+	Device.details_task.wait	();
 	int cnt=0;
     for (DetailIt it=objects.begin(); it!=objects.end(); it++)
         xr_delete(*it);

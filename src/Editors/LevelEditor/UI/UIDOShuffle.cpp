@@ -6,10 +6,12 @@ UIDOShuffle::UIDOShuffle()
 	bModif = false;
 	m_ChooseObject = false;
 	m_Texture = nullptr;
+	m_RealTexture = nullptr;
+	m_Thm = nullptr;
+	m_list_selected = -1;
 	m_TextureNull.create("ed\\ed_nodata");
 	m_TextureNull->Load();
 	m_Props = new UIPropertiesForm();
-	m_RealTexture = nullptr;
 }
 
 UIDOShuffle::~UIDOShuffle()
@@ -155,15 +157,17 @@ void UIDOShuffle::Draw()
 				ImGui::PopID();
 				index++;
 			}
-			for (auto b = m_color_indices.begin(), e = m_color_indices.end(); b != e; b++)
+			// Index-based removal: erase invalidates iterators, the old loop
+			// kept comparing against a stale end() and walked past size()
+			for (size_t i = 0; i < m_color_indices.size();)
 			{
-				if ((*b)->IsClosed())
+				if (m_color_indices[i]->IsClosed())
 				{
-					auto ptr = *b;
-					xr_delete(ptr);
-					m_color_indices.erase(b);
-					b = m_color_indices.begin();
+					xr_delete(m_color_indices[i]);
+					m_color_indices.erase(m_color_indices.begin() + i);
 				}
+				else
+					++i;
 			}
 		}
 		ImGui::PopStyleVar(2);

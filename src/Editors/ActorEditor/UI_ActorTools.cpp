@@ -1030,22 +1030,32 @@ void CActorTools::RealGenerateLOD(bool hq)
 		{
 			BOOL bLod = O->m_objectFlags.is(CEditableObject::eoUsingLOD);
 			O->m_objectFlags.set(CEditableObject::eoUsingLOD, FALSE);
-			xr_string tex_name;
-			tex_name = EFS.ChangeFileExt(O->GetName(), "");
 
-			string_path fname;
-			FS.update_path(fname, _objects_, "");
-
-			if (tex_name.find(fname) == 0)
+			if (hq)
 			{
-				tex_name.erase(0, xr_strlen(fname));
+				// HQ billboard：按物体比例的高分辨率图集，输出到 _shared\billboards，编辑器/关卡直接引用
+				ImageLib.CreateBillboardTexture(O, O->GetLODBillboardTextureName().c_str(), O->Version(), 4);
+			}
+			else
+			{
+				xr_string tex_name;
+				tex_name = EFS.ChangeFileExt(O->GetName(), "");
+
+				string_path fname;
+				FS.update_path(fname, _objects_, "");
+
+				if (tex_name.find(fname) == 0)
+				{
+					tex_name.erase(0, xr_strlen(fname));
+				}
+
+				string_path				tmp;
+				strcpy(tmp, tex_name.c_str()); _ChangeSymbol(tmp, '\\', '_'); _ChangeSymbol(tmp, ':', '_');
+				tex_name = xr_string("lod_") + tmp;
+				tex_name = ImageLib.UpdateFileName(tex_name);
+				ImageLib.CreateLODTexture(O, tex_name.c_str(), LOD_IMAGE_SIZE, LOD_IMAGE_SIZE, LOD_SAMPLE_COUNT, O->Version(), 4);
 			}
 
-			string_path				tmp;
-			strcpy(tmp, tex_name.c_str()); _ChangeSymbol(tmp, '\\', '_'); _ChangeSymbol(tmp, ':', '_');
-			tex_name = xr_string("lod_") + tmp;
-			tex_name = ImageLib.UpdateFileName(tex_name);
-			ImageLib.CreateLODTexture(O, tex_name.c_str(), LOD_IMAGE_SIZE, LOD_IMAGE_SIZE, LOD_SAMPLE_COUNT, O->Version(), hq ? 4/*7*/ : 1);
 			O->OnDeviceDestroy();
 			O->m_objectFlags.set(CEditableObject::eoUsingLOD, bLod);
 			ELog.Msg(mtInformation, "LOD for object '%s' successfully created.", O->GetName());

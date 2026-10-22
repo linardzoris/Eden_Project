@@ -559,6 +559,7 @@ void CActorTools::OnMakeLODClick(ButtonValue* sender, bool& bModif, bool& bSafe)
 	{
 		GenerateLOD(true);
 	}
+	break;
 	case 1:
 	{
 		GenerateLOD(false);

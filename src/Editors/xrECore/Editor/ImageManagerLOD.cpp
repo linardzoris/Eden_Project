@@ -80,7 +80,8 @@ ICF static void  simple_hemi_callback(float x, float y, float z, float E, LPVOID
 
 const u32 lod_ss_quality  = 8;
 
-void CreateLODSamples(const Fbox& bbox, U32Vec& tgt_data, u32 tgt_w, u32 tgt_h)
+// 8 向正交捕捉，写入图集：横排为 8 个水平条带，竖排为 8 个垂直条带
+void CreateLODSamples(const Fbox& bbox, U32Vec& tgt_data, u32 cell_w, u32 cell_h, bool vertical, u32 atlas_w, u32 atlas_h)
 {
 	U32Vec 	s_pixels,d_pixels;
     Fmatrix save_projection		= EDevice->mProject;
@@ -95,19 +96,19 @@ void CreateLODSamples(const Fbox& bbox, U32Vec& tgt_data, u32 tgt_w, u32 tgt_h)
     u32 cc						= 	EPrefs->scene_clear_color;
     EPrefs->scene_clear_color 	= 	0x0000000;
     psDeviceFlags.zero			();
-	psDeviceFlags.set			(rsFilterLinear,TRUE);
+    psDeviceFlags.set			(rsFilterLinear,TRUE);
 	EDevice->dwFillMode			= D3DFILL_SOLID;
     EDevice->dwShadeMode			= D3DSHADE_GOURAUD;
 
     Fvector vP,vD,vN,vR;
     Fmatrix mV,mP;
-    
+
     Fvector S;
     bbox.getradius				(S);
     float R 					= 2.f*_max(S.x,S.z);
 
-    u32 pitch 					= tgt_w*LOD_SAMPLE_COUNT;
-    tgt_data.resize				(pitch*tgt_h);
+    u32 pitch 					= atlas_w;
+    tgt_data.resize				(pitch*atlas_h);
     for (int frame=0; frame<LOD_SAMPLE_COUNT; frame++){
         float angle 			= frame*(PI_MUL_2/LOD_SAMPLE_COUNT);
 
@@ -124,17 +125,18 @@ void CreateLODSamples(const Fbox& bbox, U32Vec& tgt_data, u32 tgt_w, u32 tgt_h)
 	    RCache.set_xform_project(mP);
 	    RCache.set_xform_view	(mV);
         EDevice->mFullTransform.mul(mP,mV);
-        EDevice->MakeScreenshot	(s_pixels,tgt_w*lod_ss_quality,tgt_h*lod_ss_quality);
-        d_pixels.resize 		(tgt_w*tgt_h);
-        DXTUtils::Filter::Process				(d_pixels.data(),tgt_w,tgt_h,s_pixels.data(),tgt_w*lod_ss_quality,tgt_h*lod_ss_quality, DXTUtils::Filter::imf_box);
-        // copy LOD to final
-		for (u32 y=0; y<tgt_h; y++)
-    		CopyMemory			(tgt_data.data()+y*pitch+frame*tgt_w,d_pixels.data()+y*tgt_w,tgt_w*sizeof(u32));
+        EDevice->MakeScreenshot	(s_pixels,cell_w*lod_ss_quality,cell_h*lod_ss_quality);
+        d_pixels.resize 		(cell_w*cell_h);
+        DXTUtils::Filter::Process				(d_pixels.data(),cell_w,cell_h,s_pixels.data(),cell_w*lod_ss_quality,cell_h*lod_ss_quality, DXTUtils::Filter::imf_box);
+        // copy LOD cell to final atlas
+        u32 dst 				= vertical ? frame*cell_h*pitch : frame*cell_w;
+		for (u32 y=0; y<cell_h; y++)
+    		CopyMemory			(tgt_data.data()+y*pitch+dst,d_pixels.data()+y*cell_w,cell_w*sizeof(u32));
 	}
 
     // flip data
-	for (u32 y=0; y<tgt_h/2; y++){
-		u32 y2 = tgt_h-y-1;
+	for (u32 y=0; y<atlas_h/2; y++){
+		u32 y2 = atlas_h-y-1;
 		for (u32 x=0; x<pitch; x++){
         	std::swap	(tgt_data[y*pitch+x],tgt_data[y2*pitch+x]);	
 		}
@@ -150,8 +152,11 @@ void CreateLODSamples(const Fbox& bbox, U32Vec& tgt_data, u32 tgt_w, u32 tgt_h)
     RCache.set_xform_project	(save_projection);
 }
 
-void CImageManager::CreateLODTexture(CEditableObject* OBJECT, U32Vec& lod_pixels, U32Vec& nm_pixels, u32 tgt_w, u32 tgt_h, int _samples, int quality)
+void CImageManager::CreateLODTexture(CEditableObject* OBJECT, U32Vec& lod_pixels, U32Vec& nm_pixels, u32 cell_w, u32 cell_h, bool vertical, int quality)
 {
+    u32 atlas_w = vertical ? cell_w : cell_w*LOD_SAMPLE_COUNT;
+    u32 atlas_h = vertical ? cell_h*LOD_SAMPLE_COUNT : cell_h;
+
     // build hemi light
     BLVec						simple_hemi;
     // fill simple hemi
@@ -161,23 +166,22 @@ void CImageManager::CreateLODTexture(CEditableObject* OBJECT, U32Vec& lod_pixels
     Fbox bb = OBJECT->GetBox();
 
     // build lod normals
-    lod_pixels.resize(LOD_IMAGE_SIZE * LOD_IMAGE_SIZE * LOD_SAMPLE_COUNT, 0);
-    nm_pixels.resize(LOD_IMAGE_SIZE * LOD_IMAGE_SIZE * LOD_SAMPLE_COUNT, 0);
-    U32Vec hemi_tmp(LOD_IMAGE_SIZE * LOD_IMAGE_SIZE * LOD_SAMPLE_COUNT, 0);
+    lod_pixels.resize(atlas_w*atlas_h, 0);
+    nm_pixels.resize(atlas_w*atlas_h, 0);
+    U32Vec hemi_tmp(atlas_w*atlas_h, 0);
     Fvector 					o_center, o_size;
     Fmatrix 					M, Mi;
     bb.getradius(o_size);
     bb.getcenter(o_center);
-    SPBItem* PB = UI->ProgressStart(LOD_SAMPLE_COUNT * LOD_IMAGE_SIZE, OBJECT->GetName());
-    float dW = _max(o_size.x, o_size.z) / (LOD_IMAGE_SIZE / 2);
-    float dH = o_size.y / (LOD_IMAGE_SIZE / 2);
+    SPBItem* PB = UI->ProgressStart(LOD_SAMPLE_COUNT, OBJECT->GetName());
+    float viewW = 2.f*_max(o_size.x, o_size.z);		// 与捕捉正交窗口一致（getradius 为半尺寸）
+    float viewH = 2.f*o_size.y;
+    float dW = viewW / cell_w;
+    float dH = viewH / cell_h;
     float dR = bb.getradius();
     float d2R = dR * 2.f;
-    //ETOOLS::ray_options			(CDB::OPT_CULL);
 
-    CreateLODSamples(bb, lod_pixels, LOD_IMAGE_SIZE, LOD_IMAGE_SIZE);
-
-    float tN = 0.f, tH = 0.f, tT = 0.f, tR = 0.f;
+    CreateLODSamples(bb, lod_pixels, cell_w, cell_h, vertical, atlas_w, atlas_h);
 
     float 	LOD_CALC_SAMPLES = quality;
     s32		LOD_CALC_SAMPLES_LIM = LOD_CALC_SAMPLES / 2;
@@ -190,6 +194,13 @@ void CImageManager::CreateLODTexture(CEditableObject* OBJECT, U32Vec& lod_pixels
         if (0 == surf->m_ImageData)surf->CreateImageData();
     }
 
+    // pre-build collision models: workers must never trigger lazy GenerateCFModel concurrently
+    for (EditMeshIt mesh_it = OBJECT->Meshes().begin(); mesh_it != OBJECT->Meshes().end(); mesh_it++)
+        (*mesh_it)->EnsureCFModel();
+
+    CTimer TTotal;
+    TTotal.Start();
+
     // calculate
     for (u32 sample_idx = 0; sample_idx < LOD_SAMPLE_COUNT; sample_idx++)
     {
@@ -197,51 +208,58 @@ void CImageManager::CreateLODTexture(CEditableObject* OBJECT, U32Vec& lod_pixels
         M.setXYZ(0, angle, 0);
         M.translate_over(o_center);
         Mi.invert(M);
-        for (s32 iH = 0; iH < LOD_IMAGE_SIZE; iH++)
-        {
-            PB->Inc();
-            float Y = (iH - (LOD_IMAGE_SIZE - 1) / 2) * dH;
-            for (s32 iW = 0; iW < LOD_IMAGE_SIZE; iW++)
-            {
-                float X = (iW - (LOD_IMAGE_SIZE) / 2) * dW;
 
-                u32 pixel = (LOD_IMAGE_SIZE - iH - 1) * LOD_SAMPLE_COUNT * LOD_IMAGE_SIZE + LOD_IMAGE_SIZE * sample_idx + iW;
+        // rows are independent - process them in parallel
+        // (each thread owns its collider/query buffers; shared object data is read-only here)
+        xr_parallel_for(u32(0), cell_h, [&](u32 iH)
+        {
+            // per-thread, reused across rows and directions
+            static thread_local CDB::COLLIDER	CL;
+            static thread_local SPickQuery		PQ;
+            static thread_local FvectorVec		n_vec;
+            static thread_local Fvector4Vec		sample_pt_vec;
+
+            float Y = (iH - (cell_h - 1) / 2) * dH;
+            for (u32 iW = 0; iW < cell_w; iW++)
+            {
+                float X = (iW - (cell_w) / 2) * dW;
+
+                u32 row = vertical ? sample_idx*cell_h + iH : iH;
+                u32 col = vertical ? iW : sample_idx*cell_w + iW;
+                u32 pixel = (atlas_h - row - 1) * atlas_w + col;
                 u32& tgt_c = lod_pixels[pixel];
                 u32& tgt_n = nm_pixels[pixel];
                 u32& tgt_h = hemi_tmp[pixel];
 
-                FvectorVec		n_vec;
-                Fvector4Vec		sample_pt_vec;
-                Fvector			start;
-                CTimer 	TT, TT1;
-                TT.Start();
-                SPickQuery 		PQ;
+                n_vec.clear();
+                sample_pt_vec.clear();
                 for (s32 iiH = -LOD_CALC_SAMPLES_LIM; iiH <= LOD_CALC_SAMPLES_LIM; iiH++)
                 {
                     float dY = iiH * (dH / LOD_CALC_SAMPLES);
-                    for (s32 iiW = -LOD_CALC_SAMPLES_LIM; iiW <= LOD_CALC_SAMPLES_LIM; iiW++) 
+                    for (s32 iiW = -LOD_CALC_SAMPLES_LIM; iiW <= LOD_CALC_SAMPLES_LIM; iiW++)
                     {
                         float dX = iiW * (dW / LOD_CALC_SAMPLES);
+                        Fvector start;
                         start.set(X + dX, Y + dY, 0);
                         M.transform_tiny(start);
                         start.mad(M.k, -dR);
                         PQ.prepare_rq(start, M.k, d2R, CDB::OPT_CULL);
-                        OBJECT->RayQuery(PQ);
+                        OBJECT->RayQuery(CL, PQ);
 
-                        if (PQ.r_count()) 
+                        if (PQ.r_count())
                         {
                             PQ.r_sort();
                             Fvector N = { 0,0,0 };
 
-                            for (s32 k = PQ.r_count() - 1; k >= 0; k--) 
+                            for (s32 k = PQ.r_count() - 1; k >= 0; k--)
                             {
                                 SPickQuery::SResult* R = PQ.r_begin() + k;
                                 u32 	uA, uC;
                                 if (!GetPointColor(R, uA, uC)) continue;
                                 float	fA = float(uA) / 255.f;
-                                if (uA) 
+                                if (uA)
                                 {
-                                    Fvector  pt; 	pt.mad(PQ.m_Start, PQ.m_Direction, R->range - EPS_L);
+                                    Fvector 	pt; 	pt.mad(PQ.m_Start, PQ.m_Direction, R->range - EPS_L);
                                     Fvector4 ptt;	ptt.set(pt.x, pt.y, pt.z, fA);
                                     sample_pt_vec.push_back(ptt);
                                 }
@@ -260,10 +278,9 @@ void CImageManager::CreateLODTexture(CEditableObject* OBJECT, U32Vec& lod_pixels
                         }
                     }
                 }
-                tN += TT.GetElapsed_sec();
 
                 Fvector N = { 0,0,0 };
-                if (!n_vec.empty()) 
+                if (!n_vec.empty())
                 {
                     for (FvectorIt it = n_vec.begin(); it != n_vec.end(); it++) N.add(*it);
                     N.div(n_vec.size());
@@ -276,33 +293,40 @@ void CImageManager::CreateLODTexture(CEditableObject* OBJECT, U32Vec& lod_pixels
                 N.mul(255.f);
                 tgt_n = color_rgba(iFloor(N.x), iFloor(N.y), iFloor(N.z), color_get_A(tgt_c));
 
-                if (0 == color_get_A(tgt_c)) 
+                if (0 == color_get_A(tgt_c))
                     continue;
 
-                TT.Start();
-                // light points
-                float res_transp = 0.f;
+                // hemi/AO: evaluate once per pixel at the most opaque hit point instead of
+                // every sub-ray hit (AO is low-frequency; this removes the 25x ray explosion)
+                const Fvector4* best_pt = 0;
+                float best_w = 0.f;
                 for (Fvector4It pt_it = sample_pt_vec.begin(); pt_it != sample_pt_vec.end(); pt_it++)
                 {
-                    float avg_transp = 0.f;
-                    for (BLIt it = simple_hemi.begin(); it != simple_hemi.end(); it++) 
+                    if (pt_it->w > best_w)
                     {
-                        TT1.Start();
-                        Fvector 		start;
-                        start.mad(Fvector().set(pt_it->x, pt_it->y, pt_it->z), it->light.direction, -dR);
+                        best_w = pt_it->w;
+                        best_pt = &*pt_it;
+                    }
+                }
+
+                float res_transp = 0.f;
+                if (best_pt)
+                {
+                    float avg_transp = 0.f;
+                    for (BLIt it = simple_hemi.begin(); it != simple_hemi.end(); it++)
+                    {
+                        Fvector start;
+                        start.mad(Fvector().set(best_pt->x, best_pt->y, best_pt->z), it->light.direction, -dR);
                         PQ.prepare_rq(start, it->light.direction, dR, CDB::OPT_CULL);
-                        OBJECT->RayQuery(PQ);
-                        tR += TT1.GetElapsed_sec();
+                        OBJECT->RayQuery(CL, PQ);
                         float ray_transp = 1.f;
 
-                        if (PQ.r_count()) 
+                        if (PQ.r_count())
                         {
                             for (s32 k = 0; k < PQ.r_count(); k++)
                             {
                                 u32 	a, uC;
-                                TT1.Start();
                                 if (!GetPointColor(PQ.r_begin() + k, a, uC)) continue;
-                                tT += TT1.GetElapsed_sec();
                                 ray_transp *= (1.f - float(a) / 255.f);
                                 if (fis_zero(ray_transp, EPS_L)) break;
                             }
@@ -310,19 +334,19 @@ void CImageManager::CreateLODTexture(CEditableObject* OBJECT, U32Vec& lod_pixels
                         avg_transp += ray_transp;
                     }
                     avg_transp /= simple_hemi.size();
-                    res_transp = res_transp * (1.f - pt_it->w) + avg_transp * pt_it->w;
+                    res_transp = res_transp * (1.f - best_w) + avg_transp * best_w;
                 }
-                tH += TT.GetElapsed_sec();
                 u8 h = (u8)iFloor(res_transp * 255.f);
                 tgt_h = color_rgba(h, h, h, color_get_A(tgt_c));
             }
-        }
+        });
+        PB->Inc();
     }
 
-    Msg("Normal: %3.2fsec, Hemi: %3.2f, PC: %3.2f, RP: %3.2f", tN, tH, tT, tR);
-    ImageLib.ApplyBorders(lod_pixels, LOD_IMAGE_SIZE * LOD_SAMPLE_COUNT, LOD_IMAGE_SIZE);
-    ImageLib.ApplyBorders(nm_pixels, LOD_IMAGE_SIZE * LOD_SAMPLE_COUNT, LOD_IMAGE_SIZE);
-    ImageLib.ApplyBorders(hemi_tmp, LOD_IMAGE_SIZE * LOD_SAMPLE_COUNT, LOD_IMAGE_SIZE);
+    Msg("LOD pixels %u: %3.2fsec", atlas_w*atlas_h, TTotal.GetElapsed_sec());
+    ImageLib.ApplyBorders(lod_pixels, atlas_w, atlas_h);
+    ImageLib.ApplyBorders(nm_pixels, atlas_w, atlas_h);
+    ImageLib.ApplyBorders(hemi_tmp, atlas_w, atlas_h);
 
     // fill alpha to N-channel (HEMI)
     for (int px_idx = 0; px_idx<int(nm_pixels.size()); px_idx++)
@@ -332,13 +356,13 @@ void CImageManager::CreateLODTexture(CEditableObject* OBJECT, U32Vec& lod_pixels
 }
 
 //------------------------------------------------------------------------------
-// 
+//
 //------------------------------------------------------------------------------
 void CImageManager::CreateLODTexture(CEditableObject* OBJECT, LPCSTR tex_name, u32 tgt_w, u32 tgt_h, int samples, time_t age, int quality)
 {
     U32Vec lod_pixels, nm_pixels;
 
-    CreateLODTexture(OBJECT, lod_pixels, nm_pixels, tgt_w, tgt_h, samples, quality);
+    CreateLODTexture(OBJECT, lod_pixels, nm_pixels, tgt_w, tgt_h, false, quality);
 
     string_path out_name, src_name;
     // save lod
@@ -349,7 +373,7 @@ void CImageManager::CreateLODTexture(CEditableObject* OBJECT, LPCSTR tex_name, u
 
     strcpy(src_name, EFS.ChangeFileExt(src_name, ".tga").c_str());
     FS.update_path(out_name, _textures_, src_name);
-    DXTUtils::Converter::MakeTGA(tgt_w * samples, tgt_h, lod_pixels, out_name);
+    DXTUtils::Converter::MakeTGA(tgt_w * LOD_SAMPLE_COUNT, tgt_h, lod_pixels, out_name);
     FS.set_file_age(out_name, age);
     SynchronizeTexture(src_name, age);
 
@@ -360,7 +384,68 @@ void CImageManager::CreateLODTexture(CEditableObject* OBJECT, LPCSTR tex_name, u
 
     strcpy(src_name, EFS.ChangeFileExt(src_name, ".tga").c_str());
     FS.update_path(out_name, _textures_, src_name);
-    DXTUtils::Converter::MakeTGA(tgt_w * samples, tgt_h, nm_pixels, out_name);
+    DXTUtils::Converter::MakeTGA(tgt_w * LOD_SAMPLE_COUNT, tgt_h, nm_pixels, out_name);
     FS.set_file_age(out_name, age);
     SynchronizeTexture(src_name, age);
+}
+
+//------------------------------------------------------------------------------
+// HQ billboard：按物体比例生成高分辨率 8 向图集，直接输出 tga/thm/dds 到 _shared\billboards
+//------------------------------------------------------------------------------
+void CImageManager::CreateBillboardTexture(CEditableObject* OBJECT, LPCSTR tex_name, time_t age, int quality)
+{
+    u32 cell_w, cell_h, atlas_w, atlas_h;
+    bool vertical;
+    OBJECT->GetLODAtlasParams(cell_w, cell_h, vertical, atlas_w, atlas_h);
+    Msg("LOD billboard '%s': cell [%ux%u], atlas [%ux%u], %s", tex_name, cell_w, cell_h, atlas_w, atlas_h, vertical ? "vertical" : "horizontal");
+
+    U32Vec lod_pixels, nm_pixels;
+    CreateLODTexture(OBJECT, lod_pixels, nm_pixels, cell_w, cell_h, vertical, quality);
+
+    string_path out_name, src_name, nm_name;
+    xr_strconcat(nm_name, tex_name, "_nm");
+
+    // save color tga
+    strcpy(src_name, EFS.ChangeFileExt(tex_name, ".tga").c_str());
+    FS.update_path(out_name, _textures_, src_name);
+    VerifyPath(out_name);
+    DXTUtils::Converter::MakeTGA(atlas_w, atlas_h, lod_pixels, out_name);
+    FS.set_file_age(out_name, age);
+
+    // save normal map tga
+    strcpy(src_name, EFS.ChangeFileExt(nm_name, ".tga").c_str());
+    FS.update_path(out_name, _textures_, src_name);
+    VerifyPath(out_name);
+    DXTUtils::Converter::MakeTGA(atlas_w, atlas_h, nm_pixels, out_name);
+    FS.set_file_age(out_name, age);
+
+    // thm + dds：色彩 DXT3（边缘 alpha），法线 DXT5（alpha 存 hemi/AO），与批量同步参数一致
+    STextureParams tp;
+    tp.width			= atlas_w;
+    tp.height			= atlas_h;
+    tp.type				= STextureParams::ttImage;
+    tp.mip_filter		= STextureParams::kMIPFilterAdvanced;
+    tp.flags.assign		(STextureParams::flDitherColor | STextureParams::flGenerateMipMaps | STextureParams::flHasAlpha);
+
+    tp.fmt				= STextureParams::tfDXT3;
+    strcpy(src_name, EFS.ChangeFileExt(tex_name, ".dds").c_str());
+    FS.update_path(out_name, _game_textures_, src_name);
+    MakeGameTexture(out_name, lod_pixels.data(), tp);
+
+    ETextureThumbnail* THM = new ETextureThumbnail(tex_name, false);
+    THM->m_TexParams	= tp;
+    THM->SetValid	();
+    THM->Save		(age);
+    xr_delete		(THM);
+
+    tp.fmt				= STextureParams::tfDXT5;
+    strcpy(src_name, EFS.ChangeFileExt(nm_name, ".dds").c_str());
+    FS.update_path(out_name, _game_textures_, src_name);
+    MakeGameTexture(out_name, nm_pixels.data(), tp);
+
+    THM = new ETextureThumbnail(nm_name, false);
+    THM->m_TexParams	= tp;
+    THM->SetValid	();
+    THM->Save		(age);
+    xr_delete		(THM);
 }

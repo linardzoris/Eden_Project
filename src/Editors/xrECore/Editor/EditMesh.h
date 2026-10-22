@@ -235,6 +235,13 @@ public:
 	void 			GenerateRenderBuffers();
 	void 			UnloadRenderBuffers();
 
+	// build collision model on demand (public wrapper; call serially, not from worker threads)
+	void			EnsureCFModel		();
+
+	// thread-safe ray query: caller supplies the collider (one per worker thread),
+	// bypassing the global ETOOLS collider so pixel loops can run in parallel
+	void            RayQuery				(CDB::COLLIDER& CL, SPickQuery& pinf);
+
 	void 			GenerateFNormals	();
 	void 			GenerateVNormals	(const Fmatrix* parent_xform, bool force = false);
 	void			AssignMesh			(shared_str to_bone);

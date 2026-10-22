@@ -290,7 +290,12 @@ public:
 	// LOD
 	xr_string		GetLODTextureName		();
 	LPCSTR			GetLODShaderName		(){return LOD_SHADER_NAME;}
-	void			GetLODFrame				(int frame, Fvector p[4], Fvector2 t[4], const Fmatrix* parent=0);
+	void			GetLODFrame				(int frame, Fvector p[4], Fvector2 t[4], const Fmatrix* parent=0, int w_cnt=LOD_SAMPLE_COUNT, int h_cnt=1);
+	// HQ billboard atlas: 按物体 AABB 比例计算 8 向图集布局（cell 尺寸为 2 的幂，图集 WH<=2048）
+	void			GetLODAtlasParams		(u32& cell_w, u32& cell_h, bool& vertical, u32& atlas_w, u32& atlas_h);
+	bool			HasHQBillboard			();
+	void			GetLODGridForRender		(int& w_cnt, int& h_cnt);
+	xr_string		GetLODBillboardTextureName();
 
 	// skeleton
 	IC BPIt			FirstBonePart			()	{return m_BoneParts.begin();}
@@ -376,6 +381,8 @@ public:
 	void			RenameBone				(CBone* bone, LPCSTR new_name);
 
 	void 			RayQuery				(SPickQuery& pinf);
+	// thread-safe variant: caller supplies per-thread collider (see CEditableMesh::RayQuery)
+	void 			RayQuery				(CDB::COLLIDER& CL, SPickQuery& pinf);
 	void 			RayQuery				(const Fmatrix& parent, const Fmatrix& inv_parent, SPickQuery& pinf);
 	void 			BoxQuery				(const Fmatrix& parent, const Fmatrix& inv_parent, SPickQuery& pinf);
 	bool 			BoxPick					(CCustomObject* obj, const Fbox& box, const Fmatrix& inv_parent, SBoxPickInfoVec& pinf);

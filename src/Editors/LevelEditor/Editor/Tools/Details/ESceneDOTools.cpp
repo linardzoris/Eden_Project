@@ -41,6 +41,8 @@ void EDetailManager::ClearColorIndices()
 }
 void EDetailManager::ClearSlots()
 {
+    // Background UpdateVisibleM/cache_Decompress may be reading dtSlots right now
+    Device.details_task.wait		();
     ZeroMemory			(&dtH,sizeof(DetailHeader));
     xr_free				(dtSlots);
 	m_Selected.clear	();
@@ -63,6 +65,8 @@ void EDetailManager::Clear(bool bSpecific)
 
 void EDetailManager::InvalidateCache()
 {
+	// Background task may be walking cache/cache_task right now
+	Device.details_task.wait		();
 	// Initialize 'vis' and 'cache'
 	cache_Initialize	();
 }

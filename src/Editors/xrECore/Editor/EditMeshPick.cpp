@@ -55,9 +55,14 @@ void CEditableMesh::GenerateCFModel()
 	ETOOLS::destroy_collector(CL);
 }
 
+void CEditableMesh::EnsureCFModel()
+{
+	if (!m_CFModel) GenerateCFModel();
+}
+
 void CEditableMesh::RayQuery(SPickQuery& pinf)
 {
-    if (!m_CFModel) GenerateCFModel();
+    EnsureCFModel	();
 
 	ETOOLS::ray_query	(m_CFModel, pinf.m_Start, pinf.m_Direction, pinf.m_Dist);
 	for (int r=0; r<ETOOLS::r_count(); r++)
@@ -67,6 +72,18 @@ void CEditableMesh::RayQuery(SPickQuery& pinf)
     for (int r=0; r<XRC.r_count(); r++)
         pinf.append	(XRC.r_begin()+r,m_Parent,this);
 //*/
+}
+
+// Same results as RayQuery(SPickQuery&) but uses the caller-supplied collider,
+// so concurrent queries against the same (read-only, already built) model are safe
+void CEditableMesh::RayQuery(CDB::COLLIDER& CL, SPickQuery& pinf)
+{
+    EnsureCFModel	();
+
+	CL.ray_options	(CDB::OPT_CULL);
+	CL.ray_query	(m_CFModel, pinf.m_Start, pinf.m_Direction, pinf.m_Dist);
+	for (int r=0; r<CL.r_count(); r++)
+		pinf.append	(CL.r_begin()+r,m_Parent,this);
 }
 
 void CEditableMesh::RayQuery(const Fmatrix& parent, const Fmatrix& inv_parent, SPickQuery& pinf)

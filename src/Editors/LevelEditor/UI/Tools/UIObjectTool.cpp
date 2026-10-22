@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "../../Editor/Utils/TerrainGarbageGenerator.h"
+#include "UIEnvGeneratorForm.h"
 
 static xr_atomic_bool RefreshInProgress;
 
@@ -176,30 +176,10 @@ void UIObjectTool::DrawRandomAppend()
 		}
 
 		ImGui::SameLine();
-		ImGui::BeginDisabled(ParentTools->m_AppendRandomObjects.empty());
-		if (ImGui::Button("Generate Garbage", { ButtonSize , 0 }))
+		if (ImGui::Button("Environment Generator", { ButtonSize , 0 }))
 		{
-			static EGarbageGenerator Generator;
-			ESceneObjectTool* ObjectToolPtr = static_cast<ESceneObjectTool*>(Scene->GetTool(OBJCLASS_SCENEOBJECT));
-			auto ObjectList = ObjectToolPtr->GetObjects();
-
-			bool Placed = false;
-
-			for (CCustomObject* Object : ObjectList)
-			{
-				if (!Object->Selected())
-					continue;
-
-				Generator.Generate((CSceneObject*)Object);
-				Placed = true;
-			}
-
-			if (!Placed)
-			{
-				ELog.DlgMsg(mtInformation, mbOK, "An object or terrain must be selected!");
-			}
+			UIEnvGeneratorForm::Show();
 		}
-		ImGui::EndDisabled();
 
 		if (ImGui::Checkbox("Random Append", &m_RandomAppend))
 		{
@@ -374,6 +354,7 @@ void UIObjectTool::RefreshListInternal()
 
 void UIObjectTool::OnDrawUI()
 {
+	UIEnvGeneratorForm::Update();
 	if (m_Selection)
 	{
 		bool change = false;

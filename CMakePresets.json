@@ -13,7 +13,7 @@
             "generator": "Visual Studio 18 2026",
             "cacheVariables": {
                 "IXRAY_UTILS": "OFF",
-                "IXRAY_EDITORS": "OFF",
+                "IXRAY_EDITORS": "ON",
                 "IXRAY_MP": "OFF",
                 "IXRAY_COMPRESSOR_ONLY": "OFF",
                 "IXRAY_PLUGINS": "OFF",
@@ -361,6 +361,12 @@
             "displayName": "Editors-x64-Windows-RelWithDebInfo",
             "configurePreset": "Editors-x64-Windows",
             "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "Editors-x64-Windows-MixedAVX",
+            "displayName": "Editors-x64-Windows-MixedAVX",
+            "configurePreset": "Editors-x64-Windows",
+            "configuration": "MixedAVX"
         },
         {
             "name": "Utilities-x64-Windows-Debug",
