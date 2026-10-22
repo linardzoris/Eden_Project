@@ -15,7 +15,7 @@ bool CEditorRenderDevice::MakeScreenshot(U32Vec& pixels, u32 width, u32 height)
     Resources->Evict();
 
     IDirect3DSurface9* 	poldZB=0;
-   // IDirect3DSurface9* 	pZB=0;
+    IDirect3DSurface9* 	pZB=0;
     IDirect3DSurface9* 	pRT=0;
     IDirect3DSurface9* 	poldRT=0;
     D3DVIEWPORT9		oldViewport;
@@ -25,14 +25,20 @@ bool CEditorRenderDevice::MakeScreenshot(U32Vec& pixels, u32 width, u32 height)
     CHK_DX(REDevice->GetViewport(&oldViewport));
 
 	CHK_DX(REDevice->CreateRenderTarget(width,height,D3DFMT_A8R8G8B8,D3DMULTISAMPLE_NONE,0,FALSE,&pRT,0));
-	//CHK_DX(REDevice->CreateDepthStencilSurface(width,height,Caps.bStencil?D3DFMT_D24S8:D3DFMT_D24X8,D3DMULTISAMPLE_NONE,0,FALSE,&pZB,0));
+	// D3D9 requires the depth stencil to be at least as large as the render target.
+	// Bind a matching DS BEFORE the RT: with only the window-sized DS bound, SetRenderTarget
+	// silently fails (CHK_DX is a no-op in release) for offscreen targets larger than the window
+	// and the screenshot comes out black.
+	CHK_DX(REDevice->CreateDepthStencilSurface(width,height,D3DFMT_D24S8,D3DMULTISAMPLE_NONE,0,FALSE,&pZB,0));
+	CHK_DX(REDevice->SetDepthStencilSurface(pZB));
 	CHK_DX(REDevice->SetRenderTarget(0,pRT));
-	//CHK_DX(REDevice->SetDepthStencilSurface(pZB));
+	D3DVIEWPORT9 vp = {0,0,width,height,0.0f,1.0f};
+	CHK_DX(REDevice->SetViewport(&vp));
 
 	UI->PrepareRedraw	();
     EDevice->Begin		();
     Tools->Render		();
-    EDevice->End			();
+    EDevice->End		();
 
 	// Create temp-surface
 	IDirect3DSurface9*	pFB;
@@ -54,11 +60,12 @@ bool CEditorRenderDevice::MakeScreenshot(U32Vec& pixels, u32 width, u32 height)
 
     R_CHK(pFB->UnlockRect());
 
-	CHK_DX(REDevice->SetDepthStencilSurface(poldZB));
+	// restore the RT first, then the DS, so DS >= RT holds on every call
     CHK_DX(REDevice->SetRenderTarget(0,poldRT));
+    CHK_DX(REDevice->SetDepthStencilSurface(poldZB));
     CHK_DX(REDevice->SetViewport(&oldViewport));
 
-    //_RELEASE(pZB);
+    _RELEASE(pZB);
     _RELEASE(poldZB);
     _RELEASE(pFB);
     _RELEASE(pRT);
