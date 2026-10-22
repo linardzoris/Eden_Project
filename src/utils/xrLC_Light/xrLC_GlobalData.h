@@ -47,6 +47,7 @@ class	XRLC_LIGHT_API xrLC_GlobalData
 
 
 	bool							_b_nosun;
+	bool							_b_nohemi;
 	bool							_gl_linear;
 	bool							_b_use_intel;
 	bool							_b_skipWeld;
@@ -110,8 +111,10 @@ public:
 	void SetSkipTHM(bool v) { SkipThm = v; };
 
 		bool						b_nosun			()		{	return _b_nosun; }
+		bool						b_nohemi		()		{	return _b_nohemi; }
 		bool						gl_linear		()		{	return _gl_linear; }
 IC		void						b_nosun_set		(bool v){	_b_nosun = v; }
+IC		void						b_nohemi_set	(bool v){	_b_nohemi = v; }
 		void						initialize		()		;
 		void						destroy_rcmodel	()		;
 

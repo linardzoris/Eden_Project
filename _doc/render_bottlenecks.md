@@ -13,7 +13,7 @@
 Calculate(dsgraph 构建)
 → Z-prefill（R2FLAG_ZFILL，静态 only，0.25×far 短投影，PHASE_SMAP，深度 only）
 → G-buffer render_main(true)（PHASE_NORMAL，HQ/LQ 按距离 50m 档位）
-→ DEFER_TEST_LIGHT_VIS（逐灯 occq 可见性测试，同帧忙等回读）
+→ DEFER_TEST_LIGHT_VIS（逐灯 occq 查询签发 + 光源体积绘制；结果回读在帧尾 render_lights 累积阶段）
 → 太阳级联 ×3（R_sun.cpp）
 → phase_accumulator（点光/聚光累积，体积光）
 → VSLR 离屏反射立方体 ×6（offscreen_reflecitons 开启时，静态 only，HOM 禁用）
@@ -35,7 +35,8 @@ Calculate(dsgraph 构建)
 | 雨 | ×1 | r4_R_rain.cpp#L216 |
 
 开 VSLR + 雨 = **13+N 次遍历/帧**；不开也至少 6+N。
-每次 `r_dsgraph_render_subspace` = portal/sector 递归（CSector::traverse）+ 对 sector 内 `r_visuals` **线性列表**全量视锥/SSA/HOM 测试（r__dsgraph_build.cpp#L292-453，sector 内无 BVH，开放世界几乎整个关卡是一个大 sector）+ 动态物 `ISpatial_DB` 树查询（带 TBV 缓存，健康）。
+每次 `r_dsgraph_render_subspace`（r__dsgraph_render.cpp#L348）= portal/sector 递归（CSector::traverse，r__sector.cpp#L82-215）+ 静态部分对每个命中 sector 的 root visual 走 **hierrarhy 树递归**（r4.cpp#L503 add_Geometry → r__dsgraph_build.cpp#L551 add_Static：每节点 testSAABB 视锥测试 + HOM 测试，fcvFull 子树切换到 add_leafs_Static（L362）免视锥仅 HOM+SSA——剔除层级只有这棵导出期的粗粒度球/盒树，无空间索引、虚拟调用递归、无缓存友好布局）+ 动态物 `ISpatial_DB` 树查询（带 TBV 缓存，健康）。
+（轮 5 修正：本节原写"sector 内 r_visuals 线性列表全量测试"——本代码库无此结构，实际是上述 hierrarhy 递归；"完全无层级剔除"的说法过重，真实低效点在于每节点独立测试的常数开销与扇出次数。）
 
 ---
 
@@ -61,26 +62,30 @@ Calculate(dsgraph 构建)
 
 ## 3. 深挖方案（三条线）
 
-### 3.1 occq 下一帧回读（优先级 1，~50 行）
+### 3.1 occq 下一帧回读（优先级 1，~60 行，草稿见 _code_temp\02）
 
 **先例**：`smapvis` 已实现同款（light_smapvis.cpp#L70 `testQ_frame = Device.dwFrame + 1`，`flushoccq` 到期帧才读）。
 
-**当前时序**：`vis_prepare`（发查询+画光源体积）在 DEFER_TEST_LIGHT_VIS（r4_R_render.cpp#L635-669）→ `vis_update`（同帧忙等）在累积阶段（lights_render.cpp#L195-258）。两步间只隔 G-buffer 尾段，队列尾部灯照样 stall。
+**当前时序（轮 5 实测修正）**：
+- 查询签发：`vis_prepare`（发查询+画光源体积）在 DEFER_TEST_LIGHT_VIS（r4_R_render.cpp#L610-674，vis_prepare 调用点 L640/651/662）——紧跟 G-buffer PART0 之后
+- 忙等回读：`vis_update` 在 render_lights 累积阶段（lights_render.cpp#L195/208/240/258；调用点 r4_R_render.cpp#L785 LP_normal / L791 LP_pending）
+- **两步之间隔着 ZBUFFER_COPY→PhaseWinter→WALLMARKS→FLUSH_OCCLUSION→RAIN→SUN×3 级联→SELF_ILLUM（L689-779）**——GPU 已有大半帧时间消化查询；忙等主要在 GPU 积压帧咬人
+- `occq_get` 是**纯自旋**（无 Sleep/Yield，r__occlusion.cpp#L130-144），0.1ms 超时后 `fragments=5` 假装可见；每灯上限 0.1ms CPU
+- 复测节奏：可见灯 +10~20 帧随机（delay_large_min/max，light_vis.cpp#L6-7），不可见灯次帧复测（轮 5 修正：原写"40-200 帧"有误）
 
-**设计**：`light::vis` 改 smapvis 模式——F 帧 prepare，F+1 帧 update。
-- `vis.pending`/`vis.query_id` 跨帧持久，per-light 槽位天然成立；池压力只增 pending 灯数（几十个），1536 池不扩
-- 坑①：空包时 `occq_refresh()` 销毁全部查询（r4_R_render.cpp#L612）——有 pending 必须跳过或先强刷（`smapvis.resetoccq` 是现成兜底模式）
-- 坑②：device lost/reset 走 resetoccq 同款
-- 光源延迟 +1 帧无感知（可见灯已有 40-200 帧随机复测间隔）
+**设计（harvest-in-prepare，smapvis 模式）**：查询照旧 F 帧签发；`vis_update` 变空操作，累积用上一轮已知可见性；下一次 `vis_prepare` 开头先收割遗留查询（至少 1 帧旧，GetData 立即返回无 stall）。可见性决策延迟从 ~1 帧变为一个复测周期（可见灯 10-20 帧/不可见灯次帧），对光源体积剔除无感。
+- 坑①：空包时 `occq_refresh()` 销毁全部在途查询（r4_R_render.cpp#L612-613 + r__occlusion.cpp#L41-55）——加 `in_flight()==0` 守卫（同时修掉 smapvis 的同款潜在隐患）
+- 坑②：灯带 pending 查询销毁会永久漏池槽（槽只在 occq_get 里归还）——`~light` 加 `occq_discard`
+- 坑③：device reset 后 pending ID 悬挂——occq_get 的 VERIFY2 同 occq_discard 一样软化为越界即返回假可见
 - `r__pixel_calculator`（LPS 加载期）保持同帧不动
 
-**改动面**：light_vis.cpp + lights_render.cpp + occq_refresh 守卫。
+**改动面**：light_vis.cpp + light.cpp（析构）+ r__occlusion.h/.cpp（occq_discard + in_flight）+ r4_R_render.cpp（refresh 守卫）。草稿：`_doc\_code_temp\02_occq_next_frame_readback.md`。
 
 ### 3.2 VSLR 面轮转（优先级 2，小改动）
 
 **事实**：`R4FLAG_OFFSCREEN_REFLECTIONS` 门控；三档质量 128/256/512px（默认 256，ps_r4_vslr_quality）；RGBA16F+mips+独立 env depth；每帧 6 面全渲染，`_dynamic=FALSE` 只画静态，`HOM.Disable()`，无遮挡剔除；成本本质 = **CPU 遍历+draw 提交 ×6**（128-256px 像素填充可忽略）。消费端 r2_RT_env 被 SSR/SSLR 回退、VSLR 表面、combine 环境光采样——粗糙面/远场采深 mip，1-5 帧陈旧不可感知。`rt_Reflection_temp` 已有乒乓历史结构（r4_R_render.cpp#L461）。
 
-**设计**：面轮转——每帧渲染 1-2 个面 round-robin，其余面保留上帧内容。RT 常驻，改动 = 循环边界 + 轮转计数器，零 shader 改动。收益：砍 4-5 次完整遍历 + 数千 draw 提交。
+**设计**：面轮转——每帧渲染 1-2 个面 round-robin，其余面保留上帧内容。RT 常驻，改动 = 循环边界 + 轮转计数器，零 shader 改动。收益：砍 4-5 次完整遍历 + 数千 draw 提交。草稿：`_doc\_code_temp\03_vslr_face_rotation.md`（含新控制台变量 `r4_vslr_faces_per_frame`，1..6，默认 1，6=旧行为；仅被渲染面清屏/未动面内容保留已被逐行核实）。
 
 ### 3.3 zfill/G-buffer 双桶单遍历（优先级 3，中型重构）
 
@@ -125,20 +130,21 @@ Calculate(dsgraph 构建)
 
 **遗留待查**：k02 实际池数量/decl 种类/桶分布统计（需运行时打点，动工前先做）。
 
-### 5.2 纹理异步加载队列（设计面确认，长期项第 1 步）
+### 5.2 纹理异步加载队列（设计面确认，长期项第 1 步；轮 5 重大修正）
 
-**现状**：
+**现状（轮 5 逐行核实，两处重要修正）**：
 - hitch 触发点：`CTexture::apply_load()` 在**绑定阶段**检查 `flags.bLoaded`，未加载就同步 `Load()`（dx11SH_Texture.cpp#L141-145）——发生在渲染线程首 draw
-- `texture_load`：DEFAULT usage + 初始数据直建（dx11Texture.cpp#L118-139），无 staging 中转
-- **现成先例**：`ProcessStaging()` 已有"staging→default 替换"路径（dx11SH_Texture.cpp#L147-175）；`surface_set()` 替换机制存在（3DFluidManager 在用）；R5 有完整异步上传队列参考（`dx12::EnqueueTextureUpload`/`ProcessPendingTextureUploads`，帧首渲染线程排空、每帧字节上限、尺寸校验护栏——见 project_memory R5 条目）
+- **修正①：staging 管道已存在，默认被 flag 关闭**——`texture_load(..., bStaging)` 三分支齐全（dx11Texture.cpp#L125-141：usage/bindFlags/cpuAccessFlags），`CTexture::Load` 对普通纹理强制传 `bStaging=true`（dx11SH_Texture.cpp#L508）；但默认 flags **RFLAG_NO_RAM_TEXTURES 已置位**（xrRender_console.cpp#L146）→ `bAllowStaging=false` → 走 DEFAULT 直建。开 `r__no_ram_textures` 关闭即是"DDS 解码进 staging 常驻 RAM + 首用时 `surface_get`→`ProcessStaging` 同步 promote"的完整机制（dx11SH_Texture.cpp#L124-131, L147+）
+- **修正②：关卡加载期已有 MT 批量预载**——`CResourceManager::DeferredUpload()`（ResourceManager.cpp#L349-372）在加载收尾阶段把 m_textures 全表 Load（RFLAG_MT_TEX_LOAD 默认开时 `xr_parallel_foreach` 并行；调用点 IGame_Persistent.cpp#L140）。**hitch 只发生在关卡加载完成后新注册的纹理**
+- `surface_set()` 替换机制存在（3DFluidManager 在用）；R5 有完整异步上传队列参考（`dx12::EnqueueTextureUpload`/`ProcessPendingTextureUploads`，帧首渲染线程排空、每帧字节上限、尺寸校验护栏）
 
-**设计骨架**（移植 R5 模式回 R4）：
-1. `apply_load` 命中未加载 → 立即建 1x1 占位纹理（同步，微秒级）+ 入加载队列，渲染继续
-2. 加载线程做 DDS 解码 + 建 staging
-3. 帧首（渲染线程，Begin 后）排空队列：staging→default `CopyResource`（ProcessStaging 路径）+ `surface_set` 替换 + SRV 重建，每帧字节上限（R5 用 96MB/帧）
-4. 护栏：初始化期/超大单资源走同步路径（R5 同款）；R5 教训——尺寸不匹配纹理跳过、SRV 引用持有、持久槽互斥（R4 无描述符堆问题但 SRV 重建仍须渲染线程）
+**设计骨架（轮 5 修订：直接骑在现成 staging 管道上）**：
+1. 保持 `r__no_ram_textures` 开启（staging 模式生效），`apply_load` 命中未 promote 的 staging 纹理 → 先绑 1x1 占位 SRV + 入 promote 队列，渲染继续
+2. **不再需要独立加载线程做解码**——DeferredUpload 已在加载期把 staging 建好；剩下的只是把"首用同步 promote（ProcessStaging 的 CopyResource+SRV 重建）"搬进帧首批量排空（渲染线程，Begin 后），每帧字节上限（R5 用 96MB/帧）
+3. `surface_set` 替换 + SRV 重建必须渲染线程做（现成 ProcessStaging 代码就是渲染线程，搬调用时机即可）
+4. 护栏：初始化期/超大单资源走同步路径（R5 同款）；R5 教训——尺寸不匹配纹理跳过、SRV 引用持有、持久槽互斥
 
-**预估**：中等工作量；风险主要在加载线程与渲染线程的 surface_set/SRV 竞态（R5 的崩溃史可全部借鉴）。
+**预估**：工作量从"中"下调（解码/加载线程整个省掉，核心只是 apply_load 分流 + 帧首排空循环）；风险集中在 SRV 替换时序。
 
 ### 5.3 detail/LOD 系统（已健康，非瓶颈）
 
@@ -170,7 +176,7 @@ Calculate(dsgraph 构建)
 **问题**：①级联×3 全量遍历+draw（13+N 扇出里最肥固定项）；②草×3（开放世界隐藏大户）；③固定分割比不自适应。
 
 **改进**：
-1. 草只进最近 1-2 级联（per-cascade gating，几行改动）
+1. 草只进最近 1-2 级联（per-cascade gating，几行改动；草稿见 _code_temp\04，含新变量 `r4_sun_details_max_cascade` 0..2 默认 1）
 2. 级联静态缓存：xform 相机对齐后静态内容只在窗口滑动跨 texel 时重画（VXGI clipmap 思路），每帧只补动态物薄 pass——阴影遍历 ×3 → 动态 ×3 + 偶发静态（中改动）
 3. 级联分割自适应（SDSM/按 far_plane 缩放）——质量收益
 4. 静态 instancing 一次投入三处阴影 pass 受益
@@ -183,7 +189,7 @@ Calculate(dsgraph 构建)
 - **无时域累积**；**蓝噪声静态第 0 帧**（gtao_render.ps#L184-186，注释自己写了动画化方法没做）——噪声是固定图案，TAA 积分不掉
 
 **改进（按性价比）**：
-1. 噪声动画化一行（`m_taa_jitter.w % 32`）——配合 TAA 立即变可积分颗粒
+1. 噪声动画化一行（gtao_render.ps.hlsl#L186 `0` → `uint(m_taa_jitter.w) % 32`）——配合 TAA 立即变可积分颗粒。轮 5 核实：`m_taa_jitter.w = float(Device.dwFrame)` 由常量 binder 无条件绑定（Blender_Recorder_StandartBinding.cpp#L285-288，TAA 关闭也有效），SSLR 已有同款先例（sslr_render.ps.hlsl#L65）。草稿：`_doc\_code_temp\01_gtao_noise_animate.md`
 2. 加时域累积 pass（抄 SSLR temporal / HVGI temporal 现成骨架）+ 空间滤波 16→6-8 taps——成本砍半以上质量更好
 3. 默认 half-res（时域上来后考虑）
 4. VXGI 开启时远距离 AO 让位（gi_ao 接口已有），GTAO 只管近场
@@ -208,7 +214,7 @@ Calculate(dsgraph 构建)
 
 主循环：render_main → FORWARD_REFLECTIONS(×6 面) → DEFER_ZPREFILL → DEFER_PART0 → TEST_LIGHT_VIS → ZBUFFER_COPY → PhaseWinter(积雪) → DEFER_WALLMARKS(墙印) → DEFER_FLUSH_OCCLUSION → DEFER_RAIN → DEFER_SUN → DEFER_SELF_ILLUM → DEFER_LIGHT_NO_OCCQ/OCCQ/COMBINE → phase_combine 内部（render_clouds、combine_1、Forward_puddles、Forward_rendering、distort、AA、phase_scale/上采样、combine_2、render_flares、CAS、**饱和度/暗角/色差三个独立全屏**、phase_pp LUT）→ bloom → gamma
 
-**新发现**：饱和度/暗角/色差是三个独立全屏 pass（phase_combine.cpp#L430-440）——可合并进一个 compute；velocity 是 G-buffer MRT 输出（全分辨率 R16G16，每 deferred draw 都写，r4_rendertarget.cpp#L562）——时域系统数据无忧但构成固定带宽项。
+**新发现**：饱和度/暗角/色差是三个独立全屏 pass（r4_rendertarget_phase_combine.cpp#L429-442）——可合并进一个 compute；velocity 是 G-buffer MRT 输出（全分辨率 R16G16，每 deferred draw 都写，r4_rendertarget.cpp#L562）——时域系统数据无忧但构成固定带宽项。（轮 5 注：文件名原写 phase_combine.cpp 有误，实际为 r4_rendertarget_phase_combine.cpp；三 pass 逐 flag 门控已核实。）
 
 ### 错误修正记录（轮 3）
 
@@ -223,7 +229,7 @@ Calculate(dsgraph 构建)
 
 - ✅ **常量缓存 flush_cache 不是热点（修正）**：`flush()` 无条件调用 `flush_cache()`（dx10r_constants_cache.h#L96-100 脏检查被注释），但 `dx10ConstantBuffer::Flush()` 内部有 `m_bChanged` 脏检查（dx10ConstantBuffer.cpp#L83-100）——实际成本 = 最多 32 槽 ×6 类 = 192 次指针判空 + **仅变更缓冲**的 Map(WRITE_DISCARD)+memcpy+Unmap。中等开销，无需动。
 - ✅ **velocity 始终有效**：rt_Velocity 是 `phase_scene_begin` 的 MRT3 无条件绑定（r4_rendertarget_phase_scene.cpp#L30 `u_setrt(rt_Color, rt_Normal, rt_Surface, rt_Velocity, RDepth)`），每帧清屏——TAA 关闭时 SSLR temporal / 未来 GTAO temporal 照样有速度数据。**GTAO 时域累积无障碍**。
-- ✅ **饱和度/暗角/色差确认**：三个独立全屏 pass，各自 flag 门控（R2FLAG_SPP_SATURATION/VIGNETTE/ABERRATION，phase_combine.cpp#L429-442）——多项同开时可合并为单 pass；单项开启时无收益。
+- ✅ **饱和度/暗角/色差确认**：三个独立全屏 pass，各自 flag 门控（R2FLAG_SPP_SATURATION/VIGNETTE/ABERRATION，r4_rendertarget_phase_combine.cpp#L429-442）——多项同开时可合并为单 pass；单项开启时无收益。
 - ✅ **LOD 树 8 面排序结案**：每树 8 次 dotproduct + 8 元素小排序（r__dsgraph_render_lods.cpp#L70-84），千树量级 ≈ 数十微秒，可忽略。结案，不再列待办。
 - ✅ **数字复核（万无一失）**：occq 池 = `occq_size = 2*768 = 1536`（r__occlusion.h#L3）；级联尺寸 = 15/40/160m（R_sun.cpp#L46-59 init_cacades）；smap 2048（ps_r2_smapsize）；ps_r2_zfill=0.25；sslr steps=30/scale=1.2/thickness=0.25；gtao dirs=3/steps=4/radius=0.85/resolution=1——全部与正文一致。
 
@@ -242,13 +248,14 @@ Calculate(dsgraph 构建)
 
 **改动面**：大（seqRender 快照机制 + secondary_tasks 调度重排 + 输入/相机快照化）——**维持"最后做"**，且应先量化：修完 stall 项后如果帧时间已达标，此项可无限期搁置。
 
-### 7.4 桶分布运行时打点方案（静态 instancing 前置，具体化）
+### 7.4 桶分布运行时打点方案（静态 instancing 前置，具体化；轮 5 补精确行号）
 
 在 `r_dsgraph_render_graph` 的 NORMAL 遍历里统计即可（约 20 行，console 开关 `r4_stats_buckets` 门控）：
-- 遍历 mapNormalPasses[0][*] 每个叶子桶（VS,GS,PS,CS,State,TexList），累计 `items.size()` 与桶数
-- 输出 Top 20 桶（按 items 数）+ 总桶数/总 item 数/中位桶大小——直接回答"同桶 visual 有多少、instancing 能省多少 draw"
-- 附带统计 mapMatrixPasses（动态）作对照
-- 注意 `_clear=true` 会在渲染后清桶，统计须在遍历前或用计数器旁路
+- 桶链结构（r__dsgraph_types.h#L118-130）：mapNormalPasses[0][*] = FixedMAP 嵌套 `VS → PS → AdvStages(hs/ds+mapCS) → State → STextureList* → items`（_NormalItem{ssa,pVisual}）
+- 遍历位置：r__dsgraph_render.cpp#L91-115（textures→items 叶子循环，L98-105 即 per-item `Ni.pVisual->Render`）
+- 累计每叶桶 `items.size()` 与桶数，输出 Top 20 桶（按 items 数）+ 总桶数/总 item 数/中位桶大小——直接回答"同桶 visual 有多少、instancing 能省多少 draw"
+- 附带统计 mapMatrixPasses（动态，r__dsgraph_render.cpp#L118 起）作对照
+- 注意 `_clear=true` 会在渲染后原位清桶（L105-114 `items.clear()` 等），统计须在遍历前或用计数器旁路
 
 ### 错误修正记录（轮 4）
 
@@ -257,20 +264,20 @@ Calculate(dsgraph 构建)
 
 ---
 
-## 8. 实施顺序（轮 4 复核：顺序无变更，结论加固）
+## 8. 实施顺序（轮 5 复核：顺序无变更，序位 0-4 已有暂存草稿/设计修订）
 
-> 轮 4 核验后顺序不变；新增确认：GTAO 时域无障碍（velocity MRT3 常在）、常量缓存非热点不动、色差三 pass 合并视 flag 组合。
+> 轮 4 核验后顺序不变；轮 5 逐行复核全部行号引用与参数默认值（见 §11），序位 0/1/2/3 的修改位已确认并暂存草稿代码，序位 4 设计面重大简化（§5.2）。
 
-| 序 | 项 | 改动面 | 收益 |
-|---|---|---|---|
-| 0 | GTAO 蓝噪声动画化（一行） | 极小 | 静态伪影→可积分噪声，配合 TAA |
-| 1 | occq 下一帧回读 | ~50 行，有先例 | 消除逐灯 stall |
-| 2 | VSLR 面轮转 | 小 | 开 VSLR 时遍历/提交砍 ~80% |
-| 3 | 草只进近级联 | 小 | 太阳阴影砍草×3 |
-| 4 | 纹理异步加载队列（§5.2 骨架） | 中 | 消除首用 hitch |
-| 5 | GTAO 时域累积 + 默认半分辨率 | 中 | AO 成本砍半以上 |
-| 6 | SSLR stencil 预分类 | 中 | trace GPU 砍 30-60%（视场景） |
-| 7 | zfill/G-buffer 双桶、级联静态缓存、静态 instancing | 大 | 长期项 |
+| 序 | 项 | 改动面 | 收益 | 草稿 |
+|---|---|---|---|---|
+| 0 | GTAO 蓝噪声动画化（一行） | 极小 | 静态伪影→可积分噪声，配合 TAA | _code_temp\01 |
+| 1 | occq 下一帧回读 | ~60 行，有先例 | 消除逐灯 CPU 自旋（收益重述见 §3.1） | _code_temp\02 |
+| 2 | VSLR 面轮转 | 小 | 开 VSLR 时遍历/提交砍 ~80% | _code_temp\03 |
+| 3 | 草只进近级联 | 小 | 太阳阴影砍草×3 | _code_temp\04 |
+| 4 | 纹理异步 promote 队列（§5.2 骨架，轮 5 简化） | 中→中小 | 消除首用 hitch | 设计修订未暂存代码 |
+| 5 | GTAO 时域累积 + 默认半分辨率 | 中 | AO 成本砍半以上 | — |
+| 6 | SSLR stencil 预分类 | 中 | trace GPU 砍 30-60%（视场景） | — |
+| 7 | zfill/G-buffer 双桶、级联静态缓存、静态 instancing | 大 | 长期项 | — |
 
 ## 9. 待深挖问题（剩余，迭代中）
 
@@ -278,6 +285,7 @@ Calculate(dsgraph 构建)
 - [ ] **动工项**：全屏链逐 pass GPU 量化（rs_statistic/PIX），识别饱和度/暗角/色差合并与其它可合并 pass 的实际收益
 - [ ] 帧重叠架构：评估已完成（§7.3），是否立项取决于 stall 项修完后的帧时间
 - [ ] 长期：静态 instancing（§5.1）、级联静态缓存（§6.1）、zfill 双桶（§3.3）——均待打点/量化数据支撑立项
+- [ ] 序位 4（纹理 promote 队列）：动工前先确认默认 `r__no_ram_textures` 置位下显存行为与 RAM 占用差异（staging 常驻 RAM 的代价），决定是否默认开
 
 ---
 
@@ -287,17 +295,64 @@ Calculate(dsgraph 构建)
 |---|---|
 | src/Layers/xrRenderPC_R4/r4_R_render.cpp | 帧主循环、render_main、zfill、TEST_LIGHT_VIS、VSLR |
 | src/Layers/xrRender/r__dsgraph_render.cpp | render_graph/render_subspace、draw 提交 |
-| src/Layers/xrRender/r__dsgraph_build.cpp | add_static/add_dynamic、SSA、HOM 测试 |
+| src/Layers/xrRender/r__dsgraph_build.cpp | add_Static/add_leafs_Static（hierrarhy 静态遍历）、add_Dynamic、SSA、HOM 测试 |
 | src/Layers/xrRender/r__sector.cpp | CSector::traverse portal 递归 |
-| src/Layers/xrRender/r__occlusion.cpp | occq 池（1536）、忙等回读 |
-| src/Layers/xrRender/light_vis.cpp / light_smapvis.cpp | 光源可见性（同帧/延迟回读先例） |
+| src/Layers/xrRender/r__occlusion.h / r__occlusion.cpp | occq 池（1536）、纯自旋回读、occq_refresh 语义 |
+| src/Layers/xrRender/light_vis.cpp / light_smapvis.cpp / light.cpp | 光源可见性（同帧/延迟回读先例）、light 析构清理点 |
 | src/Layers/xrRender/R_sun.cpp | 3 级联太阳阴影 |
-| src/Layers/xrRender/lights_render.cpp | 光源包处理、阴影 subspace |
-| src/Layers/xrRenderPC_R4/r4.cpp#L41-67 | element 选择（phase→E[]） |
-| src/xrCore/FixedMap.h | FixedMAP 实现 |
+| src/Layers/xrRender/lights_render.cpp | 光源包处理、阴影 subspace、vis_update 调用点 |
+| src/Layers/xrRenderPC_R4/r4.cpp#L41-67 | element 选择（phase→E[]）；#L503 add_Geometry；#L281 reset_begin |
+| src/Layers/xrRender/blenders/Blender_Recorder.cpp#L159-190 | PassEnd：_CreateTextureList 生成共享 STextureList*（桶 key 成分） |
+| src/Layers/xrRender/Blender_Recorder_StandartBinding.cpp#L42-53 / #L285-288 | 树变换常量 binder；m_taa_jitter.w=float(dwFrame) |
+| src/xrCore/FixedMap.h | FixedMAP 实现（clear()={pool=0}） |
 | src/xrEngine/device.cpp#L287-308 | 帧线程同步屏障 |
-| src/Layers/xrRenderDX10/dx11SH_Texture.cpp | 纹理同步加载 |
+| src/Layers/xrRenderDX10/dx11SH_Texture.cpp | 纹理同步加载（apply_load L141-145）、ProcessStaging、DeferredUpload 载入链 |
+| src/Layers/xrRenderDX10/dx11Texture.cpp#L119+ | texture_load（staging 三分支 L125-141） |
+| src/Layers/xrRender/ResourceManager.cpp#L349-372 | DeferredUpload：加载期 MT 批量纹理预载 |
+| src/Layers/xrRender/xrRender_console.cpp#L129 / #L146 / #L176-219 | r2_mt 默认开；r__common_flags 默认（NO_RAM_TEXTURES+MT_TEX_LOAD）；GTAO/SSLR/VSLR 参数默认值 |
 | src/Layers/xrRenderDX10/dx10ConstantBuffer.cpp / dx10r_constants_cache.* | 常量缓存（m_bChanged 脏检查） |
 | src/Layers/xrRenderPC_R4/r4_rendertarget_phase_gtao.cpp | GTAO + SSLR 全部 phase |
+| src/Layers/xrRenderPC_R4/r4_rendertarget_phase_combine.cpp#L429-442 | 饱和度/暗角/色差三独立 pass |
+| src/Layers/xrRenderPC_R4/r4_rendertarget_phase_scene.cpp#L26-37 | phase_scene_begin：velocity MRT3 绑定 |
 | src/Layers/xrRenderPC_R4/blender_gtao.cpp | gtao/sslr 五个 element 的绑定 |
+| gamedata/shaders/d3d11/gtao_render.ps.hlsl#L184-186 | 蓝噪声采样（动画化修改位） |
 | gamedata/shaders/d3d11/sslr_temporal.ps.hlsl | 方差裁剪/双历史参考实现 |
+
+---
+
+## 11. 轮 5 记录（2026-10-22：全量行号/事实复核 + 暂存草稿）
+
+本轮为纯复核迭代：对前四轮的全部关键断言做了逐行代码核对（约 40 处引用），并确认 §8 序位 0-4 的修改位。**代码未改**，修改草稿暂存在 `_doc\_code_temp\`：
+
+| 草稿 | 对应序位 | 内容 |
+|---|---|---|
+| 01_gtao_noise_animate.md | 0 | gtao_render.ps.hlsl 一行 + 依据（m_taa_jitter.w 绑定点、SSLR 先例） |
+| 02_occq_next_frame_readback.md | 1 | 4 文件 ~60 行：occq_discard/in_flight + vis_prepare 收割 + vis_update 置空 + refresh 守卫；含验证计划与 reset 软化项 |
+| 03_vslr_face_rotation.md | 2 | 循环轮转 + r4_vslr_faces_per_frame（1..6）；未渲染面不清屏的可行性已逐行核实 |
+| 04_sun_cascade_grass_gate.md | 3 | R_sun.cpp 级联门控 + r4_sun_details_max_cascade（0..2 默认 1） |
+
+### 轮 5 错误修正记录
+
+- ❌ "TEST_LIGHT_VIS 同帧忙等回读" → 忙等在帧尾 render_lights 累积阶段；签发（L610-674）与回读（L785/791）之间隔着 ZBUFFER_COPY→…→SUN×3→SELF_ILLUM 大半帧 GPU 工作——§3.1 已整体改写，收益重述为"消除 CPU 纯自旋（每灯 ≤0.1ms）+ 时序确定性"，不再是"消除大幅 GPU 等待"。
+- ❌ "可见灯 40-200 帧随机复测间隔" → 实为 **10-20 帧**（delay_large_min/max，light_vis.cpp#L6-7）；不可见灯次帧复测。
+- ❌ "sector 内 r_visuals 线性列表全量测试（无 BVH）" → 本代码库无 r_visuals 结构；实际是 sector root 的 **hierrarhy 树递归**（r4.cpp#L503 → add_Static r__dsgraph_build.cpp#L551，每节点 testSAABB+HOM，fcvFull 子树走 add_leafs_Static 免视锥）——§1 已改写；低效点是每节点测试常数与扇出次数，不是"完全无层级"。
+- ❌ "texture_load 无 staging 中转、DEFAULT 直建" → **staging 管道完整存在**（dx11Texture.cpp#L125-141 三分支），`CTexture::Load` 恒传 bStaging=true（dx11SH_Texture.cpp#L508），仅被默认置位的 RFLAG_NO_RAM_TEXTURES 关闭（xrRender_console.cpp#L146）；且 RFLAG_MT_TEX_LOAD（默认开）驱动 DeferredUpload 关卡加载期并行预载全部已注册纹理（ResourceManager.cpp#L349-372，调用点 IGame_Persistent.cpp#L140）——§5.2 设计骨架随之简化（省掉独立加载线程，只剩 apply_load 分流 + 帧首批量 promote）。
+- ❌ "phase_combine.cpp" 文件名 → 实为 **r4_rendertarget_phase_combine.cpp**（三 pass 门控行号 L429-442 不变）。
+- ❌ Blender_Recorder.cpp#L148-190 → PassEnd 实为 L159-190（_CreateTextureList 在 L184）；StandartBinding 树 binder 实为 L42-53。
+
+### 轮 5 新增确认（加固，无需改动）
+
+- `m_taa_jitter.w = float(Device.dwFrame)` 由 binder 无条件设置（Blender_Recorder_StandartBinding.cpp#L285-288）——GTAO 噪声动画化在 TAA 关闭时同样有效。
+- SSLR 蓝噪声动画先例：sslr_render.ps.hlsl#L65 `uint(m_taa_jitter.w) % 32`。
+- smap 每级联 ClearDepthStencilView 全清（r4_rendertarget_phase_smap_D.cpp#L5-6）——级联静态缓存改造前每级联独立重画的断言成立。
+- velocity 清屏点：r4_R_render.cpp#L520-521（rt_Generic_0/rt_Velocity 每帧 Clear）。
+- 仅被渲染面清屏、其余立方体面内容保留：VSLR 循环逐行核实（ClearRenderTargetView 只作用于 pRT[i]）——面轮转无需 RT 结构改动。
+- occq_refresh 现状对 smapvis 即存在"空包帧销毁在途查询"的潜在隐患（r4_R_render.cpp#L612-613）——轮 5 草稿的 in_flight 守卫同时修掉它。
+- light::~light 已有 Lights_LastFrame 自清理先例（light.cpp#L59-64）——occq_discard 挂析构与现有模式一致。
+- 桶 key 结构核实：VS→PS→AdvStages(hs/ds+CS表)→State→STextureList*→items（r__dsgraph_types.h#L118-130），同 shader+纹理组天然同桶（§5.1 结论成立）。
+- 全部数值默认值复核通过：occq 池 1536、smap 2048、zfill 0.25、级联 15/40/160m、GTAO 3/4/0.85m/全分辨率、SSLR 30/1.2/0.25、VSLR 256px/0.7/hud_only=0、hw_BatchSize=61、r2_mt 默认开。
+
+### 轮 5 未能复核（遗留）
+
+- `xr_parallel_foreach` 的具体实现线程池（ResourceMgr DeferredUpload 用）——不影响结论，未展开。
+- phase_combine 内部 render_clouds/combine_1/Forward_puddles/distort/AA 等子 pass 的逐个行号——轮 3 已盘点过 GPU_EVENT 顺序，本轮未重复逐行核对。

@@ -28,6 +28,7 @@ struct CompilersMode
 	bool LC_SaveOFG = false;
 	bool LC_GI = false;
 	bool LC_NoSun = false;
+	bool LC_NoHemi = false;
 	bool LC_NoSMG = true;
 	bool LC_Noise = true;
 	bool LC_Tess = true;

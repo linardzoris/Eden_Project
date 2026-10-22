@@ -269,6 +269,7 @@ int APIENTRY WinMain
 	Serializer.Read("LC_SaveOFG", gCompilerMode.LC_SaveOFG);
 	Serializer.Read("LC_GI", gCompilerMode.LC_GI);
 	Serializer.Read("LC_NoSun", gCompilerMode.LC_NoSun);
+	Serializer.Read("LC_NoHemi", gCompilerMode.LC_NoHemi);
 	Serializer.Read("LC_NoSMG", gCompilerMode.LC_NoSMG);
 	Serializer.Read("LC_Noise", gCompilerMode.LC_Noise);
 	Serializer.Read("LC_Tess", gCompilerMode.LC_Tess);
@@ -310,6 +311,7 @@ int APIENTRY WinMain
 	Serializer.Write("LC_SaveOFG", gCompilerMode.LC_SaveOFG);
 	Serializer.Write("LC_GI", gCompilerMode.LC_GI);
 	Serializer.Write("LC_NoSun", gCompilerMode.LC_NoSun);
+	Serializer.Write("LC_NoHemi", gCompilerMode.LC_NoHemi);
 	Serializer.Write("LC_NoSMG", gCompilerMode.LC_NoSMG);
 	Serializer.Write("LC_Noise", gCompilerMode.LC_Noise);
 	Serializer.Write("LC_Tess", gCompilerMode.LC_Tess);

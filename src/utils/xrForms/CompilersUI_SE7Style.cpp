@@ -13,6 +13,13 @@ bool ShowMainUI = true;
 
 extern CompilersMode gCompilerMode;
 
+// Shows a descriptive help tooltip while the previously submitted item is hovered.
+static void HoverHelp(const char* desc)
+{
+	if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal | ImGuiHoveredFlags_NoSharedDelay))
+		ImGui::SetTooltip("%s", desc);
+}
+
 void InitializeUIData()
 {
 	string_path LevelsDir = {};
@@ -89,12 +96,15 @@ void RenderMainUI()
 				for (auto& [File, Selected] : gCompilerMode.Files)
 				{
 					ImGui::TableNextColumn();
-					xr_string U8Str = Platform::ANSI_TO_UTF8(File);
-					ImGui::Selectable(U8Str.c_str());
+				xr_string U8Str = Platform::ANSI_TO_UTF8(File);
+				ImGui::Selectable(U8Str.c_str());
+				HoverHelp("Level folder inside gamedata\\levels that the enabled compiler\n"
+					"modules will process.\nThe 'Prop' checkbox marks this level for the next Run Compiler.");
 
-					ImGui::TableNextColumn();
-					ImGui::Checkbox(("##check" + File).c_str(), &Selected);
-					Iter++;
+				ImGui::TableNextColumn();
+				ImGui::Checkbox(("##check" + File).c_str(), &Selected);
+				HoverHelp("Mark this level to be compiled when 'Run Compiler' is pressed.");
+				Iter++;
 
 					if (Iter < gCompilerMode.Files.size())
 					{
@@ -279,47 +289,95 @@ void DrawLCConfig()
 	{
 		ImGui::PushID("xrLC");
 		ImGui::Checkbox("Lighting Compiler", &gCompilerMode.LC);
+		HoverHelp("Master switch for the Levels Compiler (xrLC).\n"
+			"Runs the full build pipeline for every selected level: geometry conversion, UV mapping,\n"
+			"subdivide, lightmap packing, lightmap/vertex/MU light baking and lightmap save.");
 		ImGui::Separator();
 
 		ImGui::BeginDisabled(!gCompilerMode.LC);
 
 		// ImGui::Checkbox("GI (Radiosity)", &gCompilerMode.LC_GI);
 		ImGui::Checkbox("No Sun", &gCompilerMode.LC_NoSun);
+		HoverHelp("Skip the directional sun light while baking lightmaps and vertex colors.\n"
+			"All sun channels stay black - use for levels lit only by interior or point lights.");
+		ImGui::Checkbox("No Hemi", &gCompilerMode.LC_NoHemi);
+		HoverHelp("Skip the hemisphere ('$hemi') light group while baking lightmaps.\n"
+			"The lmap hemi channel stays black and the whole hemi raycast pass is skipped.\n"
+			"Static geometry vertex lighting is baked without hemi anyway;\n"
+			"MU objects keep their own baked vertex hemi.");
 		ImGui::Checkbox("No Smooth Group", &gCompilerMode.LC_NoSMG);
-		ImGui::Checkbox("Noise", &gCompilerMode.LC_Noise);
+		HoverHelp("Ignore the smoothing groups stored in level faces when generating smooth vertex\n"
+			"normals - every edge stays sharp (face normals only).\n"
+			"Changes lmap texel normals and baked vertex lighting on curved geometry.");
+		ImGui::Checkbox("Skip Progressive", &gCompilerMode.LC_Noise);
+		HoverHelp("Do not build progressive meshes (VIPM) for x-meshes.\n"
+			"Skips mesh simplification and the vertex-cache-ordered LOD records.\n"
+			"Faster builds and no VIPM crashes on huge meshes,\n"
+			"but the engine keeps full-detail geometry with no vertex-LOD memory savings.");
 		ImGui::Checkbox("Tesselation", &gCompilerMode.LC_Tess);
+		HoverHelp("Allow the Adaptive HT phase to tessellate (split) faces whose vertex hemi\n"
+			"lighting differs strongly, giving smoother baked hemi/vertex lighting.\n"
+			"Disable for faster builds on mostly flat geometry.");
 		ImGui::Checkbox("Skip invalid faces", &gCompilerMode.LC_SkipInvalidFaces);
+		HoverHelp("Do not hard-crash when degenerate or invalid faces are found during conversion.\n"
+			"The bad faces are logged and skipped instead of aborting the whole build.");
 		ImGui::Checkbox("Texture RGBA", &gCompilerMode.LC_tex_rgba);
+		HoverHelp("Store lightmap textures as uncompressed 32-bit RGBA instead of DXT-compressed DDS.\n"
+			"Shadows and gradients stay clean (no compression artifacts), but files are ~4x larger.");
 		ImGui::Checkbox("Skip Subdivide", &gCompilerMode.LC_NoSubdivide);
+		HoverHelp("Skip the subdivide phase that splits oversized faces into smaller ones before\n"
+			"lightmap packing. Faster, but very large faces pack worse into atlases.");
 		ImGui::Checkbox("Skip Welding", &gCompilerMode.LC_skipWeld);
- 
+		HoverHelp("Skip the geometry welding phase - vertices and edges closer than 'Dist Weld'\n"
+			"are no longer merged. Use when welding corrupts imported or very dense geometry.");
+
 		ImGui::Separator();
 
 		ImGui::SetNextItemWidth(100);
 		if (ImGui::Combo("lmaps", &item_current_selected, items, 4))
  			gCompilerMode.LC_sizeLmaps = atoi(items[item_current_selected]);
-		ImGui::Checkbox("LMAP places by se7kills", &gCompilerMode.LC_LmapsAlternative);
- 
+		HoverHelp("Lightmap atlas resolution in pixels (per side).\n"
+			"Larger atlases = fewer lightmap files and denser packing,\n"
+			"but each texture costs more VRAM in the engine.");
+		ImGui::Checkbox("Simple LMAP pack", &gCompilerMode.LC_LmapsAlternative);
+		HoverHelp("Lightmap atlas placement strategy.\n"
+			"OFF (default): per-pixel placement - a pixel-occupancy grid built from each\n"
+			"deflector's marker channel packs deflectors tightly around lit texels\n"
+			"(se7kills layout, densest atlases).\n"
+			"ON: simple scanline row packing with fixed 2px borders -\n"
+			"simpler and faster, but leaves noticeably more empty atlas space.");
+
 		ImGui::Separator();
 		ImGui::Checkbox("Overload Prebuild", &gCompilerMode.IsOverloadedSettings);
+		HoverHelp("Ignore the quality settings stored in build.prj and use the\n"
+			"JitterMU / Jitter / Pixels / Dist Weld values below for this run instead.");
 
 		ImGui::BeginDisabled(!gCompilerMode.IsOverloadedSettings);
-		
+
 			ImGui::SetNextItemWidth(100);
 			ImGui::Combo("JitterMU", &item_current_jitter_mu, itemsJitterMU, 7);
+			HoverHelp("Raycast jitter sample count used while baking MU (multi-use) object vertex colors.\n"
+				"0 = single centered ray, higher = averaged multi-ray sampling (smoother, slower).");
 			ImGui::SetNextItemWidth(100);
 			ImGui::Combo("Jitter", &item_current_jitter, itemsJitter, 3);
+			HoverHelp("Jitter samples per lightmap texel: 1 = one centered ray,\n"
+				"4 / 9 = stratified grid samples averaged per texel.\n"
+				"Smoother shadows at a proportional speed cost.");
  			ImGui::SetNextItemWidth(100);
 			ImGui::InputFloat("Pixels", &gCompilerMode.LC_Pixels);
+			HoverHelp("Lightmap texels per world meter.\n"
+				"Higher = sharper lightmaps, proportionally longer bake times and more memory.");
  			ImGui::SetNextItemWidth(100);
 			ImGui::InputFloat("Dist Weld", &gCompilerMode.WeldDistance);
+			HoverHelp("World-space distance threshold for the welding phase:\n"
+				"vertices closer than this value are merged into one.");
 
 			gCompilerMode.LC_JSample   = atoi(itemsJitter[item_current_jitter]);
 			gCompilerMode.LC_JSampleMU = atoi(itemsJitterMU[item_current_jitter_mu]);
-	 
+
 			ImGui::EndDisabled();
 		ImGui::EndDisabled();
-		
+
 		ImGui::PopID();
 		//ImGui::EndChild();
 	}
@@ -331,10 +389,14 @@ void DrawDOConfig()
 {
 	ImGui::PushID("xrDO");
 	ImGui::Checkbox("Details Compiler", &gCompilerMode.DO);
+	HoverHelp("Run the Details Compiler (xrDO) for each selected level:\n"
+		"bakes detail objects (grass/rocks etc. from detail slots) into the level details file.");
 	ImGui::Separator();
 
 	ImGui::BeginDisabled(!gCompilerMode.DO);
 	ImGui::Checkbox("No Sun", &gCompilerMode.LC_NoSun);
+	HoverHelp("Do not bake the sun light into detail object vertex colors.\n"
+		"Shares the same flag as the xrLC 'No Sun' option.");
 	ImGui::EndDisabled();
 
 	ImGui::PopID();
@@ -345,34 +407,51 @@ void DrawAIConfig()
 	//if (ImGui::BeginChild("AI", { 200, 370 }, ImGuiChildFlags_Border, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings))
 	{
 			ImGui::Checkbox("AI Compiler", &gCompilerMode.AI);
-		
+			HoverHelp("Master switch for the AI Compiler (xrAI).");
+
 			ImGui::BeginDisabled(!gCompilerMode.AI);
 
 			ImGui::Separator();
 
 			ImGui::Checkbox("AI Compiler ai.level", &gCompilerMode.AI_BuildLevel);
-		 
+			HoverHelp("Build the level AI map (ai.level): navigation nodes, links and graph data\n"
+				"used by pathfinding, cover selection and NPC logic.");
+
 				ImGui::BeginDisabled(!gCompilerMode.AI_BuildLevel);
 
 				ImGui::Checkbox("Draft AI-Map", &gCompilerMode.AI_Draft);
+				HoverHelp("Draft mode: fewer refinement and merge passes, no final validation.\n"
+					"For quick iteration only - rebuild without this flag before release.");
 				ImGui::Checkbox("Pure Covers", &gCompilerMode.AI_PureCovers);
+				HoverHelp("Compute cover tables directly from raw level geometry,\n"
+					"without the cover optimization and merge post-pass.");
 				ImGui::Checkbox("Verify", &gCompilerMode.AI_Verify);
+				HoverHelp("Run verify_level_graph on the built ai.level:\n"
+					"checks node connectivity and reports broken or invalid links.");
 				ImGui::Checkbox("Verbose", &gCompilerMode.AI_Verbose);
-	  
+				HoverHelp("Print detailed per-node diagnostics while Verify runs.");
+
 				ImGui::EndDisabled();
-		
+
 			ImGui::Separator();
 
 			ImGui::Checkbox("AI Compiler all.spawn", &gCompilerMode.AI_BuildSpawn);
+			HoverHelp("Build the global spawn file (all.spawn): game objects, waypoints,\n"
+				"paths and level transitions for the whole game graph.");
 				ImGui::BeginDisabled(!gCompilerMode.AI_BuildSpawn);
-				
+
 				ImGui::Checkbox("No Separator Check", &gCompilerMode.AI_NoSeparatorCheck);
+				HoverHelp("Skip separator (level-transition link) validation while building all.spawn.\n"
+					"Allows building spawn with partially connected levels.");
 
 				ImGui::Text("Name all.spawn :");
 				ImGui::InputText("#1", gCompilerMode.AI_spawn_name, sizeof(gCompilerMode.AI_spawn_name));
+				HoverHelp("Output file name of the built all.spawn.");
 				ImGui::Text("Name level start:");
 				ImGui::InputText("#2", gCompilerMode.AI_StartActor, sizeof(gCompilerMode.AI_StartActor));
- 
+				HoverHelp("Name of the level that provides the actor start point\n"
+					"for spawn graph construction.");
+
 				ImGui::EndDisabled();
 
 			ImGui::EndDisabled();
@@ -387,7 +466,12 @@ void DrawCompilerConfig()
 	//if (ImGui::BeginChild("Settings", { 170, 370 }, ImGuiChildFlags_Border, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings))
 	{
 		ImGui::Checkbox("Silent mode", &gCompilerMode.Silent);
+		HoverHelp("Run without dialog windows or message boxes - all output goes to the log only.\n"
+			"A failing build will not stop for user input.");
 		ImGui::Checkbox("Use Intel Embree", &gCompilerMode.Embree);
+		HoverHelp("Trace occlusion rays with the Intel Embre kernel instead of the engine CDB collider.\n"
+			"A BVH is built once per phase and traced with SIMD rays - several times faster\n"
+			"on large levels. NOTE: MU (multi-use) objects are excluded from the Embre model.");
 		ImGui::Separator();
 
 		ImGui::TextColored(ImVec4(RGBAColor(204, 102, 102, 255)), "(Warning Disable MU in raycast)");
@@ -396,14 +480,22 @@ void DrawCompilerConfig()
 
 		ImGui::TextColored(ImVec4(RGBAColor(0, 255, 0, 255)), "(This Only For Build BVH)");
 		ImGui::Checkbox("Embree Compacted", &gCompilerMode.EmbreeBVHCompact);
+		HoverHelp("Adds RTC_SCENE_FLAG_COMPACT to the Embre scene - compact BVH node layout.\n"
+			"Less memory, slightly slower traversal.");
 		ImGui::Checkbox("Embree Robust", &gCompilerMode.EmbreeBVHRobust);
+		HoverHelp("Adds RTC_SCENE_FLAG_ROBUST to the Embre scene - exact ray/triangle intersection\n"
+			"tests near shared edges. Fixes rare missed hits, slightly slower.");
 
 		ImGui::Separator();
 
 		ImGui::Checkbox("Clear temp files", &gCompilerMode.ClearTemp);
+		HoverHelp("Delete the level's temp folder (intermediate build data) after the compiler finishes.");
 		ImGui::Checkbox("Skip THM", &gCompilerMode.SkipTHM);
+		HoverHelp("Do not write .thm (thumbnail/meta) files next to the exported textures.");
 		ImGui::Checkbox("Save cform to obj", &SaveCForm);
-		
+		HoverHelp("Keep CFORM simplifier temp files and dump the collision form as a\n"
+			"Wavefront .obj mesh for inspection in external 3D tools.");
+
 		ImGui::Separator();
 		ImGui::Text("Threads Max");
 
@@ -411,6 +503,8 @@ void DrawCompilerConfig()
 		{
 			gCompilerMode.ThreadsPerWork = std::min((u32)gCompilerMode.ThreadsPerWork, CPU::ID.n_threads);
 		}
+		HoverHelp("Cap for the worker thread pool used by all parallel phases.\n"
+			"Clamped to the CPU logical core count.");
 
 		//ImGui::EndChild();
 	}

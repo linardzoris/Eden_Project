@@ -44,6 +44,7 @@ void StartupLC()
 
 		create_global_data();
 		lc_global_data()->b_nosun_set(gCompilerMode.LC_NoSun);
+		lc_global_data()->b_nohemi_set(gCompilerMode.LC_NoHemi);
 		lc_global_data()->SetSkipInvalid(gCompilerMode.LC_SkipInvalidFaces);
 		lc_global_data()->SetSkipTesselate(!gCompilerMode.LC_Tess);
 		lc_global_data()->SetLmapRGBA(gCompilerMode.LC_tex_rgba);

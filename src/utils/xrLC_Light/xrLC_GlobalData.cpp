@@ -36,7 +36,7 @@ void	destroy_global_data()
 
 
 xrLC_GlobalData::xrLC_GlobalData	():
- _b_nosun(false),_gl_linear(false),
+ _b_nosun(false),_b_nohemi(false),_gl_linear(false),
 	b_vert_not_register( false ),
 	_skipInvalid(false), _skipTesselate(false), _lmapRGBA(false),
 	_skipSubdivide(false)
