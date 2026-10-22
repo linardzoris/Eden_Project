@@ -322,18 +322,20 @@ void UIObjectTool::RefreshList()
 	FS.update_path(ObjectPath, _objects_, "");
 	FS.rescan_path(ObjectPath, true);
 
+	// Raise the flag BEFORE launching: when it was set inside the thread,
+	// two refresh threads could start concurrently and race on members.
+	RefreshInProgress = true;
+
 	std::thread refreshThread(&UIObjectTool::RefreshListInternal, this);
 	refreshThread.detach();
 }
 
 void UIObjectTool::RefreshListInternal()
 {
-	RefreshInProgress = true;
-
 	ListItemsVec items;
 	FS_FileSet lst;
-	
-	if (Lib.GetObjects(lst)) 
+
+	if (Lib.GetObjects(lst))
 	{
 		FS_FileSetIt	it = lst.begin();
 		FS_FileSetIt	_E = lst.end();
@@ -342,10 +344,11 @@ void UIObjectTool::RefreshListInternal()
 			ListItem* I = LHelper().CreateItem(items, it->name.c_str(), 0, ListItem::flDrawThumbnail, 0);
 		}
 	}
-	if (m_RealTexture)
-		m_RemoveTexture = m_RealTexture;
 
-	m_RealTexture = nullptr;
+	// Do not touch texture members here: they are owned and drawn by the
+	// UI thread (Draw()/OnItemFocused); mutating them from this worker
+	// raced with the render thread and could double-release a d3d9 texture.
+
 	m_Props->ClearProperties();
 	m_ObjectList->AssignItems(items);
 

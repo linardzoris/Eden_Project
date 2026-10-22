@@ -21,13 +21,25 @@ UIDOShuffle::~UIDOShuffle()
 
 	ApplyChanges();
 	xr_delete(m_Props);
-	if (m_Texture)
-		IM_TEXTURE_RELEASE(m_Texture);
 
 	ClearIndexForms();
 
-	if (m_RealTexture)
-		IM_TEXTURE_RELEASE(m_RealTexture);
+	// m_Texture and m_RealTexture usually alias the same d3d9 texture
+	// (single refcount shared between both members), so it must be
+	// released exactly once, otherwise the d3d9 object is destroyed
+	// while still referenced and later draws crash inside the driver.
+	if (m_RealTexture == m_Texture)
+	{
+		if (m_Texture)
+			IM_TEXTURE_RELEASE(m_Texture);
+	}
+	else
+	{
+		if (m_Texture)
+			IM_TEXTURE_RELEASE(m_Texture);
+		if (m_RealTexture)
+			IM_TEXTURE_RELEASE(m_RealTexture);
+	}
 }
 
 void UIDOShuffle::Draw()
@@ -73,6 +85,9 @@ void UIDOShuffle::Draw()
 	ImGui::NextColumn();
 	ImGui::BeginChild("Left");
 	{
+		// Single ownership release point: m_RealTexture and m_Texture alias
+		// the same d3d9 texture most of the time, so the stale one is
+		// released here and nowhere else.
 		if (m_RealTexture != m_Texture)
 		{
 			if (m_RealTexture)
@@ -315,28 +330,25 @@ void UIDOShuffle::OnItemFocused(const char* name)
 {
 	if (!name)
 	{
-		if (m_Texture)
-		{
-			IM_TEXTURE_RELEASE(m_Texture);
-			m_Texture = nullptr;
-		}
-
+		// Drop the preview. Ownership of the old texture stays with
+		// m_RealTexture; the sync block in Draw() releases it exactly once.
+		m_Texture = nullptr;
 		m_Props->ClearProperties();
 		m_list_selected = -1;
 		return;
 	}
 
 	m_Thm = ImageLib.CreateThumbnail(name, EImageThumbnail::ETObject);
-	if (m_Texture)
-	{
-		IM_TEXTURE_RELEASE(m_Texture);
-		m_Texture = nullptr;
-	}
-	
-	if (m_Thm)
-		m_Thm->Update((ID3DBaseTexture*&)m_Texture);
 
+	// Build the new texture first and only then swap the pointer. Never
+	// release m_Texture here: when nothing was drawn yet, m_RealTexture
+	// aliases it and releasing would destroy a texture that Draw() still
+	// references (double Release -> dangling d3d9 object -> driver crash).
+	ImTextureID NewTexture = nullptr;
+	if (m_Thm)
+		m_Thm->Update((ID3DBaseTexture*&)NewTexture);
 	xr_delete(m_Thm);
+	m_Texture = NewTexture;
 
 	EDetail *dd= DM->FindDOByName(name);
 	VERIFY(dd);
