@@ -1,7 +1,8 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 
 #include "../xrECore/Editor/EditorChooseEvents.h"
 #include "IconsFontAwesome6.h"
+#include "UILodEditorForm.h"
 
 UIMainForm* MainForm = nullptr;
 UIMainForm::UIMainForm()
@@ -68,6 +69,7 @@ void UIMainForm::Draw()
     m_LeftBar->Draw();
     m_KeyForm->Draw();
     m_Render->Draw();
+    UILodEditorForm::Update();
 }
 
 void UIMainForm::ResetEnd()

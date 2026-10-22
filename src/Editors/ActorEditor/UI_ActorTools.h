@@ -314,6 +314,8 @@ public:
 	void				OptimizeMotions		();
 	void				RealMakeThumbnail();
 	void				RealGenerateLOD(bool hq);
+	// batch LOD generation for the currently attached object (used by the LOD editor)
+	void				GenerateLODForCurrentObject(bool hq);
 	bool				BatchConvert		(LPCSTR fn);
 
 

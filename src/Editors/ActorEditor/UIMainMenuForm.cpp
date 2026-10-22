@@ -2,6 +2,7 @@
 #include "CustomTools/UIPostProcess.h"
 #include "../xrEUI/xrUITheme.h"
 #include "../xrEUI/imgui_EditorEx.h"
+#include "UILodEditorForm.h"
 UIMainMenuForm::UIMainMenuForm()
 {
 }
@@ -76,7 +77,8 @@ void UIMainMenuForm::Draw()
 				ImGui::EndMenu();
 			}
 			if (ImGui::MenuItem("Light Anim Editor", "")) { ExecCommand(COMMAND_LIGHTANIM_EDITOR); }
-			if (ImGui::MenuItem("Minimap Editor", "")) { ExecCommand(COMMAND_MINIMAP_EDITOR); }
+		if (ImGui::MenuItem("Minimap Editor", "")) { ExecCommand(COMMAND_MINIMAP_EDITOR); }
+		if (ImGui::MenuItem("LOD Editor", "")) { UILodEditorForm::Show(); }
 			ImGui::EndMenu();
 		}
 

@@ -1021,52 +1021,57 @@ void CActorTools::RealMakeThumbnail()
 void CActorTools::RealGenerateLOD(bool hq)
 {
 	if (m_pEditObject)
+		GenerateLODForCurrentObject(hq);
+}
+
+void CActorTools::GenerateLODForCurrentObject(bool hq)
+{
+	CEditableObject* O = m_pEditObject;
+	if (!O)
+		return;
+
+	if (O->IsMUStatic())
 	{
 		bool engine_render = MainForm->GetLeftBarForm()->GetRenderMode() == UILeftBarForm::Render_Engine;
 		MainForm->GetLeftBarForm()->SetRenderMode(false);
-		CEditableObject* O = m_pEditObject;
 
-		if (O && O->IsMUStatic())
+		BOOL bLod = O->m_objectFlags.is(CEditableObject::eoUsingLOD);
+		O->m_objectFlags.set(CEditableObject::eoUsingLOD, FALSE);
+
+		if (hq)
 		{
-			BOOL bLod = O->m_objectFlags.is(CEditableObject::eoUsingLOD);
-			O->m_objectFlags.set(CEditableObject::eoUsingLOD, FALSE);
-
-			if (hq)
-			{
-				// HQ billboard：按物体比例的高分辨率图集，输出到 _eden\_shared\billboards，编辑器/关卡直接引用
-				ImageLib.CreateBillboardTexture(O, O->GetLODBillboardTextureName().c_str(), xr_chrono_to_time_t(std::chrono::system_clock::now()), 4);
-			}
-			else
-			{
-				xr_string tex_name;
-				tex_name = EFS.ChangeFileExt(O->GetName(), "");
-
-				string_path fname;
-				FS.update_path(fname, _objects_, "");
-
-				if (tex_name.find(fname) == 0)
-				{
-					tex_name.erase(0, xr_strlen(fname));
-				}
-
-				string_path				tmp;
-				strcpy(tmp, tex_name.c_str()); _ChangeSymbol(tmp, '\\', '_'); _ChangeSymbol(tmp, ':', '_');
-				tex_name = xr_string("lod_") + tmp;
-				tex_name = ImageLib.UpdateFileName(tex_name);
-				ImageLib.CreateLODTexture(O, tex_name.c_str(), LOD_IMAGE_SIZE, LOD_IMAGE_SIZE, LOD_SAMPLE_COUNT, O->Version(), 4);
-			}
-
-			O->OnDeviceDestroy();
-			O->m_objectFlags.set(CEditableObject::eoUsingLOD, bLod);
-			ELog.Msg(mtInformation, "LOD for object '%s' successfully created.", O->GetName());
+			// HQ billboard：按物体比例的高分辨率图集，输出到 _eden\_shared\billboards，编辑器/关卡直接引用
+			ImageLib.CreateBillboardTexture(O, O->GetLODBillboardTextureName().c_str(), xr_chrono_to_time_t(std::chrono::system_clock::now()), 4);
 		}
 		else
 		{
-			ELog.Msg(mtError, "Can't create LOD texture from non 'Multiple Usage' object.", O->GetName());
+			xr_string tex_name;
+			tex_name = EFS.ChangeFileExt(O->GetName(), "");
+
+			string_path fname;
+			FS.update_path(fname, _objects_, "");
+
+			if (tex_name.find(fname) == 0)
+			{
+				tex_name.erase(0, xr_strlen(fname));
+			}
+
+			string_path				tmp;
+			strcpy(tmp, tex_name.c_str()); _ChangeSymbol(tmp, '\\', '_'); _ChangeSymbol(tmp, ':', '_');
+			tex_name = xr_string("lod_") + tmp;
+			tex_name = ImageLib.UpdateFileName(tex_name);
+			ImageLib.CreateLODTexture(O, tex_name.c_str(), LOD_IMAGE_SIZE, LOD_IMAGE_SIZE, LOD_SAMPLE_COUNT, O->Version(), 4);
 		}
+
+		O->OnDeviceDestroy();
+		O->m_objectFlags.set(CEditableObject::eoUsingLOD, bLod);
+		ELog.Msg(mtInformation, "LOD for object '%s' successfully created.", O->GetName());
 		MainForm->GetLeftBarForm()->SetRenderMode(engine_render);
 	}
-
+	else
+	{
+		ELog.Msg(mtError, "Can't create LOD texture from non 'Multiple Usage' object.", O->GetName());
+	}
 }
 
 bool CActorTools::BatchConvert(LPCSTR fn)
