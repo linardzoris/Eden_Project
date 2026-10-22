@@ -843,9 +843,9 @@ void UIMainMenuForm::ExportLevelAsArchive()
 		CSceneObject* Obj = (CSceneObject *)*_F;
 		ParseObject(Obj, Obj->GetReference()->GetName(), RawObjectPath);
 		
-		// copy whichever LOD texture the object actually uses (HQ billboard or plain LQ)
+		// copy whichever LOD texture the object actually uses (BLOD or FLOD)
 		CEditableObject* ObjRef = Obj->GetReference();
-		const xr_string LodTexture = ObjRef->HasHQBillboard() ? ObjRef->GetLODBillboardTextureName() : ObjRef->GetLODTextureName();
+		const xr_string LodTexture = ObjRef->HasHQBillboard() ? ObjRef->GetLODBillboardTextureName() : ObjRef->GetLODFLODTextureName();
 
 		if (LodTexture.empty())
 			continue;

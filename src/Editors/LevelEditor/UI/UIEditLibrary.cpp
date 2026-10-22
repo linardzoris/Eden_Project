@@ -248,8 +248,8 @@ void UIEditLibrary::GenerateLOD(const RStringVec& props, bool bHighQuality)
 				string_path tmp;
 				strcpy(tmp, tex_name.c_str());
 				_ChangeSymbol(tmp, '\\', '_');
-				tex_name = xr_string("lod_") + tmp;
-				tex_name = ImageLib.UpdateFileName(tex_name);
+				// FLOD: merged into level_lods at build time, standalone fallback texture
+				tex_name = xr_string("_eden\\_shared\\lods\\flod\\") + "lod_" + tmp;
 				ImageLib.CreateLODTexture(O, tex_name.c_str(), LOD_IMAGE_SIZE, LOD_IMAGE_SIZE, LOD_SAMPLE_COUNT, xr_chrono_to_time_t(std::chrono::system_clock::now()), 4);
 			}
 

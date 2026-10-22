@@ -1042,7 +1042,7 @@ void CActorTools::GenerateLODForCurrentObject(bool hq)
 
 		if (hq)
 		{
-			// HQ billboard：按物体比例的高分辨率图集，输出到 _eden\_shared\billboards，编辑器/关卡直接引用
+			// HQ billboard（BLOD）：按物体比例的高分辨率图集，输出到 _eden\_shared\lods\blod，优先于合并的 FLOD
 			ImageLib.CreateBillboardTexture(O, O->GetLODBillboardTextureName().c_str(), xr_chrono_to_time_t(std::chrono::system_clock::now()), 4);
 		}
 		else
@@ -1060,8 +1060,8 @@ void CActorTools::GenerateLODForCurrentObject(bool hq)
 
 			string_path				tmp;
 			strcpy(tmp, tex_name.c_str()); _ChangeSymbol(tmp, '\\', '_'); _ChangeSymbol(tmp, ':', '_');
-			tex_name = xr_string("lod_") + tmp;
-			tex_name = ImageLib.UpdateFileName(tex_name);
+			// FLOD: merged into level_lods at build time, standalone fallback texture
+			tex_name = xr_string("_eden\\_shared\\lods\\flod\\") + "lod_" + tmp;
 			ImageLib.CreateLODTexture(O, tex_name.c_str(), LOD_IMAGE_SIZE, LOD_IMAGE_SIZE, LOD_SAMPLE_COUNT, O->Version(), 4);
 		}
 

@@ -57,9 +57,9 @@ bool ESceneObjectTool::Validate(bool full_test)
             if (Scene->IsValidateLODs && full_test && A->IsMUStatic())
             {
                 CEditableObject* E = A->GetReference(); VERIFY(E);
-                // HQ billboards live under _eden\_shared\billboards, plain LODs under lod\ -
+                // HQ billboards live under _eden\_shared\lods\blod, FLODs under _eden\_shared\lods\flod -
                 // validate whichever texture the object actually uses
-                xr_string lod_name = E->HasHQBillboard() ? E->GetLODBillboardTextureName() : E->GetLODTextureName();
+                xr_string lod_name = E->HasHQBillboard() ? E->GetLODBillboardTextureName() : E->GetLODFLODTextureName();
                 xr_string l_name = lod_name.c_str();
                 string_path fn;
                 int age, age_nm;

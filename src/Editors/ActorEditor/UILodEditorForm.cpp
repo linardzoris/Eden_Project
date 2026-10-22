@@ -63,6 +63,8 @@ void UILodEditorForm::ScanObjects()
 // HasHQBillboard until the affected roots are force-rescanned
 void UILodEditorForm::RescanFS()
 {
+	// new blod/flod dds/thm files are invisible to HasHQBillboard/HasLQTexture
+	// until the _eden\_shared\lods roots are force-rescanned
 	FS.rescan_path(FS.get_path(_game_textures_)->m_Path, TRUE);
 	FS.rescan_path(FS.get_path(_objects_)->m_Path, TRUE);
 }

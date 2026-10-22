@@ -295,9 +295,9 @@ void CEditableObject::RenderLOD(const Fmatrix& parent)
 	}
 }
 
-xr_string CEditableObject::GetLODTextureName()
+// shared base name: "lod_<objects-relative path with '_'>", no folder part
+xr_string CEditableObject::GetLODBaseName()
 {
-	// strip the objects root and file extension so the name matches the on-disk lod_* texture
 	xr_string obj_name = EFS.ChangeFileExt(m_LibName.c_str(), "");
 	string_path objs_root;
 	FS.update_path(objs_root, _objects_, "");
@@ -305,15 +305,25 @@ xr_string CEditableObject::GetLODTextureName()
 		obj_name.erase(0, xr_strlen(objs_root));
 	string512 nm;
 	xr_strcpy(nm, obj_name.c_str()); _ChangeSymbol(nm,'\\','_');
-	xr_string 	l_name;
-	l_name 			= xr_string("lod_")+nm;
-	return ImageLib.UpdateFileName(l_name);
+	return xr_string("lod_")+nm;
+}
+
+xr_string CEditableObject::GetLODTextureName()
+{
+	// legacy layout (textures\lod\lod_<name>), kept for old references
+	return xr_string("lod\\")+GetLODBaseName();
+}
+
+xr_string CEditableObject::GetLODFLODTextureName()
+{
+	// FLOD: merged into level_lods at build time, also usable as a standalone texture
+	return xr_string("_eden\\_shared\\lods\\flod\\")+GetLODBaseName();
 }
 
 xr_string CEditableObject::GetLODBillboardTextureName()
 {
-	// HQ billboards live under the project _eden folder, base name matches the LQ lod texture
-	return xr_string("_eden\\_shared\\billboards\\")+GetLODTextureName();
+	// BLOD: standalone high-res billboard, preferred over the merged FLOD when present
+	return xr_string("_eden\\_shared\\lods\\blod\\")+GetLODBaseName();
 }
 
 bool CEditableObject::HasHQBillboard()
@@ -326,7 +336,7 @@ bool CEditableObject::HasHQBillboard()
 
 bool CEditableObject::HasLQTexture()
 {
-	xr_string fname	= GetLODTextureName()+xr_string(".dds");
+	xr_string fname	= GetLODFLODTextureName()+xr_string(".dds");
 	string_path full;
 	FS.update_path	(full,_game_textures_,fname.c_str());
 	return !!FS.exist(full);

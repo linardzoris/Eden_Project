@@ -295,6 +295,8 @@ public:
 	void			GetLODAtlasParams		(u32& cell_w, u32& cell_h, bool& vertical, u32& atlas_w, u32& atlas_h);
 	bool			HasHQBillboard			();
 	bool			HasLQTexture			();
+	xr_string		GetLODBaseName			();
+	xr_string		GetLODFLODTextureName	();
 	void			GetLODGridForRender		(int& w_cnt, int& h_cnt);
 	xr_string		GetLODBillboardTextureName();
 
