@@ -60,9 +60,13 @@ void EImageThumbnail::Update(ID3DBaseTexture*& Texture)
     }
 
     ID3DTexture2D* pTexture = nullptr;
+    bool bQiReference = false;
     if (Texture != nullptr)
     {
         R_CHK(((IDirect3DBaseTexture9*)(Texture))->QueryInterface(__uuidof(ID3DTexture2D), (void**)&pTexture));
+        // QueryInterface adds a reference on the caller-owned texture;
+        // it must be released after refilling or it leaks on every update
+        bQiReference = true;
     }
     else
     {
@@ -70,15 +74,21 @@ void EImageThumbnail::Update(ID3DBaseTexture*& Texture)
         Texture = pTexture;
     }
 
-    D3DLOCKED_RECT rect;
-    R_CHK(pTexture->LockRect(0, &rect, 0, D3DLOCK_DISCARD));
-    for (int i = 0; i < THUMB_HEIGHT; i++)
+    if (pTexture)
     {
+        D3DLOCKED_RECT rect;
+        R_CHK(pTexture->LockRect(0, &rect, 0, D3DLOCK_DISCARD));
+        for (int i = 0; i < THUMB_HEIGHT; i++)
+        {
 
-        unsigned char* dest = static_cast<unsigned char*>(rect.pBits) + (rect.Pitch * i);
-        memcpy(dest, Pixels() + (THUMB_WIDTH * (THUMB_HEIGHT - i - 1)), sizeof(unsigned char) * THUMB_WIDTH * 4);
+            unsigned char* dest = static_cast<unsigned char*>(rect.pBits) + (rect.Pitch * i);
+            memcpy(dest, Pixels() + (THUMB_WIDTH * (THUMB_HEIGHT - i - 1)), sizeof(unsigned char) * THUMB_WIDTH * 4);
+        }
+        R_CHK(pTexture->UnlockRect(0));
+
+        if (bQiReference)
+            pTexture->Release();
     }
-    R_CHK(pTexture->UnlockRect(0));
 }
 
 ECORE_API EImageThumbnail* CreateThumbnail(LPCSTR src_name, ECustomThumbnail::THMType type, bool bLoad)

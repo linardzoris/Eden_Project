@@ -13,6 +13,7 @@ UIObjectTool::UIObjectTool()
 	m_Selection = false;
 	m_RealTexture = nullptr;
 	m_RemoveTexture = nullptr;
+	m_HasPendingItems = false;
 	m_ObjectList = new UIItemListForm();
 	m_ObjectList->SetOnItemFocusedEvent(TOnILItemFocused(this, &UIObjectTool::OnItemFocused));
 	m_TextureNull.create("ed\\ed_nodata");
@@ -28,6 +29,15 @@ UIObjectTool::~UIObjectTool()
 {
 	while (RefreshInProgress)
 		std::this_thread::yield();
+
+	// Unapplied refresh result: the list never took ownership of these
+	if (m_HasPendingItems)
+	{
+		m_HasPendingItems = false;
+		for (ListItem* item : m_PendingItems)
+			xr_delete(item);
+	}
+	m_PendingItems.clear();
 
 	if (m_RemoveTexture)
 		IM_TEXTURE_RELEASE(m_RemoveTexture);
@@ -345,18 +355,34 @@ void UIObjectTool::RefreshListInternal()
 		}
 	}
 
-	// Do not touch texture members here: they are owned and drawn by the
-	// UI thread (Draw()/OnItemFocused); mutating them from this worker
-	// raced with the render thread and could double-release a d3d9 texture.
-
-	m_Props->ClearProperties();
-	m_ObjectList->AssignItems(items);
-
+	// Prepare the result only. UI objects (props/list/preview texture) are
+	// owned by the UI thread and get applied in OnDrawUI once this flag is
+	// lowered; store the flag last so it acts as a release barrier.
+	m_PendingItems = items;
+	m_HasPendingItems = true;
 	RefreshInProgress = false;
 }
 
 void UIObjectTool::OnDrawUI()
 {
+	// Apply the refresh result on the UI thread: the worker thread only
+	// prepares the item list, UI objects must not be touched from there.
+	if (m_HasPendingItems && !RefreshInProgress)
+	{
+		m_HasPendingItems = false;
+
+		// Same visual behavior as the old in-thread refresh: drop the
+		// current preview; the texture is released by Draw() via the
+		// m_RemoveTexture staging slot.
+		if (m_RealTexture)
+			m_RemoveTexture = m_RealTexture;
+		m_RealTexture = nullptr;
+
+		m_Props->ClearProperties();
+		m_ObjectList->AssignItems(m_PendingItems);
+		m_PendingItems.clear();
+	}
+
 	UIEnvGeneratorForm::Update();
 	if (m_Selection)
 	{

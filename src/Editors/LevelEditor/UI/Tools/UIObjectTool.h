@@ -47,4 +47,10 @@ private:
 
 	ImTextureID m_RealTexture;
 	ImTextureID m_RemoveTexture;
+
+	// Refresh result handed off from the worker thread to the UI thread;
+	// UI objects (list/props/preview texture) must only be touched on the
+	// UI thread, the worker only prepares the item list.
+	ListItemsVec m_PendingItems;
+	bool m_HasPendingItems;
 };

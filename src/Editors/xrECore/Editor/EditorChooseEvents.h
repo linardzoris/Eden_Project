@@ -189,20 +189,26 @@ namespace ChoseEvents
         {
 
             ID3DTexture2D* pTexture = nullptr;
+            bool bQiReference = false;
             if (Texture != nullptr)
             {
                 R_CHK(((ID3DBaseTexture*)Texture)->QueryInterface(__uuidof(ID3DTexture2D), (void**)&pTexture));
+                // QueryInterface adds a reference on the caller-owned texture;
+                // release it after refilling: this runs every frame while the
+                // animated choose form is open, an unreleased ref leaks fast
+                bQiReference = true;
             }
             else
             {
                 R_CHK(REDevice->CreateTexture(THUMB_WIDTH, THUMB_HEIGHT, 1, D3DUSAGE_DYNAMIC, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &pTexture, 0));
                 Texture = pTexture;
             }
+            if (pTexture)
             {
                 D3DLOCKED_RECT rect;
                 R_CHK(pTexture->LockRect(0, &rect, 0, 0));
                 u32* dest = nullptr;
-                
+
                 for (u32 y = 0; y < THUMB_HEIGHT; y++)
                 {
                     dest = reinterpret_cast<u32*>(reinterpret_cast<char*>(rect.pBits)+(rect.Pitch*y));
@@ -213,6 +219,9 @@ namespace ChoseEvents
                     }
                 }
                 R_CHK(pTexture->UnlockRect(0));
+
+                if (bQiReference)
+                    pTexture->Release();
             }
 
         }
