@@ -425,7 +425,7 @@ void CEditableObject::DefferedLoadRP()
 
 //*/
 	// создать LOD shader
-	xr_string l_name = HasHQBillboard() ? GetLODBillboardTextureName() : GetLODTextureName();
+	xr_string l_name = HasHQBillboard() ? GetLODBillboardTextureName() : GetLODFLODTextureName();
 	xr_string fname = xr_string(l_name)+xr_string(".dds");
 	m_LODShader.destroy();
 //    if (FS.exist(_game_textures_,fname.c_str()))
