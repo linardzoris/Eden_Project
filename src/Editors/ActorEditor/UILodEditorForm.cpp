@@ -346,6 +346,11 @@ void UILodEditorForm::DrawActions()
 
 	ImGui::Separator();
 	ImGui::TextWrapped("Only large objects should use BLODs, small objects use FLODs instead. Engine&Compiler prioritize BLODs over FLODs. BLODs are saved independently, FLODs are merged into level_lods.");
+
+	ImGui::Separator();
+	ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 200, 80, 255));
+	ImGui::TextWrapped("WARNING: First-time generation results in wrong albedo, this is a bug TBD. FIX: Generate any LQ for once upon first AE use!");
+	ImGui::PopStyleColor();
 }
 
 void UILodEditorForm::Draw()
