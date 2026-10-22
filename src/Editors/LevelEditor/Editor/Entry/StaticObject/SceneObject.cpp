@@ -375,7 +375,7 @@ bool CSceneObject::GetSummaryInfo(SSceneSummary* inf)
 			inf->AppendTexture(temp.c_str(),SSceneSummary::sttBase,area,pixel_area,E->m_LibName.c_str());
 		}
 		if (m_Flags.is(CEditableObject::eoUsingLOD)){
-			inf->AppendTexture(E->GetLODTextureName().c_str(),SSceneSummary::sttLOD,0,0,"$LOD$");
+			inf->AppendTexture((E->HasHQBillboard() ? E->GetLODBillboardTextureName() : E->GetLODTextureName()).c_str(),SSceneSummary::sttLOD,0,0,"$LOD$");
 			inf->lod_objects.insert	(E->m_LibName.c_str());
 			inf->object_lod_ref_cnt++;
 		}
