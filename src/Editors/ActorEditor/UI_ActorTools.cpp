@@ -1021,7 +1021,12 @@ void CActorTools::RealMakeThumbnail()
 void CActorTools::RealGenerateLOD(bool hq)
 {
 	if (m_pEditObject)
+	{
+		bool engine_render = MainForm->GetLeftBarForm()->GetRenderMode() == UILeftBarForm::Render_Engine;
+		MainForm->GetLeftBarForm()->SetRenderMode(false);
 		GenerateLODForCurrentObject(hq);
+		MainForm->GetLeftBarForm()->SetRenderMode(engine_render);
+	}
 }
 
 void CActorTools::GenerateLODForCurrentObject(bool hq)
@@ -1032,9 +1037,6 @@ void CActorTools::GenerateLODForCurrentObject(bool hq)
 
 	if (O->IsMUStatic())
 	{
-		bool engine_render = MainForm->GetLeftBarForm()->GetRenderMode() == UILeftBarForm::Render_Engine;
-		MainForm->GetLeftBarForm()->SetRenderMode(false);
-
 		BOOL bLod = O->m_objectFlags.is(CEditableObject::eoUsingLOD);
 		O->m_objectFlags.set(CEditableObject::eoUsingLOD, FALSE);
 
@@ -1066,7 +1068,6 @@ void CActorTools::GenerateLODForCurrentObject(bool hq)
 		O->OnDeviceDestroy();
 		O->m_objectFlags.set(CEditableObject::eoUsingLOD, bLod);
 		ELog.Msg(mtInformation, "LOD for object '%s' successfully created.", O->GetName());
-		MainForm->GetLeftBarForm()->SetRenderMode(engine_render);
 	}
 	else
 	{

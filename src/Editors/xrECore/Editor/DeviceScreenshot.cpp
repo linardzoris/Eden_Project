@@ -13,6 +13,8 @@ bool CEditorRenderDevice::MakeScreenshot(U32Vec& pixels, u32 width, u32 height)
 
     // free managed resource
     Resources->Evict();
+    // WARNING: First-time generation results in wrong albedo, this is a bug TBD.
+    // FIX: Generate any LQ for once upon first AE use!
 
     IDirect3DSurface9* 	poldZB=0;
     IDirect3DSurface9* 	pZB=0;

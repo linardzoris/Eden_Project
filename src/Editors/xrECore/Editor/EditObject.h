@@ -294,6 +294,7 @@ public:
 	// HQ billboard atlas: 按物体 AABB 比例计算 8 向图集布局（cell 尺寸为 2 的幂，图集 WH<=2048）
 	void			GetLODAtlasParams		(u32& cell_w, u32& cell_h, bool& vertical, u32& atlas_w, u32& atlas_h);
 	bool			HasHQBillboard			();
+	bool			HasLQTexture			();
 	void			GetLODGridForRender		(int& w_cnt, int& h_cnt);
 	xr_string		GetLODBillboardTextureName();
 

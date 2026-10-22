@@ -108,8 +108,8 @@ void CreateLODSamples(const Fbox& bbox, U32Vec& tgt_data, u32 cell_w, u32 cell_h
     float R 					= 2.f*_max(S.x,S.z);
 
     u32 pitch 					= atlas_w;
-    tgt_data.resize				(pitch*atlas_h);
-    for (int frame=0; frame<LOD_SAMPLE_COUNT; frame++){
+	tgt_data.resize				(pitch*atlas_h);
+	for (int frame=0; frame<LOD_SAMPLE_COUNT; frame++){
         float angle 			= frame*(PI_MUL_2/LOD_SAMPLE_COUNT);
 
 		Fbox bb 				= bbox;
@@ -138,9 +138,15 @@ void CreateLODSamples(const Fbox& bbox, U32Vec& tgt_data, u32 cell_w, u32 cell_h
 	for (u32 y=0; y<atlas_h/2; y++){
 		u32 y2 = atlas_h-y-1;
 		for (u32 x=0; x<pitch; x++){
-        	std::swap	(tgt_data[y*pitch+x],tgt_data[y2*pitch+x]);	
+        	std::swap	(tgt_data[y*pitch+x],tgt_data[y2*pitch+x]);
 		}
 	}
+
+    // diagnostic: how much the GPU capture actually contained (all-zero = broken render target state)
+    u32 cap_nonzero = 0;
+    for (u32 i = 0; i < tgt_data.size(); i++)
+        if (tgt_data[i] != 0) cap_nonzero++;
+    Msg("LOD capture: %u / %u non-empty pixels", cap_nonzero, (u32)tgt_data.size());
 
     // restore render params
 	EDevice->dwFillMode			= old_dwFillMode;

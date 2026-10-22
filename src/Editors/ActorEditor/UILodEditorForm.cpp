@@ -15,8 +15,12 @@ UILodEditorForm::~UILodEditorForm()
 // enumerate all library objects, keep only MU-static ones (hide static/dynamic/HOM)
 void UILodEditorForm::ScanObjects()
 {
-	items.clear();
+	// preserve the selection across rescans
+	xr_vector<Item> old;
+	old.swap(items);
+	groups.clear();
 	m_ScanDone = true;
+	m_LastClickIndex = -1;
 
 	FS_FileSet lst;
 	if (!FS.file_list(lst, _objects_, FS_ListFiles, "*.object"))
@@ -35,18 +39,48 @@ void UILodEditorForm::ScanObjects()
 		CEditableObject* O = new CEditableObject(full);
 		if (O->Load(full) && O->IsMUStatic())
 		{
+			xr_path rel(f.name.c_str());
 			Item it;
 			it.name = full;
-			it.short_name = f.name.c_str();
+			it.file_name = rel.xfilename().c_str();
+			it.folder = xr_path(rel.parent_path()).xstring().c_str();
 			it.UsingLOD = !!O->m_objectFlags.is(CEditableObject::eoUsingLOD);
 			it.HasHQ = O->HasHQBillboard();
+			it.HasLQ = O->HasLQTexture();
+			for (const auto& prev : old)
+				if (prev.name == it.name) { it.selected = prev.selected; break; }
 			items.push_back(it);
 		}
 		xr_delete(O);
 	}
 	UI->ProgressEnd(PB);
 
+	BuildGroups();
 	ELog.Msg(mtInformation, "LOD Editor: found %d MU object(s).", items.size());
+}
+
+// the FS caches directory listings: new dds/thm files are invisible to
+// HasHQBillboard until the affected roots are force-rescanned
+void UILodEditorForm::RescanFS()
+{
+	FS.rescan_path(FS.get_path(_game_textures_)->m_Path, TRUE);
+	FS.rescan_path(FS.get_path(_objects_)->m_Path, TRUE);
+}
+
+// group items by folder (list is sorted, so folders are contiguous)
+void UILodEditorForm::BuildGroups()
+{
+	groups.clear();
+	for (int i = 0; i < (int)items.size(); i++)
+	{
+		if (groups.empty() || groups.back().folder != items[i].folder)
+		{
+			FolderGroup g;
+			g.folder = items[i].folder;
+			groups.push_back(g);
+		}
+		groups.back().indices.push_back(i);
+	}
 }
 
 void UILodEditorForm::ApplyUsingLOD(bool value)
@@ -96,6 +130,13 @@ void UILodEditorForm::RunBatch(bool hq)
 	if (ATools->CurrentObject())
 		saved = ATools->CurrentObject()->GetName();
 
+	// editor render mode for the whole batch (same state as the single Make HQ/LQ flow)
+	bool engine_render = MainForm->GetLeftBarForm()->GetRenderMode() == UILeftBarForm::Render_Engine;
+	MainForm->GetLeftBarForm()->SetRenderMode(false);
+
+	CTimer batch_timer;
+	batch_timer.Start();
+
 	SPBItem* PB = UI->ProgressStart(list.size(), hq ? "Making HQ billboards (BLOD)" : "Making LQ lods (FLOD)");
 	u32 done = 0;
 	for (const auto& name : list)
@@ -116,6 +157,7 @@ void UILodEditorForm::RunBatch(bool hq)
 			if (O)
 			{
 				it.HasHQ = O->HasHQBillboard();
+				it.HasLQ = O->HasLQTexture();
 				it.UsingLOD = !!O->m_objectFlags.is(CEditableObject::eoUsingLOD);
 			}
 			done++;
@@ -123,38 +165,118 @@ void UILodEditorForm::RunBatch(bool hq)
 		}
 	}
 	UI->ProgressEnd(PB);
+	float seconds = batch_timer.GetElapsed_sec();
+
+	// new dds/thm files must enter the FS cache before HasHQBillboard can see them
+	RescanFS();
+	ScanObjects();
 
 	if (!saved.empty())
 		ATools->Load(saved.c_str());
 
-	ELog.Msg(mtInformation, "LOD Editor: %s generated for %d of %d object(s).", hq ? "BLOD" : "FLOD", done, list.size());
+	MainForm->GetLeftBarForm()->SetRenderMode(engine_render);
+
+	// update the time estimate from the measurement
+	float per_object = seconds / (float)list.size();
+	if (hq) m_EstimateHQ = per_object;
+	else m_EstimateLQ = per_object;
+
+	ELog.Msg(mtInformation, "LOD Editor: %s generated for %d of %d object(s) in %.1fsec.", hq ? "BLOD" : "FLOD", done, list.size(), seconds);
+	ELog.DlgMsg(mtInformation, "Generation successfully done!");
 }
 
 void UILodEditorForm::DrawObjectList()
 {
 	if (ImGui::Button("Rescan"))
+	{
+		RescanFS();
 		ScanObjects();
+	}
 	ImGui::SameLine();
 	if (ImGui::Button("All"))
 		for (auto& it : items)
 			it.selected = true;
 	ImGui::SameLine();
 	if (ImGui::Button("None"))
+	{
 		for (auto& it : items)
 			it.selected = false;
+		m_LastClickIndex = -1;
+	}
 	ImGui::SameLine();
 	ImGui::SetNextItemWidth(-1);
 	ImGui::InputText("##filter", m_Filter, sizeof(m_Filter));
 
-	ImGui::BeginChild("objects", ImVec2(0, 0), true);
-	for (auto& it : items)
+	// flat multi-select list (file names only, full path on hover)
+	ImGui::BeginChild("flat list", ImVec2(0, ImGui::GetContentRegionAvail().y * 0.45f), true);
+	int visible = 0;
+	for (int i = 0; i < (int)items.size(); i++)
 	{
+		auto& it = items[i];
 		if (m_Filter[0] && !strstr(it.name.c_str(), m_Filter))
 			continue;
+		visible++;
 
 		ImGui::PushID(it.name.c_str());
-		xr_string mark = it.HasHQ ? "[HQ]" : (it.UsingLOD ? "[LOD]" : "[ - ]");
-		ImGui::Selectable((mark + " " + it.short_name).c_str(), &it.selected);
+		xr_string mark = it.HasHQ ? "[HQ]" : (it.HasLQ ? "[LQ]" : "[ - ]");
+		bool clicked = ImGui::Selectable((mark + " " + it.file_name).c_str(), it.selected);
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("%s", it.name.c_str());
+		if (clicked)
+		{
+			if (ImGui::GetIO().KeyShift && m_LastClickIndex >= 0)
+			{
+				// shift+click: range select from the anchor to this row
+				int a = _min(m_LastClickIndex, i), b = _max(m_LastClickIndex, i);
+				for (int j = a; j <= b; j++)
+					items[j].selected = true;
+			}
+			else
+			{
+				it.selected = !it.selected;
+				m_LastClickIndex = i;
+			}
+		}
+		ImGui::PopID();
+	}
+	if (visible == 0)
+		ImGui::TextDisabled("no matching objects");
+	ImGui::EndChild();
+
+	// explorer-style folder tree, checkboxes synced with the flat list
+	ImGui::BeginChild("folder tree", ImVec2(0, 0), true);
+	ImGui::TextDisabled("Folders");
+	for (auto& g : groups)
+	{
+		// filter: keep the folder if any member matches
+		bool any = false;
+		for (int idx : g.indices)
+			if (!m_Filter[0] || strstr(items[idx].name.c_str(), m_Filter))
+			{
+				any = true;
+				break;
+			}
+		if (!any)
+			continue;
+
+		ImGui::PushID(g.folder.c_str());
+		if (ImGui::TreeNode("", "%s (%d)", g.folder.empty() ? "<root>" : g.folder.c_str(), g.indices.size()))
+		{
+			for (int idx : g.indices)
+			{
+				auto& it = items[idx];
+				if (m_Filter[0] && !strstr(it.name.c_str(), m_Filter))
+					continue;
+
+				ImGui::PushID(idx);
+				xr_string mark = it.HasHQ ? "[HQ]" : (it.HasLQ ? "[LQ]" : "[ - ]");
+				ImGui::Checkbox((mark + " " + it.file_name).c_str(), &it.selected);
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("%s", it.name.c_str());
+				ImGui::PopID();
+			}
+			ImGui::TreePop();
+		}
 		ImGui::PopID();
 	}
 	ImGui::EndChild();
@@ -180,15 +302,46 @@ void UILodEditorForm::DrawActions()
 
 	ImGui::Separator();
 
-	if (ImGui::Checkbox("MakeHQ (BLOD)", &m_MakeHQ))
+	if (ImGui::Button("MakeHQ (BLOD)", ImVec2(-1, 0)))
 	{
-		m_MakeHQ = false;
-		RunBatch(true);
+		if (selected == 0)
+			ELog.DlgMsg(mtInformation, "LOD Editor: no objects selected.");
+		else
+		{
+			m_MakeHQConfirm = true;
+			m_MakeLQConfirm = false;
+			ImGui::OpenPopup("Confirm generation");
+		}
 	}
-	if (ImGui::Checkbox("MakeLQ (FLOD)", &m_MakeLQ))
+	if (ImGui::Button("MakeLQ (FLOD)", ImVec2(-1, 0)))
 	{
-		m_MakeLQ = false;
-		RunBatch(false);
+		if (selected == 0)
+			ELog.DlgMsg(mtInformation, "LOD Editor: no objects selected.");
+		else
+		{
+			m_MakeLQConfirm = true;
+			m_MakeHQConfirm = false;
+			ImGui::OpenPopup("Confirm generation");
+		}
+	}
+
+	if (ImGui::BeginPopupModal("Confirm generation", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		bool hq = m_MakeHQConfirm;
+		int seconds = int(ceil(selected * (hq ? m_EstimateHQ : m_EstimateLQ)));
+		ImGui::Text("Total %d MU-Objects selected,", selected);
+		ImGui::Text("%d %s will be generated,", selected, hq ? "BLODs" : "FLODs");
+		ImGui::Text("estimated processing time: %d seconds.", seconds);
+		ImGui::Separator();
+		if (ImGui::Button("Proceed", ImVec2(120, 0)))
+		{
+			ImGui::CloseCurrentPopup();
+			RunBatch(hq);
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Cancel", ImVec2(120, 0)))
+			ImGui::CloseCurrentPopup();
+		ImGui::EndPopup();
 	}
 
 	ImGui::Separator();
@@ -222,7 +375,8 @@ void UILodEditorForm::Update()
 	{
 		if (!Form->IsClosed())
 		{
-			ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(720, 480));
+			ImGui::SetNextWindowSize(ImVec2(1250, 760), ImGuiCond_FirstUseEver);
+			ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(1000, 600));
 			if (ImGui::Begin("LOD Editor", &Form->bOpen))
 			{
 				Form->Draw();

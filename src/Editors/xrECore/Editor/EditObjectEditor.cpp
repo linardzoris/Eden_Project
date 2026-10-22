@@ -324,6 +324,14 @@ bool CEditableObject::HasHQBillboard()
 	return !!FS.exist(full);
 }
 
+bool CEditableObject::HasLQTexture()
+{
+	xr_string fname	= GetLODTextureName()+xr_string(".dds");
+	string_path full;
+	FS.update_path	(full,_game_textures_,fname.c_str());
+	return !!FS.exist(full);
+}
+
 // 单元格尺寸就近吸附到 2 的幂（64..2048），满足 DXT/mipmap 的 POT 约束
 IC static u32 SnapLODCellSize(float v)
 {
