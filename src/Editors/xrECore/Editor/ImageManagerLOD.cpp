@@ -403,6 +403,38 @@ void CImageManager::CreateLODTexture(CEditableObject* OBJECT, LPCSTR tex_name, u
     DXTUtils::Converter::MakeTGA(tgt_w * LOD_SAMPLE_COUNT, tgt_h, nm_pixels, out_name);
     FS.set_file_age(out_name, age);
     SynchronizeTexture(src_name, age);
+
+    // game dds: FLOD is a standalone texture now (color DXT3, normal DXT5 with AO in alpha)
+    STextureParams tp;
+    tp.width			= tgt_w * LOD_SAMPLE_COUNT;
+    tp.height			= tgt_h;
+    tp.type				= STextureParams::ttImage;
+    tp.mip_filter		= STextureParams::kMIPFilterAdvanced;
+    tp.flags.assign		(STextureParams::flDitherColor | STextureParams::flGenerateMipMaps | STextureParams::flHasAlpha);
+
+    tp.fmt				= STextureParams::tfDXT3;
+    strcpy(src_name, EFS.ChangeFileExt(tex_name, ".dds").c_str());
+    FS.update_path(out_name, _game_textures_, src_name);
+    MakeGameTexture(out_name, lod_pixels.data(), tp);
+
+    ETextureThumbnail* THM = new ETextureThumbnail(tex_name, false);
+    THM->m_TexParams	= tp;
+    THM->SetValid	();
+    THM->Save		(age);
+    xr_delete		(THM);
+
+    tp.fmt				= STextureParams::tfDXT5;
+    xr_strconcat(src_name, tex_name, "_nm");
+    strcpy(src_name, EFS.ChangeFileExt(src_name, ".dds").c_str());
+    FS.update_path(out_name, _game_textures_, src_name);
+    MakeGameTexture(out_name, nm_pixels.data(), tp);
+
+    xr_strconcat(src_name, tex_name, "_nm");
+    THM = new ETextureThumbnail(src_name, false);
+    THM->m_TexParams	= tp;
+    THM->SetValid	();
+    THM->Save		(age);
+    xr_delete		(THM);
 }
 
 //------------------------------------------------------------------------------

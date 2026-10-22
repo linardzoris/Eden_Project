@@ -1060,7 +1060,7 @@ void CActorTools::GenerateLODForCurrentObject(bool hq)
 
 			string_path				tmp;
 			strcpy(tmp, tex_name.c_str()); _ChangeSymbol(tmp, '\\', '_'); _ChangeSymbol(tmp, ':', '_');
-			// FLOD: merged into level_lods at build time, standalone fallback texture
+			// FLOD: standalone fallback texture, used when no BLOD exists
 			tex_name = xr_string("_eden\\_shared\\lods\\flod\\") + "lod_" + tmp;
 			ImageLib.CreateLODTexture(O, tex_name.c_str(), LOD_IMAGE_SIZE, LOD_IMAGE_SIZE, LOD_SAMPLE_COUNT, O->Version(), 4);
 		}
