@@ -1,5 +1,5 @@
 [logic]
-active = nil;sr_idle@jup_b25_start
+active = sr_idle@jup_b25_start
 
 [sr_idle@jup_b25_start]
 on_info = {-jup_b25_flint_squad_spawned +zat_b106_search_soroka} sr_idle@jup_b25_scene %+jup_b25_flint_squad_spawned =create_squad(jup_b25_freedom_flint_squad:jup_a6)%
@@ -19,8 +19,8 @@ on_game_timer = 3600 | {=jup_b221_who_will_start(ability)} sr_idle@choose
 on_info = {=jup_b221_who_will_start(choose)} sr_idle@a, sr_idle@d
 
 [sr_idle@a]
-on_info = {+jup_b221_spawn_more_freedom} %=create_squad(jup_b221_freedom_squad:jup_a6) -jup_b221_spawn_more_freedom%, {+jup_b221_spawn_more_duty} %=create_squad(jup_b221_duty_squad:jup_a6) -jup_b221_spawn_more_duty%;–¢–û–õ–¨–ö–û –î–õ–Ø –¢–ï–°–¢–ê! 
-on_actor_inside = {=obj_on_job(logic@jup_b221_duty_01:jup_a6) =obj_on_job(logic@jup_b221_duty_02:jup_a6) =obj_on_job(logic@jup_b221_duty_03:jup_a6) =obj_on_job(logic@jup_b221_freedom_01:jup_a6) =obj_on_job(logic@jup_b221_freedom_02:jup_a6) =obj_on_job(logic@jup_b221_freedom_02:jup_a6)} sr_idle@b %+jup_b221_duty_main%
+on_info = {+jup_b221_spawn_more_freedom} %=create_squad(jup_b221_freedom_squad:jup_a6) -jup_b221_spawn_more_freedom%, {+jup_b221_spawn_more_duty} %=create_squad(jup_b221_duty_squad:jup_a6) -jup_b221_spawn_more_duty%;“ŒÀ‹ Œ ƒÀﬂ “≈—“¿! 
+on_actor_inside = {=is_obj_on_job(logic@jup_b221_duty_01:jup_a6) =is_obj_on_job(logic@jup_b221_duty_02:jup_a6) =is_obj_on_job(logic@jup_b221_duty_03:jup_a6) =is_obj_on_job(logic@jup_b221_freedom_01:jup_a6) =is_obj_on_job(logic@jup_b221_freedom_02:jup_a6) =is_obj_on_job(logic@jup_b221_freedom_02:jup_a6)} sr_idle@b %+jup_b221_duty_main%
 
 [sr_idle@b]
 on_info = {-jup_b221_duty_main} sr_idle@c1 
@@ -35,7 +35,7 @@ on_game_timer = 10 | {-jup_b221_duty_reply} sr_idle@c3 %+jup_b221_duty_reaction_
 on_game_timer = 10 | {-jup_b221_duty_reply} sr_idle@d, sr_idle@g 
 
 [sr_idle@d]
-on_actor_inside = {=obj_on_job(logic@jup_b221_duty_01:jup_a6) =obj_on_job(logic@jup_b221_duty_02:jup_a6) =obj_on_job(logic@jup_b221_duty_03:jup_a6) =obj_on_job(logic@jup_b221_freedom_01:jup_a6) =obj_on_job(logic@jup_b221_freedom_02:jup_a6) =obj_on_job(logic@jup_b221_freedom_02:jup_a6)} sr_idle@e %+jup_b221_freedom_main%
+on_actor_inside = {=is_obj_on_job(logic@jup_b221_duty_01:jup_a6) =is_obj_on_job(logic@jup_b221_duty_02:jup_a6) =is_obj_on_job(logic@jup_b221_duty_03:jup_a6) =is_obj_on_job(logic@jup_b221_freedom_01:jup_a6) =is_obj_on_job(logic@jup_b221_freedom_02:jup_a6) =is_obj_on_job(logic@jup_b221_freedom_02:jup_a6)} sr_idle@e %+jup_b221_freedom_main%
 
 [sr_idle@e]
 on_info = {-jup_b221_freedom_main} sr_idle@f1 

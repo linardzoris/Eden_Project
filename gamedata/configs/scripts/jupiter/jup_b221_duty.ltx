@@ -1,6 +1,6 @@
 [logic@jup_b221_duty_01]
 active = animpoint@jup_b221_duty_01_reach
-suitable = {+jup_b25_freedom_flint_gone =npc_in_zone(jup_a6_sr_noweap) =npc_community(dolg)} true
+suitable = {=check_npc_name(monolith)} false, {+jup_b25_freedom_flint_gone =npc_in_zone(jup_a6_sr_noweap) =npc_community(dolg)} true
 prior = 150
 
 [animpoint@jup_b221_duty_01_reach]
@@ -9,7 +9,7 @@ avail_animations = animpoint_stay_table
 use_camp = false
 meet = meet@jup_b221_duty
 on_info = {=npc_in_zone(jup_a6_sr_light)} animpoint@jup_b221_duty_01
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 out_restr = jup_a6_sr_noweap
 gather_items_enabled = false
 help_wounded_enabled = false
@@ -21,9 +21,9 @@ avail_animations = animpoint_stay_table
 use_camp = false
 meet = meet@jup_b221_duty
 on_info = {+jup_b221_duty_main} animpoint@jup_b221_duty_01_theme
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = jup_a6_sr_noweap
 gather_items_enabled = false
 help_wounded_enabled = false
@@ -36,9 +36,9 @@ use_camp = false
 meet = no_meet
 on_info = {-jup_b221_play_main_start} %=jup_b221_play_main(duty) +jup_b221_play_main_start% 
 on_signal = theme_end | animpoint@jup_b221_duty_01 %-jup_b221_duty_main -jup_b221_play_main_start%
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = jup_a6_sr_noweap
 gather_items_enabled = false
 help_wounded_enabled = false
@@ -59,7 +59,7 @@ meet_on_talking = false
 
 [logic@jup_b221_duty_02]
 active = animpoint@jup_b221_duty_02_reach
-suitable = {+jup_b25_freedom_flint_gone =npc_in_zone(jup_a6_sr_noweap) =npc_community(dolg)} true
+suitable = {=check_npc_name(monolith)} false, {+jup_b25_freedom_flint_gone =npc_in_zone(jup_a6_sr_noweap) =npc_community(dolg)} true
 prior = 150
 
 [animpoint@jup_b221_duty_02_reach]
@@ -68,7 +68,7 @@ avail_animations = animpoint_stay_table
 use_camp = false
 meet = meet@jup_b221_duty
 on_info = {=npc_in_zone(jup_a6_sr_light)} animpoint@jup_b221_duty_02
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 out_restr = jup_a6_sr_noweap
 gather_items_enabled = false
 help_wounded_enabled = false
@@ -80,9 +80,9 @@ avail_animations = animpoint_stay_table
 use_camp = false
 meet = meet@jup_b221_duty
 on_info = {+jup_b221_duty_reaction_01} animpoint@jup_b221_duty_02_reaction
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = jup_a6_sr_noweap
 gather_items_enabled = false
 help_wounded_enabled = false
@@ -94,9 +94,9 @@ use_camp = false
 meet = no_meet
 on_info = %=play_sound(jup_b221_duty_reaction)%
 on_signal = sound_end | animpoint@jup_b221_duty_02 %-jup_b221_duty_reaction_01%
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = jup_a6_sr_noweap
 gather_items_enabled = false
 help_wounded_enabled = false
@@ -106,7 +106,7 @@ corpse_detection_enabled = false
 
 [logic@jup_b221_duty_03]
 active = animpoint@jup_b221_duty_03_reach
-suitable = {+jup_b25_freedom_flint_gone =npc_in_zone(jup_a6_sr_noweap) =npc_community(dolg)} true
+suitable = {=check_npc_name(monolith)} false, {+jup_b25_freedom_flint_gone =npc_in_zone(jup_a6_sr_noweap) =npc_community(dolg)} true
 prior = 150
 
 [animpoint@jup_b221_duty_03_reach]
@@ -115,7 +115,7 @@ avail_animations = animpoint_stay_table
 use_camp = false
 meet = meet@jup_b221_duty
 on_info = {=npc_in_zone(jup_a6_sr_light)} animpoint@jup_b221_duty_03
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 out_restr = jup_a6_sr_noweap
 gather_items_enabled = false
 help_wounded_enabled = false
@@ -127,9 +127,9 @@ avail_animations = animpoint_stay_table
 use_camp = false
 meet = meet@jup_b221_duty
 on_info = {+jup_b221_duty_reaction_02} animpoint@jup_b221_duty_03_reaction
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = jup_a6_sr_noweap
 gather_items_enabled = false
 help_wounded_enabled = false
@@ -141,9 +141,9 @@ use_camp = false
 meet = no_meet
 on_info = %=play_sound(jup_b221_duty_reaction)%
 on_signal = sound_end | animpoint@jup_b221_duty_03 %-jup_b221_duty_reaction_02%
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = jup_a6_sr_noweap
 gather_items_enabled = false
 help_wounded_enabled = false

@@ -15,7 +15,7 @@ function evaluator_use_smartcover_in_combat:__init(storage, name) super(nil, nam
 end
 function evaluator_use_smartcover_in_combat:evaluate()
 	if xr_logic.is_active(self.object, self.st) then
-		return self.st.use_in_combat or false
+		return	self.st.use_in_combat
 	end
 	return false
 end
@@ -194,7 +194,7 @@ end
 -- Smartcover binder
 ----------------------------------------------------------------------------------------------------------------------
 function add_to_binder(npc, ini, scheme, section, storage)
-	--printf("DEBUG: add_to_binder: scheme='%s', section='%s'", scheme, section)
+	printf("DEBUG: add_to_binder: scheme='%s', section='%s'", scheme, section)
 	local operators	= {}
 	local properties  = {}
 
@@ -260,27 +260,27 @@ end
 
 
 function set_scheme(npc, ini, scheme, section, gulag_name)
-	--printf("DEBUG: set_scheme: scheme='%s', section='%s'", scheme, section)
+	printf("DEBUG: set_scheme: scheme='%s', section='%s'", scheme, section)
 	local st = xr_logic.assign_storage_and_bind(npc, ini, scheme, section)
 	--printf("DEBUG: set_scheme: storage assigned")
 
 	st.logic				= xr_logic.cfg_get_switch_conditions(ini, section, npc)
 
-	st.cover_name			= ini:r_string_ex(section,"cover_name") or "$script_id$_cover"
-	st.loophole_name		= ini:r_string_ex(section,"loophole_name")
-	st.cover_state			= ini:r_string_ex(section,"cover_state") or "default_behaviour"
-	st.target_enemy			= ini:r_string_ex(section,"target_enemy")
-	st.target_path			= ini:r_string_ex(section,"target_path") or "nil"
-	st.idle_min_time		= ini:r_float_ex(section,"idle_min_time") or 6
-	st.idle_max_time		= ini:r_float_ex(section,"idle_max_time") or 10
-	st.lookout_min_time		= ini:r_float_ex(section,"lookout_min_time") or 6
-	st.lookout_max_time		= ini:r_float_ex(section,"lookout_max_time") or 10
-	st.exit_body_state		= ini:r_string_ex(section,"exit_body_state") or "stand"
-	st.use_precalc_cover 	= ini:r_bool_ex(section,"use_precalc_cover",false)
-	st.use_in_combat	 	= ini:r_bool_ex(section,"use_in_combat",false)
-	st.weapon_type	 		= ini:r_string_ex(section,"weapon_type")
-	st.moving  				= ini:r_string_ex(section,"def_state_moving") or "sneak"
-	st.sound_idle			= ini:r_string_ex(section,"sound_idle")
+	st.cover_name			= utils.cfg_get_string	(ini, section, "cover_name", 		npc, false, "", "$script_id$_cover" )
+	st.loophole_name		= utils.cfg_get_string	(ini, section, "loophole_name", 	npc, false, "", nil)
+	st.cover_state			= utils.cfg_get_string	(ini, section, "cover_state", 		npc, false, "", "default_behaviour")
+	st.target_enemy			= utils.cfg_get_string	(ini, section, "target_enemy", 		npc, false, "", nil)
+	st.target_path			= utils.cfg_get_string	(ini, section, "target_path", 		npc, false, "", "nil")
+	st.idle_min_time		= utils.cfg_get_number	(ini, section, "idle_min_time", 	npc, false, 6)
+	st.idle_max_time		= utils.cfg_get_number	(ini, section, "idle_max_time", 	npc, false, 10)
+	st.lookout_min_time		= utils.cfg_get_number	(ini, section, "lookout_min_time",	npc, false, 6)
+	st.lookout_max_time		= utils.cfg_get_number	(ini, section, "lookout_max_time",	npc, false, 10)
+	st.exit_body_state		= utils.cfg_get_string	(ini, section, "exit_body_state", 	npc ,false, "", "stand")
+	st.use_precalc_cover 	= utils.cfg_get_bool	(ini, section, "use_precalc_cover", npc, false, false)
+	st.use_in_combat	 	= utils.cfg_get_bool	(ini, section, "use_in_combat", 	npc, false, false)
+	st.weapon_type	 		= utils.cfg_get_string	(ini, section, "weapon_type", 	npc, false, false)
+	st.moving  				= utils.cfg_get_string	(ini, section, "def_state_moving", 	npc, false, "", "sneak")
+	st.sound_idle			= utils.cfg_get_string	(ini, section, "sound_idle",		npc, false, "")
 
 --[[
 	if st.use_precalc_cover == true then

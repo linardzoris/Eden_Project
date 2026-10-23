@@ -19,9 +19,9 @@ path_look = mon_preacher_shoot
 out_restr = pri_a17_preacher_outrestr
 on_signal = preacher_ready | remark@shoot_ice  
 on_info = {+pri_a17_ice_dead} animpoint@pray
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false 
+invulnerable = true 
 meet = no_meet
 
 [remark@shoot_ice]:walker@generic
@@ -29,9 +29,9 @@ anim = threat_fire
 target =  story | pri_a17_military_sergeant_morozov
 on_signal = anim_end | remark@shoot_ice2
 out_restr = pri_a17_preacher_outrestr
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true 
-invulnerable = {!actor_enemy} true, false 
+invulnerable = true 
 meet = no_meet
 on_info = {+pri_a17_ice_dead} animpoint@pray
 
@@ -41,9 +41,9 @@ target =  story | pri_a17_military_sergeant_morozov
 on_game_timer = 15 | animpoint@pray %+pri_a17_ice_is_fucked%
 on_info = {+pri_a17_ice_dead} animpoint@pray 
 out_restr = pri_a17_preacher_outrestr
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false 
+invulnerable = true 
 meet = no_meet
 
 [animpoint@pray]:walker@generic
@@ -55,7 +55,7 @@ on_game_timer2 = 180| camper@angry_preacher
 on_info = {+pri_a17_preacher_hitted_by_actor}  camper@angry_preacher, {=counter_equal(pri_a17_monolith_amb_death:10)} camper@angry_preacher 
 out_restr = pri_a17_preacher_outrestr
 meet = no_meet
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true 
 
 [camper@angry_preacher]:walker@generic
@@ -87,7 +87,7 @@ on_death = death
 path_walk = ambusher_1_trans
 path_look = ambusher_trans_look_1
 def_state_standing = trans_0
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true 
 on_info = {+pri_a17_actor_attack_military} walker@ambusher_1, {+pri_a17_mon_ambush_start} walker@ambusher_1, {+pri_a17_actor_find_ambush} walker@ambusher_1
 
@@ -114,7 +114,7 @@ on_death = death
 path_walk = ambusher_2_trans
 path_look = ambusher_trans_look_2
 def_state_standing = trans_0
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true 
 on_info = {+pri_a17_actor_attack_military} walker@ambusher_2, {+pri_a17_mon_ambush_start} walker@ambusher_2, {+pri_a17_actor_find_ambush} walker@ambusher_2
 
@@ -138,7 +138,7 @@ on_death = death
 path_walk = ambusher_3_trans
 path_look = ambusher_trans_look_2
 def_state_standing = trans_1
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true 
 on_info = {+pri_a17_actor_attack_military} walker@ambusher_3, {+pri_a17_mon_ambush_start} walker@ambusher_3, {+pri_a17_actor_find_ambush} walker@ambusher_3
 
@@ -162,7 +162,7 @@ on_death = death
 path_walk = ambusher_4_trans
 path_look = ambusher_trans_look_2
 def_state_standing = trans_0
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true 
 on_info = {+pri_a17_actor_attack_military} walker@ambusher_4, {+pri_a17_mon_ambush_start} walker@ambusher_4, {+pri_a17_actor_find_ambush} walker@ambusher_4
 
@@ -186,7 +186,7 @@ on_death = death
 path_walk = ambusher_5_trans
 path_look = ambusher_trans_look_2
 def_state_standing = trans_1
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true 
 on_info = {+pri_a17_actor_attack_military} walker@ambusher_5, {+pri_a17_mon_ambush_start} walker@ambusher_5, {+pri_a17_actor_find_ambush} walker@ambusher_5
 
@@ -288,7 +288,7 @@ known_info = known_info
 path_walk = patrol_1_trans
 path_look = patrol_trans_look
 def_state_standing = trans_1
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true 
 on_info = {+pri_a17_actor_attack_military} walker@attack_1, {+pri_a17_patrol_go} patrol@patrol_1, {+pri_a17_actor_find_ambush} patrol@patrol_1
 
@@ -354,7 +354,7 @@ known_info = known_info
 path_walk = patrol_2_trans
 path_look = patrol_trans_look
 def_state_standing = trans_0
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true 
 on_info =  {+pri_a17_actor_attack_military} walker@attack_2, {+pri_a17_patrol_go} patrol@patrol_2, {+pri_a17_actor_find_ambush} patrol@patrol_2
 
@@ -409,7 +409,7 @@ known_info = known_info
 path_walk = patrol_3_trans
 path_look = patrol_trans_look
 def_state_standing = trans_1
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true 
 on_info =  {+pri_a17_actor_attack_military} walker@attack_lead, {+pri_a17_patrol_go} patrol@patrol_lead, {+pri_a17_actor_find_ambush} patrol@patrol_lead
 
@@ -537,7 +537,7 @@ on_death = death
 path_walk = sniper_1_trans
 path_look = ambusher_trans_look_1
 def_state_standing = trans_1
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true 
 on_info = {+pri_a17_actor_attack_military} walker@take_pos_1, {+pri_a17_mon_ambush_start} walker@take_pos_1, {+pri_a17_actor_find_ambush} walker@take_pos_1
 
@@ -570,7 +570,7 @@ on_death = death
 path_walk = sniper_2_trans
 path_look = ambusher_trans_look_1
 def_state_standing = trans_0
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true 
 on_info = {+pri_a17_actor_attack_military} walker@take_pos_2, {+pri_a17_mon_ambush_start} walker@take_pos_2, {+pri_a17_actor_find_ambush} walker@take_pos_2
 

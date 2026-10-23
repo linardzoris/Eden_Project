@@ -11,7 +11,7 @@ path_walk = evac_military_1_walk
 path_look = evac_military_1_look
 def_state_standing = hide_na
 out_restr = pri_a28_scene_end_zone
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 on_info = {+pri_a28_squad_dead} camper@pri_a28_evac_military_1 %=clear_smart_terrain(pri_sim_2) +pri_a28_evac_squad_active%
 on_info2 = {=dist_to_actor_le(150)} camper@pri_a28_evac_military_1 %=clear_smart_terrain(pri_sim_2) +pri_a28_evac_squad_active%
 on_info3 = {+pri_a28_evac_done} camper@pri_a28_evac_military_1 %=clear_smart_terrain(pri_sim_2) +pri_a28_evac_squad_active%

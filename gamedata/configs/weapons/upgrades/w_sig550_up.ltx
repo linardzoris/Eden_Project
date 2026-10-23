@@ -1,4 +1,4 @@
-;РЎРєРѕСЂРѕСЃС‚СЂРµР»СЊРЅРѕСЃС‚СЊ(1)10%
+;Скорострельность(1)10%
 ;----------------------
 [up_sect_firsta_sig550]
 cost		      		= 800
@@ -6,7 +6,7 @@ value					= +10
 
 rpm                     = +75 ;750
 
-;РћС‚РґР°С‡Р°(2)-20%
+;Отдача(2)-20%
 ;_------------
 [up_sect_firstc_sig550]
 cost	      	     	= 1200
@@ -14,30 +14,30 @@ value					= -20
 
 cam_dispersion              = -0.045		;0.4
 cam_dispersion_inc         	= -0.018		;0.4
-cam_step_angle_horz        	= -0.14		;1.0 [0.46 РІ РѕСЃС‚Р°С‚РєРµ]
+cam_step_angle_horz        	= -0.14		;1.0 [0.46 в остатке]
 
 zoom_cam_dispersion          = -0.05	;0.3
 zoom_cam_dispersion_inc      = -0.02	;0.3
-zoom_cam_step_angle_horz     = -0.1 	;0.7 [0.17 РІ РѕСЃС‚Р°С‚РєРµ]
+zoom_cam_step_angle_horz     = -0.1 	;0.7 [0.17 в остатке]
 
-;РќР°РґРµР¶РЅРѕСЃС‚СЊ(3)25%
+;Надежность(3)25%
 ;_---------------
 [up_sect_firstd_sig550]
 cost		      		= 1200
 value					= +25
 
-;СѓРІРµР»РёС‡РµРЅРёРµ РґРёСЃРїРµСЂСЃРёРё РІ РїСЂРѕС†РµРЅС‚Р°С… РїСЂРё РјР°РєСЃРёРјР°Р»СЊРЅРѕРј РёР·РЅРѕСЃРµ
+;увеличение дисперсии в процентах при максимальном износе
 fire_dispersion_condition_factor    = -1.5 ;15
-;СѓРІРµР»РёС‡РµРЅРёРµ РёР·РЅРѕС€РµРЅРѕСЃС‚Рё РїСЂРё РІС‹СЃС‚СЂРµР»Рµ РѕС‡РµСЂРµРґСЊСЋ
+;увеличение изношености при выстреле очередью
 condition_queue_shot_dec	= -0.0001 ;0.0013
-;СѓРІРµР»РёС‡РµРЅРёРµ РёР·РЅРѕС€РµРЅРѕСЃС‚Рё РїСЂРё РѕРґРёРЅРѕС‡РЅРѕРј РІС‹СЃС‚СЂРµР»Рµ
+;увеличение изношености при одиночном выстреле
 condition_shot_dec      	= -0.0001 ;0.0011
-;С€Р°РЅСЃ РѕСЃРµС‡РєРё РїСЂРё РёР·РЅРѕС€РµРЅРѕСЃС‚Рё Р±РѕР»СЊС€Рµ С‡РµРј misfireStartCondition
+;шанс осечки при изношености больше чем misfireStartCondition
 misfire_start_prob	     	= -0.0015
-;С€Р°РЅСЃ РѕСЃРµС‡РєРё РїСЂРё РёР·РЅРѕС€РµРЅРѕСЃС‚Рё Р±РѕР»СЊС€Рµ С‡РµРј misfireEndCondition
+;шанс осечки при изношености больше чем misfireEndCondition
 misfire_end_prob	     	= -0.02 ;0.03
 
-;РћС‚РґР°С‡Р°(3)-30%
+;Отдача(3)-30%
 ;_------------
 [up_sect_firste_sig550]
 cost		      		= 1600
@@ -45,34 +45,34 @@ value					= -30
 
 cam_dispersion              = -0.085	;0.4
 cam_dispersion_inc         	= -0.045	;0.4
-cam_step_angle_horz        	= -0.42		;1.0 [0.46 РІ РѕСЃС‚Р°С‚РєРµ]
+cam_step_angle_horz        	= -0.42		;1.0 [0.46 в остатке]
 
 zoom_cam_dispersion          = -0.09	;0.3
 zoom_cam_dispersion_inc      = -0.048	;0.3
-zoom_cam_step_angle_horz     = -0.28 	;0.7 [0.17 РІ РѕСЃС‚Р°С‚РєРµ]
+zoom_cam_step_angle_horz     = -0.28 	;0.7 [0.17 в остатке]
 
-;РћС‚РґР°С‡Р°(1)-10%
+;Отдача(1)-10%
 ;_------------
 [up_sect_secona_sig550]
 cost		      		= 800
 value					= -10
 
-cam_dispersion              = -0.07		;0.4 [0.085 РІ РѕСЃС‚Р°С‚РєРµ]
+cam_dispersion              = -0.07		;0.4 [0.085 в остатке]
 cam_dispersion_inc         	= -0.03		;0.4
-cam_step_angle_horz        	= -0.23		;1.0 [0.46 РІ РѕСЃС‚Р°С‚РєРµ]
+cam_step_angle_horz        	= -0.23		;1.0 [0.46 в остатке]
 
 zoom_cam_dispersion          = -0.068	;0.3
 zoom_cam_dispersion_inc      = -0.029	;0.3
-zoom_cam_step_angle_horz     = -0.19 	;0.7 [0.17 РІ РѕСЃС‚Р°С‚РєРµ]
+zoom_cam_step_angle_horz     = -0.19 	;0.7 [0.17 в остатке]
 
-;РўРѕС‡РЅРѕСЃС‚СЊ(2)20%
+;Точность(2)20%
 [up_sect_seconc_sig550]
 cost		      		= 1200
 value					= +20
 fire_dispersion_base    = -0.04 ;0.06
 fire_dispersion_condition_factor    = -1 ;15
 
-;РћС‚РґР°С‡Р°(3)-30%
+;Отдача(3)-30%
 ;_------------
 [up_sect_secone_sig550]
 cost		      		= 1600
@@ -80,33 +80,33 @@ value					= -30
 
 cam_dispersion              = -0.085		;0.4
 cam_dispersion_inc         	= -0.048	;0.4
-cam_step_angle_horz        	= -0.42		;1.0 [0.46 РІ РѕСЃС‚Р°С‚РєРµ]
+cam_step_angle_horz        	= -0.42		;1.0 [0.46 в остатке]
 
 zoom_cam_dispersion          = -0.09		;0.3
 zoom_cam_dispersion_inc      = -0.047	;0.3
-zoom_cam_step_angle_horz     = -0.28 	;0.7 [0.17 РІ РѕСЃС‚Р°С‚РєРµ]
+zoom_cam_step_angle_horz     = -0.28 	;0.7 [0.17 в остатке]
 
-;РўРѕС‡РЅРѕСЃС‚СЊ(3)30%
+;Точность(3)30%
 [up_sect_seconf_sig550]
 cost		      		= 1600
 value					= +30
 fire_dispersion_base    = -0.07 ;0.06
 fire_dispersion_condition_factor    = -1 ;15
 
-;РќР°РґРµР¶РЅРѕСЃС‚СЊ(1)10%
+;Надежность(1)10%
 ;_---------------
 [up_sect_thirda_sig550]
 cost		      		= 800
 value					= +10
 
-;СѓРІРµР»РёС‡РµРЅРёРµ РґРёСЃРїРµСЂСЃРёРё РІ РїСЂРѕС†РµРЅС‚Р°С… РїСЂРё РјР°РєСЃРёРјР°Р»СЊРЅРѕРј РёР·РЅРѕСЃРµ
+;увеличение дисперсии в процентах при максимальном износе
 fire_dispersion_condition_factor    = -1 ;15
-;С€Р°РЅСЃ РѕСЃРµС‡РєРё РїСЂРё РёР·РЅРѕС€РµРЅРѕСЃС‚Рё Р±РѕР»СЊС€Рµ С‡РµРј misfireStartCondition
+;шанс осечки при изношености больше чем misfireStartCondition
 misfire_start_prob	     	= -0.0007
-;С€Р°РЅСЃ РѕСЃРµС‡РєРё РїСЂРё РёР·РЅРѕС€РµРЅРѕСЃС‚Рё Р±РѕР»СЊС€Рµ С‡РµРј misfireEndCondition
+;шанс осечки при изношености больше чем misfireEndCondition
 misfire_end_prob	     	= -0.01 ;0.03
 
-;РЎРєРѕСЂРѕСЃС‚СЂРµР»СЊРЅРѕСЃС‚СЊ(2)15%
+;Скорострельность(2)15%
 ;----------------------
 [up_sect_thirdc_sig550]
 cost		      		= 1200
@@ -114,7 +114,7 @@ value					= +15
 
 rpm                     = +120 ;750
 
-;РќР°СЃС‚РёР»СЊРЅРѕСЃС‚СЊ(2)20%
+;Настильность(2)20%
 ;------------------
 [up_sect_thirdd_sig550]
 cost		      		= 1200
@@ -123,7 +123,7 @@ bullet_speed			= +100 ;570
 fire_dispersion_base    = -0.02 
 hit_impulse				= +15
 
-;РЎРєРѕСЂРѕСЃС‚СЂРµР»СЊРЅРѕСЃС‚СЊ(3)25%
+;Скорострельность(3)25%
 ;----------------------
 [up_sect_thirde_sig550]
 cost		      		= 1600
@@ -131,7 +131,7 @@ value					= +25
 
 rpm                     = +150 ;750
 
-;Р’РµСЃ
+;Вес
 ;------------------
 [up_sect_fourta_sig550]
 cost		      		= 800
@@ -146,7 +146,7 @@ PDM_disp_vel_factor 		= -0.1 ;1.5
 PDM_disp_accel_factor 		= -0.1 ;1.5
 
 
-;РЈРґРѕР±СЃС‚РІРѕ(2)15%
+;Удобство(2)15%
 ;_--------------
 [up_sect_fourtc_sig550]
 cost		      		= 1200
@@ -158,7 +158,7 @@ PDM_disp_base 				= -0.07 ;0.5
 PDM_disp_vel_factor 		= -0.25 ;1.5
 PDM_disp_accel_factor 		= -0.25 ;1.5
 
-;РЈРґРѕР±СЃС‚РІРѕ(3)25%
+;Удобство(3)25%
 ;_--------------
 [up_sect_fourte_sig550]
 cost		      		= 1600
@@ -171,7 +171,7 @@ PDM_disp_vel_factor 		= -0.5 ;1.5
 PDM_disp_accel_factor 		= -0.5 ;1.5
 
 
-;РќР°СЃС‚РёР»СЊРЅРѕСЃС‚СЊ(3)30%
+;Настильность(3)30%
 ;------------------
 [up_sect_fourtf_sig550]
 cost		      		= 1600
@@ -180,7 +180,7 @@ bullet_speed			= +150 ;570
 fire_dispersion_base    = -0.03 
 hit_impulse				= +25
 
-РћР±СЉРµРј РјР°РіР°Р·РёРЅР° +10
+Объем магазина +10
 ;--------------------
 [up_sect_fiftha_sig550]
 cost		      		= 1500
@@ -400,7 +400,7 @@ scheme_index            = 1, 4
 known                   = 1
 effects                 = up_gr_thirdef_sig550
 section                 = up_sect_thirdd_sig550
-property                = prop_bullet_speed, prop_dispersion
+property                = prop_bullet_speed
 
 precondition_functor    = inventory_upgrades.precondition_functor_a
 precondition_parameter  = a & b
@@ -504,7 +504,7 @@ scheme_index            = 2, 5
 known                   = 1
 effects                 =
 section                 = up_sect_fourtf_sig550
-property                = prop_bullet_speed, prop_dispersion
+property                = prop_bullet_speed
 
 precondition_functor    = inventory_upgrades.precondition_functor_a
 precondition_parameter  = a & b

@@ -1,400 +1,847 @@
 <?xml version="1.0" encoding="windows-1251" ?>
 <string_table>
 	<string id="Clear">
-		<text>РЇСЃРЅР°СЏ</text>
+		<text>Ясная</text>
 	</string>
 	<string id="Cloudy">
-		<text>РћР±Р»Р°С‡РЅР°СЏ</text>
+		<text>Облачная</text>
 	</string>
 	<string id="Default">
-		<text>СЃСЂРµРґРЅРёРµ</text>
+		<text>средние</text>
 	</string>
 	<string id="Extreme">
-		<text>РјР°РєСЃРёРјР°Р»СЊРЅС‹Рµ</text>
+		<text>максимальные</text>
 	</string>
 	<string id="High">
-		<text>РІС‹СЃРѕРєРёРµ</text>
+		<text>высокие</text>
 	</string>
 	<string id="Low">
-		<text>РЅРёР·РєРёРµ</text>
+		<text>низкие</text>
 	</string>
 	<string id="Minimum">
-		<text>РјРёРЅРёРјР°Р»СЊРЅС‹Рµ</text>
+		<text>минимальные</text>
 	</string>
 	<string id="Night">
-		<text>РќРѕС‡СЊ</text>
+		<text>Ночь</text>
 	</string>
 	<string id="Rain">
-		<text>Р”РѕР¶РґСЊ</text>
+		<text>Дождь</text>
 	</string>
 	<string id="game type">
-		<text>РўРРџ РР“Р Р«</text>
+		<text>ТИП ИГРЫ</text>
 	</string>
 	<string id="gd_master">
-		<text>РјР°СЃС‚РµСЂ</text>
+		<text>мастер</text>
 	</string>
 	<string id="gd_novice">
-		<text>РЅРѕРІРёС‡РѕРє</text>
+		<text>новичок</text>
 	</string>
 	<string id="gd_veteran">
-		<text>РІРµС‚РµСЂР°РЅ</text>
+		<text>ветеран</text>
 	</string>
 	<string id="icon">
-		<text>Р—РќРђР§РљР</text>
+		<text>ЗНАЧКИ</text>
 	</string>
 	<string id="map">
-		<text>РљРђР РўРђ</text>
+		<text>КАРТА</text>
+	</string>
+	<string id="mm_mp_actret_time">
+		<text>Возвращение активацией</text>
+	</string>
+	<string id="mm_mp_allowvoting">
+		<text>Разрешить голосование</text>
+	</string>
+	<string id="mm_mp_anomalytime">
+		<text>Время аномалии (мин.)</text>
+	</string>
+	<string id="mm_mp_artefactcapture">
+		<text>Захват артефакта</text>
+	</string>
+	<string id="mm_mp_artefdelay">
+		<text>Задержка артефакта</text>
+	</string>
+	<string id="mm_mp_artefnum">
+		<text>Кол-во артефактов</text>
+	</string>
+	<string id="mm_mp_artefstay">
+		<text>Время артефакта</text>
+	</string>
+	<string id="mm_mp_artret_time">
+		<text>Возврат артефакта</text>
+	</string>
+	<string id="mm_mp_autoteambalance">
+		<text>Автобаланс команд</text>
+	</string>
+	<string id="mm_mp_autoteamswap">
+		<text>Автосмена команд</text>
+	</string>
+	<string id="mm_mp_avail_maps">
+		<text>ДОСТУПНЫЕ КАРТЫ</text>
+	</string>
+	<string id="mm_mp_cancel">
+		<text>Отмена</text>
+	</string>
+	<string id="mm_mp_cd_key">
+		<text>CD-key</text>
+	</string>
+	<string id="mm_mp_check_cdkey">
+		<text>проверять CD-key</text>
+	</string>
+	<string id="mm_mp_client">
+		<text>Клиент</text>
+	</string>
+	<string id="mm_mp_create">
+		<text>Создать</text>
+	</string>
+	<string id="mm_mp_damageblock">
+		<text>Неуязвимость (сек.)</text>
+	</string>
+	<string id="mm_mp_damageblockindicator">
+		<text>Индикатор неуязвимости</text>
+	</string>
+	<string id="mm_mp_deaths">
+		<text>Смерти</text>
+	</string>
+	<string id="mm_mp_dedicated">
+		<text>Выделенный</text>
+	</string>
+	<string id="mm_mp_demo_play_list">
+		<text>список демо-роликов</text>
+	</string>
+	<string id="mm_mp_demo_play_players_stats">
+		<text>статистика игроков</text>
+	</string>
+	<string id="mm_mp_demosave">
+		<text>Записывать демо-ролики</text>
+	</string>
+	<string id="mm_mp_demosave_options">
+		<text>Запись демо-роликов</text>
+	</string>
+	<string id="mm_mp_empty">
+		<text>Пустые</text>
+	</string>
+	<string id="mm_mp_filters">
+		<text>Фильтры</text>
+	</string>
+	<string id="mm_mp_forcerespawn">
+		<text>Рождение (сек.)</text>
+	</string>
+	<string id="mm_mp_fraglimit">
+		<text>Лимит фрагов</text>
+	</string>
+	<string id="mm_mp_frags">
+		<text>Фраги</text>
+	</string>
+	<string id="mm_mp_freezetime">
+		<text>Время задержки</text>
+	</string>
+	<string id="mm_mp_friendlyfire">
+		<text>Огонь союзника (к.)</text>
+	</string>
+	<string id="mm_mp_friendlyindicators">
+		<text>Индикаторы союзников</text>
+	</string>
+	<string id="mm_mp_friendlynames">
+		<text>Имена друзей</text>
+	</string>
+	<string id="mm_mp_full">
+		<text>Полные</text>
+	</string>
+	<string id="mm_mp_gamemode">
+		<text>Режим</text>
+	</string>
+	<string id="mm_mp_host_port">
+		<text>IP/хост: порт</text>
+	</string>
+	<string id="mm_mp_internet">
+		<text>Интернет</text>
+	</string>
+	<string id="mm_mp_join">
+		<text>Соединиться</text>
+	</string>
+	<string id="mm_mp_lan">
+		<text>Локальная сеть</text>
+	</string>
+	<string id="mm_mp_listenservers">
+		<text>Не выделенные</text>
+	</string>
+	<string id="mm_mp_load_demo">
+		<text>Воспроизвести</text>
+	</string>
+	<string id="mm_mp_mapratation">
+		<text>Список карт</text>
+	</string>
+	<string id="mm_mp_maxplayers">
+		<text>Макс. игроков</text>
+	</string>
+	<string id="mm_mp_network_connection">
+		<text>Сетевое соединение</text>
+	</string>
+	<string id="mm_mp_noanomalies">
+		<text>Без аномалий</text>
+	</string>
+	<string id="mm_mp_options">
+		<text>Опции</text>
+	</string>
+	<string id="mm_mp_password">
+		<text>Пароль</text>
+	</string>
+	<string id="mm_mp_player_name">
+		<text>Имя игрока:</text>
+	</string>
+	<string id="mm_mp_players">
+		<text>Игроки</text>
+	</string>
+	<string id="mm_mp_players_count">
+		<text>количество игроков</text>
+	</string>
+	<string id="mm_mp_publicserver">
+		<text>Интернет-сервер</text>
+	</string>
+	<string id="mm_mp_quickrefresh">
+		<text>Обновить один</text>
+	</string>
+	<string id="mm_mp_rateofchange">
+		<text>Коэф. изменения</text>
+	</string>
+	<string id="mm_mp_refresh">
+		<text>Обновить всё</text>
+	</string>
+	<string id="mm_mp_reinforcement">
+		<text>Подкрепление (сек.)</text>
+	</string>
+	<string id="mm_mp_respawnoptions">
+		<text>Опции рождения</text>
+	</string>
+	<string id="mm_mp_sel_maps">
+		<text>ВЫБРАННЫЕ КАРТЫ</text>
+	</string>
+	<string id="mm_mp_server">
+		<text>Сервер</text>
+	</string>
+	<string id="mm_mp_server_list">
+		<text>Список серверов</text>
+	</string>
+	<string id="mm_mp_server_prop">
+		<text>Свойства сервера</text>
+	</string>
+	<string id="mm_mp_serverinfo">
+		<text>Инфо сервера</text>
+	</string>
+	<string id="mm_mp_serverlist">
+		<text>Сервер</text>
+	</string>
+	<string id="mm_mp_servername">
+		<text>Имя сервера</text>
+	</string>
+	<string id="mm_mp_serversettings">
+		<text>Настройки сервера</text>
+	</string>
+	<string id="mm_mp_spectator">
+		<text>Наблюдатель</text>
+	</string>
+	<string id="mm_mp_spectator_firsteye">
+		<text>От первого лица</text>
+	</string>
+	<string id="mm_mp_spectator_freefly">
+		<text>Свободный полёт</text>
+	</string>
+	<string id="mm_mp_spectator_freelook">
+		<text>Свободно-привязанный</text>
+	</string>
+	<string id="mm_mp_spectator_lookat">
+		<text>От третьего лица</text>
+	</string>
+	<string id="mm_mp_spectator_options">
+		<text>Настройки наблюдателя</text>
+	</string>
+	<string id="mm_mp_spectator_teamonly">
+		<text>Только для команды</text>
+	</string>
+	<string id="mm_mp_startweather">
+		<text>Погода</text>
+	</string>
+	<string id="mm_mp_team_stats">
+		<text>счёт</text>
+	</string>
+	<string id="mm_mp_timelimit">
+		<text>Лимит времени (мин.)</text>
+	</string>
+	<string id="mm_mp_warmuptime">
+		<text>Разогрев (сек.)</text>
+	</string>
+	<string id="mm_mp_weatheroptions">
+		<text>Опции погоды</text>
+	</string>
+	<string id="mm_mp_withoutfriendlyfire">
+		<text>Без огня по своим</text>
+	</string>
+	<string id="mm_mp_withoutpassword">
+		<text>Без пароля</text>
+	</string>
+	<string id="mm_mp_withoutpunkbuster">
+		<text>Без Punk Buster</text>
+	</string>
+	<string id="mm_mp_withpassword">
+		<text>С паролем</text>
+	</string>
+	<string id="mm_offline_mode">
+		<text>Локальная сеть</text>
+	</string>
+	<string id="mm_online_mode">
+		<text>Интернет</text>
+	</string>
+	<string id="mp_agroprom">
+		<text>Завод «Агропром»</text>
+	</string>
+	<string id="mp_atp">
+		<text>АТП</text>
+	</string>
+	<string id="mp_bath">
+		<text>Бассейн</text>
+	</string>
+	<string id="mp_change_unick_success">
+		<text>Успешное изменение уникального ника!</text>
+	</string>
+	<string id="mp_darkvalley">
+		<text>Тёмная Долина</text>
+	</string>
+	<string id="mp_factory">
+		<text>Завод «Янтарь»</text>
+	</string>
+	<string id="mp_gamespy_atlas_error">
+		<text>ошибка соединения с сервером статистики</text>
+	</string>
+	<string id="mp_gamespy_ws_login_error">
+		<text>ошибка соединения с логин-сервером</text>
+	</string>
+	<string id="mp_login_success">
+		<text>Вы успешно авторизировались</text>
+	</string>
+	<string id="mp_lost_village">
+		<text>Заброшенная деревня</text>
+	</string>
+	<string id="mp_military_1">
+		<text>Военные склады</text>
+	</string>
+	<string id="mp_nick_name_not_valid">
+		<text>неправильное имя</text>
+	</string>
+	<string id="mp_pool">
+		<text>Бассейн</text>
+	</string>
+	<string id="mp_railroad">
+		<text>Ж/д станция</text>
+	</string>
+	<string id="mp_rostok">
+		<text>Завод «Росток»</text>
+	</string>
+	<string id="mp_unique_nick_not_valid">
+		<text>неправильный уникальный ник</text>
+	</string>
+	<string id="mp_want_to_delete_demo">
+		<text>Вы действительно хотите удалить</text>
+	</string>
+	<string id="mp_workshop">
+		<text>Заброшенная фабрика</text>
+	</string>
+	<string id="ping">
+		<text>ПИНГ</text>
+	</string>
+	<string id="players">
+		<text>ИГРОКИ</text>
 	</string>
 	<string id="renderer_r1">
-		<text>РЎС‚Р°С‚РёС‡РЅРѕРµ РѕСЃРІРµС‰РµРЅРёРµ</text>
-	</string>
-	<string id="renderer_r2a">
-		<text>Р”РёРЅР°Рј. РѕСЃРІРµС‰РµРЅРёРµ РѕР±СЉРµРєС‚РѕРІ</text>
+		<text>Статичное освещение</text>
 	</string>
 	<string id="renderer_r2">
-		<text>РџРѕР»РЅРѕРµ РґРёРЅР°РјРёС‡. РѕСЃРІРµС‰РµРЅРёРµ</text>
+		<text>Полное динамическое освещение</text>
 	</string>
 	<string id="renderer_r2.5">
-		<text>РЈР»СѓС‡С€. РїРѕР»РЅРѕРµ РѕСЃРІРµС‰РµРЅРёРµ</text>
+		<text>Улучшенное полное освещение</text>
+	</string>
+	<string id="renderer_r2a">
+		<text>Динам. освещение объектов</text>
 	</string>
 	<string id="renderer_r3">
-		<text>РЈР». РїРѕР»РЅРѕРµ РѕСЃРІРµС‰РµРЅРёРµ (DX10)</text>
+		<text>Ул. полное освещение (DX10)</text>
 	</string>
-	<string id="renderer_r4">
-		<text>РЈР». РїРѕР»РЅРѕРµ РѕСЃРІРµС‰РµРЅРёРµ (DX11)</text>
+	<string id="server name">
+		<text>ИМЯ СЕРВЕРА</text>
+	</string>
+	<string id="st_artefacthunt">
+		<text>Охота за артефактом</text>
+	</string>
+	<string id="st_capture_the_artefact">
+		<text>Захват артефакта</text>
+	</string>
+	<string id="st_deathmatch">
+		<text>Все против всех</text>
+	</string>
+	<string id="st_mp_gsfilter">
+		<text>Фильтр:</text>
 	</string>
 	<string id="st_opt_high">
-		<text>РІС‹СЃРѕРєРѕ</text>
+		<text>высоко</text>
 	</string>
 	<string id="st_opt_low">
-		<text>РЅРёР·РєРѕ</text>
+		<text>низко</text>
 	</string>
 	<string id="st_opt_medium">
-		<text>СЃСЂРµРґРЅРµ</text>
+		<text>средне</text>
 	</string>
 	<string id="st_opt_off">
-		<text>РѕС‚РєР»СЋС‡РµРЅРѕ</text>
+		<text>отключено</text>
+	</string>
+	<string id="st_rank_experienced">
+		<text>опытный</text>
+	</string>
+	<string id="st_rank_legend">
+		<text>легендарный сталкер</text>
+	</string>
+	<string id="st_rank_novice">
+		<text>новичок</text>
+	</string>
+	<string id="st_rank_professional">
+		<text>профессионал</text>
+	</string>
+	<string id="st_rank_veteran">
+		<text>ветеран</text>
+	</string>
+	<string id="st_team_deathmatch">
+		<text>Команда против команды</text>
 	</string>
 	<string id="ui_mm_60_hz">
-		<text>Р§Р°СЃС‚РѕС‚Р° 60Р“С†</text>
+		<text>Частота 60Гц</text>
 	</string>
 	<string id="ui_mm_action">
-		<text>Р”РµР№СЃС‚РІРёРµ</text>
+		<text>Действие</text>
 	</string>
 	<string id="ui_mm_advanced">
-		<text>Р Р°СЃС€РёСЂРµРЅРЅС‹Рµ</text>
+		<text>Расширенные</text>
 	</string>
 	<string id="ui_mm_alternative">
-		<text>РђР»СЊС‚РµСЂРЅР°С‚РёРІР°</text>
+		<text>Альтернатива</text>
 	</string>
 	<string id="ui_mm_anisotropic">
-		<text>Р¤РёР»СЊС‚СЂР°С†РёСЏ С‚РµРєСЃС‚СѓСЂ</text>
+		<text>Фильтрация текстур</text>
 	</string>
 	<string id="ui_mm_apply">
-		<text>РџСЂРёРјРµРЅРёС‚СЊ</text>
+		<text>Применить</text>
 	</string>
 	<string id="ui_mm_back">
-		<text>РќР°Р·Р°Рґ</text>
+		<text>Назад</text>
 	</string>
 	<string id="ui_mm_blood">
-		<text>РљСЂРѕРІСЊ</text>
+		<text>Кровь</text>
 	</string>
 	<string id="ui_mm_brightness">
-		<text>РЇСЂРєРѕСЃС‚СЊ</text>
+		<text>Яркость</text>
 	</string>
 	<string id="ui_mm_cancel">
-		<text>РћС‚РјРµРЅР°</text>
+		<text>Отмена</text>
 	</string>
 	<string id="ui_mm_check_updates">
-		<text>РћР±РЅРѕРІР»РµРЅРёСЏ</text>
+		<text>Обновления</text>
 	</string>
 	<string id="ui_mm_contrast">
-		<text>РљРѕРЅС‚СЂР°СЃС‚</text>
+		<text>Контраст</text>
 	</string>
 	<string id="ui_mm_controls">
-		<text>РЈРїСЂР°РІР»РµРЅРёРµ</text>
+		<text>Управление</text>
 	</string>
 	<string id="ui_mm_credits">
-		<text>РўРёС‚СЂС‹</text>
+		<text>Титры</text>
 	</string>
 	<string id="ui_mm_crosshair_distance">
-		<text>Р”РёСЃС‚Р°РЅС†РёСЏ РґРѕ С†РµР»Рё</text>
+		<text>Дистанция до цели</text>
 	</string>
 	<string id="ui_mm_default">
-		<text>РџРѕ СѓРјРѕР»С‡Р°РЅРёСЋ</text>
+		<text>По умолчанию</text>
 	</string>
 	<string id="ui_mm_delete">
-		<text>РЈРґР°Р»РёС‚СЊ</text>
+		<text>Удалить</text>
 	</string>
 	<string id="ui_mm_delete_existing_file_q">
-		<text>Р”РµР№СЃС‚РІРёС‚РµР»СЊРЅРѕ СѓРґР°Р»РёС‚СЊ?</text>
+		<text>Вы действительно хотите удалить файл?</text>
 	</string>
 	<string id="ui_mm_detail_density">
-		<text>РџР»РѕС‚РЅРѕСЃС‚СЊ С‚СЂР°РІС‹</text>
+		<text>Плотность травы</text>
 	</string>
-    <string id="ui_mm_detail_radius">
-	    <text>Р”Р°Р»СЊРЅРѕСЃС‚СЊ РѕС‚СЂРёСЃРѕРІРєРё С‚СЂР°РІС‹</text>
-    </string>
 	<string id="ui_mm_difficulty">
-		<text>РЎР»РѕР¶РЅРѕСЃС‚СЊ</text>
+		<text>Сложность</text>
 	</string>
 	<string id="ui_mm_disconnect">
-		<text>РћС‚СЃРѕРµРґРёРЅРёС‚СЊСЃСЏ</text>
+		<text>Отсоединиться</text>
 	</string>
 	<string id="ui_mm_disconnect_message">
-		<text>Р’С‹ РґРµР№СЃС‚РІРёС‚РµР»СЊРЅРѕ Р¶РµР»Р°РµС‚Рµ РѕС‚СЃРѕРµРґРёРЅРёС‚СЊСЃСЏ?</text>
+		<text>Вы действительно желаете отсоединиться?</text>
 	</string>
 	<string id="ui_mm_dof">
-		<text>Р“Р»СѓР±РёРЅР° СЂРµР·РєРѕСЃС‚Рё</text>
+		<text>Глубина резкости</text>
 	</string>
 	<string id="ui_mm_dyn_crosshair">
-		<text>Р”РёРЅР°РјРёС‡. РїСЂРёС†РµР»</text>
+		<text>Динамический прицел</text>
 	</string>
 	<string id="ui_mm_dynamic_music">
-		<text>Р”РёРЅР°РјРёС‡РµСЃРєР°СЏ РјСѓР·С‹РєР°</text>
+		<text>Динамическая музыка</text>
 	</string>
 	<string id="ui_mm_eax">
-		<text>РћР±СЉРµРјРЅС‹Р№ Р·РІСѓРє (EAX)</text>
+		<text>EAX</text>
 	</string>
 	<string id="ui_mm_fullscreen">
-		<text>РџРѕР»РЅС‹Р№ СЌРєСЂР°РЅ</text>
+		<text>Полный экран</text>
 	</string>
 	<string id="ui_mm_gameplay">
-		<text>РРіСЂР°</text>
+		<text>Игра</text>
 	</string>
 	<string id="ui_mm_gamma">
-		<text>Р“Р°РјРјР°</text>
+		<text>Гамма</text>
 	</string>
 	<string id="ui_mm_geometry_lod">
-		<text>Р”РµС‚Р°Р»РёР·Р°С†РёСЏ РѕР±СЉРµРєС‚РѕРІ</text>
+		<text>Детализация объектов</text>
 	</string>
 	<string id="ui_mm_invert_mouse">
-		<text>РРЅРІРµСЂС‚РёСЂРѕРІР°С‚СЊ РјС‹С€СЊ</text>
+		<text>Инвертировать мышь</text>
 	</string>
 	<string id="ui_mm_key">
-		<text>РљРЅРѕРїРєР°</text>
+		<text>Кнопка</text>
 	</string>
 	<string id="ui_mm_keyboard_setup">
-		<text>РќР°СЃС‚СЂРѕР№РєР° РєР»Р°РІРёР°С‚СѓСЂС‹</text>
+		<text>Настройка клавиатуры</text>
 	</string>
 	<string id="ui_mm_last_save">
-		<text>РџРѕСЃР». СЃРѕС…СЂР°РЅРµРЅРёРµ</text>
+		<text>Посл. сохранение</text>
 	</string>
 	<string id="ui_mm_light_distance">
-		<text>Р”Р°Р»СЊРЅРѕСЃС‚СЊ РѕСЃРІРµС‰РµРЅРёСЏ</text>
+		<text>Дальность освещения</text>
 	</string>
 	<string id="ui_mm_load">
-		<text>Р—Р°РіСЂСѓР·РёС‚СЊ</text>
+		<text>Загрузить</text>
 	</string>
 	<string id="ui_mm_load_game">
-		<text>Р—Р°РіСЂСѓР·РёС‚СЊ РёРіСЂСѓ</text>
+		<text>Загрузить игру</text>
 	</string>
 	<string id="ui_mm_logout">
-		<text>Р’С‹Р№С‚Рё РёР· РїСЂРѕС„РёР»СЏ</text>
+		<text>Выйти из профиля</text>
 	</string>
 	<string id="ui_mm_master">
-		<text>РњР°СЃС‚РµСЂ</text>
+		<text>Мастер</text>
 	</string>
 	<string id="ui_mm_master_volume">
-		<text>Р“СЂРѕРјРєРѕСЃС‚СЊ</text>
+		<text>Громкость</text>
 	</string>
 	<string id="ui_mm_mouse_sense">
-		<text>Р§СѓРІСЃС‚РІРёС‚РµР»СЊРЅРѕСЃС‚СЊ РјС‹С€Рё</text>
+		<text>Чувствительность мыши</text>
 	</string>
 	<string id="ui_mm_msaa_alphatest">
-		<text>РЎРіР»Р°Р¶РёРІР°С‚СЊ Рђ-С‚РµСЃС‚РѕРІС‹Рµ РѕР±СЉРµРєС‚С‹</text>
+		<text>Сглаживать А-тестовые объекты</text>
 	</string>
 	<string id="ui_mm_msaa_opt">
-		<text>РћРїС‚РёРјРёР·РёСЂРѕРІР°С‚СЊ СЃРіР»Р°Р¶РёРІР°РЅРёРµ</text>
+		<text>Оптимизировать сглаживание</text>
 	</string>
 	<string id="ui_mm_multiplayer">
-		<text>РЎР•РўР•Р’РђРЇ РР“Р Рђ</text>
+		<text>СЕТЕВАЯ ИГРА</text>
 	</string>
 	<string id="ui_mm_multiplayer_n">
-		<text>РЎРµС‚РµРІР°СЏ РёРіСЂР°</text>
+		<text>Сетевая игра</text>
 	</string>
 	<string id="ui_mm_music_volume">
-		<text>Р“СЂРѕРјРєРѕСЃС‚СЊ РјСѓР·С‹РєРё</text>
+		<text>Громкость музыки</text>
 	</string>
 	<string id="ui_mm_need_restart">
-		<text>РР·РјРµРЅРµРЅРёСЏ РІСЃС‚СѓРїСЏС‚ РІ СЃРёР»Сѓ С‚РѕР»СЊРєРѕ РїРѕСЃР»Рµ РїРµСЂРµР·Р°РіСЂСѓР·РєРё РёРіСЂС‹</text>
+		<text>Изменения вступят в силу только после перезагрузки игры</text>
 	</string>
 	<string id="ui_mm_network_game">
-		<text>РЎРµС‚РµРІР°СЏ РёРіСЂР°</text>
+		<text>Сетевая игра</text>
 	</string>
 	<string id="ui_mm_newgame">
-		<text>РќРѕРІР°СЏ РёРіСЂР°</text>
+		<text>Новая игра</text>
 	</string>
 	<string id="ui_mm_novice">
-		<text>РќРѕРІРёС‡РѕРє</text>
+		<text>Новичок</text>
 	</string>
 	<string id="ui_mm_npc_torch">
-		<text>РЎРІРµС‚ С„РѕРЅР°СЂРёРєРѕРІ NPC</text>
+		<text>Свет фонариков NPC</text>
 	</string>
 	<string id="ui_mm_options">
-		<text>РћРџР¦РР</text>
+		<text>ОПЦИИ</text>
 	</string>
 	<string id="ui_mm_options_n">
-		<text>РћРїС†РёРё</text>
-	</string>
-	<string id="ui_mm_weather_options">
-		<text>РџРѕРіРѕРґР°</text>
+		<text>Опции</text>
 	</string>
 	<string id="ui_mm_particles_distance">
-		<text>Р”Р°Р»СЊРЅРѕСЃС‚СЊ С‡Р°СЃС‚РёС†</text>
+		<text>Дальность частиц</text>
 	</string>
 	<string id="ui_mm_quality_presets">
-		<text>РЈСЃС‚Р°РЅРѕРІРєРё РєР°С‡РµСЃС‚РІР°</text>
+		<text>Установки качества</text>
 	</string>
 	<string id="ui_mm_quit2windows">
-		<text>Р’С‹Р№С‚Рё РІ Windows</text>
+		<text>Выйти в Windows</text>
 	</string>
 	<string id="ui_mm_quit_game">
-		<text>Р—Р°РІРµСЂС€РёС‚СЊ РёРіСЂСѓ</text>
+		<text>Завершить игру</text>
 	</string>
 	<string id="ui_mm_quit_game_message">
-		<text>Р”РµР№СЃС‚РІРёС‚РµР»СЊРЅРѕ РїРѕРєРёРЅСѓС‚СЊ РёРіСЂСѓ?</text>
+		<text>Вы действительно желаете покинуть игру?</text>
 	</string>
 	<string id="ui_mm_quit_windows_message">
-		<text>Р”РµР№СЃС‚РІРёС‚РµР»СЊРЅРѕ РІС‹Р№С‚Рё РІ Windows?</text>
+		<text>Вы действительно хотите выйти в Windows?</text>
 	</string>
 	<string id="ui_mm_r2_detail_bump">
-		<text>Р”РµС‚Р°Р»СЊРЅС‹Р№ СЂРµР»СЊРµС„</text>
+		<text>Детальный рельеф</text>
 	</string>
 	<string id="ui_mm_r2_steep_parallax">
 		<text>Steep parallax</text>
 	</string>
 	<string id="ui_mm_r2_sun">
-		<text>РўРµРЅСЊ РѕС‚ СЃРѕР»РЅС†Р°</text>
+		<text>Тень от солнца</text>
 	</string>
 	<string id="ui_mm_r2_sun_details">
-		<text>РўРµРЅСЊ С‚СЂР°РІС‹</text>
+		<text>Тень травы</text>
 	</string>
-    	<string id="ui_mm_r__actor_shadow">
-    		<text>РўРµРЅСЊ РѕС‚ РёРіСЂРѕРєР°</text>
-    	</string>
 	<string id="ui_mm_r2_sun_quality">
-		<text>РљР°С‡РµСЃС‚РІРѕ СЃРѕР»РЅС†Р°</text>
+		<text>Качество солнца</text>
 	</string>
 	<string id="ui_mm_r3_DX10_1">
-		<text>РСЃРїРѕР»СЊР·РѕРІР°С‚СЊ DX10.1</text>
+		<text>Использовать DX10.1</text>
 	</string>
 	<string id="ui_mm_r3_MSAA">
-		<text>РџРѕР»РЅРѕСЌРєСЂР°РЅРЅРѕРµ СЃРіР»Р°Р¶РёРІР°РЅРёРµ</text>
+		<text>Полноэкранное сглаживание</text>
 	</string>
 	<string id="ui_mm_r3_dynamic_wet_surfaces">
-		<text>РќР°РјРѕРєР°РЅРёРµ РїР»РѕСЃРєРѕСЃС‚РµР№</text>
+		<text>Намокание плоскостей</text>
 	</string>
 	<string id="ui_mm_r3_gbuffer_opt">
-		<text>РћРїС‚РёРјРёР·РёСЂРѕРІР°С‚СЊ РіРµРѕРјРµС‚СЂ. Р±СѓС„РµСЂ</text>
+		<text>Оптимизировать геометр. буфер</text>
 	</string>
 	<string id="ui_mm_r3_volumetric_smoke">
-		<text>РћР±СЉС‘РјРЅС‹Р№ РґС‹Рј</text>
+		<text>Объёмный дым</text>
 	</string>
 	<string id="ui_mm_render_2">
-		<text>Р РµРЅРґРµСЂ-2</text>
+		<text>Рендер-2</text>
 	</string>
 	<string id="ui_mm_renderer">
-		<text>РўРёРї СЂРµРЅРґРµСЂР°</text>
+		<text>Тип рендера</text>
 	</string>
 	<string id="ui_mm_resolution">
-		<text>Р Р°Р·СЂРµС€РµРЅРёРµ</text>
+		<text>Разрешение</text>
 	</string>
 	<string id="ui_mm_return_game">
-		<text>РџСЂРѕРґРѕР»Р¶РёС‚СЊ</text>
+		<text>Возврат к игре</text>
 	</string>
 	<string id="ui_mm_save">
-		<text>РЎРѕС…СЂР°РЅРёС‚СЊ</text>
+		<text>Сохранить</text>
 	</string>
 	<string id="ui_mm_save_game">
-		<text>РЎРѕС…СЂР°РЅРёС‚СЊ РёРіСЂСѓ</text>
+		<text>Сохранить игру</text>
 	</string>
 	<string id="ui_mm_show_crosshair">
-		<text>РџРѕРєР°Р·С‹РІР°С‚СЊ РїСЂРёС†РµР»</text>
+		<text>Показывать прицел</text>
 	</string>
 	<string id="ui_mm_show_weapon">
-		<text>РџРѕРєР°Р·С‹РІР°С‚СЊ РѕСЂСѓР¶РёРµ</text>
+		<text>Показывать оружие</text>
 	</string>
 	<string id="ui_mm_simply">
-		<text>Р‘Р°Р·РѕРІС‹Рµ</text>
+		<text>Базовые</text>
 	</string>
 	<string id="ui_mm_snd_device">
-		<text>Р—РІСѓРєРѕРІРѕРµ СѓСЃС‚СЂРѕР№СЃС‚РІРѕ</text>
+		<text>Звуковое устройство</text>
 	</string>
 	<string id="ui_mm_soft_particles">
-		<text>РњСЏРіРєРёРµ С‡Р°СЃС‚РёС†С‹</text>
+		<text>Мягкие частицы</text>
 	</string>
 	<string id="ui_mm_soft_water">
-		<text>РњСЏРіРєР°СЏ РІРѕРґР°</text>
+		<text>Мягкая вода</text>
 	</string>
 	<string id="ui_mm_sound">
-		<text>Р—РІСѓРє</text>
+		<text>Звук</text>
 	</string>
 	<string id="ui_mm_sound_quality">
-		<text>РљР°С‡РµСЃС‚РІРѕ Р·РІСѓРєР°</text>
+		<text>Качество звука</text>
 	</string>
 	<string id="ui_mm_stalker">
-		<text>РЎС‚Р°Р»РєРµСЂ</text>
+		<text>Сталкер</text>
 	</string>
 	<string id="ui_mm_sun_quality">
-		<text>РљР°С‡РµСЃС‚РІРѕ С‚РµРЅРµР№</text>
+		<text>Качество теней</text>
 	</string>
 	<string id="ui_mm_sun_shafts">
-		<text>РЎРѕР»РЅРµС‡РЅС‹Рµ Р»СѓС‡Рё</text>
+		<text>Солнечные лучи</text>
 	</string>
 	<string id="ui_mm_supersample">
-		<text>РЎРіР»Р°Р¶РёРІР°РЅРёРµ</text>
+		<text>Сглаживание</text>
 	</string>
 	<string id="ui_mm_switch_torch">
-		<text>РЎРІРµС‚ С„РѕРЅР°СЂРёРєРѕРІ РќРџРЎ</text>
+		<text>Использование фонариков AI</text>
 	</string>
 	<string id="ui_mm_texture_quality">
-		<text>РљР°С‡РµСЃС‚РІРѕ С‚РµРєСЃС‚СѓСЂ</text>
+		<text>Качество текстур</text>
 	</string>
 	<string id="ui_mm_tips">
-		<text>Р Р°СЃРїРѕР·РЅР°РІР°РЅРёРµ NPC</text>
+		<text>Распознавание NPC</text>
 	</string>
 	<string id="ui_mm_veteran">
-		<text>Р’РµС‚РµСЂР°РЅ</text>
+		<text>Ветеран</text>
 	</string>
 	<string id="ui_mm_video">
-		<text>Р’РёРґРµРѕ</text>
+		<text>Видео</text>
 	</string>
 	<string id="ui_mm_vis_distance">
-		<text>Р”Р°Р»СЊРЅРѕСЃС‚СЊ РІРёРґРёРјРѕСЃС‚Рё</text>
+		<text>Дальность видимости</text>
 	</string>
 	<string id="ui_mm_volumetric_light">
-		<text>РћР±СЉС‘РјРЅС‹Р№ СЃРІРµС‚</text>
+		<text>Объёмный свет</text>
 	</string>
 	<string id="ui_mm_vsync">
-		<text>Р’РµСЂС‚. СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ</text>
+		<text>Верт. синхронизация</text>
+	</string>
+	<string id="ui_mp_gamespy_changing_unique_nick">
+		<text>Изменение уникального имени...</text>
+	</string>
+	<string id="ui_mp_gamespy_email_already_exist">
+		<text>такой e-mail уже используется</text>
+	</string>
+	<string id="ui_mp_internet">
+		<text>По Интернету</text>
+	</string>
+	<string id="ui_mp_localnet">
+		<text>В локальной сети</text>
+	</string>
+	<string id="ui_st_backstabks_in_row">
+		<text>ножом в спину</text>
+	</string>
+	<string id="ui_st_bleed_kills_in_row">
+		<text>от потери крови</text>
+	</string>
+	<string id="ui_st_explosive_kills_in_row">
+		<text>взрывом</text>
+	</string>
+	<string id="ui_st_eye_kills_in_row">
+		<text>в глаз</text>
+	</string>
+	<string id="ui_st_headshots_in_row">
+		<text>в голову</text>
+	</string>
+	<string id="ui_st_invalid_saved_game">
+		<text>Версия сохраненного файла не совпадает с версией игры</text>
+	</string>
+	<string id="ui_st_kills_in_row">
+		<text>убийств подряд</text>
+	</string>
+	<string id="ui_st_knife_kills_in_row">
+		<text>ножом</text>
+	</string>
+	<string id="ui_st_last_set">
+		<text>Посл. набор</text>
+	</string>
+	<string id="ui_st_mp_local_network_login_page">
+		<text>Вход в сетевую игру</text>
+	</string>
+	<string id="ui_st_mp_nickname">
+		<text>Имя</text>
+	</string>
+	<string id="ui_st_mp_try_change">
+		<text>Изменить</text>
+	</string>
+	<string id="ui_st_preset1">
+		<text>Набор 1</text>
+	</string>
+	<string id="ui_st_preset2">
+		<text>Набор 2</text>
+	</string>
+	<string id="ui_st_preset3">
+		<text>Набор 3</text>
 	</string>
 	<string id="ui_st_reset">
-		<text>РЎР±СЂРѕСЃРёС‚СЊ</text>
+		<text>Сбросить</text>
 	</string>
 	<string id="ui_st_sell_all">
-		<text>РџСЂРѕРґР°С‚СЊ РІСЃС‘</text>
+		<text>Продать всё</text>
 	</string>
 	<string id="version">
-		<text>Р’РµСЂСЃРёСЏ</text>
+		<text>Версия</text>
+	</string>
+	<string id="mp_pripyat">
+		<text>Припять</text>
 	</string>
 	<string id="ui_mm_crouch_toggle">
-		<text>Р РµР¶РёРј СЃРµСЃС‚СЊ/РІСЃС‚Р°С‚СЊ</text>
+		<text>Режим сесть/встать</text>
 	</string>
 	<string id="ui_mm_important_save">
-		<text>РђРІС‚РѕСЃРѕС…СЂР°РЅРµРЅРёРµ</text>
+		<text>Автосохранение</text>
 	</string>
 	<string id="ui_mm_r1_detail_textures">
-		<text>Р”РµС‚Р°Р»СЊРЅС‹Рµ С‚РµРєСЃС‚СѓСЂС‹</text>
+		<text>Детальные текстуры</text>
+	</string>
+	<string id="mm_mp_demo">
+		<text>Ролики</text>
+	</string>
+	<string id="ui_st_mp_login">
+		<text>Войти</text>
+	</string>
+	<string id="ui_st_mp_logout">
+		<text>Выйти</text>
+	</string>
+	<string id="ui_st_mp_create">
+		<text>Создать</text>
+	</string>
+	<string id="mp_gp_unknown_email_or_bad_password">
+		<text>Неверный e-mail или пароль</text>
+	</string>
+	<string id="mp_gp_parameter_error">
+		<text>Неверный профиль</text>
+	</string>
+	<string id="mp_gp_network_error">
+		<text>Ошибка соединения</text>
+	</string>
+	<string id="mp_gp_server_error">
+		<text>Сервер временно недоступен</text>
+	</string>
+	<string id="mp_gp_unknown_error_2">
+		<text>Необходимо войти в профиль</text>
+	</string>
+	<string id="mp_gp_unknown_error_6">
+		<text>Ошибка соединения</text>
+	</string>
+	<string id="mp_gp_unknown_error_7">
+		<text>Ошибка соединения</text>
+	</string>
+	<string id="mp_gp_unknown_error_8">
+		<text>Ошибка соединения</text>
+	</string>
+	<string id="mp_gp_unknown_error_513">
+		<text>Неверное имя профиля</text>
+	</string>
+	<string id="mp_gp_unknown_error_514">
+		<text>Неверный пароль</text>
+	</string>
+	<string id="mp_gp_unknown_error_515">
+		<text>Неверный уникальный ник</text>
+	</string>
+	<string id="mp_gp_unknown_error_516">
+		<text>Уникальный ник уже используется</text>
+	</string>
+	<string id="mp_first_need_to_login">
+		<text>Необходимо вначале войти в профиль</text>
+	</string>
+	<string id="mp_first_need_to_logout">
+		<text>Необходимо сперва выйти из профиля</text>
+	</string>
+	<string id="mp_gamespy_http_error">
+		<text>Ошибка соединения с сервером профилей</text>
+	</string>
+	<string id="ui_st_you_cannot_delete_profile_after_creation">
+		<text>Вы не сможете удалить профиль после его создания</text>
 	</string>
 	<string id="ui_mm_ssao_quality">
-		<text>РљР°С‡РµСЃС‚РІРѕ SSAO</text>
+		<text>Качество SSAO</text>
 	</string>
 	<string id="ui_mm_ssao_text">
-		<text>Р РµР¶РёРј SSAO</text>
+		<text>Режим SSAO</text>
 	</string>
 	<string id="ui_mm_ssao">
-		<text>РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ</text>
+		<text>по умолчанию</text>
 	</string>
 	<string id="ui_mm_hdao">
 		<text>HDAO</text>
@@ -403,115 +850,87 @@
 		<text>HBAO</text>
 	</string>
 	<string id="ui_st_disable_hud">
-		<text>Р’РєР». РёРЅС‚РµСЂС„РµР№СЃ</text>
+		<text>Показывать интерфейс</text>
 	</string>
-	<string id="ui_mm_hud_draw">
-		<text>Р’РєР». РёРЅС‚РµСЂС„РµР№СЃ</text>
+	<string id="mp_gp_unique_nick_not_registred">
+		<text>Уникальный ник не зарегистрирован. Пожалуйста, зарегистрируйте его</text>
+	</string>
+	<string id="mp_gp_unique_nick_has_expired">
+		<text>Уникальный ник устарел. Пожалуйста, зарегистрируйте его снова</text>
 	</string>
 	<string id="gd_stalker">
-		<text>СЃС‚Р°Р»РєРµСЂ</text>
+		<text>сталкер</text>
 	</string>
 	<string id="st_opt_extreme">
-		<text>РјР°РєСЃ. РІС‹СЃРѕРєРѕ</text>
+		<text>макс. высоко</text>
 	</string>
-
+	<string id="renderer_r4">
+		<text>Ул. полное освещение (DX11)</text>
+	</string>
+	<string id="mp_please_login">
+		<text>Пожалуйста, авторизируйтесь для входа на внешний сервер.</text>
+	</string>
+	<string id="mp_already_logged_in">
+		<text>Этот профиль GameSpy ID в данный момент используется. Пожалуйста, используйте другой профиль GameSpy ID.</text>
+	</string>
+	<string id="mp_gp_unknown_email">
+		<text>Неверный Email</text>
+	</string>
+	<string id="mp_gp_bad_password">
+		<text>Неверный пароль</text>
+	</string>
+	<string id="mp_use_offline_mode">
+		<text>Вы не можете использовать профиль GameSpy ID для входа на локальный сервер. Пожалуйста, используйте режим игры по локальной сети.</text>
+	</string>
+	<string id="st_kicked_by_server">
+		<text>Вы были выброшены сервером.</text>
+	</string>
+	<string id="mp_you_have_been_banned_by">
+		<text>Вы были заблокированы администратором: </text>
+	</string>
+	<string id="mp_you_have_been_banned_by_server">
+		<text>Вы были заблокированы сервером</text>
+	</string>
+	<string id="mp_server_info">
+		<text>Информация о сервере</text>
+	</string>
+	<string id="mp_gp_email_is_too_big">
+		<text>E-mail слишком длинный. Вы можете ввести максимум 50 символов.</text>
+	</string>
+	<string id="mp_gp_bad_email">
+		<text>Некорректный e-mail</text>
+	</string>
+	<string id="mp_gp_password_is_too_small">
+		<text>Пароль слишком короткий</text>
+	</string>
+	<string id="mp_gp_password_is_too_big">
+		<text>Пароль слишком длинный</text>
+	</string>
+	<string id="mp_gp_no_email">
+		<text>E-mail не найден</text>
+	</string>
+	<string id="mp_gp_no_unique_nick">
+		<text>Уникальный ник не задан</text>
+	</string>
+	<string id="mp_gp_unique_nick_is_too_big">
+		<text>Уникальный ник слишком длинный. Вы можете ввести максимум 30 символов.</text>
+	</string>
+	<string id="mp_gp_unique_nick_must_contain_only">
+		<text>Уникальный ник может содержать только цифры, буквы латиницы и специальные символы</text>
+	</string>
+	<string id="mp_gp_unique_nick_must_contain_nospaces">
+		<text>Уникальный ник не может содержать пробелы</text>
+	</string>
+	<string id="mp_gp_unique_nick_bad_first_symbol">
+		<text>Уникальный ник не может начинаться с цифры или символов: '@', '+', ':' или '#'</text>
+	</string>
 	<string id="st_opt_ultra">
-		<text>РѕС‡РµРЅСЊ РІС‹СЃРѕРєРѕ</text>
+		<text>очень высоко</text>
 	</string>
 	<string id="ui_mm_r4_enable_tessellation">
-		<text>РўРµСЃСЃРµР»СЏС†РёСЏ</text>
+		<text>Тесселяция</text>
 	</string>
 	<string id="ui_mm_confirm_changes">
-		<text>РџСЂРёРјРµРЅРёС‚СЊ СЃРѕРІРµСЂС€РµРЅРЅС‹Рµ РёР·РјРµРЅРµРЅРёСЏ? Р’СЃРµ РёР·РјРµРЅРµРЅРёСЏ Р±СѓРґСѓС‚ РѕС‚РјРµРЅРµРЅС‹ С‡РµСЂРµР·</text>
-	</string>
-	<string id="st_cap_check_story">
-		<text>РўР°Р№РЅР° Р—РѕРЅС‹</text>
-	</string>
-	<string id="st_cap_check_survival">
-		<text>Р’С‹Р¶РёРІР°РЅРёРµ</text>
-	</string>
-	<string id="st_cap_check_hardcore">
-		<text>РћРґРЅР° Р¶РёР·РЅСЊ</text>
-	</string>
-	<string id="st_cap_check_azazel_mode">
-		<text>Р–РёР·РЅСЊ РїРѕСЃР»Рµ Р¶РёР·РЅРё</text>
-	</string>
-	<string id="st_cap_check_hardcore_aim">
-		<text>РњРµС‚РєРёРµ РќРџРЎ</text>
-	</string>
-	<string id="ui_mm_debug_hud">
-		<text>Debug Hud</text>
-	</string>
-	<string id="ui_mm_radio_mod">
-		<text>РњСѓР·С‹РєР° СЂР°РґРёРѕ</text>
-	</string>
-	<string id="ui_mm_mechanic_feature">
-		<text>Р”Р»РёС‚РµР»СЊРЅС‹Р№ СЂРµРјРѕРЅС‚</text>
-	</string>
-	<string id="ui_mm_big_head_mode">
-		<text>Big Head Mode</text>
-	</string>
-	<string id="ui_mm_heli_engine_sound">
-		<text>Р—РІСѓРє РІРµСЂС‚РѕР»С‘С‚Р°</text>
-	</string>
-	<string id="ui_mm_heli_spawn">
-		<text>РЎРїР°СѓРЅ РІРµСЂС‚РѕР»С‘С‚Р°</text>
-	</string>
-	<string id="ui_mm_ai_die_in_anomaly">
-		<text>РЎРјРµСЂС‚СЊ РќРџРЎ РІ Р°РЅРѕРјР°Р»РёСЏС…</text>
-	</string>
-	<string id="ui_mm_dynamic_news">
-		<text>Р”РёРЅР°РјРёС‡РµСЃРєРёРµ РЅРѕРІРѕСЃС‚Рё</text>
-	</string>
-	<string id="ui_mm_art_degrade">
-		<text>РџРѕСЂС‚СЏС‰РёРµСЃСЏ Р°СЂС‚РµС„Р°РєС‚С‹</text>
-	</string>
-	<string id="ui_mm_sleep_deprived">
-		<text>РќРµРґРѕСЃС‹РїР°РЅРёРµ</text>
-	</string>
-        <string id="ui_mm_excl_dist">
-                <text>Р Р°РґРёСѓСЃ Р·Р°РїСЂРµС‚Р° СЃРїР°РІРЅР°</text>
-        </string>
-	<string id="ui_mm_char_portrait">
-		<text>РСЃС…РѕРґРЅС‹Р№ РїРѕСЂС‚СЂРµС‚</text>
-	</string>
-	<string id="ui_mm_outfit_portrait">
-		<text>РџРѕСЂС‚СЂРµС‚ РІ РєРѕСЃС‚СЋРјРµ</text>
-	</string>
-	<string id="ui_mm_show_enemy_health">
-		<text>Р”Р°РЅРЅС‹Рµ Рѕ РїСЂРѕС‚РёРІРЅРёРєРµ</text>
-	</string>
-	<string id="ui_mm_quicksave_cnt">
-		<text>Р‘С‹СЃС‚СЂС‹Рµ СЃРѕС…СЂР°РЅРµРЅРёСЏ</text>
-	</string>
-	<string id="ui_mm_actor_hud">
-		<text>Р”РёРЅР°РјРёС‡РµСЃРєРёР№ HUD</text>
-	</string>
-	<string id="ui_mm_alife_mutant_pop">
-		<text>РљРѕСЌС„-РЅС‚ С‡РёСЃР»Р° РјСѓС‚Р°РЅС‚РѕРІ</text>
-	</string>
-	<string id="ui_mm_alife_stalker_pop">
-		<text>РљРѕСЌС„-РЅС‚ С‡РёСЃР»Р° СЃС‚Р°Р»РєРµСЂРѕРІ</text>
-	</string>
-	<string id="ui_mm_hud_fov">
-		<text>РРЅС‚РµСЂС„РµР№СЃ</text>
-	</string>
-	<string id="ui_mm_fov">
-		<text>РЈРіРѕР» РѕР±Р·РѕСЂР°</text>
-	</string>
-	<string id="ui_mm_slot_hud">
-		<text>РђСЂС‚РµС„Р°РєС‚С‹ РЅР° РїРѕСЏСЃРµ</text>
-	</string>
-	<string id="ui_mm_show_tracers">
-		<text>РўСЂР°СЃСЃРµСЂС‹ РїСѓР»СЊ</text>
-	</string>
-	<string id="ui_mm_release_dropped_items">
-		<text>РЈРґР°Р»СЏС‚СЊ Р±СЂРѕС€РµРЅРЅС‹Рµ РІРµС‰Рё</text>
-	</string>
-	<string id="ui_mm_hardcore_ai_aim">
-		<text>РњРµС‚РєРёРµ РќРџРЎ</text>
-	</string>
-	<string id="ui_mm_localization">
-		<text>Р›РѕРєР°Р»РёР·Р°С†РёСЏ</text>
+		<text>Применить сделанные изменения? Все изменения будут отменены через</text>
 	</string>
 </string_table>

@@ -302,7 +302,7 @@ end
 -- ADD_TO_BINDER
 ----------------------------------------------------------------------------------------------------
 function add_to_binder(npc, ini, scheme, section, storage)
-	--printf("DEBUG: add_to_binder: npc:name()='%s', scheme='%s', section='%s'", npc:name(), scheme, section)
+	printf("DEBUG: add_to_binder: npc:name()='%s', scheme='%s', section='%s'", npc:name(), scheme, section)
 
 	local new_action = mob_camp(npc, storage)
 
@@ -311,7 +311,7 @@ function add_to_binder(npc, ini, scheme, section, storage)
 end
 
 ----------------------------------------------------------------------------------------------------
--- set_scheme
+-- SET_SCHEME
 ----------------------------------------------------------------------------------------------------
 function set_scheme(npc, ini, scheme, section, gulag_name)
 	local storage				= xr_logic.assign_storage_and_bind(npc, ini, scheme, section)
@@ -320,11 +320,11 @@ function set_scheme(npc, ini, scheme, section, gulag_name)
 	
 	storage.state				= mob_state_mgr.get_state(ini, section, npc)
 	
-	storage.look_point			= utils.prefix_r_string(ini,section,"path_look",gulag_name)
-	storage.home_point			= utils.prefix_r_string(ini,section,"path_home",gulag_name)
-	storage.time_change_point	= ini:r_float_ex(section,"time_change_point") or 10000
-	storage.home_min_radius		= ini:r_float_ex(section,"home_min_radius") or 20
-	storage.home_max_radius		= ini:r_float_ex(section,"home_max_radius") or 35
+	storage.look_point			= utils.cfg_get_string(ini, section, "path_look",			npc, false, gulag_name)
+	storage.home_point			= utils.cfg_get_string(ini, section, "path_home",			npc, false, gulag_name)
+	storage.time_change_point	= utils.cfg_get_number(ini, section, "time_change_point",	npc, false, 10000)
+	storage.home_min_radius		= utils.cfg_get_number(ini, section, "home_min_radius",		npc, false, 30)
+	storage.home_max_radius		= utils.cfg_get_number(ini, section, "home_max_radius",		npc, false, 40)
 	 
 	
 	-- check min and max radius

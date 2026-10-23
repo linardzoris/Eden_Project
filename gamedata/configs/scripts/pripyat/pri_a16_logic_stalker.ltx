@@ -1,7 +1,7 @@
 [walker@def]
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = pri_a16_sr_noweap
 gather_items_enabled = false
 help_wounded_enabled = false
@@ -13,9 +13,9 @@ invulnerable = false
 
 [animpoint@def]
 reach_movement = walk_noweap
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 use_camp = true
 meet = meet@animpoint
 out_restr = pri_a16_sr_noweap
@@ -33,6 +33,7 @@ close_victim 	= nil
 far_anim 		= nil
 far_victim 		= nil
 close_snd_hello = nil
+close_snd_bye 	= nil
 close_distance 	= 0
 far_distance 	= 0
 use = {=actor_enemy} false, {=dist_to_actor_le(3)} true, false
@@ -223,9 +224,9 @@ active = animpoint@base
 
 [animpoint@base]
 cover_name = pri_a16_animp_medic
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 meet = meet
 out_restr = pri_a16_sr_noweap
 gather_items_enabled = false

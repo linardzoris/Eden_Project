@@ -1,18 +1,12 @@
 [smart_terrain];zat_sim_23
 squad_id = 12
 max_population = 1
-respawn_params = respawn@zat_sim_23
-respawn_idle = 60000
-
+respawn_params = respawn@zat_sim_23  
 
 [respawn@zat_sim_23]
-spawn_monster
-spawn_rat
+spawn_bloodsucker
 
-[spawn_rat]
-spawn_squads = simulation_rat, simulation_rats
-spawn_num = 1
 
-[spawn_monster]
-spawn_squads = simulation_cat, simulation_bloodsucker, simulation_fracture
+[spawn_bloodsucker]
+spawn_squads = simulation_bloodsucker
 spawn_num = 1

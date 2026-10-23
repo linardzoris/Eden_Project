@@ -4,7 +4,7 @@
 		<text>Flatness</text>
 	</string>
 	<string id="st_prop_calibre">
-		<text>Calibre</text>
+		<text>Caliber</text>
 	</string>
 	<string id="st_prop_recoil">
 		<text>Recoil</text>
@@ -22,7 +22,7 @@
 		<text>Silencer</text>
 	</string>
 	<string id="st_prop_underbarrel_slot">
-		<text>under-barrel mount</text>
+		<text>underbarrel mount</text>
 	</string>
 	<string id="st_prop_weight">
 		<text>Weight</text>
@@ -40,10 +40,10 @@
 		<text>Optical mount</text>
 	</string>
 	<string id="st_up_add_a3_descr">
-		<text>Installation of a mount for attachment of an under-barrel grenade launcher.</text>
+		<text>Installation of a mount for attachment of an underbarrel grenade launcher.</text>
 	</string>
 	<string id="st_up_add_a3_name">
-		<text>Under-barrel grenade launcher mount</text>
+		<text>Underbarrel grenade launcher mount</text>
 	</string>
 	<string id="st_up_add_a4_descr">
 		<text>Replacing a standard magazine with a bigger one.</text>
@@ -52,28 +52,28 @@
 		<text>Increased magazine capacity</text>
 	</string>
 	<string id="st_up_add_b1_descr">
-		<text>A complex, integrated alteration of the weapon's mechanical and automated parts, which allow its calibre to be changed at the cost of reliability.</text>
+		<text>A complex, integrated alteration of the weapon's mechanical and automated parts, which allow its caliber to be changed at the cost of reliability.</text>
 	</string>
 	<string id="st_up_add_b1_name">
-		<text>Change of calibre to 5x45</text>
+		<text>Change of caliber to 5x45</text>
 	</string>
 	<string id="st_up_add_b2_descr">
-		<text>A complex, integrated alteration of the weapon's mechanical and automated parts, which allow its calibre to be changed at the cost of reliability.</text>
+		<text>A complex, integrated alteration of the weapon's mechanical and automated parts, which allow its caliber to be changed at the cost of reliability.</text>
 	</string>
 	<string id="st_up_add_b2_name">
-		<text>Change of calibre to 5x56</text>
+		<text>Change of caliber to 5x56</text>
 	</string>
 	<string id="st_up_add_b3_descr">
-		<text>A complex, integrated alteration of the weapon's mechanical and automated parts, which allow its calibre to be changed at the cost of reliability.</text>
+		<text>A complex, integrated alteration of the weapon's mechanical and automated parts, which allow its caliber to be changed at the cost of reliability.</text>
 	</string>
 	<string id="st_up_add_b3_name">
-		<text>Change of calibre to 9x18</text>
+		<text>Change of caliber to 9x18</text>
 	</string>
 	<string id="st_up_add_b4_descr">
-		<text>A complex, integrated alteration of the weapon's mechanical and automated parts, which allow its calibre to be changed at the cost of reliability.</text>
+		<text>A complex, integrated alteration of the weapon's mechanical and automated parts, which allow its caliber to be changed at the cost of reliability.</text>
 	</string>
 	<string id="st_up_add_b4_name">
-		<text>Change of calibre to 9x19</text>
+		<text>Change of caliber to 9x19</text>
 	</string>
 	<string id="st_up_addd_a1_descr">
 		<text>Magazine capacity increase without increasing weapon part length</text>
@@ -88,10 +88,10 @@
 		<text>Increased box magazine capacity</text>
 	</string>
 	<string id="st_up_arm_a1_descr">
-		<text>Increased number of titanium plates considerably improves body armour durability.</text>
+		<text>Increased number of titanium plates considerably improves body armor durability.</text>
 	</string>
 	<string id="st_up_arm_a1_name">
-		<text>Additional aluminium/titanium plates</text>
+		<text>Additional aluminum/titanium plates</text>
 	</string>
 	<string id="st_up_arm_a2_descr">
 		<text>Reinforced plates that last longer, but are not more durable.</text>
@@ -100,10 +100,10 @@
 		<text>Kevlar plates</text>
 	</string>
 	<string id="st_up_arm_a3_descr">
-		<text>An aluminium & titanium alloy allows the weight of titanium to be reduced for use in personal protection equipment.</text>
+		<text>An aluminum & titanium alloy allows the weight of titanium to be reduced for use in personal protection equipment.</text>
 	</string>
 	<string id="st_up_arm_a3_name">
-		<text>Aluminium & titanium plates</text>
+		<text>Aluminum & titanium plates</text>
 	</string>
 	<string id="st_up_arm_a4_descr">
 		<text>Titanium is normally too heavy to be used in personal protection equipment, but is sometimes utilized in exoskeletons.</text>
@@ -112,13 +112,13 @@
 		<text>Solid titanium components</text>
 	</string>
 	<string id="st_up_arm_a5_descr">
-		<text>Replacing metal with carbon fibre allows the weight of body armour to be reduced without sacrificing reliability.</text>
+		<text>Replacing metal with carbon fiber allows the weight of body armor to be reduced without sacrificing reliability.</text>
 	</string>
 	<string id="st_up_arm_a5_name">
-		<text>Replacing metal body armour components with carbon fibre</text>
+		<text>Replacing metal body armor components with carbon fiber</text>
 	</string>
 	<string id="st_up_arm_a6_descr">
-		<text>Kevlar is one of the most commonly used materials in body armour.</text>
+		<text>Kevlar is one of the most commonly used materials in body armor.</text>
 	</string>
 	<string id="st_up_arm_a6_name">
 		<text>Kevlar plates</text>
@@ -142,31 +142,31 @@
 		<text>Steel plates</text>
 	</string>
 	<string id="st_up_arm_b1_descr">
-		<text>A ceramic outer layer can deflect armour piercing bullets that impact at an angle and cause armour piercing bullets that make a direct impact to crumble into fine dust.</text>
+		<text>A ceramic outer layer can deflect armor piercing bullets that impact at an angle and cause armor piercing bullets that make a direct impact to crumble into fine dust.</text>
 	</string>
 	<string id="st_up_arm_b1_name">
-		<text>Ceramic body armour outer layer</text>
+		<text>Ceramic body armor outer layer</text>
 	</string>
 	<string id="st_up_arm_b2_descr">
-		<text>Additional internal armour layer in case the outer layer is damaged.</text>
+		<text>Additional internal armor layer in case the outer layer is damaged.</text>
 	</string>
 	<string id="st_up_arm_b2_name">
 		<text>Duplicate protective plate layer</text>
 	</string>
 	<string id="st_up_arm_b3_descr">
-		<text>Armour with an inner layer that spreads impact over a greater area.</text>
+		<text>Armor with an inner layer that spreads impact over a greater area.</text>
 	</string>
 	<string id="st_up_arm_b3_name">
 		<text>Addition of a compensation element</text>
 	</string>
 	<string id="st_up_arm_b4_descr">
-		<text>The frame is capable of stopping a pistol bullet if the main body armour is damaged.</text>
+		<text>The frame is capable of stopping a pistol bullet if the main body armor is damaged.</text>
 	</string>
 	<string id="st_up_arm_b4_name">
-		<text>Additional armoured frame</text>
+		<text>Additional armored frame</text>
 	</string>
 	<string id="st_up_arm_b5_descr">
-		<text>Thinner sheets of armour are layered to increase the armour's wear-resistance.</text>
+		<text>Thinner sheets of armor are layered to increase the armor's wear-resistance.</text>
 	</string>
 	<string id="st_up_arm_b5_name">
 		<text>Segmented protection</text>
@@ -184,13 +184,13 @@
 		<text>Installation of mobile protective plates for joints</text>
 	</string>
 	<string id="st_up_arm_b8_descr">
-		<text>A lighter aluminium frame for plates to replace the steel frame.</text>
+		<text>A lighter aluminum frame for plates to replace the steel frame.</text>
 	</string>
 	<string id="st_up_arm_b8_name">
-		<text>A lighter aluminium frame</text>
+		<text>A lighter aluminum frame</text>
 	</string>
 	<string id="st_up_arm_b9_descr">
-		<text>Thickened inserts to reduce the force of bullet impacts felt through body armour.</text>
+		<text>Thickened inserts to reduce the force of bullet impacts felt through body armor.</text>
 	</string>
 	<string id="st_up_arm_b9_name">
 		<text>Thickening leather inserts</text>
@@ -202,7 +202,7 @@
 		<text>Reinforced ceramic plates</text>
 	</string>
 	<string id="st_up_arm_c11_descr">
-		<text>Use of lighter materials to reduce body armour weight.</text>
+		<text>Use of lighter materials to reduce body armor weight.</text>
 	</string>
 	<string id="st_up_arm_c11_name">
 		<text>Installation of lighter synthetic and plastic components</text>
@@ -211,7 +211,7 @@
 		<text>While solid titanium plates are much too heavy for an infantry soldier to drag around, an exoskeleton with its powerful servomotors can handle the weight.</text>
 	</string>
 	<string id="st_up_arm_c12_name">
-		<text>Cuirass titanium armour</text>
+		<text>Cuirass titanium armor</text>
 	</string>
 	<string id="st_up_arm_c13_descr">
 		<text>SBK-RKhZ.m.II - a special radiochemical protection combat bodysuit, mark two.</text>
@@ -220,10 +220,10 @@
 		<text>SBK-RKhZ.m.II airtight radiation protection bodysuit </text>
 	</string>
 	<string id="st_up_arm_c1_descr">
-		<text>This labour-intensive and time consuming upgrade is not very popular, although it has been known to save lives.</text>
+		<text>This labor-intensive and time consuming upgrade is not very popular, although it has been known to save lives.</text>
 	</string>
 	<string id="st_up_arm_c1_name">
-		<text>Sewn-in chain mail shirt</text>
+		<text>Sewn-in chainmail shirt</text>
 	</string>
 	<string id="st_up_arm_c2_descr">
 		<text>The Scale comprises overlaying ceramic plates that prevent the wearer from being hit in the same place.</text>
@@ -244,7 +244,7 @@
 		<text>Application of a ceramic layer onto plates</text>
 	</string>
 	<string id="st_up_arm_c5_descr">
-		<text>Reinforced matrix that uses beryllium instead of aluminium is one of the most reliable ways of protecting infantry soldiers.</text>
+		<text>Reinforced matrix that uses beryllium instead of aluminum is one of the most reliable ways of protecting infantry soldiers.</text>
 	</string>
 	<string id="st_up_arm_c6_descr">
 		<text>Ceramics considerably soften bullet impact by deflecting it onto fragments that break off.</text>
@@ -253,7 +253,7 @@
 		<text>Ceramic layer on plates</text>
 	</string>
 	<string id="st_up_arm_c7_descr">
-		<text>Carbon fibre is one of the most durable and wear-resistant materials that is even used in aviation construction.</text>
+		<text>Carbon fiber is one of the most durable and wear-resistant materials that is even used in aviation construction.</text>
 	</string>
 	<string id="st_up_arm_c8_descr">
 		<text>Combined multi-layered polymer and ceramic coating.</text>
@@ -292,7 +292,7 @@
 		<text>Often used in weaponry, a roller locking system reduces recoil and improves groupings.</text>
 	</string>
 	<string id="st_up_autd_b3_name">
-		<text>Semi-free bolt with a roller system</text>
+		<text>Semifree bolt with a roller system</text>
 	</string>
 	<string id="st_up_autd_b4_descr">
 		<text>Installation of an additional gas cylinder reduces weapon load, which allows the rate of fire to be increased significantly.</text>
@@ -313,7 +313,7 @@
 		<text>Protective component sputter</text>
 	</string>
 	<string id="st_up_autd_c2_descr">
-		<text>When a shot is fired, a component opens a path into the barrel and returns to the closed position by means of a lengthwise sliding movement of the forward grip.</text>
+		<text>When a shot is fired, a component opens a path into the barrel and returns to the closed position by means of a lengthwise sliding movement of the foregrip.</text>
 	</string>
 	<string id="st_up_autd_c2_name">
 		<text>Barrel closing system</text>
@@ -448,7 +448,7 @@
 		<text>Often used in Western weaponry, a roller locking system reduces recoil and improves groupings.</text>
 	</string>
 	<string id="st_up_auts_b1_name">
-		<text>Semi-free bolt with a roller system</text>
+		<text>Semifree bolt with a roller system</text>
 	</string>
 	<string id="st_up_auts_b2_descr">
 		<text>A special mechanism takes on some of the impact during firing, which makes shooting the weapon more comfortable.</text>
@@ -487,7 +487,7 @@
 		<text>Longer barrel</text>
 	</string>
 	<string id="st_up_bar_a2_descr">
-		<text>The lack of big gas chambers and barrel mounting on the forward grip has a positive effect on accuracy.</text>
+		<text>The lack of big gas chambers and barrel mounting on the foregrip has a positive effect on accuracy.</text>
 	</string>
 	<string id="st_up_bar_a2_name">
 		<text>Installation of a "floating" barrel</text>
@@ -679,16 +679,16 @@
 		<text>Additional servomotors</text>
 	</string>
 	<string id="st_up_exo_b1_descr">
-		<text>A development of Freedom technicians, who were the first to replace metal with carbon fibre in view of exoskeletons' huge weight.</text>
+		<text>A development of Freedom technicians, who were the first to replace metal with carbon fiber in view of exoskeletons' huge weight.</text>
 	</string>
 	<string id="st_up_exo_b1_name">
-		<text>Replacing metal components with carbon fibre</text>
+		<text>Replacing metal components with carbon fiber</text>
 	</string>
 	<string id="st_up_exo_b2_descr">
-		<text>Armouring protects the exoskeleton's critical components from being damaged by accurate fire.</text>
+		<text>Armoring protects the exoskeleton's critical components from being damaged by accurate fire.</text>
 	</string>
 	<string id="st_up_exo_b2_name">
-		<text>Drive device armouring</text>
+		<text>Drive device armoring</text>
 	</string>
 	<string id="st_up_exo_c1_descr">
 		<text>The easy movement system uses reinforced springs and joints, which allow the wearer to use the exoskeleton's own weight to ease motor functions.</text>
@@ -715,28 +715,28 @@
 		<text>Amortization silicon thickeners</text>
 	</string>
 	<string id="st_up_kom_a3_descr">
-		<text>Fabric, clips and thickeners are replaced with lighter synthetic materials to reduce armour weight.</text>
+		<text>Fabric, clips and thickeners are replaced with lighter synthetic materials to reduce armor weight.</text>
 	</string>
 	<string id="st_up_kom_a3_name">
 		<text>Lighter, synthetic and polymer materials</text>
 	</string>
 	<string id="st_up_kom_a4_descr">
-		<text>Rubberising prevents soft tissue damage in the event of impact against the plate.</text>
+		<text>Rubberizing prevents soft tissue damage in the event of impact against the plate.</text>
 	</string>
 	<string id="st_up_kom_a4_name">
-		<text>Amortization rubberised layer</text>
+		<text>Amortization rubberized layer</text>
 	</string>
 	<string id="st_up_kom_a5_descr">
-		<text>The under-layer will help if the main fabric is torn.</text>
+		<text>The underlayer will help if the main fabric is torn.</text>
 	</string>
 	<string id="st_up_kom_a6_descr">
-		<text>A multi-layered polycarbonate, silicon and carbon fibre insert in case the main armour is penetrated.</text>
+		<text>A multi-layered polycarbonate, silicon and carbon fiber insert in case the main armor is penetrated.</text>
 	</string>
 	<string id="st_up_kom_a6_name">
 		<text>Protective polymer inserts</text>
 	</string>
 	<string id="st_up_kom_a7_descr">
-		<text>Freedom's airtight Expanse bodysuit used to locate artefacts in anomalous areas.</text>
+		<text>Freedom's airtight Expanse bodysuit used to locate artifacts in anomalous areas.</text>
 	</string>
 	<string id="st_up_kom_a7_name">
 		<text>Expanse anomalous protection bodysuit</text>
@@ -748,7 +748,7 @@
 		<text>Synthetic layer</text>
 	</string>
 	<string id="st_up_kom_b10_descr">
-		<text>A number of ergonomic adjustments that use a rubber construction, which allow mobility to be retained even when wearing bulky armour.</text>
+		<text>A number of ergonomic adjustments that use a rubber construction, which allow mobility to be retained even when wearing bulky armor.</text>
 	</string>
 	<string id="st_up_kom_b10_name">
 		<text>A rubber mobility bodysuit</text>
@@ -760,7 +760,7 @@
 		<text>Constantan thermal isolation inserts</text>
 	</string>
 	<string id="st_up_kom_b12_descr">
-		<text>Lead is a reliable defence against radiation because it absorbs all three types thereof.</text>
+		<text>Lead is a reliable defense against radiation because it absorbs all three types thereof.</text>
 	</string>
 	<string id="st_up_kom_b12_name">
 		<text>Addition of lead to bodysuit</text>
@@ -772,7 +772,7 @@
 		<text>Canvas bodysuit</text>
 	</string>
 	<string id="st_up_kom_b2_descr">
-		<text>Fabric treated with a fire-resistant substance is popular among stalkers searching for fire artefacts.</text>
+		<text>Fabric treated with a fire-resistant substance is popular among stalkers searching for fire artifacts.</text>
 	</string>
 	<string id="st_up_kom_b2_name">
 		<text>Fabric treated with a fire-resistant substance</text>
@@ -790,7 +790,7 @@
 		<text>Airtight plastic inner layer</text>
 	</string>
 	<string id="st_up_kom_b5_descr">
-		<text>Fabric, clips and thickeners are replaced with lighter synthetic materials to reduce armour weight.</text>
+		<text>Fabric, clips and thickeners are replaced with lighter synthetic materials to reduce armor weight.</text>
 	</string>
 	<string id="st_up_kom_b5_name">
 		<text>Replacement of fabric with synthetic materials</text>
@@ -814,10 +814,10 @@
 		<text>Constantan-based inner layer for isolation</text>
 	</string>
 	<string id="st_up_kom_b9_descr">
-		<text>fibreglass is used in bodysuits worn by natural disasters response teams.</text>
+		<text>Fiberglass is used in bodysuits worn by natural disasters response teams.</text>
 	</string>
 	<string id="st_up_kom_b9_name">
-		<text>Thermal fibreglass protection </text>
+		<text>Thermal fiberglass protection </text>
 	</string>
 	<string id="st_up_kom_c1_descr">
 		<text>Impregnated fabric should prevent chemical poisoning.</text>
@@ -838,22 +838,22 @@
 		<text>Shield high durability protective frame</text>
 	</string>
 	<string id="st_up_kom_c4_descr">
-		<text>Nickel is sufficiently fire-resistant to be used for body armour inserts</text>
+		<text>Nickel is sufficiently fire-resistant to be used for body armor inserts</text>
 	</string>
 	<string id="st_up_kom_c4_name">
 		<text>Fire-resistant bodysuit with nickel inserts</text>
 	</string>
 	<string id="st_up_kom_c5_descr">
-		<text>This nickel and magnesium alloy is used in armour to prevent electric shocks.</text>
+		<text>This nickel and magnesium alloy is used in armor to prevent electric shocks.</text>
 	</string>
 	<string id="st_up_kom_c5_name">
 		<text>An isolation bodysuit with manganin inserts</text>
 	</string>
 	<string id="st_up_kom_c6_descr">
-		<text>Airtight bodysuit with an anti-corrosion layer and Kevlar armour.</text>
+		<text>Airtight bodysuit with an anti-corrosion layer and Kevlar armor.</text>
 	</string>
 	<string id="st_up_kom_c6_name">
-		<text>Second Skin integrated armoured bodysuit</text>
+		<text>Second Skin integrated armored bodysuit</text>
 	</string>
 	<string id="st_up_kom_c7_descr">
 		<text>A bodysuit made using new unspecified polymers previously used by the Kiev research institute in developing the Ecologist suit with cavities filled with bismuth.</text>
@@ -891,23 +891,11 @@
 	<string id="st_up_opt_a3_name">
 		<text>5.0x optical scope</text>
 	</string>
-	<string id="st_up_opt_a3_nimble_descr">
-		<text>Mounting of an optical scope for a very long range combat.</text>
-	</string>
-	<string id="st_up_opt_a3_nimble_name">
-		<text>10.0x optical scope</text>
-	</string>
 	<string id="st_up_opt_a4_descr">
 		<text>Mounting of an optical scope for long range combat.</text>
 	</string>
 	<string id="st_up_opt_a4_name">
 		<text>6.0x optical scope</text>
-	</string>
-	<string id="st_up_opt_a4_nimble_descr">
-		<text>Mounting of an optical scope for a very long range combat.</text>
-	</string>
-	<string id="st_up_opt_a4_nimble_name">
-		<text>12.0x optical scope</text>
 	</string>
 	<string id="st_up_opt_b1_descr">
 		<text>A modification made to assault weapons with reflex sights by means of a simple improvement in sight contrast in the yellow range. Important for combat in twilight conditions and dim buildings.</text>
@@ -988,7 +976,7 @@
 		<text>Additional bolt assembly gas buffer</text>
 	</string>
 	<string id="st_up_pris_a1_descr">
-		<text>A rubberised recoil-softening part is often used on factory-made stocks for large calibre sniper rifles.</text>
+		<text>A rubberized recoil-softening part is often used on factory-made stocks for large caliber sniper rifles.</text>
 	</string>
 	<string id="st_up_pris_a1_name">
 		<text>Amortization stock component</text>
@@ -1000,7 +988,7 @@
 		<text>Adjustable stock with a cheek pad</text>
 	</string>
 	<string id="st_up_pris_c1_descr">
-		<text>A component for large calibre weapons with powerful recoil installed in the stock.</text>
+		<text>A component for large caliber weapons with powerful recoil installed in the stock.</text>
 	</string>
 	<string id="st_up_pris_c1_name">
 		<text>Hydraulic stock recoil buffer</text>
@@ -1012,10 +1000,10 @@
 		<text>Active filters</text>
 	</string>
 	<string id="st_up_res_a2_descr">
-		<text>The closed band has been demonstrated to provide partial protection against direct psi-emissions.</text>
+		<text>The closed band has been demonstrated to provide partial protection against direct psy-emissions.</text>
 	</string>
 	<string id="st_up_res_a2_name">
-		<text>A psi-protection band made of paired steel grills</text>
+		<text>A psy-protection band made of paired steel grills</text>
 	</string>
 	<string id="st_up_res_a3_descr">
 		<text>A mask used in contaminated air or critical air temperature conditions, which are too low or too high for breathing.</text>
@@ -1051,10 +1039,10 @@
 		<text>Impregnated breathing mask</text>
 	</string>
 	<string id="st_up_res_c1_descr">
-		<text>This beryllium & aluminium matrix provides excellent protection without a significant increase in the helmet's weight.</text>
+		<text>This beryllium & aluminum matrix provides excellent protection without a significant increase in the helmet's weight.</text>
 	</string>
 	<string id="st_up_res_c1_name">
-		<text>Beryllium & aluminium plates</text>
+		<text>Beryllium & aluminum plates</text>
 	</string>
 	<string id="st_up_res_c2_descr">
 		<text>A beryllium & titanium matrix ensures more effective protection without a significant weight increase.</text>
@@ -1069,22 +1057,22 @@
 		<text>Installation of improved filters for scientific work</text>
 	</string>
 	<string id="st_up_res_c4_descr">
-		<text>Hi-tech psi-protection that is said to have been invented by a scientist called Sakharov.</text>
+		<text>Hi-tech psy-protection that is said to have been invented by a scientist called Sakharov.</text>
 	</string>
 	<string id="st_up_res_c4_name">
-		<text>Installation of the Psi-Dome band</text>
+		<text>Installation of the Psy-Dome band</text>
 	</string>
 	<string id="st_up_res_c5_descr">
 		<text>Protective alloy frame to prevent thermal and electrical damage.</text>
 	</string>
 	<string id="st_up_res_c5_name">
-		<text>Thunderbird constantan face armour</text>
+		<text>Thunderbird constantan face armor</text>
 	</string>
 	<string id="st_up_res_c6_descr">
-		<text>Additional armour to improve helmet durability.</text>
+		<text>Additional armor to improve helmet durability.</text>
 	</string>
 	<string id="st_up_res_c6_name">
-		<text>Reinforced armoured helmet body</text>
+		<text>Reinforced armored helmet body</text>
 	</string>
 	<string id="st_up_res_c7_descr">
 		<text>A filter with an additional purification coating and a system for removal of poisons.</text>
@@ -1120,10 +1108,10 @@
 		<text>Automatic target acquisition system</text>
 	</string>
 	<string id="st_up_resp_b3_descr">
-		<text>Scientific wave-based device developed for work in anomalous areas with psi-emissions.</text>
+		<text>Scientific wave-based device developed for work in anomalous areas with psy-emissions.</text>
 	</string>
 	<string id="st_up_resp_b3_name">
-		<text>Oracle psi-stimulator</text>
+		<text>Oracle psy-stimulator</text>
 	</string>
 	<string id="st_up_resp_c1_descr">
 		<text>Installation of a more advanced night vision device for operations in complete darkness.</text>
@@ -1138,13 +1126,13 @@
 		<text>Ion Wind cooling system</text>
 	</string>
 	<string id="st_up_resp_c3_descr">
-		<text>An infra-red scanner allows for detection of nearby humans.</text>
+		<text>An infrared scanner allows for detection of nearby humans.</text>
 	</string>
 	<string id="st_up_resp_c3_name">
-		<text>Infra-red scanner</text>
+		<text>Infrared scanner</text>
 	</string>
 	<string id="st_up_resp_c4_descr">
-		<text>SPB - VPZ.m.IV Psychological Security Wave Psi Protection System, mark four.</text>
+		<text>SPB - VPZ.m.IV Psychological Security Wave Psy Protection System, mark four.</text>
 	</string>
 	<string id="st_up_resp_c4_name">
 		<text>SPB - VPZ.m.IV combat system</text>
@@ -1465,13 +1453,13 @@
 		<text>A system that supplies electricity to the suit's exterior, repelling radioactive and chemical particles.</text>
 	</string>
 	<string id="st_up_tch_a4_name">
-		<text>A built-in dust repellent system</text>
+		<text>A built-in dust repellant system</text>
 	</string>
 	<string id="st_up_tch_b1_descr">
 		<text>Generation B injector, which regularly introduces a coagulation agent into the bloodstream when blood pressure drops significantly.</text>
 	</string>
 	<string id="st_up_tch_b1_name">
-		<text>Hydra haemoglobin injector</text>
+		<text>Hydra hemoglobin injector</text>
 	</string>
 	<string id="st_up_tch_b2_descr">
 		<text>By maintaining optimal body temperature, this system prevents exhaustion.</text>
@@ -1480,16 +1468,16 @@
 		<text>Installation of a thermal regulation system</text>
 	</string>
 	<string id="st_up_tch_b3_descr">
-		<text>This wave emitter is mounted on the chest and considerably increases bleeding control speed, immune system strength and the wearer's pain barrier when in constant use.</text>
+		<text>This wave emitter is mounted on the chest and considerably increases wound healing speed, immune system strength and the wearer's pain barrier when in constant use.</text>
 	</string>
 	<string id="st_up_tch_b3_name">
 		<text>Sun biostimulator</text>
 	</string>
 	<string id="st_up_tch_b4_descr">
-		<text>Scientific wave-based device developed for work in anomalous areas with psi-emissions.</text>
+		<text>Scientific wave-based device developed for work in anomalous areas with psy-emissions.</text>
 	</string>
 	<string id="st_up_tch_b4_name">
-		<text>Oracle psi-stimulator</text>
+		<text>Oracle psy-stimulator</text>
 	</string>
 	<string id="st_up_tch_c1_descr">
 		<text>Generation C injector that introduces a combat mix of dubious content into the bloodstream, improving tissue regeneration and removing pain.</text>
@@ -1642,10 +1630,10 @@
 		<text>Installation of an oxygen tank</text>
 	</string>
 	<string id="st_up_uti_b1_descr">
-		<text>Installation of an additional artefact container.</text>
+		<text>Installation of an additional artifact container.</text>
 	</string>
 	<string id="st_up_uti_b1_name">
-		<text>Additional artefact container</text>
+		<text>Additional artifact container</text>
 	</string>
 	<string id="st_up_uti_b2_descr">
 		<text>A system of mounts allows for weight to be distributed onto the whole body more evenly.</text>
@@ -1690,13 +1678,13 @@
 		<text>Antidote poison removal system</text>
 	</string>
 	<string id="st_up_uti_c1_descr">
-		<text>Installation of an additional artefact container.</text>
+		<text>Installation of an additional artifact container.</text>
 	</string>
 	<string id="st_up_uti_c1_name">
-		<text>Additional two-compartment artefact container</text>
+		<text>Additional two-compartment artifact container</text>
 	</string>
 	<string id="st_up_uti_c2_descr">
-		<text>A combat support system built into the whole suit. Used rarely, primarily by the Spetsnaz. Comes pre-installed with adrenaline and blood clotting systems.</text>
+		<text>A combat support system built into the whole suit. Used rarely, primarily by the Spetsnaz. Comes preinstalled with adrenaline and blood clotting systems.</text>
 	</string>
 	<string id="st_up_uti_c2_name">
 		<text>Varyag field support system</text>
@@ -1789,7 +1777,7 @@
 		<text>Often used in modern weaponry, a roller locking system reduces recoil and improves groupings.</text>
 	</string>
 	<string id="st_up_zat_c5_name">
-		<text>Change to a roller system with a semi-free bolt</text>
+		<text>Change to a roller system with a semifree bolt</text>
 	</string>
 	<string id="st_up_zath_a1_descr">
 		<text>In absorbing some of the heat, the components reduce weapon temperature changes during firing.</text>
@@ -1935,17 +1923,11 @@
 	<string id="st_prop_scope_6x">
 		<text>x6 optical scope</text>
 	</string>
-	<string id="st_prop_scope_10x">
-		<text>x10 optical scope</text>
-	</string>
-	<string id="st_prop_scope_12x">
-		<text>x12 optical scope</text>
-	</string>
 	<string id="st_prop_scanner">
 		<text>Infrared scanner</text>
 	</string>
 	<string id="st_prop_weightoutfit">
-		<text>Body armour weight</text>
+		<text>Body armor weight</text>
 	</string>
 	<string id="st_prop_night_vision_2">
 		<text>Second generation night vision device</text>
@@ -1960,10 +1942,10 @@
 		<text>Integrated silencer</text>
 	</string>
 	<string id="st_prop_grenade_launcher">
-		<text>Under-barrel grenade launcher</text>
+		<text>Underbarrel grenade launcher</text>
 	</string>
 	<string id="st_prop_restore_bleeding">
-		<text>Bleeding control</text>
+		<text>Wound healing</text>
 	</string>
 	<string id="st_prop_restore_health">
 		<text>Health restoration</text>
@@ -1984,7 +1966,7 @@
 		<text>Suit durability</text>
 	</string>
 	<string id="st_gauss_cannot_be_repaired">
-		<text>It's not clear how the weapon works. It can't be repaired without additional information about its design.</text>
+		<text>It’s not clear how the weapon works. It can’t be repaired without additional information about its design.</text>
 	</string>
 	<string id="st_upgr_cant_do">
 		<text>The technician cannot perform this modification</text>
@@ -1996,7 +1978,7 @@
 		<text>Not enough money</text>
 	</string>
 	<string id="st_no_buck">
-		<text>No buckshot</text>
+		<text>Does not use shot</text>
 	</string>
 	<string id="st_auto_fire">
 		<text>Automatic fire mode</text>
@@ -2005,25 +1987,25 @@
 		<text>3-round burst mode</text>
 	</string>
 	<string id="st_prop_artefact">
-		<text>Artefact containers</text>
+		<text>Number of containers</text>
 	</string>
 	<string id="st_upgr_vodka">
-		<text>The technician needs vodka</text>
+		<text>the technician needs vodka</text>
 	</string>
 	<string id="st_upgr_toolkit_1">
-		<text>The technician needs tools for basic work</text>
+		<text>the technician needs tools for basic work</text>
 	</string>
 	<string id="st_upgr_toolkit_2">
-		<text>The technician needs tools for fine work</text>
+		<text>the technician needs tools for fine work</text>
 	</string>
 	<string id="st_upgr_toolkit_3">
-		<text>The technician needs tools for calibration</text>
+		<text>the technician needs tools for calibration</text>
 	</string>
 	<string id="st_upgr_condlist">
-		<text>The technician needs additional tools</text>
+		<text>the technician needs additional information</text>
 	</string>
 	<string id="st_upgr_parents">
-		<text>Preceding modifications required</text>
+		<text>preceding modifications required</text>
 	</string>
 	<string id="st_up_arm_c9_name">
 		<text>Armadillo protective coating based on sapphire crystals</text>
@@ -2032,9 +2014,9 @@
 		<text>Reinforced titanium & beryllium matrix</text>
 	</string>
 	<string id="st_up_arm_c7_name">
-		<text>Extra carbon fibre coating</text>
+		<text>Extra carbon fiber coating</text>
 	</string>
 	<string id="st_up_kom_a5_name">
-		<text>Rubberised cloth under-layer</text>
+		<text>Rubberized cloth underlayer</text>
 	</string>
 </string_table>

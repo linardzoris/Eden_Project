@@ -6,7 +6,7 @@ function evaluator_need_cover:__init(storage, name) super(nil, name)
   	self.st = storage
 end
 function evaluator_need_cover:evaluate()
-  	return xr_logic.is_active(self.object, self.st) or false
+  	return xr_logic.is_active(self.object, self.st)
 end
 
 ----------------------------------------------------------------------------------------------------------------------
@@ -16,29 +16,15 @@ function action_cover:__init (npc_name, action_name, storage) super(nil, action_
 end
 function action_cover:initialize()
 	action_base.initialize(self)
+	self.board = sim_board.get_sim_board()
 end
 function action_cover:activate_scheme()
     self.st.signals = {}
-
+    self.board = sim_board.get_sim_board()
     --' Высчитываем кавер.
-    local base_point = self.st.path_center and patrol
-	if (self.st.path_center) then 
-		local path = patrol(self.st.path_center)
-		if (path) then 
-			base_point = path:level_vertex_id(0)
-		end
-	else 
-		local smart = SIMBOARD:get_smart_by_name(self.st.smart)
-		if (smart) then
-			base_point = smart.m_level_vertex_id
-		end
-	end
-	
-	if not (base_point) then 
-		base_point = self.object:level_vertex_id()
-	end
+    local base_point = sim_board.get_sim_board():get_smart_by_name(self.st.smart).m_level_vertex_id
 
-
+       
     local direction_vector = vector():set(math.random(-100,100), 0, math.random(-100,100))
     local base_vertex_id = level.vertex_in_direction(base_point, direction_vector, math.random(self.st.radius_min,self.st.radius_max))
     local self_random_position = level.vertex_position(base_vertex_id)
@@ -51,9 +37,9 @@ function action_cover:activate_scheme()
 
 	local cover_dist = 2
     while cover == nil and cover_dist <= 4 do
-		cover = self.object:best_cover(self_random_position, self.enemy_random_position, cover_dist, 1, 150)
-		cover_dist = cover_dist + 1
-	end
+		cover = self.object:best_cover(self_random_position, self.enemy_random_position, cover_dist, 1, 150)		
+		cover_dist = cover_dist + 1		
+	end	
 
 	if cover == nil then
 		--printf("cover is [nil]")
@@ -70,16 +56,16 @@ function action_cover:activate_scheme()
 		end
 		--printf("cover exists -- cover_vertex [%s] cover_position [%s]", tostring(self.cover_vertex_id), vec_to_str(self.cover_position))
 	end
-
+			
 	if not self.object:accessible(self.cover_position) then
 		local ttp = vector():set(0,0,0)
 		self.cover_vertex_id = self.object:accessible_nearest(self.cover_position, ttp)
 		self.cover_position = level.vertex_position(self.cover_vertex_id)
 		--printf("cover exists but not accesible -- cover_vertex [%s] cover_position [%s]", tostring(self.cover_vertex_id), vec_to_str(self.cover_position))
-	end
+	end	
 
 	local desired_direction = vector():sub(self.cover_position,self.enemy_random_position)
-	--printf("desired_direction = %s", vec_to_str(desired_direction))
+	printf("desired_direction = %s", vec_to_str(desired_direction))
 	if desired_direction ~= nil and not utils.vector_cmp(desired_direction, vector():set(0,0,0)) then
 		desired_direction:normalize()
 		self.object:set_desired_direction(desired_direction)
@@ -95,21 +81,16 @@ end
 function action_cover:execute()
 	--printf("[%s] dist %s to %s", self.object:name(), self.cover_position:distance_to_sqr(self.object:position()), vec_to_str(self.cover_position))
 	--' Проверяем пришли ли в точку.
-
-	if not (self.cover_position) then
-		return
-	end
-
 	if self.cover_position:distance_to_sqr(self.object:position()) <= 0.4 then
-		local anm = xr_logic.pick_section_from_condlist(db.actor, self.object, self.st.anm)
-		state_mgr.set_state(self.object, anm)
+		local anim = xr_logic.pick_section_from_condlist(db.actor, self.object, self.st.anim)
+		state_mgr.set_state(self.object, anim, nil, nil, {look_position = self.enemy_random_position}, nil, nil)
 	else
 		self.object:set_dest_level_vertex_id(self.cover_vertex_id)
 		state_mgr.set_state(self.object, "assault")
 	end
 	if self.st.sound_idle ~= nil then
 		xr_sound.set_sound_play(self.object:id(), self.st.sound_idle)
-	end
+	end	
 	action_base.execute(self)
 end
 function action_cover:finalize()
@@ -126,13 +107,13 @@ end
 function add_to_binder(npc, ini, scheme, section, storage)
   		local operators	= {}
 	  	local properties  = {}
-
+		
 	   	local manager = npc:motivation_action_manager()
 
 		properties["event"]			= xr_evaluators_id.reaction
 	 	properties["need_cover"]	= xr_evaluators_id.stohe_cover_base + 1
 		properties["state_mgr_logic_active"] 	= xr_evaluators_id.state_mgr + 4
-
+		
 	 	operators["action_cover"]	= xr_actions_id.stohe_cover_base + 1
 
 	   	-- evaluators
@@ -162,17 +143,16 @@ function set_scheme(npc, ini, scheme, section, gulag_name)
 
 	st.logic    = xr_logic.cfg_get_switch_conditions(ini, section, npc)
 
-	st.smart	= ini:r_string_ex(section,"smart")
-	st.path_center	= ini:r_string_ex(section,"path_center")
-	st.anm		= xr_logic.parse_condlist(npc, "anim", "anim", ini:r_string_ex(section,"anim") or "hide")
-	st.sound_idle= ini:r_string_ex(section,"sound_idle")
-
-	if (st.smart== nil and st.path_center == nil) then
-		printf("There is no path_center or smart in xr_cover.")
+	st.smart	= utils.cfg_get_string(ini, section, "smart", npc, false, "")
+	st.anim		= xr_logic.parse_condlist(npc, "anim", "anim", utils.cfg_get_string(ini, section, "anim", npc, false, "", "hide"))
+	st.sound_idle= utils.cfg_get_string(ini, section, "sound_idle",npc, false, "")
+		
+	if st.smart == nil then
+		abort("There is no path_walk and smart in xr_cover.")
 	end
+	
+	st.use_attack_direction = utils.cfg_get_bool(ini, section, "use_attack_direction", npc, false, true)
 
-	st.use_attack_direction = ini:r_bool_ex(section,"use_attack_direction",true)
-
-	st.radius_min = ini:r_float_ex(section,"radius_min") or 3
-	st.radius_max = ini:r_float_ex(section,"radius_max") or 7
+	st.radius_min = utils.cfg_get_number(ini, section, "radius_min", npc, false, 3)
+	st.radius_max = utils.cfg_get_number(ini, section, "radius_max", npc, false, 5)
 end

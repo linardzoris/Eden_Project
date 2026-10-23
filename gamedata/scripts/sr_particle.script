@@ -160,7 +160,7 @@ end
 
 -----------------------------------------------------------------------------------------------------
 function add_to_binder (npc, ini, scheme, section, storage)
-	--printf("DEBUG: add_to_binder: scheme='%s', section='%s'", scheme, section)
+	printf("DEBUG: add_to_binder: scheme='%s', section='%s'", scheme, section)
 	local new_action = action_particle (npc, storage)
 	xr_logic.subscribe_action_for_events (npc, storage, new_action)
 
@@ -171,10 +171,10 @@ function set_scheme (obj, ini, scheme, section, gulag_name)
 	local st = xr_logic.assign_storage_and_bind (obj, ini, scheme, section)
 	st.logic = xr_logic.cfg_get_switch_conditions (ini, section, obj)
 
-    st.name         = ini:r_string_ex(section,"name")
-    st.path         = ini:r_string_ex(section,"path")
-    st.mode         = ini:r_float_ex(section,"mode")
-    st.looped       = ini:r_bool_ex(section,"looped",false)
+    st.name         = utils.cfg_get_string (ini, section, "name", obj, true, "", nil)
+    st.path         = utils.cfg_get_string (ini, section, "path", obj, true, "", nil)
+    st.mode         = utils.cfg_get_number (ini, section, "mode", obj, true)
+    st.looped       = utils.cfg_get_bool   (ini, section, "looped", obj, false)
     if st.path == nil or st.path == "" then
        abort ("SR_PARTICLE : invalid path name")
     end

@@ -1,136 +1,5 @@
 <?xml version="1.0" encoding="windows-1251" ?>
-
-<!--===========================================================
-<
-< TEXT  STRINGS FOR TASKS ON ZATON MAP
-<	CoC 1.3.11
-<
-<	Modified by: DoctorX
-<	March 18, 2016
-<
-<===========================================================-->
-
 <string_table>
-
-
-	<!-- ELIMINATE MUTANTS FOR BEARD TASK -->
-	<string id="zat_a2_stalker_barmen_task_1_name">
-		<text>Clear Area of Mutants</text>
-	</string>
-	<string id="zat_a2_stalker_barmen_task_1_text">
-		<text>Mutants are afoot. Hunt them down and clear the area.</text>
-	</string>
-	<string id="zat_a2_stalker_barmen_task_1_about">
-		<text>Shh... Listen, hear that? Some mutants howling. Still gives me the chills after all this time. How about you go out there and take care of them? I'll make it worth your while.</text>
-	</string>
-	<string id="zat_a2_stalker_barmen_task_1_finish">
-		<text>Haha! Well done stalker! Have a drink on Beard!</text>
-	</string>
-
-
-	<!-- FIND ARTEFACT FOR BEARD TASK -->
-	<string id="zat_a2_stalker_barmen_task_2_name">
-		<text>Find the %s Artefact</text>
-	</string>
-	<string id="zat_a2_stalker_barmen_task_2_text">
-		<text>Beard wants you to find the %s artefact for him.</text>
-	</string>
-	<string id="zat_a2_stalker_barmen_task_2_about">
-		<text>I deal in artefacts. I usually don't buy them from stalkers, but there is one in particular I would like to get my hands on. Do you want to try to get one for me?</text>
-	</string>
-	<string id="zat_a2_stalker_barmen_task_2_fetch_about">
-		<text>I'm looking for the %s. You ever seen one? If you can find it I will pay you well.</text>
-	</string>
-	<string id="zat_a2_stalker_barmen_task_2_fetch_finish">
-		<text>Good hunting stalker! Have a drink on the house!</text>
-	</string>
-
-
-	<!-- ASSASSINATION FOR BEARD TASK -->
-	<string id="zat_a2_stalker_barmen_task_3_name">
-		<text>Diplomat</text>
-	</string>
-	<string id="zat_a2_stalker_barmen_task_3_text">
-		<text>Convince the military commander to call off his search for a fellow stalker.</text>
-	</string>
-	<string id="zat_a2_stalker_barmen_task_3_about">
-		<text>You see that guy in the corner there? Spetsnaz is looking for him. He's been hiding out here for weeks. They say he ran through the Brain Scorcher to escape them. I don't know how he survived, though he ain't quite right in the head any-more. Anyway, you want to help the poor fellow? I happen to know where the military commander who wants him is stationed. Maybe you can convince him to leave the guy alone.</text>
-	</string>
-	<string id="zat_a2_stalker_barmen_task_3_finish">
-		<text>Ah, you killed him! Well, that's effective diplomacy! Good man! Free drinks for you!</text>
-	</string>
-
-
-	<!-- ASSASSIATION FOR BANDITS TASK -->
-	<string id="zat_b7_bandit_boss_sultan_task_1_name">
-		<text>Eliminate Target</text>
-	</string>
-	<string id="zat_b7_bandit_boss_sultan_task_1_text">
-		<text>Find and eliminate the target then return to Sultan for payment.</text>
-	</string>
-	<string id="zat_b7_bandit_boss_sultan_task_1_about">
-		<text>There are many people in the Zone who have rubbed me the wrong way or shown me disrespect. Some of these pricks either owe me money or fucked up some deal. These people are nothing but rats that need stomped out. If you are up for the task, I will give you their information so that you can track them through GPS.</text>
-	</string>
-	<string id="zat_b7_bandit_boss_sultan_task_1_finish">
-		<text>Great work! Here's a little something for your trouble:</text>
-	</string>
-
-
-	<!-- FIND LEVEL 1 TOOLKIT FOR CARDAN TASK -->
-	<string id="zat_a2_stalker_mechanic_task_1_name">
-		<text>Find %s</text>
-	</string>
-	<string id="zat_a2_stalker_mechanic_task_1_text">
-		<text>%s are required by Cardan to install basic equipment upgrades, you should bring them back to him if you find any.</text>
-	</string>
-	<string id="zat_a2_stalker_mechanic_task_1_about">
-		<text>Not only do I need some more booze I can really use a good set of tools, stalker. If you are interested in helping me out, I will tell you what I need.</text>
-	</string>
-	<string id="zat_a2_stalker_mechanic_task_1_fetch_about">
-		<text>I need a set of basic tools. It should contain what I need. If you can bring some back for me I will be grateful, I will even offer you a discount from here on out.</text>
-	</string>
-	<string id="zat_a2_stalker_mechanic_task_1_fetch_finish">
-		<text>Great, stalker. You brought exactly what I've asked. Thanks.</text>
-	</string>
-
-
-	<!-- FIND LEVEL 2 TOOLKIT FOR CARDAN TASK -->
-	<string id="zat_a2_stalker_mechanic_task_2_name">
-		<text>Find %s</text>
-	</string>
-	<string id="zat_a2_stalker_mechanic_task_2_text">
-		<text>%s are required by Cardan to install advanced equipment upgrades, you should bring them back to him if you find any.</text>
-	</string>
-	<string id="zat_a2_stalker_mechanic_task_2_about">
-		<text>I could really use more tools and vodka. But the vodka is easy to find. What I need from you is more tools; better tools. Can you do this for me?</text>
-	</string>
-	<string id="zat_a2_stalker_mechanic_task_2_fetch_about">
-		<text>I need a set of advanced tools. It should contain what I need. If you can bring some back for me I will be grateful, I will even offer you a discount from here on out.</text>
-	</string>
-	<string id="zat_a2_stalker_mechanic_task_2_fetch_finish">
-		<text>Fantastic! Feel free to stop by any time for a drink or if you need me to take a look at your gear.</text>
-	</string>
-
-
-	<!-- FIND LEVEL 3 TOOLKIT FOR CARDAN TASK -->
-	<string id="zat_a2_stalker_mechanic_task_3_name">
-		<text>Find %s</text>
-	</string>
-	<string id="zat_a2_stalker_mechanic_task_3_text">
-		<text>%s are required by Cardan to install expert equipment upgrades, you should bring them back to him if you find any.</text>
-	</string>
-	<string id="zat_a2_stalker_mechanic_task_3_about">
-		<text>I could really use more tools and vodka. But the vodka is easy to find. What I need from you is more tools; better tools. Can you do this for me?</text>
-	</string>
-	<string id="zat_a2_stalker_mechanic_task_3_fetch_about">
-		<text>I need a set of expert tools. It should contain what I need. If you can bring some back for me I will be grateful, I will even offer you a discount from here on out.</text>
-	</string>
-	<string id="zat_a2_stalker_mechanic_task_3_fetch_finish">
-		<text>Fantastic! Feel free to stop by any time for a drink or if you need me to take a look at your gear.</text>
-	</string>
-
-
-	<!-- OLD TASKS FROM CoP (no longer used?) -->
 	<string id="zat_a2_reach_base_name">
 		<text>Safe spot: reach Skadovsk</text>
 	</string>
@@ -255,16 +124,16 @@
 		<text>The map you found in one of the helicopters indicated evacuation locations. You should check if the soldiers went to location B2</text>
 	</string>
 	<string id="zat_b14_bring_strange_object_name">
-		<text>Strange phenomenon: take the artefact to Beard</text>
+		<text>Strange phenomenon: take the artifact to Beard</text>
 	</string>
 	<string id="zat_b14_bring_strange_object_text">
-		<text>The source of the strange glow was an equally strange artefact. It's bound to be of interest to Beard.</text>
+		<text>The source of the strange glow was an equally strange artifact. It's bound to be of interest to Beard.</text>
 	</string>
 	<string id="zat_b14_learn_about_strange_occurrence_by_stalkers_name">
-		<text>Strange phenomenon: ask stalkers about the artefact</text>
+		<text>Strange phenomenon: ask stalkers about the artifact</text>
 	</string>
 	<string id="zat_b14_learn_about_strange_occurrence_by_stalkers_text">
-		<text>Stalkers may know something about the strange artefact or they could suggest someone who does. You should talk to them.</text>
+		<text>Stalkers may know something about the strange artifact or they could suggest someone who does. You should talk to them.</text>
 	</string>
 	<string id="zat_b14_learn_about_strange_occurrence_name">
 		<text>Strange phenomenon: find the source of the glow at the dredge station</text>
@@ -273,16 +142,16 @@
 		<text>A strange glow was spotted at the dredge station. Beard asked you to find its source.</text>
 	</string>
 	<string id="zat_b14_take_artefact_name">
-		<text>Strange phenomenon: take the artefact</text>
+		<text>Strange phenomenon: take the artifact</text>
 	</string>
 	<string id="zat_b14_take_artefact_text">
-		<text>The source of the strange glow was an equally strange artefact. You should take it.</text>
+		<text>The source of the strange glow was an equally strange artifact. You should take it.</text>
 	</string>
 	<string id="zat_b14_tell_svyaznoy_about_all_name">
-		<text>Strange phenomenon: tell Beard about the artefact</text>
+		<text>Strange phenomenon: tell Beard about the artifact</text>
 	</string>
 	<string id="zat_b14_tell_svyaznoy_about_all_text">
-		<text>The source of the strange glow was an equally strange artefact. Even though you don't have the artefact, you should tell Beard about it.</text>
+		<text>The source of the strange glow was an equally strange artifact. Even though you don't have the artifact, you should tell Beard about it.</text>
 	</string>
 	<string id="zat_b20_cross_the_teleport_name">
 		<text>Getting to the plateau: jump into the anomaly</text>
@@ -321,103 +190,103 @@
 		<text>Investigate the Stingray 3 crash site.</text>
 	</string>
 	<string id="zat_b29_simple_bring_text_1">
-		<text>You need to bring Beard the artefact, but the head start time has expired. Now your competitors are searching for the artefact as well.</text>
+		<text>You need to bring Beard the artifact, but the head start time has expired. Now your competitors are searching for the artifact as well.</text>
 	</string>
 	<string id="zat_b29_simple_bring_text_2">
-		<text>You need to bring Beard the artefact. Remember: your competitors are also searching for it.</text>
+		<text>You need to bring Beard the artifact. Remember: your competitors are also searching for it.</text>
 	</string>
 	<string id="zat_b29_simple_bring_text_3">
-		<text>You need to bring Beard the artefact, but there is a report that another group has already found one. You should track the signal and try to complete the job before your competitors do.</text>
+		<text>You need to bring Beard the artifact, but there is a report that another group has already found one. You should track the signal and try to complete the job before your competitors do.</text>
 	</string>
 	<string id="zat_b29_simple_bring_text_4">
-		<text>You need to bring Beard the artefact, but another group has already done that. Now you'll only get half your fee for the artefact.</text>
+		<text>You need to bring Beard the artifact, but another group has already done that. Now you'll only get half your fee for the artifact.</text>
 	</string>
 	<string id="zat_b29_simple_bring_text_5">
-		<text>You need to bring Beard the artefact.</text>
+		<text>You need to bring Beard the artifact.</text>
 	</string>
 	<string id="zat_b29_simple_bring_title_16">
-		<text>Artefact order: bring back a Gravi</text>
+		<text>Artifact order: bring back a Gravi</text>
 	</string>
 	<string id="zat_b29_simple_bring_title_17">
-		<text>Artefact order: bring back an Eye</text>
+		<text>Artifact order: bring back an Eye</text>
 	</string>
 	<string id="zat_b29_simple_bring_title_18">
-		<text>Artefact order: bring back a Bubble</text>
+		<text>Artifact order: bring back a Bubble</text>
 	</string>
 	<string id="zat_b29_simple_bring_title_19">
-		<text>Artefact order: bring back a Shell</text>
+		<text>Artifact order: bring back a Shell</text>
 	</string>
 	<string id="zat_b29_simple_bring_title_20">
-		<text>Artefact order: bring back a Goldfish</text>
+		<text>Artifact order: bring back a Goldfish</text>
 	</string>
 	<string id="zat_b29_simple_bring_title_21">
-		<text>Artefact order: bring back a Flame</text>
+		<text>Artifact order: bring back a Flame</text>
 	</string>
 	<string id="zat_b29_simple_bring_title_22">
-		<text>Artefact order: bring back a Firefly</text>
+		<text>Artifact order: bring back a Firefly</text>
 	</string>
 	<string id="zat_b29_simple_bring_title_23">
-		<text>Artefact order: bring back a Snowflake</text>
+		<text>Artifact order: bring back a Snowflake</text>
 	</string>
 	<string id="zat_b29_simple_find_text_1">
-		<text>You need to find the artefact for Beard, but the head start time has expired. Now your competitors are searching for the artefact as well.</text>
+		<text>You need to find the artifact for Beard, but the head start time has expired. Now your competitors are searching for the artifact as well.</text>
 	</string>
 	<string id="zat_b29_simple_find_text_2">
-		<text>You need to find the artefact for Beard. Remember: your competitors are also searching for it.</text>
+		<text>You need to find the artifact for Beard. Remember: your competitors are also searching for it.</text>
 	</string>
 	<string id="zat_b29_simple_find_text_3">
-		<text>You need to find the artefact for Beard, but there is a report that another group has already found one. You should track the signal and try to complete the job before your competitors do.</text>
+		<text>You need to find the artifact for Beard, but there is a report that another group has already found one. You should track the signal and try to complete the job before your competitors do.</text>
 	</string>
 	<string id="zat_b29_simple_find_text_4">
-		<text>You need to find the artefact for Beard, but another group has already completed the order. Now you'll only get half your fee for the artefact.</text>
+		<text>You need to find the artifact for Beard, but another group has already completed the order. Now you'll only get half your fee for the artifact.</text>
 	</string>
 	<string id="zat_b29_simple_find_text_5">
-		<text>You need to find the artefact for Beard.</text>
+		<text>You need to find the artifact for Beard.</text>
 	</string>
 	<string id="zat_b29_simple_find_title_16">
-		<text>Artefact order: find a Gravi</text>
+		<text>Artifact order: find a Gravi</text>
 	</string>
 	<string id="zat_b29_simple_find_title_17">
-		<text>Artefact order: find an Eye</text>
+		<text>Artifact order: find an Eye</text>
 	</string>
 	<string id="zat_b29_simple_find_title_18">
-		<text>Artefact order: find a Bubble</text>
+		<text>Artifact order: find a Bubble</text>
 	</string>
 	<string id="zat_b29_simple_find_title_19">
-		<text>Artefact order: find a Shell</text>
+		<text>Artifact order: find a Shell</text>
 	</string>
 	<string id="zat_b29_simple_find_title_20">
-		<text>Artefact order: find a Goldfish</text>
+		<text>Artifact order: find a Goldfish</text>
 	</string>
 	<string id="zat_b29_simple_find_title_21">
-		<text>Artefact order: find a Flame</text>
+		<text>Artifact order: find a Flame</text>
 	</string>
 	<string id="zat_b29_simple_find_title_22">
-		<text>Artefact order: find a Firefly</text>
+		<text>Artifact order: find a Firefly</text>
 	</string>
 	<string id="zat_b29_simple_find_title_23">
-		<text>Artefact order: find a Snowflake</text>
+		<text>Artifact order: find a Snowflake</text>
 	</string>
 	<string id="zat_b30_compass_to_barmen_task_find_name">
-		<text>Compass: locate Noah and find out where you can get the rare artefact</text>
+		<text>Compass: locate Noah and find out where you can get the rare artifact</text>
 	</string>
 	<string id="zat_b30_compass_to_barmen_task_find_text">
-		<text>You need to locate Noah at the old barge and find out where you can get the rare Compass artefact. Beard has been looking for the artefact for a long time and he's willing to pay well for it.</text>
+		<text>You need to locate Noah at the old barge and find out where you can get the rare Compass artifact. Beard has been looking for the artifact for a long time and he's willing to pay well for it.</text>
 	</string>
 	<string id="zat_b30_compass_to_barmen_task_give_name">
-		<text>Compass: take the artefact to Beard</text>
+		<text>Compass: take the artifact to Beard</text>
 	</string>
 	<string id="zat_b30_compass_to_sultan_task_find_name">
-		<text>Compass: find out where you can get the rare artefact from Noah</text>
+		<text>Compass: find out where you can get the rare artifact from Noah</text>
 	</string>
 	<string id="zat_b30_compass_to_sultan_task_find_text">
-		<text>Sultan wants to intercept the artefact Beard is looking for. You need to locate Noah at the old barge and find out where you can get the artefact.</text>
+		<text>Sultan wants to intercept the artifact Beard is looking for. You need to locate Noah at the old barge and find out where you can get the artifact.</text>
 	</string>
 	<string id="zat_b30_compass_to_sultan_task_give_name">
-		<text>Compass: take the artefact to Sultan</text>
+		<text>Compass: take the artifact to Sultan</text>
 	</string>
 	<string id="zat_b30_compass_to_sultan_task_give_text">
-		<text>The artefact Noah gave you is the Compass Sultan is looking for.</text>
+		<text>The artifact Noah gave you is the Compass Sultan is looking for.</text>
 	</string>
 	<string id="zat_b30_percent_task_name">
 		<text>Shady business: get your cut from Beard</text>
@@ -435,7 +304,7 @@
 		<text>Shady business: take detectors from stalkers </text>
 	</string>
 	<string id="zat_b30_sultan_task_2_text">
-		<text>You must do whatever you can to take the detector prototypes away from the stalkers who are searching for artefacts for Beard. If he has no detectors, he'll have to agree to Sultan's terms.</text>
+		<text>You must do whatever you can to take the detector prototypes away from the stalkers who are searching for artifacts for Beard. If he has no detectors, he'll have to agree to Sultan's terms.</text>
 	</string>
 	<string id="zat_b30_sultan_task_3_name">
 		<text>Shady business: talk to Sultan</text>
@@ -459,19 +328,19 @@
 		<text>Shady business: take the second detector away from stalkers </text>
 	</string>
 	<string id="zat_b30_sultan_task_7_text">
-		<text>You must do whatever you can to take the detector prototypes away from the stalkers who are searching for artefacts for Beard. If he has no detectors, he'll have to agree to Sultan's terms.</text>
+		<text>You must do whatever you can to take the detector prototypes away from the stalkers who are searching for artifacts for Beard. If he has no detectors, he'll have to agree to Sultan's terms.</text>
 	</string>
 	<string id="zat_b30_task_1_name">
-		<text>Tempting business: bring Tukarev three Veles detectors</text>
+		<text>Tempting business: bring Novikov three Veles detectors</text>
 	</string>
 	<string id="zat_b30_task_1_text">
-		<text>Owl the trader has offered you to participate in a lucrative venture. Your job is to find three Veles detectors and take them to Tukarev in the scientists' bunker.</text>
+		<text>Owl the trader has offered you to participate in a lucrative venture. Your job is to find three Veles detectors and take them to Novikov in the scientists' bunker.</text>
 	</string>
 	<string id="zat_b30_task_2_name">
 		<text>Tempting business: wait until Owl gets the detectors</text>
 	</string>
 	<string id="zat_b30_task_2_text">
-		<text>Tukarev accepted the detectors and promised to send them back to Owl himself. You need to wait for him to finish working with the detectors and then find out about the results from Owl.</text>
+		<text>Novikov accepted the detectors and promised to send them back to Owl himself. You need to wait for him to finish working with the detectors and then find out about the results from Owl.</text>
 	</string>
 	<string id="zat_b30_task_3_name">
 		<text>Tempting business: talk to Owl</text>
@@ -570,43 +439,43 @@
 		<text>Tools: bring Cardan tools</text>
 	</string>
 	<string id="zat_b3_get_tools_1_2_text">
-		<text>Cardan has asked you to get two sets of tools: one for basic work and one for fine work. The technician will pay you for the tools and will be able to perform more advanced weapon and armour modifications.</text>
+		<text>Cardan has asked you to get two sets of tools: one for basic work and one for fine work. The technician will pay you for the tools and will be able to perform more advanced weapon and armor modifications.</text>
 	</string>
 	<string id="zat_b3_get_tools_1_3_name">
 		<text>Tools: bring Cardan tools</text>
 	</string>
 	<string id="zat_b3_get_tools_1_3_text">
-		<text>Cardan has asked you to get two sets of tools: one for basic work and one for calibration. The technician will pay you for the tools and will be able to perform more advanced weapon and armour modifications.</text>
+		<text>Cardan has asked you to get two sets of tools: one for basic work and one for calibration. The technician will pay you for the tools and will be able to perform more advanced weapon and armor modifications.</text>
 	</string>
 	<string id="zat_b3_get_tools_1_name">
 		<text>Tools: bring Cardan tools</text>
 	</string>
 	<string id="zat_b3_get_tools_1_text">
-		<text>Cardan has asked you to get a set of tools for basic work. The technician will pay you for the tools and will be able to perform more advanced weapon and armour modifications.</text>
+		<text>Cardan has asked you to get a set of tools for basic work. The technician will pay you for the tools and will be able to perform more advanced weapon and armor modifications.</text>
 	</string>
 	<string id="zat_b3_get_tools_2_3_name">
 		<text>Tools: bring Cardan tools</text>
 	</string>
 	<string id="zat_b3_get_tools_2_3_text">
-		<text>Cardan has asked you to get two sets of tools: one for fine work and one for calibration. The technician will pay you for the tools and will be able to perform more advanced weapon and armour modifications.</text>
+		<text>Cardan has asked you to get two sets of tools: one for fine work and one for calibration. The technician will pay you for the tools and will be able to perform more advanced weapon and armor modifications.</text>
 	</string>
 	<string id="zat_b3_get_tools_2_name">
 		<text>Tools: bring Cardan tools</text>
 	</string>
 	<string id="zat_b3_get_tools_2_text">
-		<text>Cardan has asked you to get a set of tools for fine work. The technician will pay you for the tools and will be able to perform more advanced weapon and armour modifications.</text>
+		<text>Cardan has asked you to get a set of tools for fine work. The technician will pay you for the tools and will be able to perform more advanced weapon and armor modifications.</text>
 	</string>
 	<string id="zat_b3_get_tools_3_name">
 		<text>Tools: bring Cardan tools</text>
 	</string>
 	<string id="zat_b3_get_tools_3_text">
-		<text>Cardan has asked you to get a set of tools for calibration. The technician will pay you for the tools and will be able to perform more advanced weapon and armour modifications.</text>
+		<text>Cardan has asked you to get a set of tools for calibration. The technician will pay you for the tools and will be able to perform more advanced weapon and armor modifications.</text>
 	</string>
 	<string id="zat_b3_mechanic_toolkit_search_name">
 		<text>Tools: bring Cardan tools</text>
 	</string>
 	<string id="zat_b3_mechanic_toolkit_search_text">
-		<text>Cardan has asked you to get three sets of tools: one for basic work, one for fine work and one for calibration. The technician will pay you for the tools and will be able to perform more advanced weapon and armour modifications.</text>
+		<text>Cardan has asked you to get three sets of tools: one for basic work, one for fine work and one for calibration. The technician will pay you for the tools and will be able to perform more advanced weapon and armor modifications.</text>
 	</string>
 	<string id="zat_b40_reconnoitre_merc_camp_01_name">
 		<text>Mercenary camp: take any information you can find</text>
@@ -870,13 +739,13 @@
 		<text>The hit: join the robbers</text>
 	</string>
 	<string id="zat_b7_stalkers_raiders_stalkers_text">
-		<text>Stalkers have asked you to help them repel the robbersпїЅ attack. You should join the robbers. When they begin the assault, youпїЅll be able to attack them from behind with impunity.</text>
+		<text>Stalkers have asked you to help them repel the robbers’ attack. You should join the robbers. When they begin the assault, you’ll be able to attack them from behind with impunity.</text>
 	</string>
 	<string id="zat_b7_stalkers_raiders_meet_text">
-		<text>The robbers should be waiting by Shevchenko. YouпїЅll need to meet them to take part in their assault on the stalkers.</text>
+		<text>The robbers should be waiting by Shevchenko. You’ll need to meet them to take part in their assault on the stalkers.</text>
 	</string>
 	<string id="zat_b7_stalkers_raiders_wait_text">
-		<text>Wait for the meeting with the robbers. They want to attack the stalker camp after midnight while itпїЅs still dark. The agreed meeting place is Shevchenko.</text>
+		<text>Wait for the meeting with the robbers. They want to attack the stalker camp after midnight while it’s still dark. The agreed meeting place is Shevchenko.</text>
 	</string>
 	<string id="zat_b7_stalkers_raiders_raiders_reward_name">
 		<text>The hit: get your cut</text>
@@ -897,17 +766,15 @@
 		<text>You need to take the container and deliver it to its owner.</text>
 	</string>
 	<string id="zat_b100_guide_maps_01_text">
-		<text>The Stingray 2 on-board computer had maps of the area between Zaton and Jupiter. You should find someone who could use them.</text>
+		<text>The Stingray 2 onboard computer had maps of the area between Zaton and Jupiter. You should find someone who could use them.</text>
 	</string>
 	<string id="zat_b20_ask_a_stalkers_name">
 		<text>Getting to the plateau: talk to stalkers</text>
 	</string>
 	<string id="zat_b20_ask_a_stalkers_text">
-		<text>It looks like thereпїЅs no direct route to the plateau. Ask local stalkers about other ways of getting there.</text>
+		<text>It looks like there’s no direct route to the plateau. Ask local stalkers about other ways of getting there.</text>
 	</string>
 	<string id="zat_b30_compass_to_barmen_task_give_text">
-		<text>The artefact you got from Noah is the Compass that Beard wants.</text>
+		<text>The artifact you got from Noah is the Compass that Beard wants.</text>
 	</string>
-
-
 </string_table>

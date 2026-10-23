@@ -1,21 +1,7 @@
 
 
 animations = 	{
-		prone		= 	{	prop	= 	{ maxidle = 5,sumidle = 3,rnd = 80,moving = true },
-						into	= 	{
-										[0] = { "loophole_9_in_front_0" },
-										[1] = { "loophole_9_in_front_0" }
-									},
-						out		= nil,
-						idle	= 	{
-										[0]	= "loophole_9_idle_0",
-										[1]	= "loophole_9_idle_0"
-									},
-						rnd		= 	{
-										[0]	= {	"loophole_9_idle_0" },
-										[1]	= {	"loophole_9_idle_0" }
-									}
-					},
+
 		sit			= {	prop	= { maxidle = 5,
 									sumidle = 3,
 									rnd = 80 },

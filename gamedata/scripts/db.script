@@ -3,10 +3,6 @@
 Чугай Александр
 --------------------------------------------------------------------------------------------------]]
 
-used_level_vertex_ids = {}
-OnlineStalkers		= {}
-campfire_by_name	= nil
-campfire_table_by_smart_names = {}
 zone_by_name        = {}
 script_ids			= {}
 storage             = {}
@@ -17,7 +13,9 @@ camp_storage        = {}
 story_by_id	        = {}
 smart_terrain_by_id = {}
 info_restr          = {}
+strn_by_respawn     = {}
 heli_enemies        = {}
+heli_enemy_count    = 0
 anim_obj_by_name	= {}
 goodwill 			= {sympathy = {}, relations = {}}
 story_object		= {}
@@ -27,38 +25,25 @@ anomaly_by_name     = {}
 level_doors 		= {}  -- Содержит список всех дверей на уровне (чтобы нпс могли по нему пробегаться и открывать двери, рядом с которыми они стоят.
 no_weap_zones 		= {}
 spawned_vertex_by_id= {}
-dynamic_ltx			= {}
-vehicle				= nil
 
-function add_enemy(obj)
-	table.insert(heli_enemies,obj:id())
+
+
+function add_enemy( obj )
+	heli_enemies[heli_enemy_count] = obj
+	heli_enemy_count = heli_enemy_count + 1
 end
 
-function delete_enemy(obj)
-	local id = obj:id()
-	local remove_me
-	for i=1,#heli_enemies do 
-		if (heli_enemies[i] == id) then 
-			remove_me = i
-			break
-		end
-	end
-	table.remove(heli_enemies,remove_me)
+function delete_enemy( e_index )
+	heli_enemies[e_index] = nil
 end
 
 function add_obj( obj )
-	--printf("adding object %s",obj:name())
+	printf("adding object %s",obj:name())
 	storage[obj:id()].object = obj
-	if (obj:clsid() == clsid.script_stalker) then 
-		add_stalker(obj)
-	end
 end
 
 function del_obj( obj )
-	storage[obj:id()] = nil
-	if (obj:clsid() == clsid.script_stalker) then 
-		del_stalker(obj)
-	end
+	storage   [obj:id()] = nil
 end
 
 
@@ -116,28 +101,4 @@ end
 function del_anim_obj(anim_obj)
 	anim_obj_by_name[anim_obj:name()] = nil
 	del_obj(anim_obj)
-end
-
-function add_stalker(npc)
-	for i=#db.OnlineStalkers,1,-1 do
-		if (npc:id() == db.OnlineStalkers[i]) then
-			return
-		end
-	end
-	table.insert(db.OnlineStalkers,npc:id())
-end
-
-function del_stalker(npc)
-	if not (db.OnlineStalkers) then
-		return
-	end
-	local index
-	for i=#db.OnlineStalkers,1,-1 do
-		if (npc:id() == db.OnlineStalkers[i]) then
-			index = i
-			break
-		end
-	end
-
-	table.remove(db.OnlineStalkers,index)
 end

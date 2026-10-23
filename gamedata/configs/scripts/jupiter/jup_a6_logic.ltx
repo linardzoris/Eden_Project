@@ -2,9 +2,9 @@
 reach_movement = walk_noweap
 use_camp = false
 meet = meet@jup_a6_animpoint_meet
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = jup_a6_sr_noweap
 gather_items_enabled = false
 help_wounded_enabled = false
@@ -15,6 +15,8 @@ combat_ignore_keep_when_attacked = false
 invulnerable = false
 
 [meet@jup_a6_animpoint_meet]
+close_snd_hello = {=check_npc_name(monolith)} nil, {=is_wounded} nil, {!is_squad_commander} nil, {=actor_enemy} nil, {=actor_has_weapon} meet_hide_weapon, meet_hello
+close_snd_bye 	= {=check_npc_name(monolith)} nil, {=is_wounded} nil, {!is_squad_commander} nil, {=actor_enemy} nil, {=actor_has_weapon} nil, meet_hello
 close_anim 		= nil
 close_victim 	= nil
 far_anim 		= nil
@@ -29,123 +31,127 @@ meet_on_talking = false
 
 [logic@jup_a6_animp_01]
 active = animpoint@jup_a6_animp_01
-suitable = true
-prior = 60
+suitable = {=npc_community(stalker) =npc_in_zone(jup_a6_sr_noweap)} true, {=npc_community(dolg) =npc_in_zone(jup_a6_sr_noweap)} true
+prior = 100
 
 [logic@jup_a6_animp_02]
 active = animpoint@jup_a6_animp_02
-suitable = true
-prior = 60
+suitable = {=npc_community(stalker) =npc_in_zone(jup_a6_sr_noweap)} true, {=npc_community(dolg) =npc_in_zone(jup_a6_sr_noweap)} true
+prior = 100
 
 [logic@jup_a6_animp_03]
 active = animpoint@jup_a6_animp_03
-suitable = true
-prior = 60
+suitable = {=npc_community(stalker) =npc_in_zone(jup_a6_sr_noweap)} true, {=npc_community(dolg) =npc_in_zone(jup_a6_sr_noweap)} true
+prior = 100
 
 [logic@jup_a6_animp_04]
 active = animpoint@jup_a6_animp_04
-suitable = true
-prior = 60
+suitable = {=npc_community(stalker) =npc_in_zone(jup_a6_sr_noweap)} true, {=npc_community(dolg) =npc_in_zone(jup_a6_sr_noweap)} true
+prior = 100
 
 [logic@jup_a6_animp_09]
 active = animpoint@jup_a6_animp_09
-suitable = true
-prior = 60
+suitable = {+jup_b217_welcome_tech_talked =npc_community(stalker) =npc_in_zone(jup_a6_sr_noweap)} true, {+jup_b217_welcome_tech_talked =npc_community(dolg) =npc_in_zone(jup_a6_sr_noweap)} true
+prior = 100
 
 [logic@jup_a6_animp_10]
 active = animpoint@jup_a6_animp_10
-suitable = true
-prior = 60
+suitable = {=npc_community(stalker) =npc_in_zone(jup_a6_sr_noweap)} true, {=npc_community(dolg) =npc_in_zone(jup_a6_sr_noweap)} true
+prior = 100
 
 [logic@jup_a6_animp_11]
 active = animpoint@jup_a6_animp_11
-suitable = true
-prior = 60
+suitable = {+jup_b217_welcome_tech_talked =npc_community(stalker) =npc_in_zone(jup_a6_sr_noweap)} true, {+jup_b217_welcome_tech_talked =npc_community(dolg) =npc_in_zone(jup_a6_sr_noweap)} true
+prior = 100
 
 [logic@jup_a6_animp_15]
 active = animpoint@jup_a6_animp_15
-suitable = true
-prior = 60
+suitable = {=npc_community(stalker) =npc_in_zone(jup_a6_sr_noweap)} true, {=npc_community(dolg) =npc_in_zone(jup_a6_sr_noweap)} true
+prior = 100
 
 [logic@jup_a6_animp_16]
 active = animpoint@jup_a6_animp_16
-suitable = true
-prior = 60
+suitable = {=npc_community(stalker) =npc_in_zone(jup_a6_sr_noweap)} true, {=npc_community(dolg) =npc_in_zone(jup_a6_sr_noweap)} true
+prior = 100
 
 [logic@jup_a6_animp_17]
 active = animpoint@jup_a6_animp_17
-suitable = true
-prior = 60
+suitable = {=npc_community(stalker) =npc_in_zone(jup_a6_sr_noweap)} true, {=npc_community(dolg) =npc_in_zone(jup_a6_sr_noweap)} true
+prior = 100
 
 [logic@jup_a6_animp_18]
 active = animpoint@jup_a6_animp_18
-suitable = true
-prior = 60
+suitable = {=npc_community(stalker) =npc_in_zone(jup_a6_sr_noweap)} true, {=npc_community(dolg) =npc_in_zone(jup_a6_sr_noweap)} true
+prior = 100
 
 [logic@jup_a6_animp_91]
 active = animpoint@jup_a6_animp_91
-suitable = true
-prior = 60
+suitable = {-jup_b25_freedom_flint_gone =npc_community(dolg) =npc_in_zone(jup_a6_sr_noweap)} true
+prior = 100
 
 [logic@jup_a6_animp_92]
 active = animpoint@jup_a6_animp_92
-suitable = true
-prior = 60
+suitable = {-jup_b25_freedom_flint_gone =npc_community(dolg) =npc_in_zone(jup_a6_sr_noweap)} true
+prior = 100
 
 [logic@jup_a6_animp_93]
 active = animpoint@jup_a6_animp_93
-suitable = true
-prior = 60
+suitable = {-jup_b25_freedom_flint_gone =npc_community(dolg) =npc_in_zone(jup_a6_sr_noweap)} true
+prior = 100
+
+
 
 [logic@jup_a6_animp_05]
 active = animpoint@jup_a6_animp_05
-suitable = true
-prior = 60
+suitable = {=npc_community(stalker) =npc_in_zone(jup_a6_sr_noweap)} true, {=npc_community(freedom) =npc_in_zone(jup_a6_sr_noweap)} true
+prior = 95
 
 [logic@jup_a6_animp_06]
 active = animpoint@jup_a6_animp_06
-suitable = true
-prior = 60
+suitable = {=npc_community(stalker) =npc_in_zone(jup_a6_sr_noweap)} true, {=npc_community(freedom) =npc_in_zone(jup_a6_sr_noweap)} true
+prior = 95
 
 [logic@jup_a6_animp_07]
 active = animpoint@jup_a6_animp_07
-suitable = true
-prior = 60
+suitable = {=npc_community(stalker) =npc_in_zone(jup_a6_sr_noweap)} true, {=npc_community(freedom) =npc_in_zone(jup_a6_sr_noweap)} true
+prior = 100
 
 [logic@jup_a6_animp_08]
 active = animpoint@jup_a6_animp_08
-suitable = true
-prior = 60
+suitable = {=npc_community(stalker) =npc_in_zone(jup_a6_sr_noweap)} true, {=npc_community(freedom) =npc_in_zone(jup_a6_sr_noweap)} true
+prior = 95
 
 [logic@jup_a6_animp_12]
 active = animpoint@jup_a6_animp_12
-suitable = true
-prior = 60
+suitable = {=npc_community(stalker) =npc_in_zone(jup_a6_sr_noweap)} true, {=npc_community(freedom) =npc_in_zone(jup_a6_sr_noweap)} true
+prior = 100
 
 [logic@jup_a6_animp_13]
 active = animpoint@jup_a6_animp_13
-suitable = true
-prior = 60
+suitable = {=npc_community(stalker) =npc_in_zone(jup_a6_sr_noweap)} true, {=npc_community(freedom) =npc_in_zone(jup_a6_sr_noweap)} true
+prior = 100
 
 [logic@jup_a6_animp_14]
 active = animpoint@jup_a6_animp_14
-suitable = true
-prior = 60
+suitable = {=npc_community(stalker) =npc_in_zone(jup_a6_sr_noweap)} true, {=npc_community(freedom) =npc_in_zone(jup_a6_sr_noweap)} true
+prior = 100
 
 [logic@jup_a6_animp_19]
 active = animpoint@jup_a6_animp_19
-suitable = true
-prior = 60
+suitable = {=npc_community(stalker) =npc_in_zone(jup_a6_sr_noweap)} true, {=npc_community(freedom) =npc_in_zone(jup_a6_sr_noweap)} true
+prior = 100
 
 [logic@jup_a6_animp_20]
 active = animpoint@jup_a6_animp_20
-suitable = true
-prior = 60
+suitable = {=npc_community(stalker) =npc_in_zone(jup_a6_sr_noweap)} true, {=npc_community(freedom) =npc_in_zone(jup_a6_sr_noweap)} true
+prior = 85
 
 [logic@jup_a6_animp_21]
 active = animpoint@jup_a6_animp_21
-suitable = true
-prior = 60
+suitable = {=npc_community(stalker) =npc_in_zone(jup_a6_sr_noweap)} true, {=npc_community(freedom) =npc_in_zone(jup_a6_sr_noweap)} true
+prior = 80
+
+
 
 [animpoint@jup_a6_animp_01]:animpoint@jup_a6_animp_gen_reach
 cover_name = jup_a6_animp_01
@@ -341,15 +347,15 @@ cover_name = jup_b221_duty_03
 
 [logic@jup_a6_duty_guard]
 active = walker@jup_a6_duty_guard_reach
-suitable = true
-prior = 61
+suitable = {=npc_community(dolg) =npc_in_zone(jup_a6_sr_noweap)} true
+prior = 100
 
 [walker@jup_a6_duty_guard_reach]
 path_walk = duty_guard_walk
 path_look = duty_guard_look
 def_state_standing = wait_na
 meet = meet@jup_a6_animpoint_meet
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 out_restr = jup_a6_sr_noweap
 gather_items_enabled = false
 help_wounded_enabled = false
@@ -362,9 +368,9 @@ path_walk = duty_guard_walk
 path_look = duty_guard_look
 def_state_standing = wait_na
 meet = meet@jup_a6_animpoint_meet
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = jup_a6_sr_noweap
 gather_items_enabled = false
 help_wounded_enabled = false
@@ -374,52 +380,60 @@ use_camp = false
 
 [logic@jup_a6_duty_guarder]
 active = walker@jup_a6_duty_guarder
-suitable = true
-prior = 61
+suitable = {=target_squad_name(b207)} false, {=check_npc_name(monolith)} false, {=is_factions_enemies(dolg)} false, {=npc_community(dolg) =npc_in_zone(jup_a6_sr_noweap) !surge_started} true
+prior = 120
 
 [walker@jup_a6_duty_guarder]
 path_walk = duty_guarder_walk
 path_look = duty_guarder_look
 on_info = {!actor_enemy =see_actor !npc_in_zone(jup_a6_sr_light) =actor_has_weapon =actor_in_zone(jup_a6_sr_noweap) =dist_to_actor_le(35)} remark@jup_a6_duty_guarder
+combat_ignore_cond = {=check_enemy_name(freedom)} true, {=npc_in_zone(jup_a6_sr_light)} true, false
 out_restr = jup_a6_sr_noweap
+in_restr = jup_a6_sr_light
 meet = no_meet
 
 [remark@jup_a6_duty_guarder]
 anim = threat
 target = story | actor
-;on_info = %=play_sound(jup_a6_base_guard)%
+on_info = %=play_sound(jup_a6_base_guard)%
 on_game_timer = 75 | walker@jup_a6_duty_guarder
+combat_ignore_cond = {=check_enemy_name(freedom)} true, {=npc_in_zone(jup_a6_sr_light)} true, false
 out_restr = jup_a6_sr_noweap
+in_restr = jup_a6_sr_light
 meet = no_meet
 
 
 
 [logic@jup_a6_freedom_guarder]
 active = walker@jup_a6_freedom_guarder
-suitable = true
-prior = 61
+suitable = {=target_squad_name(b207)} false, {=check_npc_name(monolith)} false, {=is_factions_enemies(freedom)} false, {=npc_community(freedom) =npc_in_zone(jup_a6_sr_noweap) !surge_started} true
+prior = 120
 
 [walker@jup_a6_freedom_guarder]
 path_walk = freedom_guarder_walk
 path_look = freedom_guarder_look
 on_info = {!actor_enemy =see_actor !npc_in_zone(jup_a6_sr_light) =actor_has_weapon =actor_in_zone(jup_a6_sr_noweap) =dist_to_actor_le(35)} remark@jup_a6_freedom_guarder
+combat_ignore_cond = {=check_enemy_name(duty)} true, {=npc_in_zone(jup_a6_sr_light)} true, false
 out_restr = jup_a6_sr_noweap
+in_restr = jup_a6_sr_light
 meet = no_meet
 
 [remark@jup_a6_freedom_guarder]
 anim = threat
 target = story | actor
-;on_info = %=play_sound(jup_a6_base_guard)%
+on_info = %=play_sound(jup_a6_base_guard)%
 on_game_timer = 75 | walker@jup_a6_freedom_guarder
+combat_ignore_cond = {=check_enemy_name(duty)} true, {=npc_in_zone(jup_a6_sr_light)} true, false
 out_restr = jup_a6_sr_noweap
+in_restr = jup_a6_sr_light
 meet = no_meet
 
 
 
 [logic@jup_a6_animp_freedom_guard]
 active = animpoint@jup_a6_animp_freedom_guard
-suitable = true
-prior = 61
+suitable = {=npc_community(freedom) =npc_in_zone(jup_a6_sr_noweap)} true
+prior = 100
 
 [animpoint@jup_a6_animp_freedom_guard]:animpoint@jup_a6_animp_gen_reach
 cover_name = jup_a6_animp_freedom_guard

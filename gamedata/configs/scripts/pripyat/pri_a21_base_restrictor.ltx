@@ -1,5 +1,5 @@
-[logic] ;Р»РѕРіРёРєР° РґР»СЏ СЃС†РµРЅС‹ Р’305, РЇРІР»РµРЅРёРµ РЎС‚СЂРµР»РєР°
-active = nil;sr_idle@wait 
+[logic] ;логика для сцены В305, Явление Стрелка
+active = sr_idle@wait 
 
 [sr_idle@actor_spawn]
 on_info = {+pri_b305_4_cam_actor} sr_idle@timer_cam4 %=run_postprocess(black:8811:true) =disable_ui%
@@ -41,7 +41,7 @@ on_info = {+pri_b305_kovalskiy_let_center_know_done_end} %=stop_sr_cutscene%
 on_signal = cameff_end | sr_idle@keeper_of_secrets_archievement %+pri_b305_fifth_cam_end =enable_ui%	
 
 ;*************************************************************************************************************
-; Р›РѕРіРёРєР° Р±РѕРЅСѓСЃР° Р·Р° Р°С‡РёРІРєСѓ "Р›РёРґРµСЂ"
+; Логика бонуса за ачивку "Лидер"
 ;*************************************************************************************************************
 
 [sr_idle@keeper_of_secrets_archievement]

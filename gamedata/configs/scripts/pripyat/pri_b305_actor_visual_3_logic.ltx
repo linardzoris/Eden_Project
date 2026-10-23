@@ -11,9 +11,9 @@ on_info2 = {+pri_b305_kirilov_signal_next_to_actor_done_end -pri_b305_actor_dont
 on_signal = sound_end | animpoint@search2 %+pri_b305_actor_dont_see_anyone_done_end%
 meet = no_meet
 use_camp = false
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 gather_items_enabled = false
 help_wounded_enabled = false
 corpse_detection_enabled = false
@@ -26,9 +26,9 @@ on_info = {+pri_b305_third_cam_end} %=destroy_object -pri_b305_3_cam_actor%
 on_info2 = {+pri_b305_kirilov_source_is_near_done_end} animpoint@search_timer
 meet = no_meet
 use_camp = false
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 gather_items_enabled = false
 help_wounded_enabled = false
 corpse_detection_enabled = false
@@ -40,9 +40,9 @@ on_info = {+pri_b305_third_cam_end} %=destroy_object -pri_b305_3_cam_actor%
 on_game_timer = 40 | {-pri_b305_actor_it_is_underground_done} %=play_sound(pri_b305_actor_it_is_underground) +pri_b305_actor_it_is_underground_done%
 meet = no_meet
 use_camp = false
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 gather_items_enabled = false
 help_wounded_enabled = false
 corpse_detection_enabled = false

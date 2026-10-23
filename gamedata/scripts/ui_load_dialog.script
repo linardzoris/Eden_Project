@@ -2,23 +2,26 @@ saved_game_extension	= save_extension()
 saved_game_extension_ex	= alife_storage_manager.saved_game_extension_ex
 
 class "load_item" (CUIListBoxItem)
+
 function load_item:__init(height) super(height)
+	printf("%f",height)
 	self.file_name		= "filename"
 
-	self:SetTextColor(GetARGB(255, 170, 170, 170))
+		self:SetTextColor(GetARGB(255, 170, 170, 170))
 
-	self.fn = self:GetTextItem()
-	self.fn:SetFont(GetFontLetterica18Russian())
-	self.fn:SetEllipsis(true)
+		self.fn = self:GetTextItem()
+		self.fn:SetFont(GetFontLetterica18Russian())
+		self.fn:SetEllipsis(true)
 end
 
 function load_item:__finalize()
 end
 
 class "load_dialog" (CUIScriptWnd)
+
 function load_dialog:__init() super()
-	self:InitControls()
-	self:InitCallBacks()
+	 self:InitControls()
+	 self:InitCallBacks()
 end
 
 function load_dialog:__finalize()
@@ -27,7 +30,7 @@ end
 function load_dialog:FillList()
 	self.list_box:RemoveAll()
 	local f		= getFS()
-	local flist = f:file_list_open_ex("$game_saves$",bit.bor(FS.FS_ListFiles,FS.FS_RootOnly),"*"..saved_game_extension)
+	local flist = f:file_list_open_ex("$game_saves$",bit_or(FS.FS_ListFiles,FS.FS_RootOnly),"*"..saved_game_extension)
 	local f_cnt = flist:Size()
 
 	flist:Sort(FS.FS_sort_by_modif_down)
@@ -101,11 +104,13 @@ function load_dialog:InitCallBacks()
 
 	self:AddCallback("list_window", ui_events.LIST_ITEM_CLICKED, 			  self.OnListItemClicked,		self)
 	self:AddCallback("list_window", ui_events.WINDOW_LBUTTON_DB_CLICK,		  self.OnListItemDbClicked,		self)
+
+
 end
 
 function file_exist(fname)
 	local f = getFS();
-	local flist = f:file_list_open_ex("$game_saves$",bit.bor(FS.FS_ListFiles,FS.FS_RootOnly) , fname)
+	local flist = f:file_list_open_ex("$game_saves$",bit_or(FS.FS_ListFiles,FS.FS_RootOnly) , fname)
 	local f_cnt = flist:Size()
 
 	if f_cnt > 0 then
@@ -122,8 +127,8 @@ function delete_save_game(filename)
 
 	local f = getFS()
 
-	f:file_delete("$game_saves$",save_file)
-
+    f:file_delete("$game_saves$", save_file)
+    
     -- START IX-Ray
 	if (file_exist(filename..saved_game_extension_ex)) then
 		f:file_delete("$game_saves$",filename..saved_game_extension_ex)
@@ -133,7 +138,7 @@ function delete_save_game(filename)
 	if file_exist(dds_file) then
 		f:file_delete("$game_saves$", dds_file)
 	end
-	
+
 end
 
 function AddTimeDigit(str, dig)
@@ -149,7 +154,7 @@ end
 
 function file_data(fname)
 	local f = getFS();
-	local flist = f:file_list_open_ex("$game_saves$",bit.bor(FS.FS_ListFiles,FS.FS_RootOnly) , fname .. saved_game_extension)
+	local flist = f:file_list_open_ex("$game_saves$",bit_or(FS.FS_ListFiles,FS.FS_RootOnly) , fname .. saved_game_extension)
 	local f_cnt = flist:Size()
 
 	if f_cnt > 0 then
@@ -215,32 +220,6 @@ function load_dialog:OnListItemClicked()
 		self.picture:InitTexture("ui\\ui_noise")
 	end
 --	self.picture:SetTextureRect(Frect():set(r.x1,r.y1,r.x2,r.y2))
-	
-	if (__show_scoc_debug) then
-		__show_scoc_debug = nil
-		local fname = item_text .. ".scoc"
-		if not file_exist(fname) then
-			return
-		end 
-
-		local path = getFS():update_path('$game_saves$', '')
-		local f = io.open(path..fname,"rb")
-		if not (f) then 
-			return
-		end
-		local data = f:read("*all")
-		f:close()
-		if (data) then 
-			local m_data = marshal.decode(data)
-			local output = io.open(path..item_text..".lua","wb")
-			if (output) then 
-				output:write(alun_utils.print_table(m_data,nil,true) or "")
-				output:close()
-				local msg = strformat("%s.scoc has be converted to *.lua",item_text)
-				ui_dyn_msg_box.msg_box_ui("message_box_ok",true,msg)
-			end 
-		end
-	end
 end
 
 function load_dialog:OnListItemDbClicked()
@@ -254,10 +233,6 @@ function load_dialog:OnMsgYes()
 
 	if self.msgbox_id == 1 then
 		local item  = self.list_box:GetItemByIndex(index)
-
-		if not (item) then
-			return
-		end
 
 		local fname = item.fn:GetText()
 
@@ -339,34 +314,30 @@ end
 function load_dialog:OnButton_del_clicked()
 	if self.list_box:GetSize()==0 then return end
 	local index = self.list_box:GetSelectedIndex()
+	local item = self.list_box:GetItemByIndex(index) -- Suhar_
 
-	if index == -1 then return end
+	if index == -1 or item==nil then -- Suhar_
+		return
+	end
 
 	self.msgbox_id = 1
 
 	self.message_box:InitMessageBox("message_box_delete_file_name")
 	self.message_box:ShowDialog(true)
+
 end
 
 function load_dialog:OnKeyboard(dik, keyboard_action)  --virtual function
 	CUIScriptWnd.OnKeyboard(self,dik,keyboard_action)
-	if (DEV_DEBUG) then
-		if (keyboard_action == ui_events.WINDOW_KEY_PRESSED and dik == DIK_keys.DIK_LCONTROL) then
-			__show_scoc_debug = true
-		elseif (keyboard_action == ui_events.WINDOW_KEY_RELEASED and dik == DIK_keys.DIK_LCONTROL) then
-			__show_scoc_debug = nil
-		end
-	end
 	local bind = dik_to_bind(dik)
 	if bind == key_bindings.kQUIT then
 		self:OnButton_back_clicked()
 	else
-		if (keyboard_action == ui_events.WINDOW_KEY_PRESSED) then
-			if (dik == DIK_keys.DIK_RETURN) then
-				self:OnButton_load_clicked()
-			elseif (dik == DIK_keys.DIK_DELETE) then
-				self:OnButton_del_clicked()
-			end
+
+		 DIK_RETURN = 40 -- IX-Ray: Fixed DIK_RETURN
+
+		if dik == DIK_RETURN and keyboard_action == ui_events.WINDOW_KEY_PRESSED then
+			self:OnButton_load_clicked()
 		end
 	end
 	return true
@@ -389,3 +360,6 @@ function load_dialog:AddItemToList(file_name, date_time)
 
 	self.list_box:AddExistingItem(_itm)
 end
+
+
+

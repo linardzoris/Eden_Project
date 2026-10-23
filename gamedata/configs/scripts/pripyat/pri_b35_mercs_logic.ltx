@@ -38,7 +38,7 @@ target = story | pri_b35_envoy
 
 [walker@leader_after]
 path_walk = leader_after_walk
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 out_restr = pri_b35_sr_mercs_escape
 on_info = {-pri_b35_attack_started =has_actor_enemy} %+pri_b35_attack_started% 
 on_info2 = {+pri_b35_attack_started} walker@leader_after_rush
@@ -47,7 +47,7 @@ wounded = wounded@no_wound
 
 [walker@leader_after_rush]
 path_walk = leader_after_walk
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 out_restr = pri_b35_sr_mercs_escape
 on_info = {-pri_b35_attack_started =has_actor_enemy} %+pri_b35_attack_started% 
 def_state_moving = rush

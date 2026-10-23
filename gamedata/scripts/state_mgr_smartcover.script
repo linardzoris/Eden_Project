@@ -6,16 +6,18 @@ end
 function eva_state_mgr_smartcover:evaluate()
 	if self.st.target_state ~= "smartcover" then
 		return true
-	end
+	end 
 
-	local st = db.storage[self.object:id()]
-	local state_descr = st and st["smartcover"]
-	local dest_smart_cover_name = state_descr and self.object:get_dest_smart_cover_name()
 
-	if not dest_smart_cover_name then
+	local state_descr = db.storage[self.object:id()]["smartcover"] 
+	local dest_smart_cover_name = self.object:get_dest_smart_cover_name()
+	
+	-- Также нужно добавить, чтоб мы находимся именно в _нужном_ смарткавере
+--	printf("SC %s [%s] [%s]", tostring(dest_smart_cover_name == (state_descr.smartcover_name or "")), 
+--								tostring(dest_smart_cover_name), tostring((state_descr.smartcover_name or "")))
+	if state_descr == nil then
 		return true
 	end
-
 	return dest_smart_cover_name == (state_descr.cover_name or "")
 end
 
@@ -27,9 +29,9 @@ end
 function eva_state_mgr_smartcover_need:evaluate()
 	if self.st.target_state ~= "smartcover" then
 		return false
-	end
+	end 
 
-	local state_descr = db.storage[self.object:id()]["smartcover"]
+	local state_descr = db.storage[self.object:id()]["smartcover"] 
 	if state_descr == nil then
 		return false
 	end
@@ -44,14 +46,14 @@ function eva_state_mgr_smartcover_locked:__init(name, st) super (nil, name)
 	self.st = st
 end
 function eva_state_mgr_smartcover_locked:evaluate()
-	local st = db.storage[self.object:id()]
-	local state_descr = st and st["smartcover"]
+	local state_descr = db.storage[self.object:id()]["smartcover"] 
 	if state_descr == nil then
 		return false
 	end
 
-	local in_smart_cover = self.object:in_smart_cover()
 
+	local in_smart_cover = self.object:in_smart_cover()
+	
 	return (in_smart_cover and state_descr.cover_name == nil) or
 		   (not in_smart_cover and state_descr.cover_name ~= nil)
 end
@@ -63,7 +65,7 @@ function eva_state_mgr_in_smartcover:__init(name, st) super (nil, name)
 	self.st = st
 end
 function eva_state_mgr_in_smartcover:evaluate()
-	return self.object:in_smart_cover() or false
+	return self.object:in_smart_cover()
 end
 
 
@@ -93,7 +95,7 @@ function act_state_mgr_smartcover_enter:initialize()
 
 --self.move_mgr:finalize()
 --self.move_mgr = db.storage[npc:id()].move_mgr
-	local state_descr = db.storage[self.object:id()]["smartcover"]
+	local state_descr = db.storage[self.object:id()]["smartcover"] 
 	printf("setting smartcover [%s] for stalker [%s] ", tostring(state_descr.cover_name), self.object:name())
 	self.object:use_smart_covers_only(true)
 	self.object:set_movement_type(move.run)
@@ -123,8 +125,17 @@ function act_state_mgr_smartcover_exit:initialize()
 	object:set_smart_cover_target()
 	object:use_smart_covers_only(false)
 	object:set_smart_cover_target_selector()
-	local vertex = object:level_vertex_id()
-	utils.send_to_nearest_accessible_vertex(object,vertex,"smart_cover_exit")
+	local vertex		= object:level_vertex_id()
+	local npc_position 	= level.vertex_position(vertex)
+	if not object:accessible(npc_position) then
+		local ttp 		= vector():set(0,0,0)
+		vertex 			= object:accessible_nearest(npc_position, ttp)
+		npc_position 	= level.vertex_position(vertex)
+		printf("accesible position is %s", vec_to_str(npc_position))
+	end
+	object:set_dest_level_vertex_id(vertex)
+	printf("accesible position2 is %s", vec_to_str(level.vertex_position(vertex)))
+
 end
 function act_state_mgr_smartcover_exit:execute()
 	action_base.execute(self)

@@ -4,14 +4,13 @@ prior = 100
 active = walker@jup_a10_bandit_guard_1
 
 [walker@jup_a10_bandit_guard_1]
-path_walk = bodyguard_1_walk
-path_look  = bodyguard_1_look
+path_walk = jup_a10_bandit_guard_1_walk
+path_look  = jup_a10_bandit_guard_1_look
 on_info = {=surge_started} walker@surge
-meet = no_meet
 
 
 [walker@surge]
 path_walk = bodyguard_1_walk
 path_look  = bodyguard_1_look
 on_info = {=surge_complete} walker@jup_a10_bandit_guard_1
-meet = no_meet
+

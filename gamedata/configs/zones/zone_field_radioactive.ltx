@@ -4,17 +4,11 @@ $def_sphere = 15
 ;$prefetch 		= 16
 class			= ZS_RADIO
 hit_impulse_scale	= .01
-effective_radius	= 1.00 ;СЂР°Р·РјРµСЂ СЂР°РґРёСѓСЃР° РІ РїСЂРѕС†РµРЅС‚Р°С… РѕС‚ РѕСЂРёРіРёРЅР°Р»СЊРЅРѕРіРѕ, РіРґРµ РґРµР№СЃС‚РІСѓРµС‚ Р·РѕРЅР°
+effective_radius	= 1.00 ;размер радиуса в процентах от оригинального, где действует зона
 postprocess		= postprocess_rad
 
 ef_anomaly_type			= 3
 ef_weapon_type			= 15
-
-;----------- Zone Base        -----------------------
-idle_light_volumetric 	= false
-idle_light_shadow		= true
-pick_dof_effector		= false
-idle_light_r1			= true
 
 ;----------- Anomaly settings -----------------------
 max_start_power		= 0
@@ -22,9 +16,9 @@ attenuation			= 0.5
 
 hit_type		= radiation
 
-disable_time		= -1	;РІСЂРµРјСЏ РёРіРЅРѕСЂРёСЂРѕРІР°РЅРёСЏ РЅРµР¶РёРІРѕРіРѕ РѕР±СЉРµРєС‚Р° РІ Р·РѕРЅРµ (-1 РµСЃР»Рё РЅРµ РЅСѓР¶РЅРѕ)
-disable_time_small	= -1		;РІСЂРµРјСЏ РёРіРЅРѕСЂРёСЂРѕРІР°РЅРёСЏ РјР°Р»РµРЅСЊРєРѕРіРѕ РЅРµР¶РёРІРѕРіРѕ РѕР±СЉРµРєС‚Р° РІ Р·РѕРЅРµ (-1 РµСЃР»Рё РЅРµ РЅСѓР¶РЅРѕ)
-disable_idle_time	= -1	;РІСЂРµРјСЏ РѕС‚РєР»СЋС‡РµРЅРёСЏ idle РїР°СЂС‚РёРєР»РѕРІ
+disable_time		= -1	;время игнорирования неживого объекта в зоне (-1 если не нужно)
+disable_time_small	= -1		;время игнорирования маленького неживого объекта в зоне (-1 если не нужно)
+disable_idle_time	= -1	;время отключения idle партиклов
 
 ignore_nonalive		= true;
 ignore_small		= false;
@@ -68,7 +62,7 @@ max_start_power		= 0.03
 [zone_radioactive]:zone_field_radioactive
 GroupControlSection	= spawn_group_zone
 $def_sphere = 1
-class			= ZS_RADIO
+class			= Z_RADIO
 attenuation			= 0.1
 
 

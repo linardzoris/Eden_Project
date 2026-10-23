@@ -1,15 +1,32 @@
 --' ƒиденко –услан (Stohe), „угай јлександр (Chugai)
--- modified by Alundaio
+
+
+--function printf()
+--end
+
+--' в работах поле object хранит id объекта
+local pl_gulag_enemy = 0
+
+local gulag_tasks_file_name  = "misc\\gulag_tasks.ltx"
+local gulag_tasks_ltx        = ini_file( gulag_tasks_file_name )
+
+local job_position_threshold = 120 --'50  -- рассто€ние до места работы при котором персонаж в онлайне считаетс€ достигшим места работы
+local job_idle_after_death   = 10 -- в течении такого периода времени после смерти персонажа его работа будет недоступна
+
+idle_nil  = nil
+idle_once = -1
+idle_none = -2
+
+local path_fields = { "path_walk", "path_main", "path_home", "center_point" }
 
 ----------------------------------------------------------------------------------------------------------------------
 -- ‘ункции, которые могут вызыватьс€ извне
 ----------------------------------------------------------------------------------------------------------------------
-local alife = alife
 
 -- получить гулаг по имени смарта.
 -- работает только дл€ смартов, которые в онлайне.
 function get_gulag_by_name(name)
-	local strn = SIMBOARD.smarts_by_names[name]
+	local strn = sim_board.get_sim_board().smarts_by_names[name]
 	if strn then
 		return strn
 	else
@@ -21,8 +38,9 @@ end
 -- получить гулаг по story id смарта
 -- работает всегда
 function get_gulag_by_sid(sid)
-	local id = get_story_object_id(sid)
-	return id and alife_object(id)
+	local strn = alife():object(get_story_object_id(sid))
+
+	return strn
 end
 
 -- получить гулаг по имени или story id смарта
@@ -37,25 +55,17 @@ end
 -- получить гулаг персонажа
 -- obj=game_object
 function get_npc_smart(obj)
-	if not (obj) then 
-		printf("get_npc_smart: obj is nil WHY GOD WHY!")
-		return	
-	end 
-	
-	local id = obj.id and (type(obj.id) == "function" and obj:id() or obj.id)
-	if not (id) then 
-		printf("get_npc_smart: invalid object")
-		return 
-	end 
-	
-	local sim = alife()
-	local se_obj = sim:object(id)
-	if not (se_obj and se_obj.m_smart_terrain_id) then 
-		return
-	end 
-	
-	local smart = se_obj.m_smart_terrain_id < 65535 and sim:object(se_obj.m_smart_terrain_id) or nil
-	return smart
+	--printf("npc id is [%s]", obj:id())
+	local se_obj = alife():object(obj:id())
+	if se_obj == nil then
+		return nil
+	--	abort("server_obj is nil!!!!!")
+	end
+	if se_obj.m_smart_terrain_id ~= 65535 then
+		return alife():object(se_obj.m_smart_terrain_id)
+	else
+		return nil
+	end
 end
 
 
@@ -91,13 +101,13 @@ end
 -- освободить персонажа от работы.
 -- obj=game_object
 function resetJob( obj )
-	printf( "gulag resetJob: obj=%s", obj:name() )
+		printf( "gulag resetJob: obj=%s", obj:name() )
 
-	local gulag = get_npc_smart( obj )
-	if gulag then
-		gulag:free_obj_and_reinit( obj:id() )
-		gulag:update()
-	end
+		local gulag = get_npc_smart( obj )
+		if gulag then
+			gulag:free_obj_and_reinit( obj:id() )
+			gulag:update()
+		end
 end
 
 function free_object( obj )
@@ -137,12 +147,18 @@ end
 --' Ќайти замену сталкеру на работе GUARD по истечению времени работы.
 function find_stalker_for_job(obj, need_job)
 	local smart = get_npc_smart(obj)
-	for id, npc_info in pairs(smart.npc_info) do
-		if (npc_info.job and npc_info.job.reserve_job == true) then
-			smart.npc_info[id].need_job = need_job
+
+	-- “ут мы типа выбираем чувака на какой то работе.
+	for k,v in pairs(smart.npc_info) do
+		local npc_job = smart.job_data[v.job_id]
+		if npc_job ~= nil and npc_job.reserve_job == true then
+			local selected_npc_data = smart.npc_info[k]
+			-- ” выбранного чувака устанавливаем, что он нам нужен как замена гварду
+			selected_npc_data.need_job = need_job
 			return
 		end
 	end
+	--abort("Couldnt find reserved job")
 end
 
 function switch_to_desired_job(npc)
@@ -153,6 +169,33 @@ end
 
 
 -----------------------------------------------------------------------------------------------------------------
+
+-- загрузка динамических ltx
+-- их имена: "*им€_смарттерейна*тип_гулага"
+local dynamic_ltx = {}
+function loadLtx(name)
+	local h    = "*"..name
+	local dltx = dynamic_ltx[h]
+
+	if dltx then
+		return dltx, h
+	else
+		local l
+		l = gulag_general.load_ltx(name)
+		if l ~= nil then
+			dltx = create_ini_file(l)
+			dynamic_ltx[h] = dltx
+			return dltx, h
+		end
+			return nil, nil
+		end
+end
+
+
+
+
+
+
 
 function job_in_restrictor(smart, restrictor_name, way_name)
 	--printf("SMART [%s] restr [%s]", smart:name(), tostring(restrictor_name))
@@ -177,3 +220,7 @@ function job_in_restrictor(smart, restrictor_name, way_name)
 	end
 	return true
 end
+
+
+
+

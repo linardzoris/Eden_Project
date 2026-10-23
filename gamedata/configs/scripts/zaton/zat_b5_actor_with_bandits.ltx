@@ -10,10 +10,10 @@ def_state_moving2 = rush
 def_state_moving3 = rush
 on_timer = 500 | walker@walk
 meet = no_meet
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
 danger = danger
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 
 
 [walker@walk]  
@@ -25,10 +25,10 @@ def_state_moving2 = rush
 def_state_moving3 = rush
 on_info = {+zat_b5_bandits_cutscene_end} %=destroy_object%
 meet = no_meet
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
 danger = danger
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 
 
 [danger]

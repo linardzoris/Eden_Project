@@ -1,22 +1,22 @@
 [logic]
 active = ph_button@first_locked
 
-[ph_button@first_locked] ;Р’РёРЅС‚РёР»СЊ РЅРµР»СЊР·СЏ РєСЂСѓС‚РёС‚СЊ РґРѕ РІС‹РґР°С‡Рё Р·Р°РґР°РЅРёСЏ
+[ph_button@first_locked] ;Винтиль нельзя крутить до выдачи задания
 anim_blend = true
 anim = stop
 on_info = {+zat_b57_den_of_the_bloodsucker_twist_vintil_give} ph_button@ready
 
-[ph_button@ready] ;Р’РёРЅС‚РёР»СЊ РјРѕР¶РЅРѕ РєСЂСѓС‚РёС‚СЊ
+[ph_button@ready] ;Винтиль можно крутить
 anim_blend = true
 anim = stop
 on_press = ph_button@unlocked %=disable_ui_only%
 tooltip = zat_b57_vintil_press
 
-[ph_button@unlocked] ;Р’РёРЅС‚РёР»СЊ РєСЂСѓС‚РёС‚СЃСЏ
+[ph_button@unlocked] ;Винтиль крутится
 anim_blend = true
 anim = rotate
 on_timer = 4000 | ph_button@locked %=enable_ui +zat_b57_gas_running_play +zat_b57_den_of_the_bloodsucker_wait_destroy_give%
 
-[ph_button@locked] ;Р’РёРЅС‚РёР»СЊ РїСЂРѕРєСЂСѓС‚РёР»СЃСЏ
+[ph_button@locked] ;Винтиль прокрутился
 anim_blend = true
 anim = stop

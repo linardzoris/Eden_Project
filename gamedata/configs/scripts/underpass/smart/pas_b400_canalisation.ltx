@@ -1,18 +1,6 @@
 [smart_terrain]
-squad_id = 1
-max_population = 3
-;;arrive_dist = 100000
-respawn_params = respawn@pas_b400_canalisation
-respawn_idle = 45000
-
-
-[respawn@pas_b400_canalisation]
-spawn_snorks
-
-[spawn_snorks]
-spawn_squads = simulation_snork
-spawn_num = {+actor_pass_jupiter_exit_find +actor_pass_pripyat_exit_find} 3, 0
-
+sim_avail = false
+arrive_dist = 100000
 
 [exclusive]
 pas_b400_tushkano_canalisation_1 = underpass\pas_b400_canalisation_monsters.ltx

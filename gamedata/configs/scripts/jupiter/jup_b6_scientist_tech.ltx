@@ -7,9 +7,9 @@ level_spot = mechanic
 [walker@firstmeet]
 path_walk = med_walk
 path_look = med_look
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 meet = meet
 out_restr = jup_b41_sr_light
 gather_items_enabled = false
@@ -24,9 +24,9 @@ meet = meet
 on_info = {!npc_in_zone(jup_b41_sr_light)} %=teleport_npc(jup_b41_med_walk)%
 on_info2 = {!talking} %-jup_b6_about_new_up_hide%
 out_restr = jup_b41_sr_light
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 reach_distance = 2
 gather_items_enabled = false
 help_wounded_enabled = false

@@ -1,12 +1,7 @@
 local items_to_spawn = {}
 
 function spawn_items(npc, st)
-	--alun_utils.debug_write("spawner:spawn_items")
-	if not (st.ini and st.section_logic) then 
-		return 
-	end 
-	
-	local spawn_items_section = st.ini:r_string_ex(st.section_logic,"spawn")
+	local spawn_items_section = utils.cfg_get_string(st.ini,st.section_logic , "spawn", npc, false, "", nil)
 	if spawn_items_section ~= nil then
 		local n = st.ini:line_count(spawn_items_section)
 		local id, value = "", ""

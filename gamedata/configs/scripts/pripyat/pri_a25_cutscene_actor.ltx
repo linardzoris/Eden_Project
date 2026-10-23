@@ -4,9 +4,9 @@ active = walker@start
 [walker@start]
 meet = no_meet
 use_camp = false
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 gather_items_enabled = false
 help_wounded_enabled = false
 corpse_detection_enabled = false
@@ -18,9 +18,9 @@ on_game_timer = 60 | walker@talk_rac_actor
 [walker@talk_rac_actor]
 meet = no_meet
 use_camp = false
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 gather_items_enabled = false
 help_wounded_enabled = false
 corpse_detection_enabled = false

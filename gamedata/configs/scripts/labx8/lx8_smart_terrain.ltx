@@ -1,17 +1,6 @@
 [smart_terrain]
-squad_id = 1
-max_population = 5
-;arrive_dist  = 120
-respawn_params = respawn@lx8_smart_terrain
-respawn_idle = 60000
-respawn_radius = 300
 
-[respawn@lx8_smart_terrain]
-spawn_monsters
-
-[spawn_monsters]
-spawn_squads = simulation_burer, simulation_tushkano, simulation_snork
-spawn_num = {+lx8_actor_in_lab +actor_left_labx8} 5, 0
+arrive_dist  = 120
 
 [exclusive]
 snork = labx8\lx8_snork_down.ltx

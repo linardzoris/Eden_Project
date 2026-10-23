@@ -10,9 +10,9 @@ on_signal = azot | animpoint@start %+jup_b219_azot_on_pos%
 def_state_standing = wait_na
 def_state_moving = walk
 combat_ignore_keep_when_attacked = true 
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 meet = no_meet
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = jup_factory_default_in_restrictor
 danger = danger
 gather_items_enabled = false
@@ -21,14 +21,14 @@ corpse_detection_enabled = false
 
 [animpoint@azot]
 cover_name = jup_b219_azot_smart_cover
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 use_camp = false
 reach_distance = 50
 meet = no_meet
 reach_movement = walk
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = jup_factory_default_in_restrictor
 gather_items_enabled = false
 help_wounded_enabled = false
@@ -73,81 +73,81 @@ avail_animations = jup_b219_azot_vano_monolith
 [remark@start_one]
 anim = jup_b219_azot_one
 target = path | jup_b219_azot_look,0
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 danger = danger
 combat_ignore_keep_when_attacked = true 
 meet = no_meet
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = jup_factory_default_in_restrictor
 
 [remark@start_one_vano]
 anim = jup_b219_azot_one_vano
 target = path | jup_b219_azot_look,0
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 danger = danger
 combat_ignore_keep_when_attacked = true 
 meet = no_meet
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = jup_factory_default_in_restrictor
 
 [remark@start_one_monolith]
 anim = jup_b219_azot_one_monolith
 target = path | jup_b219_azot_look,0
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 danger = danger
 combat_ignore_keep_when_attacked = true 
 meet = no_meet
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = jup_factory_default_in_restrictor
 
 [remark@start_one_soldier]
 anim = jup_b219_azot_one_soldier
 target = path | jup_b219_azot_look,0
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 danger = danger
 combat_ignore_keep_when_attacked = true 
 meet = no_meet
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = jup_factory_default_in_restrictor
 
 [remark@start_all]
 anim = jup_b219_azot_all
 target = path | jup_b219_azot_look,0
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 danger = danger
 combat_ignore_keep_when_attacked = true 
 meet = no_meet
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = jup_factory_default_in_restrictor
 
 [remark@start_soldier_vano]
 anim = jup_b219_azot_soldier_vano
 ;target = path | jup_b219_actor_start_look,0
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 danger = danger
 combat_ignore_keep_when_attacked = true 
 meet = no_meet
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = jup_factory_default_in_restrictor
 
 [remark@start_soldier_monolith]
 anim = jup_b219_azot_soldier_monolith
 ;target = path | jup_b219_actor_start_look,0
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 danger = danger
 combat_ignore_keep_when_attacked = true 
 meet = no_meet
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = jup_factory_default_in_restrictor
 
 [remark@start_vano_monolith]
 anim = jup_b219_azot_vano_monolith
 ;target = path | jup_b219_actor_start_look,0
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 danger = danger
 combat_ignore_keep_when_attacked = true 
 meet = no_meet
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = jup_factory_default_in_restrictor
 
 [danger]

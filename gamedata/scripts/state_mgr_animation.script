@@ -12,6 +12,7 @@ function eva_state_mgr_animation:__init(name, st) super (nil, name)
 	self.st = st
 end
 function eva_state_mgr_animation:evaluate()
+	--printf("%s [%s] == [%s]", self.object:name(), tostring(state_lib.states[self.st.target_state].animation), tostring(self.st.animation.states.current_state))
 	return state_lib.states[self.st.target_state].animation == self.st.animation.states.current_state
 end
 
@@ -41,9 +42,12 @@ function eva_state_mgr_animation_locked:__init(name, st) super (nil, name)
 	self.st = st
 end
 function eva_state_mgr_animation_locked:evaluate()
+	--printf("anim_locked [%s] fast_set[%s] anim_marker[%s] sid[%s]", self.object:name(), tostring(self.st.fast_set), tostring(self.st.animation.states.anim_marker), tostring(self.st.animation.sid))
+
 --	if self.st.fast_set == true then
 --		return false
 --	end
+
 	return self.st.animation.states.anim_marker ~= nil
 end
 
@@ -56,7 +60,7 @@ function act_state_mgr_animation_start:__init(name, st) super (nil, name)
 end
 function act_state_mgr_animation_start:initialize()
 	action_base.initialize(self)
-	--alun_utils.debug_write(strformat("act_state_mgr_animation_start:initialize %s anm=%s",self.object:name(),state_lib.states[self.st.target_state].animation))
+
 	self.st.animation:set_state(state_lib.states[self.st.target_state].animation)
 	self.st.animation:set_control()
 end
@@ -75,7 +79,7 @@ function act_state_mgr_animation_stop:__init(name, st) super (nil, name)
 end
 function act_state_mgr_animation_stop:initialize()
 	action_base.initialize(self)
-	--alun_utils.debug_write(strformat("act_state_mgr_animation_stop:initialize %s fast_set=%s",self.object:name(),self.st.fast_set or state_lib.states[self.st.target_state].fast_set))
+
 	self.st.animation:set_state(nil, self.st.fast_set or state_lib.states[self.st.target_state].fast_set)
 	self.st.animation:set_control()
 end
@@ -130,10 +134,10 @@ function animation:set_control()
 end
 -- Инициализируем выбор анимации
 function animation:update_anim()
-	local anm, state = self:select_anim()
+	local anim, state = self:select_anim()
 
-	if anm ~= nil then
-		self:add_anim(anm, state)
+	if anim ~= nil then
+		self:add_anim(anim, state)
 	end
 end
 -- Установка цели, какую анимацию нужно отыгрывать.
@@ -141,10 +145,8 @@ function animation:set_state(new_state, fast_set)
 	--printf("[%s] [%s] set new animation [%s], current_state [%s]", self.npc:name(), self.name, tostring(new_state), tostring(self.states.current_state))
 --	print_table(self.states)
 
-	--alun_utils.debug_write(strformat("animation:set_state %s state=%s fast_set=%s",self.npc:name(),new_state,fast_set))
-
 	-- Быстрый выход, если понадобится.
-	if (fast_set == true) then
+	if fast_set == true then
 		--printf(" FAST SET %s  sid(%s)", self.npc:name(), self.sid)
 
 		-- clear_animations
@@ -153,14 +155,14 @@ function animation:set_state(new_state, fast_set)
 		-- Детачнуть атачнутые предметы
 		local state
 
-		if self.states.anim_marker == MARKER_IN then
+		if self.states.anim_marker == MARKER_IN then	
 			-- Если в момент ресета мы играем входную анимацию
 			state = self.anim_path.animations[self.states.target_state]
 		else
 			-- Если в момент ресета мы играем выходную анимацию или айдл
 			state = self.anim_path.animations[self.states.current_state]
 		end
-
+		
 		if state ~= nil and state.out ~= nil then
 			local wpn_slot = self:weapon_slot()
 			local anim_for_slot = self:anim_for_slot(wpn_slot, state.out)
@@ -174,6 +176,8 @@ function animation:set_state(new_state, fast_set)
 			end
 		end
 
+
+
 		-- перевести current_state в nil
 		--printf("NULIFY ANIM MARKER %s", tostring(self.states.anim_marker))
 		self.states.anim_marker = nil
@@ -185,13 +189,8 @@ function animation:set_state(new_state, fast_set)
 		self.states.next_rnd = time_global()
 		return
 	end
-	
-	--[[
-	if (self.npc:animation_count() == 0) then 
-		self.states.anim_marker = nil
-	end
-	--]]
-	
+
+
 	self.states.target_state = new_state
 	self.states.next_rnd = time_global()
 end
@@ -209,10 +208,9 @@ function animation:select_anim()
 	-- Один из возможных вариантов выбора анимашки:
 	-- 1. Нужно отыграть выход из анимации.
 		if states.target_state == nil then
+			--printf("		select out")
+
 			local state = self.anim_path.animations[states.current_state]
-			if not (state) then
-				return
-			end
 
 			-- Если нет OUT анимации
 			if state.out == nil then
@@ -231,7 +229,6 @@ function animation:select_anim()
 			end
 
 			local next_anim = anim_for_slot[states.seq_id]
-
 			-- Если следующая анимация - спец действие
 			if type(next_anim) == "table" then
 				self:process_special_action(next_anim)
@@ -246,11 +243,6 @@ function animation:select_anim()
 			--printf("		select into, seq_id [%s], target [%s]", tostring(states.seq_id), tostring(states.target_state))
 
 			local state = self.anim_path.animations[states.target_state]
-
-			if not (state) then
-				printf("state_mgr_animation: Critical Error: No animation state for %s",states.target_state)
-				return
-			end
 
 			-- Если нет INTO анимации
 			if state.into == nil then
@@ -284,19 +276,19 @@ function animation:select_anim()
 		--printf("		select rnd")
 		local wpn_slot = self:weapon_slot()
 		local state = self.anim_path.animations[self.states.current_state]
-		local anm
+		local anim
 		if state.rnd ~= nil then
-			anm = self:select_rnd(state, wpn_slot, time_global() >= states.next_rnd)
+			anim = self:select_rnd(state, wpn_slot, time_global() >= states.next_rnd)
 		end
 
 		-- Если не выбрали рандомную, то играем айдл
-		if anm == nil and state.idle ~= nil then
-			anm = self:anim_for_slot(wpn_slot, state.idle)
+		if anim == nil and state.idle ~= nil then
+			anim = self:anim_for_slot(wpn_slot, state.idle)
 		end
-		if anm ~= nil then
+		if anim ~= nil then
 			states.anim_marker = MARKER_IDLE
 		end
-		return anm, state
+		return anim, state
 	end
 end
 --' Возвращает текущий оружейный слот
@@ -319,7 +311,7 @@ function animation:anim_for_slot(slot, t)
 
 	if t[0] == nil then
 --		print_table(t)
---		printf("cant find animation for slot %s", tonumber(slot))
+--		abort("cant find animation for slot %s", tonumber(slot))
 	end
 	return t[slot]
 end
@@ -354,56 +346,52 @@ end
 
 
 -- Добавление анимации, установка коллбека
-function animation:add_anim(anm, state)
-	local npc = self.npc
-	if (self.mgr.animation_position and self.mgr.animation_direction and not self.mgr.animation_direction_applied) then
-		self.mgr.animation_direction_applied = true
-		local dir = self.mgr.animation_direction
-		local rot_y = -math.deg(math.atan2(dir.x, dir.z))
-		npc:add_animation(anm, true, self.mgr.animation_position, vector():set(0,rot_y,0), true)
-	elseif (state.prop == nil or state.prop.moving ~= true) then
-		npc:add_animation(anm, true, false)
-	else
-		npc:add_animation(anm, true, true)
-	end
---[[	
+function animation:add_anim(anim, state)
 	local npc = self.npc
 	local animation_props = state.prop
-	--printf("[%s][%s] add_anim[%s] time[%s] no_rootmove[%s] %s", self.npc:name(), self.name, tostring(anm), time_global(), tostring(animation_props == nil or animation_props.moving ~= true), device():time_global())
+	--printf("[%s][%s] add_anim[%s] time[%s] no_rootmove[%s] %s", self.npc:name(), self.name, tostring(anim), time_global(), tostring(animation_props == nil or animation_props.moving ~= true), device():time_global())
+
+	if not (npc:weapon_unstrapped() or npc:weapon_strapped()) then
+		--callstack()
+		abort("Illegal call of add animation. Weapon is strapping now!!! %s", npc:name())
+	end
+	
 
 	if animation_props == nil or animation_props.moving ~= true then
-		npc:add_animation(anm, true, false)
+		npc:add_animation(anim, true, false)
 		return
 	end
 
-	-- Anee iiceoee/iai?aaeaiea aieiaoee ia caaaiu eee iie o?a i?eiaieeenu
+	-- Если позиций/направление анимации не заданы или они уже применились
 	if self.mgr.animation_position == nil or self.mgr.pos_direction_applied == true then
-		-- Aieiaoey n ia?aaae?aieai.
+		-- Анимация с передвижением.
 		--npc:set_sight(CSightParams.eSightTypeAnimationDirection, false,false)
 --		printf("%s no pos", npc:name())
-		npc:add_animation(anm, true, true)
+		npc:add_animation(anim, true, true)
 	else
-		-- N?aa ia?aaaaony ae?aeoi (aaeie?iue aaeoi?. io?ii aai ia?aaanoe a aaeoi? ?ioaeoiia ii einoyi)
+		if self.mgr.animation_direction == nil then
+			abort("Animation direction missing")
+		end
+
+		-- Сюда передается дирекшн (единичный вектор. нужно его перевести в вектор ротейшнов по костям)
 		local rot_y = -math.deg(math.atan2(self.mgr.animation_direction.x, self.mgr.animation_direction.z))
-
+		
 		--local rot_y2 = math.deg(math.acos( (v1.x*v2.x + v1.y*v2.y)/math.sqrt((v1.x*v1.x + v1.y*v1.y)*(v2.x*v2.x + v2.y*v2.y))  ))
-
+		
 		--printf("%s UGOL %s", npc:name(), rot_y)
-		-- Ie?aneaao?uay no?iea - yoi eiaaa io?ii ioua?aou aieiaoe? a aeiaaeuiuo eii?aeiaoao.
-		npc:add_animation			(anm, true, self.mgr.animation_position, vector():set(0, rot_y, 0), false)
+		-- Нижеследующая строка - это когда нужно отыграть анимацию в глобальных координатах.
+		npc:add_animation			(anim, true, self.mgr.animation_position, vector():set(0, rot_y, 0), false)
 
 		self.mgr.pos_direction_applied = true
 	end
---]]
 end
 
 -- Вызов коллбека, обычно в этот момент нужен выбор новой анимации.
 function animation:animation_callback(skip_multianim_check)
 	--printf("[%s][%s] ANIM CALLBACK time[%s] count[%s]", self.npc:name(), self.name, time_global(), self.npc:animation_count())
-	if(self.npc:animation_count() > 0) then
+	if(self.npc:animation_count()~=0) then
 		return
 	end
-
 	local states = self.states
 
 	-- 1. Отыграли INTO анимацию
@@ -446,6 +434,7 @@ function animation:animation_callback(skip_multianim_check)
 		return
 	end
 
+
 	-- 3. Отыграли OUT анимацию
 	if states.anim_marker == MARKER_OUT then
 		states.anim_marker = nil
@@ -475,59 +464,24 @@ function animation:animation_callback(skip_multianim_check)
 		end
 	end
 end
-
---[[
-local removable = {
-	["guitar_a"] = true,
-	["harmonica_a"] = true,
-	["wpn_binoc"] = true,
-	["medkit_script"] = true,
-	["hand_radio"] = true,
-	["anim_knife"] = true,
-	["anim_binoc"] = true,
-	["hand_radio_r"] = true
-}
---]]
-
--- Auto-attach newly created item for special animation
--- requires axr_main function CreateTimeEvent
-local function delayed_attach(id)
-	local itm = id and level.object_by_id(id)
-	if (itm) then
-		itm:enable_attachable_item(true)
-		return true
-	end
-	return false
-end
-
 -- Обработка спецдействий
 function animation:process_special_action(action_table)
 	--printf("[%s] process_special_action", self.npc:name())
 	-- Производим действия находящиеся на 1 позиции
 	-- Аттач предмета
 	if action_table.a ~= nil then
-		local itm = self.npc:object(action_table.a)
-		if (itm) then
-			itm:enable_attachable_item(true)
-		else
-			local se_itm = alife():create(action_table.a,vector(),0,0,self.npc:id())
-			if (se_itm) then
-				CreateTimeEvent(se_itm.id,"delayed_attach",0,delayed_attach,se_itm.id)
-			end
+		printf("item [%s] attach", utils.to_str(action_table.a))
+		local obj = self.npc:object(action_table.a)
+		if obj then
+			obj:enable_attachable_item(true)
 		end
 	end
 	-- Детач предмета
 	if action_table.d ~= nil then
-		local itm = self.npc:object(action_table.d)
-		if itm then
-			itm:enable_attachable_item(false)
-			--if (removable[action_table.d]) then
-				local sim = alife()
-				local se_itm = sim:object(itm:id())
-				if (se_itm) then
-					sim:release(se_itm,true)
-				end
-			--end
+		printf("item [%s] detach", utils.to_str(action_table.d))
+		local obj = self.npc:object(action_table.d)
+		if obj then
+			obj:enable_attachable_item(false)
 		end
 	end
 	-- Отыграть звук
@@ -547,6 +501,7 @@ function animation:process_special_action(action_table)
 	end
 	-- Запуск любой функции
 	if action_table.f ~= nil then
+		--printf("called function [%s]", tostring(action_table.f))
 		action_table.f(self.npc)
 	end
 end

@@ -1,21 +1,21 @@
-
 --'******************************************************
---'*  ñåðâåðíûé êëàññ îáúåêòà ñìàðò êàâåð .
+--'*  ÑÐµÑ€Ð²ÐµÑ€Ð½Ñ‹Ð¹ ÐºÐ»Ð°ÑÑ Ð¾Ð±ÑŠÐµÐºÑ‚Ð° ÑÐ¼Ð°Ñ€Ñ‚ ÐºÐ°Ð²ÐµÑ€ .
 --'******************************************************
 registered_smartcovers = {}
 registered_smartcovers_by_lv_id = {}
 
 class "se_smart_cover"	(cse_smart_cover)
 function se_smart_cover:__init (section) super (section)
-	--printf("%s init %s",section,self:name())
+--	printf("se_smart_cover:__init( ) called")
 	self.loopholes				= {}
+	self.last_description			= ""
 	if self.set_available_loopholes ~= nil then
 		self:set_available_loopholes	( self.loopholes )
 	end
 end
 function se_smart_cover:STATE_Write (packet)
 	cse_smart_cover.STATE_Write (self, packet)
-	packet:w_stringZ(tostring(self.last_description))
+	packet:w_stringZ(self.last_description)
 	local n = 0
 	for k,v in pairs (self.loopholes) do
 		n = n + 1
@@ -25,26 +25,27 @@ function se_smart_cover:STATE_Write (packet)
 		packet:w_stringZ(k)
 		packet:w_bool(v)
 	end
+--	printf("write")
+--	print_table(self.loopholes)
 end
 function se_smart_cover:STATE_Read (packet, size)
 	cse_smart_cover.STATE_Read (self, packet, size)
 	if self.script_version >= 9 then
-		local last_description = packet:r_stringZ()
+		self.last_description = packet:r_stringZ()
 		local smart_cover_description
-		if (last_description ~= "" and last_description ~= "nil") then
-			smart_cover_description = last_description
-			self.last_description = last_description
+		if self.last_description ~= "" then
+			smart_cover_description = self.last_description
 		else
 			smart_cover_description = self:description()
 		end
 		local existing_loopholes = {}
 		if smart_cover_description ~= nil then
-			--printf("name %s descr %s", self:name(), tostring(smart_cover_description))
+			printf("name %s descr %s", self:name(), tostring(smart_cover_description))
 			if smart_covers == nil then
-				printf("smartcovers is nil")
+				abort("smartcovers is nil")
 			end
 			if smart_covers.descriptions[smart_cover_description] == nil then
-				printf("smartcover [%s] has wrong description [%s]!!!", self:name(), tostring(smart_cover_description))
+				abort("smartcover [%s] has wrong description [%s]!!!", self:name(), tostring(smart_cover_description))
 			end
 			local loopholes = smart_covers.descriptions[smart_cover_description].loopholes
 			for k,v in pairs (loopholes) do
@@ -62,7 +63,9 @@ function se_smart_cover:STATE_Read (packet, size)
 		end
 	else
 		local smart_cover_description = self:description()
-		if smart_cover_description ~= nil then
+		if smart_cover_description ~= nil and
+		   smart_covers.descriptions[smart_cover_description] ~= nil -- IX-Ray: Fixed scripts working in editors
+		then
 			local loopholes = smart_covers.descriptions[smart_cover_description].loopholes
 			for k,v in pairs (loopholes) do
 				self.loopholes[v.id] = true
@@ -73,8 +76,7 @@ function se_smart_cover:STATE_Read (packet, size)
 end
 function se_smart_cover:on_before_register()
 	cse_smart_cover.on_before_register( self )
-	local name = self.dynamic_name or self:name()
-	registered_smartcovers[name] = self
+	registered_smartcovers[self:name()] = self
 end
 function se_smart_cover:on_register()
 	cse_smart_cover.on_register( self )
@@ -84,16 +86,11 @@ function se_smart_cover:on_register()
 		registered_smartcovers_by_lv_id[level_id] = {}
 	end
 	registered_smartcovers_by_lv_id[level_id][self.m_level_vertex_id] = self
-
-	local name = self.dynamic_name or self:name()
-	registered_smartcovers[name] = self
-
 --	printf("smart_cover [%s] is registered lvlid [%s] lvid[%s]", self:name(), tostring(level_id), tostring(self.m_level_vertex_id))
 end
 function se_smart_cover:on_unregister()
 	unregister_story_object_by_id(self.id)
-	local name = self.dynamic_name or self:name()
-	registered_smartcovers[name] = nil
+	registered_smartcovers[self:name()] = nil
 	local level_id = game_graph():vertex(self.m_game_vertex_id):level_id()
 	registered_smartcovers_by_lv_id[level_id][self.m_level_vertex_id] = nil
 --	printf("smart_cover [%s] is unregistered", self:name())
@@ -126,3 +123,31 @@ function se_smart_cover:FillProps	(pref,items)
 		end
 	end
 end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

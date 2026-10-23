@@ -44,7 +44,7 @@ gather_items_enabled = false
 help_wounded_enabled = false
 corpse_detection_enabled = false
 
-;----------СЃС‚СЂРµР»СЏРµС‚ РІ РґРІРµСЂСЊ---------
+;----------стреляет в дверь---------
 [remark@shoot_door]
 anim = threat_fire ;threat_fire
 target = path  | zat_b18_noah_door_shooting_mark, 0
@@ -61,7 +61,7 @@ help_wounded_enabled = false
 corpse_detection_enabled = false
 out_restr = zat_b18_out_restrictor_noah
 
-;----------С†РµР»РёС‚СЊСЃСЏ РІ РёРіСЂРѕРєР°---------
+;----------целиться в игрока---------
 
 [walker@stop]
 path_walk = noah_walker_1_walk
@@ -99,7 +99,7 @@ out_restr = zat_b18_out_restrictor_noah
 
 
 
-;-------------Р°С‚С‚Р°РєСѓРµРј РёРіСЂРѕРєР°----------
+;-------------аттакуем игрока----------
 [remark@fire]
 anim = threat_na
 target = story | actor
@@ -135,7 +135,7 @@ corpse_detection_enabled = false
 close_anim		= guard_na
 close_victim    = actor
 close_distance  = 7
-;close_snd_hello = nil
+close_snd_hello = nil
 close_snd_bye   = nil
 use			= true
 abuse		= true
@@ -146,7 +146,7 @@ allow_break = false
 close_anim		= threat_na
 close_victim    = actor
 close_distance  = 7
-close_snd_hello = {=actor_has_weapon} meet_hide_weapon, nil
+close_snd_hello = nil
 close_snd_bye   = nil
 use			=  true
 abuse		= true

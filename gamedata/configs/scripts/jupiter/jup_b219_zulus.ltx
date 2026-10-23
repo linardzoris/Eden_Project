@@ -9,10 +9,10 @@ path_look = zulus_look
 on_signal = zulus | walker %+jup_b219_zulus_on_pos%
 def_state_standing = guard_na
 meet = no_meet
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = jup_factory_default_in_restrictor
 combat_ignore_keep_when_attacked = true 
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 danger = danger
 gather_items_enabled = false
 help_wounded_enabled = false
@@ -29,9 +29,9 @@ on_info5 = {+jup_b219_start_all} remark@start_all
 on_info6 = {+jup_b219_start_soldier_vano} remark@start_soldier_vano
 on_info7 = {+jup_b219_start_soldier_monolith} remark@start_soldier_monolith
 on_info8 = {+jup_b219_start_vano_monolith} 		remark@start_vano_monolith
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 def_state_standing = guard_na
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true 
 danger = danger
 meet = no_meet
@@ -42,11 +42,11 @@ corpse_detection_enabled = false
 
 [remark@start_one]
 anim = jup_b219_zulus_one
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true 
 danger = danger
 meet = no_meet
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = jup_factory_default_in_restrictor
 gather_items_enabled = false
 help_wounded_enabled = false
@@ -54,11 +54,11 @@ corpse_detection_enabled = false
 
 [remark@start_one_vano]
 anim = jup_b219_zulus_one_vano
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 danger = danger
 combat_ignore_keep_when_attacked = true 
 meet = no_meet
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = jup_factory_default_in_restrictor
 gather_items_enabled = false
 help_wounded_enabled = false
@@ -66,11 +66,11 @@ corpse_detection_enabled = false
 
 [remark@start_one_monolith]
 anim = jup_b219_zulus_one_monolith
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 danger = danger
 combat_ignore_keep_when_attacked = true 
 meet = no_meet
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = jup_factory_default_in_restrictor
 gather_items_enabled = false
 help_wounded_enabled = false
@@ -79,11 +79,11 @@ corpse_detection_enabled = false
 [remark@start_one_soldier]
 anim = jup_b219_zulus_one_soldier
 ;target = path | jup_b219_actor_start_look,0
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 danger = danger
 combat_ignore_keep_when_attacked = true 
 meet = no_meet
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = jup_factory_default_in_restrictor
 gather_items_enabled = false
 help_wounded_enabled = false
@@ -92,11 +92,11 @@ corpse_detection_enabled = false
 [remark@start_all]
 anim = jup_b219_zulus_all
 ;target = path | jup_b219_actor_start_look,0
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 danger = danger
 combat_ignore_keep_when_attacked = true 
 meet = no_meet
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = jup_factory_default_in_restrictor
 gather_items_enabled = false
 help_wounded_enabled = false
@@ -105,11 +105,11 @@ corpse_detection_enabled = false
 [remark@start_soldier_vano]
 anim = jup_b219_zulus_soldier_vano
 ;target = path | jup_b219_actor_start_look,0
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 danger = danger
 combat_ignore_keep_when_attacked = true 
 meet = no_meet
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = jup_factory_default_in_restrictor
 gather_items_enabled = false
 help_wounded_enabled = false
@@ -118,11 +118,11 @@ corpse_detection_enabled = false
 [remark@start_soldier_monolith]
 anim = jup_b219_zulus_soldier_monolith
 ;target = path | jup_b219_actor_start_look,0
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 danger = danger
 combat_ignore_keep_when_attacked = true 
 meet = no_meet
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = jup_factory_default_in_restrictor
 gather_items_enabled = false
 help_wounded_enabled = false
@@ -131,11 +131,11 @@ corpse_detection_enabled = false
 [remark@start_vano_monolith]
 anim = jup_b219_zulus_vano_monolith
 ;target = path | jup_b219_actor_start_look,0
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 danger = danger
 combat_ignore_keep_when_attacked = true 
 meet = no_meet
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = jup_factory_default_in_restrictor
 gather_items_enabled = false
 help_wounded_enabled = false

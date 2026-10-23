@@ -1,3 +1,5 @@
+ANIMATED_OBJECT_SECT = "animated_object"
+
 --------------------------------------------------------------------------------
 -- Animated doors' binder
 --------------------------------------------------------------------------------
@@ -8,30 +10,26 @@ end
 --------------------------------------------------------------------------------
 class "door_binder_labx8" (object_binder)
 function door_binder_labx8:__init(obj) super(obj)
+	local ini = obj:spawn_ini()
 
-	local spawn_ini = obj:spawn_ini()
-	local filename = spawn_ini and spawn_ini:r_string_ex("animated_object","cfg")
-	if not filename then
-		printf( "[animated object %s] no animated_object section in spawn ini!", obj:name() )
+	if not ini:section_exist(ANIMATED_OBJECT_SECT) then
+		printf( "[animated object %s] no configuration!", obj:name() )
 		return
 	end
 	
-	local ini = ini_file(filename)
-	if not (ini) then 
-		printf( "[animated object %s] no configuration! %s", obj:name(),filename )
-		return	
+	local filename = utils.cfg_get_string(ini, ANIMATED_OBJECT_SECT, "cfg", nil, false, "", nil)
+	if filename then
+		ini = ini_file(filename)
 	end
-	
-	
 
 --	self.idle = 5000
 	self.is_idle = true
 	self.is_play_fwd = false
 --	self.idle_end = 0
 
-	local idle_snd 	= ini:r_string_ex("animated_object","idle_snd") or "device\\airtight_door_idle"
-	local start_snd = ini:r_string_ex("animated_object","start_snd") or "device\\airtight_door_start"
-	local stop_snd 	= ini:r_string_ex("animated_object","stop_snd") or "device\\airtight_door_stop"
+	local idle_snd 	= utils.cfg_get_string(ini, ANIMATED_OBJECT_SECT, "idle_snd", nil, false, "", "device\\airtight_door_idle")
+	local start_snd = utils.cfg_get_string(ini, ANIMATED_OBJECT_SECT, "start_snd", nil, false, "", "device\\airtight_door_start")
+	local stop_snd 	= utils.cfg_get_string(ini, ANIMATED_OBJECT_SECT, "stop_snd", nil, false, "", "device\\airtight_door_stop")
 
 	if idle_snd ~= nil and idle_snd ~= "nil" then
 		self.idle_snd 	= 	sound_object(idle_snd)
@@ -43,29 +41,29 @@ function door_binder_labx8:__init(obj) super(obj)
 		self.stop_snd 	= 	sound_object(stop_snd)
 	end
 	
- 	self.tip		= xr_logic.parse_condlist(nil, "door_binder_labx8", "tip_condlist", ini:r_string_ex("animated_object","tip") or "none")
+ 	self.tip		= xr_logic.parse_condlist(nil, "door_binder_labx8", "tip_condlist", utils.cfg_get_string(ini, ANIMATED_OBJECT_SECT, "tip", nil, false, "", "none")) 
 
 	local on_use 	= "true"
 	local on_start 	= "true"
 	local on_stop	= "true"
 
-	if(ini:line_exist("animated_object", "on_use")) then
-		on_use = ini:r_string_ex("animated_object", "on_use")
+	if(ini:line_exist(ANIMATED_OBJECT_SECT, "on_use")) then
+		on_use = ini:r_string(ANIMATED_OBJECT_SECT, "on_use")
 	end
 	self.on_use = xr_logic.parse_condlist(nil, "door_binder_labx8", "on_use", on_use)
 
-	if(ini:line_exist("animated_object", "on_start")) then
-		on_start = ini:r_string_ex("animated_object", "on_start")
+	if(ini:line_exist(ANIMATED_OBJECT_SECT, "on_start")) then
+		on_start = ini:r_string(ANIMATED_OBJECT_SECT, "on_start")
 	end
 	self.on_start = xr_logic.parse_condlist(nil, "door_binder_labx8", "on_start", on_start)
 
-	if(ini:line_exist("animated_object", "on_stop")) then
-		on_stop = ini:r_string_ex("animated_object", "on_stop")
+	if(ini:line_exist(ANIMATED_OBJECT_SECT, "on_stop")) then
+		on_stop = ini:r_string(ANIMATED_OBJECT_SECT, "on_stop")
 	end
 	self.on_stop = xr_logic.parse_condlist(nil, "door_binder_labx8", "on_stop", on_stop)
 
-	self.idle_delay = ini:r_float_ex("animated_object", "idle_delay") or 2000
-	self.start_delay = ini:r_float_ex("animated_object", "start_delay") or 0
+	self.idle_delay = utils.cfg_get_number(ini, ANIMATED_OBJECT_SECT, "idle_delay", nil, false, 2000)
+	self.start_delay = utils.cfg_get_number(ini, ANIMATED_OBJECT_SECT, "start_delay", nil, false, 0)
 	
 	self.loaded = false
 	self.anim_time = 0
@@ -122,9 +120,9 @@ function door_binder_labx8:update(delta)
 		end
 	end
 	
-	local tip_string = self.tip and xr_logic.pick_section_from_condlist(get_story_object("actor"), self.object, self.tip) or "none"
+	local tip_string = xr_logic.pick_section_from_condlist(get_story_object("actor"), nil, self.tip)
 	
-	if (tip_string ~= "none") then 
+	if tip_string ~= "none" then 
 		self.object:set_tip_text(tip_string)
 	else
 		self.object:set_tip_text("")
@@ -145,9 +143,7 @@ function door_binder_labx8:anim_forward()
 	end
 	self.is_idle = false
 	self.is_play_fwd = true
-	if (self.on_start) then
-		xr_logic.pick_section_from_condlist(get_story_object("actor"), obj, self.on_start)
-	end
+	xr_logic.pick_section_from_condlist(get_story_object("actor"), obj, self.on_start)	
 end
 
 function door_binder_labx8:anim_backward()
@@ -164,9 +160,7 @@ function door_binder_labx8:anim_backward()
 	end
 	self.is_idle = false
 	self.is_play_fwd = false
-	if (self.on_start) then
-		xr_logic.pick_section_from_condlist(get_story_object("actor"), obj, self.on_start)
-	end
+	xr_logic.pick_section_from_condlist(get_story_object("actor"), obj, self.on_start)	
 end
 
 function door_binder_labx8:anim_stop()
@@ -176,10 +170,7 @@ function door_binder_labx8:anim_stop()
 		self.stop_snd:play_at_pos(self.object, self.object:position(), 0, sound_object.s3d)
 	end
 	self.anim_time = self.object:get_physics_object():anim_time_get()
-	
-	if (self.on_stop) then
-		xr_logic.pick_section_from_condlist(get_story_object("actor"), obj, self.on_stop)
-	end
+	xr_logic.pick_section_from_condlist(get_story_object("actor"), obj, self.on_stop)	
 end
 
 function door_binder_labx8:animation_end_callback(is_end)
@@ -189,16 +180,12 @@ function door_binder_labx8:animation_end_callback(is_end)
 		end
 		self.is_idle = true
 		self.anim_time = self.object:get_physics_object():anim_time_get()
-		if (self.on_stop) then
-			xr_logic.pick_section_from_condlist(get_story_object("actor"), obj, self.on_stop)
-		end
+		xr_logic.pick_section_from_condlist(get_story_object("actor"), obj, self.on_stop)
 	end
 end
 
 function door_binder_labx8:use_callback(obj)
-	if (self.on_use) then
-		xr_logic.pick_section_from_condlist(get_story_object("actor"), obj, self.on_use)
-	end
+    xr_logic.pick_section_from_condlist(get_story_object("actor"), obj, self.on_use)
 end
 
 -- Standart function for save

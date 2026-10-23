@@ -1,13 +1,13 @@
 
 ;***************************************************************
-;*                                –ù–ï –ò–ó–ú–ï–ù–Ø–¢–¨!!!!!!!!!!!!!!!                                           *
+;*                                Õ≈ »«Ã≈Õﬂ“‹!!!!!!!!!!!!!!!                                           *
 ;***************************************************************
 
 [physic_object]
 GroupControlSection = spawn_group
 $spawn        = "physics\object"
 $prefetch       = 8
-class       = O_PHYS_S ;Change to O_PHYS_S if you want to use se_item.se_physic
+class       = O_PHYS_S
 remove_time     = 60; after this time  unbreaked removable bone will be removed
 script_binding      = bind_physic_object.init
 
@@ -15,17 +15,22 @@ script_binding      = bind_physic_object.init
 GroupControlSection = spawn_group
 $spawn        = "physics\destroyable_object"
 ;$prefetch      = 8
-class       = O_DSTR_S; P_DSTRBL	;Change to O_DSTR_S if you want to use se_item.se_physic script binding
+class       = O_DSTR_S
 remove_time     = 60; after this time  unbreaked removable bone will be removed
 script_binding      = bind_physic_object.init
 
-[physic_door]:physic_destroyable_object
+
+[physic_door]
 GroupControlSection = spawn_group
 $spawn        	= "physics\door"
+;$prefetch      = 8
+class       	= O_DSTR_S
+remove_time     = 60; after this time  unbreaked removable bone will be removed
+script_binding  = bind_physic_object.init
 is_ai_obstacle	= false
 
 ;*******************************************************************************
-;*                                –î–ê–õ–¨–®–ï –ú–û–ñ–ù–û –ú–ï–ù–Ø–¢–¨:-)                                                   *
+;*                                ƒ¿À‹ÿ≈ ÃŒ∆ÕŒ Ã≈Õﬂ“‹:-)                                                   *
 ;*******************************************************************************
 
 
@@ -99,7 +104,7 @@ custom_data 		      = models\objects\ignore_static.ltx
 
 [pri_a25_explosive_charge]:physic_object
 $spawn                        = "dynamic_objects\scene_objects\pri_a25_explosive_charge"
-visual                        = dynamics\equipments\quest\explosive_charge.ogf
+visual                        = dynamics\equipments\quest\explosive_charge.ogf 
 startup_animation					= idle
 fixed_bones							= link
 story_id = pri_a25_explosive_charge_id
@@ -107,7 +112,7 @@ custom_data 		      = models\objects\ignore_static.ltx
 
 [zat_b57_ph_gas]:physic_object
 $spawn                      = "dynamic_objects\scene_objects\zat_b57_ph_gas"
-visual                      = dynamics\equipments\quest\balloon_poison_gas.ogf
+visual                      = dynamics\equipments\quest\balloon_poison_gas.ogf 
 startup_animation			= idle
 fixed_bones					= link
 story_id 					= zat_b57_ph_gas
@@ -192,7 +197,7 @@ visual                        = dynamics\balon\bochka_close_4.ogf
 
 [gaz_balon]:physic_destroyable_object
 $spawn                        = "dynamic_objects\balon\gaz_balon"
-visual                        = dynamics\balon\gaz_balon.ogf
+visual                        = dynamics\balon\gaz_balon.ogf 
 
 ;*******************************************************************************
 
@@ -203,59 +208,59 @@ visual                        = dynamics\balon\gaz_balon.ogf
 
 [disel_generator]:physic_destroyable_object
 $spawn                        = "dynamic_objects\el_tehnika\disel_generator"
-visual                        = dynamics\el_tehnika\disel_generator.ogf
+visual                        = dynamics\el_tehnika\disel_generator.ogf 
 startup_animation  	      = idle
 fixed_bones		      = link
 custom_data 		      = models\objects\ignore_static.ltx
 
 [krisagenerator]:physic_destroyable_object
 $spawn                        = "dynamic_objects\el_tehnika\krisagenerator"
-visual                        = dynamics\el_tehnika\krisagenerator.ogf
+visual                        = dynamics\el_tehnika\krisagenerator.ogf 
 startup_animation  	      = idle
 fixed_bones		      = link
 custom_data 		      = models\objects\ignore_static.ltx
 
 [ventilator_01]:physic_destroyable_object
 $spawn                        = "dynamic_objects\el_tehnika\ventilator_01"
-visual                        = dynamics\el_tehnika\ventilator_01.ogf
+visual                        = dynamics\el_tehnika\ventilator_01.ogf 
 startup_animation  	      = idle
 fixed_bones		      = link
 custom_data 		      = models\objects\ignore_static.ltx
 
 [ventilator_02]:physic_destroyable_object
 $spawn                        = "dynamic_objects\el_tehnika\ventilator_02"
-visual                        = dynamics\el_tehnika\ventilator_02.ogf
+visual                        = dynamics\el_tehnika\ventilator_02.ogf 
 startup_animation  	      = idle
 fixed_bones		      = link
 custom_data 		      = models\objects\ignore_static.ltx
 
 [ventilator_03]:physic_destroyable_object
 $spawn                        = "dynamic_objects\el_tehnika\ventilator_03"
-visual                        = dynamics\el_tehnika\ventilator_03.ogf
+visual                        = dynamics\el_tehnika\ventilator_03.ogf 
 startup_animation  	      = idle
 fixed_bones		      = link
 custom_data 		      = models\objects\ignore_static.ltx
 
 [ventilator_04]:physic_destroyable_object
 $spawn                        = "dynamic_objects\el_tehnika\ventilator_04"
-visual                        = dynamics\el_tehnika\ventilator_04.ogf
+visual                        = dynamics\el_tehnika\ventilator_04.ogf 
 startup_animation  	      = idle
 fixed_bones		      = link
 custom_data 		      = models\objects\ignore_static.ltx
 
 [ventilator_05]:physic_destroyable_object
 $spawn                        = "dynamic_objects\el_tehnika\ventilator_05"
-visual                        = dynamics\el_tehnika\ventilator_05.ogf
+visual                        = dynamics\el_tehnika\ventilator_05.ogf 
 startup_animation  	      = idle
 fixed_bones		      = link
 custom_data 		      = models\objects\ignore_static.ltx
 
 [speakerphone]:physic_destroyable_object
 $spawn                        = "dynamic_objects\el_tehnika\speakerphone"
-visual                        = dynamics\el_tehnika\speakerphone.ogf
+visual                        = dynamics\el_tehnika\speakerphone.ogf 
 fixed_bones		      = link
 custom_data 		      = models\objects\ignore_static.ltx
-
+                                                                
 [notebook]:physic_destroyable_object
 $spawn                        = "dynamic_objects\el_tehnika\notebook"
 visual                        = dynamics\el_tehnika\notebook.ogf
@@ -301,27 +306,27 @@ visual                        = dynamics\el_tehnika\komp_blok.ogf
 
 [debris_01]:physic_destroyable_object
 $spawn                        = "dynamic_objects\fence\debris_01"
-visual                        = dynamics\fence\debris_01.ogf
+visual                        = dynamics\fence\debris_01.ogf 
 
 [wood_fence_1]:physic_destroyable_object
 $spawn                        = "dynamic_objects\fence\wood_fence_1"
 fixed_bones		      = link
-visual                        = dynamics\fence\wood_fence_1.ogf
+visual                        = dynamics\fence\wood_fence_1.ogf 
 
 [wood_fence_2]:physic_destroyable_object
 $spawn                        = "dynamic_objects\fence\wood_fence_2"
 fixed_bones		      = link
-visual                        = dynamics\fence\wood_fence_2.ogf
+visual                        = dynamics\fence\wood_fence_2.ogf 
 
 [wood_fence_3]:physic_destroyable_object
 $spawn                        = "dynamic_objects\fence\wood_fence_3"
 fixed_bones		      = link
-visual                        = dynamics\fence\wood_fence_3.ogf
+visual                        = dynamics\fence\wood_fence_3.ogf 
 
 [wood_fence_4]:physic_destroyable_object
 $spawn                        = "dynamic_objects\fence\wood_fence_4"
 fixed_bones		      = link
-visual                        = dynamics\fence\wood_fence_4.ogf
+visual                        = dynamics\fence\wood_fence_4.ogf 
 
 ;*** workshop_room *************************************************************
 ;*******************************************************************************
@@ -347,11 +352,11 @@ visual                        = dynamics\workshop_room\vedro_01.ogf
 
 [axe]:physic_destroyable_object
 $spawn                        = "dynamic_objects\workshop_room\axe"
-visual                        = dynamics\workshop_room\axe.ogf
+visual                        = dynamics\workshop_room\axe.ogf 
 
 [hammer]:physic_destroyable_object
 $spawn                        = "dynamic_objects\workshop_room\hammer"
-visual                        = dynamics\workshop_room\hammer.ogf
+visual                        = dynamics\workshop_room\hammer.ogf 
 
 [hatch_01]:physic_destroyable_object
 $spawn                        = "dynamic_objects\workshop_room\hatch_01"
@@ -359,27 +364,27 @@ visual                        = dynamics\workshop_room\hatch_01.ogf
 
 [keyga]:physic_destroyable_object
 $spawn                        = "dynamic_objects\workshop_room\keyga"
-visual                        = dynamics\workshop_room\keyga.ogf
+visual                        = dynamics\workshop_room\keyga.ogf 
 
 [lopata]:physic_destroyable_object
 $spawn                        = "dynamic_objects\workshop_room\lopata"
-visual                        = dynamics\workshop_room\lopata.ogf
+visual                        = dynamics\workshop_room\lopata.ogf 
 
 [molot]:physic_destroyable_object
 $spawn                        = "dynamic_objects\workshop_room\molot"
-visual                        = dynamics\workshop_room\molot.ogf
+visual                        = dynamics\workshop_room\molot.ogf 
 
 [pick]:physic_destroyable_object
 $spawn                        = "dynamic_objects\workshop_room\pick"
-visual                        = dynamics\workshop_room\pick.ogf
+visual                        = dynamics\workshop_room\pick.ogf 
 
 [riffler]:physic_destroyable_object
 $spawn                        = "dynamic_objects\workshop_room\riffler"
-visual                        = dynamics\workshop_room\riffler.ogf
+visual                        = dynamics\workshop_room\riffler.ogf 
 
 [saw]:physic_destroyable_object
 $spawn                        = "dynamic_objects\workshop_room\saw"
-visual                        = dynamics\workshop_room\saw.ogf
+visual                        = dynamics\workshop_room\saw.ogf 
 
 ;***kitchen_room****************************************************************
 [bottle_3L]:physic_destroyable_object
@@ -439,35 +444,35 @@ visual                        = dynamics\kitchen_room\gaz_plita_small.ogf
 ;*** box ***********************************************************************
 [box_1a]:physic_destroyable_object
 $spawn                        = "dynamic_objects\box\box_1a"
-visual                        = dynamics\box\box_1a.ogf
+visual                        = dynamics\box\box_1a.ogf 
 
 [box_1b]:physic_destroyable_object
 $spawn                        = "dynamic_objects\box\box_1b"
-visual                        = dynamics\box\box_1b.ogf
+visual                        = dynamics\box\box_1b.ogf 
 
 [box_1c]:physic_destroyable_object
 $spawn                        = "dynamic_objects\box\box_1c"
-visual                        = dynamics\box\box_1c.ogf
+visual                        = dynamics\box\box_1c.ogf 
 
 [box_bottle_1]:physic_destroyable_object
 $spawn                        = "dynamic_objects\box\box_bottle_1"
-visual                        = dynamics\box\box_bottle_1.ogf
+visual                        = dynamics\box\box_bottle_1.ogf 
 
 [box_metall_01]:physic_destroyable_object
 $spawn                        = "dynamic_objects\box\box_metall_01"
-visual                        = dynamics\box\box_metall_01.ogf
+visual                        = dynamics\box\box_metall_01.ogf 
 
 [box_wood_01]:physic_destroyable_object
 $spawn                        = "dynamic_objects\box\box_wood_01"
-visual                        = dynamics\box\box_wood_01.ogf
+visual                        = dynamics\box\box_wood_01.ogf 
 
 [box_wood_02]:physic_destroyable_object
 $spawn                        = "dynamic_objects\box\box_wood_02"
-visual                        = dynamics\box\box_wood_02.ogf
+visual                        = dynamics\box\box_wood_02.ogf 
 
 [box_paper]:physic_destroyable_object
 $spawn                        = "dynamic_objects\box\box_paper"
-visual                        = dynamics\box\box_paper.ogf
+visual                        = dynamics\box\box_paper.ogf 
 
 ;*******************************************************************************
 
@@ -510,31 +515,31 @@ visual                        = dynamics\firestation\ognetushitel.ogf
 ;*** stul **********************************************************************
 [stul_wood_01]:physic_destroyable_object
 $spawn                        = "dynamic_objects\stul\stul_wood_01"
-visual                        = dynamics\stul\stul_wood_01.ogf
+visual                        = dynamics\stul\stul_wood_01.ogf 
 
 [child_bench]:physic_destroyable_object
 $spawn                        = "dynamic_objects\stul\child_bench"
-visual                        = dynamics\stul\child_bench.ogf
+visual                        = dynamics\stul\child_bench.ogf  
 
 [stul_child_01]:physic_destroyable_object
 $spawn                        = "dynamic_objects\stul\stul_child_01"
-visual                        = dynamics\stul\stul_child_01.ogf
+visual                        = dynamics\stul\stul_child_01.ogf  
 
 [stul_school_01]:physic_destroyable_object
 $spawn                        = "dynamic_objects\stul\stul_school_01"
-visual                        = dynamics\stul\stul_school_01.ogf
+visual                        = dynamics\stul\stul_school_01.ogf  
 
 [stul_school_01_br]:physic_destroyable_object
 $spawn                        = "dynamic_objects\stul\stul_school_01_br"
-visual                        = dynamics\stul\stul_school_01_br.ogf
+visual                        = dynamics\stul\stul_school_01_br.ogf  
 
 [taburet_village]:physic_destroyable_object
 $spawn                        = "dynamic_objects\stul\taburet_village"
-visual                        = dynamics\stul\taburet_village.ogf
+visual                        = dynamics\stul\taburet_village.ogf  
 
 [taburet_wood_01]:physic_destroyable_object
 $spawn                        = "dynamic_objects\stul\taburet_wood_01"
-visual                        = dynamics\stul\taburet_wood_01.ogf
+visual                        = dynamics\stul\taburet_wood_01.ogf  
 
 ;*******************************************************************************
 
@@ -634,42 +639,3 @@ fixed_bones							= link
 $spawn                      = "dynamic_objects\museum_weapons\balloon_poison_gas"
 visual                      = dynamics\equipments\quest\balloon_poison_gas.ogf
 fixed_bones					= link
-
-;*********************************************************************************
-
-[ph_sleepbag]:physic_destroyable_object
-visual 					= dynamics\equipments\mattress02.ogf
-script_binding			= bind_physic_object.init
-custom_data 			= scripts\ph_sleepbag.ltx
-;custom_data 		    = models\objects\ignore_static.ltx
-;fixed_bones = bone01_(1),bone01_(2),bone01_(3),bone02_(1),bone02_(2),bone02_(3),bone03
-
-[ph_sleepbag_npc]:physic_destroyable_object
-visual 					= dynamics\equipments\mattress02.ogf
-script_binding			= bind_physic_object.init
-custom_data 		    = models\objects\ignore_static.ltx
-fixed_bones = bone01_(1),bone01_(2),bone01_(3),bone02_(1),bone02_(2),bone02_(3),bone03
-
-[artefact_monolit_ghost]:physic_destroyable_object
-$spawn                      = "dynamics\anomaly\artefact_monolit_ghost"
-visual                      = dynamics\anomaly\artefact_monolit_ghost.ogf
-story_id 					= artefact_monolit_ghost
-startup_animation			= idle
-fixed_bones					= link
-custom_data 		        = models\objects\ignore_static.ltx
-
-;************************************* HOLDER ENTITY OBJECT ****************************
-[holder_stul]
-$spawn                                   = "holders\holder_stul"
-GroupControlSection                      = spawn_group
-cform                                    = skeleton
-class                                    = O_HLDR_E
-visual                                   = dynamics\stul\stul_school_01.ogf
-
-allow_weapon							 = true
-camera_pos							 	 = 0,1.5,0
-camera_angle							 = 0,0,0				;0 to 3.14 (PI)
-exit_pos								 = 0,0,0
-lock_enter								 = false 
-lock_exit								 = false
-use_action_hint							 = st_use_action_sit

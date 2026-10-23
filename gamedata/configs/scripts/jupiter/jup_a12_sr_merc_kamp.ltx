@@ -1,5 +1,5 @@
 [logic]
-active = nil;sr_idle@wait_for_spawn
+active = sr_idle@wait_for_spawn
 
 [sr_idle@wait_for_spawn]
 on_info = {=is_jup_a12_mercs_time +jup_a12_actor_choose_power -pri_a12_stalker_prisoner_free -jup_a12_actor_switched_from_ransom_to_power} sr_idle@spawn, {+pri_a12_stalker_prisoner_free} sr_idle@nil

@@ -1,25 +1,16 @@
 <?xml version="1.0" encoding="windows-1251" ?>
 <string_table>
-	<string id="st_ignite_fire">
-		<text>Ignite ($$ACTION_USE$$)</text>
-	</string>
-	<string id="st_extinguish_fire">
-		<text>Extinguish ($$ACTION_USE$$)</text>
-	</string>
 	<string id="actor_inventory_box_use">
 		<text>Open personal box ($$ACTION_USE$$)</text>
 	</string>
 	<string id="cant_walk">
-		<text>You're too exhausted to move.</text>
+		<text>You’re too exhausted to move</text>
 	</string>
 	<string id="cant_walk_weight">
-		<text>You're too overloaded to move.</text>
+		<text>You’re too overloaded to move</text>
 	</string>
 	<string id="car_character_use">
 		<text>Open door ($$ACTION_USE$$)</text>
-	</string>
-	<string id="st_use_action_sit">
-		<text>Sit ($$ACTION_USE$$)</text>
 	</string>
 	<string id="character_use">
 		<text>Speak ($$ACTION_USE$$)</text>
@@ -129,6 +120,66 @@
 	<string id="sleep_zone_tip">
 		<text>Sleep ($$ACTION_USE$$)</text>
 	</string>
+	<string id="st_ach_balance_advocate">
+		<text>You have attained the Man of Balance achievement.</text>
+	</string>
+	<string id="st_ach_battle_systems_master">
+		<text>You have attained the Weapon Systems Master achievement.</text>
+	</string>
+	<string id="st_ach_detective">
+		<text>You have attained the Detective achievement.</text>
+	</string>
+	<string id="st_ach_diplomat">
+		<text>You have attained the Diplomat achievement.</text>
+	</string>
+	<string id="st_ach_friend_of_duty">
+		<text>You have attained the Friend of Duty achievement.</text>
+	</string>
+	<string id="st_ach_friend_of_freedom">
+		<text>You have attained the Friend of Freedom achievement.</text>
+	</string>
+	<string id="st_ach_friend_of_stalkers">
+		<text>You have attained the Friend of Stalkers achievement.</text>
+	</string>
+	<string id="st_ach_herald_of_justice">
+		<text>You have attained the Courier of Justice achievement.</text>
+	</string>
+	<string id="st_ach_high_tech_master">
+		<text>You have attained the Hi-Tech Expert achievement.</text>
+	</string>
+	<string id="st_ach_information_dealer">
+		<text>You have attained the Trafficker of Information achievement.</text>
+	</string>
+	<string id="st_ach_keeper_of_secrets">
+		<text>You have attained the Keeper of Secrets achievement.</text>
+	</string>
+	<string id="st_ach_kingpin">
+		<text>You have attained the Boss achievement.</text>
+	</string>
+	<string id="st_ach_leader">
+		<text>You have attained the Leader achievement.</text>
+	</string>
+	<string id="st_ach_mutant_hunter">
+		<text>You have attained the Mutant Hunter achievement.</text>
+	</string>
+	<string id="st_ach_one_of_the_lads">
+		<text>You have attained the One of Ours achievement.</text>
+	</string>
+	<string id="st_ach_pioneer">
+		<text>You have attained the Pioneer achievement.</text>
+	</string>
+	<string id="st_ach_research_man">
+		<text>You have attained the Research Assistant achievement.</text>
+	</string>
+	<string id="st_ach_seeker">
+		<text>You have attained the Artifact Hunter achievement.</text>
+	</string>
+	<string id="st_ach_skilled_stalker">
+		<text>You have attained the Seasoned Stalker achievement.</text>
+	</string>
+	<string id="st_ach_wealthy">
+		<text>You have attained the Wealthy Client achievement.</text>
+	</string>
 	<string id="st_autosave">
 		<text>Autosaving...</text>
 	</string>
@@ -145,7 +196,7 @@
 		<text>A PS5-M Universal Protection suit has been placed in the personal box at Yanov for helping Duty.</text>
 	</string>
 	<string id="st_duty_second_reward_news">
-		<text>A PSZ-9d Duty armour suit has been placed in the personal box at Yanov for helping Duty.</text>
+		<text>A PSZ-9d Duty Armor suit has been placed in the personal box at Yanov for helping Duty.</text>
 	</string>
 	<string id="st_freedom_first_reward_news">
 		<text>A Wind of Freedom suit has been placed in the personal box at Yanov for helping Freedom.</text>
@@ -154,25 +205,25 @@
 		<text>A Freedom Guard suit has been placed in the personal box at Yanov for helping Freedom.</text>
 	</string>
 	<string id="st_freeplay_text_ok">
-		<text>You didn't manage to reach the helicopters and the evacuation team left the Zone without you.</text>
+		<text>You didn’t manage to reach the helicopters and the evacuation team left the Zone without you.</text>
 	</string>
 	<string id="st_freeplay_text_yes_no">
-		<text>Are you ready to leave the Zone? There's no way back.</text>
+		<text>Are you ready to leave the Zone? There’s no way back.</text>
 	</string>
 	<string id="st_game_over">
-		<text>Lost to the Zone</text>
+		<text>Game over.</text>
 	</string>
 	<string id="st_game_over_press_jump">
 		<text>Press ($$ACTION_JUMP$$) to exit to the main menu.</text>
 	</string>
 	<string id="st_game_paused">
-		<text>Paused</text>
+		<text>Pause</text>
 	</string>
 	<string id="st_game_saved">
 		<text>Game saved</text>
 	</string>
 	<string id="st_herald_of_justice_news">
-		<text>An artefact has been placed in the personal box on the Skadovsk for helping to expose Magpie.</text>
+		<text>An artifact has been placed in the personal box on the Skadovsk for helping to expose Magpie.</text>
 	</string>
 	<string id="st_jup_b41_door_locked">
 		<text>You must wait for the dock to become airtight</text>
@@ -187,10 +238,7 @@
 		<text>Take the elevator down ($$ACTION_USE$$)</text>
 	</string>
 	<string id="st_psy_danger">
-		<text>Dangerous psi-emission levels. Protection required to go further.</text>
-	</string>
-	<string id="st_helmet_countdown">
-		<text>Protection shutdown</text>
+		<text>Critical psy-emission level. Leave danger area immediately.</text>
 	</string>
 	<string id="st_radiation_danger">
 		<text>Dangerous radiation levels. Protection required to go further.</text>
@@ -243,9 +291,6 @@
 	<string id="ui_st_mp_experience_grow">
 		<text>-</text>
 	</string>
-	<string id="ui_st_mp_create">
-		<text>Create</text>
-	</string>
 	<string id="zat_b12_conteiner_full_locked">
 		<text>The container is locked. Two keys are needed to open it.</text>
 	</string>
@@ -282,6 +327,9 @@
 	<string id="st_surge_while_asleep">
 		<text>An emission has recently occurred in the Zone.</text>
 	</string>
+	<string id="st_ach_marked_by_zone">
+		<text>You have attained the Marked by the Zone achievement.</text>
+	</string>
 	<string id="st_mutant_hunter_news">
 		<text>Ammo has been placed in the personal box at Yanov for eliminating dangerous mutants.</text>
 	</string>
@@ -296,121 +344,5 @@
 	</string>
 	<string id="st_press_any_key">
 		<text>Press any key to play</text>
-	</string>
-	<string id="tips_rad_switcher_press">
-		<text>Turn off the Brain Scorcher ($$ACTION_USE$$)</text>
-	</string>
-	<string id="st_make_a_wish">
-		<text>Make a wish ($$ACTION_USE$$)</text>
-	</string>
-	<string id="st_lx18_pda">
-		<text>Listen to PDA recording</text>
-	</string>
-	<string id="dar_poltergeist_hold_the_door">
-		<text>Someone is holding the door.</text>
-	</string>
-	<string id="st_labx18_pass_to_1st_door">
-		<text>Excellent, Colleague. I'm glad that you've received 2nd level access. At last you will find out what goes on in our laboratory. Your access code is 1243. Chief of Laboratory X-18, Piotr Ilyitch Kalugin.</text>
-	</string>
-	<string id="st_labx18_pass_to_2nd_door">
-	<text>Dear colleague, may I remind you that starting tomorrow you will attend to the container in the central laboratory room. You must inspect the containers every two hours. Report everything directly to me. The code to the central laboratory room is 9524. Chief of Laboratory X18, Piotr Ilyitch Kalugin.</text>
-	</string>
-	<string id="st_yan_saharov_message">
-		<text>Good man, you made it after all. It's extremely important that we study the machine in the lab. Try turning it off so that we can have a look at it.</text>
-	</string>
-	<string id="st_yan_saharov_message_2">
-		<text>Listen, this prototype won't protect you from powerful emissions for long. I expected this, so every time an emission is detected, a timer is activated. When the time runs out, the prototype will no longer protect you, so be careful and keep an eye on the time.</text>
-	</string>
-	<string id="st_yan_saharov_message_3">
-		<text>Great work. The emission has been turned off and you're still alive. Oh, and by the way, pop into our bunker every once in a while, won't you?</text>
-	</string>
-	<string id="tips_warlab_switcher_press">
-		<text>Turn off the Generators ($$ACTION_USE$$)</text>
-	</string>
-	<string id="tip_door_coded">
-		<text>The door is locked by a code</text>
-	</string>
-	<string id="tip_door_decode">
-		<text>Press ($$ACTION_USE$$) to decode the door</text>
-	</string>
-	<string id="tip_door_decoding">
-		<text>Decoding in progress</text>
-	</string>
-		<string id="bar_arena_actor_afraid">
-		<text>The fight is off! The challenger got cold feet and didn't come out to fight at all!</text>
-	</string>
-	<string id="bar_arena_fight_10">
-		<text>10 seconds have elapsed!</text>
-	</string>
-	<string id="bar_arena_fight_20">
-		<text>20 seconds have elapsed!</text>
-	</string>
-	<string id="bar_arena_fight_30">
-		<text>30 seconds have elapsed!</text>
-	</string>
-	<string id="bar_arena_fight_40">
-		<text>40 seconds have elapsed!</text>
-	</string>
-	<string id="bar_arena_fight_50">
-		<text>50 seconds have elapsed!</text>
-	</string>
-	<string id="bar_arena_fight_60">
-		<text>1 minute into the fight!</text>
-	</string>
-	<string id="bar_arena_fight_70">
-		<text>1 minute and 10 seconds have elapsed!</text>
-	</string>
-	<string id="bar_arena_fight_80">
-		<text>1 minute and 20 seconds have elapsed!</text>
-	</string>
-	<string id="bar_arena_fight_90">
-		<text>1 minute and 30 seconds have elapsed!</text>
-	</string>
-	<string id="bar_arena_fight_begin">
-		<text>The fight has started!</text>
-	</string>
-	<string id="bar_arena_fight_bloodsucker">
-		<text>Attention! Attention! A new fight is about to start in the Arena! In the left corner - the Zone's most dreaded nightmare, the ever-hungry Bloodsucker! And in the right corner... A man? Yes, it's a man! Your applause please for the Marked One!</text>
-	</string>
-	<string id="bar_arena_fight_burer">
-		<text>Attention! Attention! A new fight is about to start in the Arena! In the left corner - the spoon-bending kung-fu master himself - the burer! And in the right corner - the man constantly on the lookout! They call him the Marked One!</text>
-	</string>
-	<string id="bar_arena_fight_dead">
-		<text>So, the challenger has been killed! Now there's a surprise!</text>
-	</string>
-	<string id="bar_arena_fight_lose">
-		<text>Well, the challenger killed his opponent, but he didn't do it in time. He loses the fight!</text>
-	</string>
-	<string id="bar_arena_fight_pseudodog">
-		<text>Attention! Attention! A new fight is about to start in the Arena. In the left corner - it's white, it's fluffy and it's pissed off like hell... The pseudodog! And in the right corner - he came from nowhere and that's precisely where he's headed. They call him the Marked One!</text>
-	</string>
-	<string id="bar_arena_fight_savage">
-		<text>Attention! Attention! A new fight is about to start in the Arena. In the left corner - you know him, you love him, and he hates you right back! It's the Beast! And in the right corner - alive and kicking, at least for the moment - the Marked One!</text>
-	</string>
-	<string id="bar_arena_fight_snork">
-		<text>Attention! Attention! A new fight is about to start in the Arena! In the left corner - the martial arts guru and health specialist - the snork! And in the right corner - the man with no past and no future. They call him the Marked One!</text>
-	</string>
-	<string id="bar_arena_fight_timeout">
-		<text>The time's up! The challenger lost, but he's still fighting for his life!</text>
-	</string>
-	<string id="bar_arena_fight_victory">
-		<text>Ho! The challenger killed his opponent in time! He wins!</text>
-	</string>
-	<string id="st_death_count">
-		<text>You've died %s times.</text>
-	</string>
-	
-	<string id="st_screen_kick">
-		<text>Kick</text>
-	</string>
-	<string id="st_screen_field_dress">
-		<text>Field dress</text>
-	</string>
-	<string id="st_nobody_left_to_replace">
-		<text>There is nobody left to replace.</text>
-	</string>
-	
-	<string id="st_nothing_useful">
-		<text>Nothing useful</text>
 	</string>
 </string_table>

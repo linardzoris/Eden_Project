@@ -1,5 +1,7 @@
 function init(obj)
-	db.storage[obj:id()] = db.storage[obj:id()] and empty_table(db.storage[obj:id()]) or {}
+	printf("_bp: init(): name='%s'", obj:name())
+
+	db.storage[obj:id()] = { }
 	local new_binder = signal_light_binder(obj)
 	obj:bind_object(new_binder)
 end
@@ -78,9 +80,6 @@ function signal_light_binder:net_spawn(data)
 end
 
 function signal_light_binder:net_destroy()
-	-- if (self.slow_fly_started) then 
-		-- self:stop_light()
-	-- end
 	db.signal_light[self.object:name()] = nil
 	object_binder.net_destroy(self)
 end
@@ -96,8 +95,8 @@ function signal_light_binder:launch()
 
 	local obj = self.object
 	obj:set_const_force(vector():set(0,1,0), 180, 1500)
-	obj:start_particles("weapons\\light_signal", "link")
-	obj:get_hanging_lamp():turn_on()
+	--obj:start_particles("weapons\\light_signal", "link")
+	--obj:get_hanging_lamp():turn_on()
 
 	self.start_time = time_global()
 	self.slow_fly_started = false
@@ -133,7 +132,7 @@ function signal_light_binder:save(packet)
 	set_save_marker(packet, "save", false, "signal_light_binder")
 	object_binder.save(self, packet)
 	if self.start_time == nil then
-		packet:w_u32(4294967296)
+		packet:w_u32(-1)
 	else
 		packet:w_u32(time_global()-self.start_time)
 	end

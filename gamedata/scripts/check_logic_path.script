@@ -66,7 +66,7 @@ function check_ini(ini, section, smart, prefix_name)
 				prefix = smart:name()
 			end
 					
-			local path_walk = utils.prefix_r_string(ini,sect,path_field,prefix_name)
+			local path_walk = utils.cfg_get_string(ini, sect, path_field, smart, false, prefix)
 
 			--printf("        check path %s", path_walk)
 			
@@ -80,7 +80,7 @@ function check_ini(ini, section, smart, prefix_name)
 			-- ≈сли это валк путь, провер€ем есть ли лук.
 			local patrol_look = nil 
 			if path_field == "path_walk" then
-				local path_look_name = utils.prefix_r_string(ini,sect,"path_look",prefix_name)
+				local path_look_name = utils.cfg_get_string(ini, sect, "path_look", smart, false, prefix)
 				if path_look_name ~= nil then
 					--printf("		checking path look %s", tostring(path_look_name))
 					patrol_look = patrol(path_look_name)				

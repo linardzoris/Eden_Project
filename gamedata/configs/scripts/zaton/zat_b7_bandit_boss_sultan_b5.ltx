@@ -22,7 +22,7 @@ help_wounded_enabled = false
 corpse_detection_enabled = false
 combat_ignore_cond =   {=check_enemy_name(sim_default) =fighting_dist_ge(30)} true
 
-;--Р·Р° Р±Р°РЅРґРёС‚РѕРІ Р¶РґРµРј РёРіСЂРѕРєР°----------------------------
+;--за бандитов ждем игрока----------------------------
 [walker@start_work_bandit]
 path_walk = zat_b5_bandit_sultan_1_walk
 path_look = zat_b5_bandit_sultan_1_look
@@ -54,7 +54,7 @@ gather_items_enabled = false
 help_wounded_enabled = false
 corpse_detection_enabled = false
 
-;--РёРґРµРј Рє С‚РѕСЂРіРѕРІС†Сѓ
+;--идем к торговцу
 [walker@go_to_trader]
 path_walk = zat_b5_bandit_sultan_2_walk
 path_look = zat_b5_bandit_sultan_2_look
@@ -85,7 +85,7 @@ gather_items_enabled = false
 help_wounded_enabled = false
 corpse_detection_enabled = false
 
-;--Р¶РґРµРј С„СЂР°Р·С‹ С‚РѕСЂРіРѕРІС†Р°
+;--ждем фразы торговца
 [walker@close_by_trader]
 path_walk = zat_b5_bandit_sultan_2_walk
 path_look = zat_b5_bandit_sultan_2_look
@@ -101,7 +101,7 @@ gather_items_enabled = false
 help_wounded_enabled = false
 corpse_detection_enabled = false
 
-;--Сѓ РЅР°СЃ РµСЃС‚СЊ Р°СЂС‚РµС„Р°РєС‚С‹ РґР°РІР°Р№ РѕСЂСѓР¶РёРµ
+;--у нас есть артефакты давай оружие
 [remark@speak_trader]
 anim = guard
 target = path | zat_b5_smart_terrain_zat_b5_dolg_trader_1_walk,0
@@ -115,7 +115,7 @@ gather_items_enabled = false
 help_wounded_enabled = false
 corpse_detection_enabled = false
 
-;--Р¶РґРµРј Р°С‚Р°РєРё СЃС‚Р°Р»РєРµСЂРѕРІ
+;--ждем атаки сталкеров
 [walker@wait]
 path_walk = zat_b5_bandit_sultan_2_walk
 path_look = zat_b5_bandit_sultan_2_look
@@ -218,7 +218,7 @@ corpse_detection_enabled = false
 wounded = wounded
 combat_ignore_cond =  {=check_enemy_name(sim_default) =fighting_dist_ge(30)} true
 
-;----------------------------Р·Р° С‚РѕСЂРіРѕРІС†Р°---------------------
+;----------------------------за торговца---------------------
 [walker@start_work_dealer]
 path_walk = zat_b5_bandit_sultan_1_walk
 path_look = zat_b5_bandit_sultan_1_look
@@ -279,7 +279,7 @@ gather_items_enabled = false
 help_wounded_enabled = false
 corpse_detection_enabled = false
 
-;--Сѓ РЅР°СЃ РµСЃС‚СЊ Р°СЂС‚РµС„Р°РєС‚С‹ РґР°РІР°Р№ РѕСЂСѓР¶РёРµ
+;--у нас есть артефакты давай оружие
 [remark@dealer_speak_trader]
 anim = guard
 target = path | zat_b5_smart_terrain_zat_b5_dolg_trader_1_walk,0
@@ -293,7 +293,7 @@ gather_items_enabled = false
 help_wounded_enabled = false
 corpse_detection_enabled = false
 
-;--Р¶РґРµРј Р°С‚Р°РєРё СЃС‚Р°Р»РєРµСЂРѕРІ
+;--ждем атаки сталкеров
 [walker@dealer_wait]
 path_walk = zat_b5_bandit_sultan_2_walk
 path_look = zat_b5_bandit_sultan_2_look
@@ -364,7 +364,7 @@ help_wounded_enabled = false
 corpse_detection_enabled = false
 combat_ignore_cond =  {=check_enemy_name(sim_default) =fighting_dist_ge(30)} true
 
-;--------------------------Р·Р° СЃС‚Р°Р»РєРµСЂРѕРІ---------------
+;--------------------------за сталкеров---------------
 [walker@start_work_stalker]
 path_walk = zat_b5_bandit_sultan_2_walk
 path_look = zat_b5_bandit_sultan_2_look
@@ -380,7 +380,7 @@ gather_items_enabled = false
 help_wounded_enabled = false
 corpse_detection_enabled = false
 
-;--Р¶РґРµРј С„СЂР°Р·С‹ С‚РѕСЂРіРѕРІС†Р°
+;--ждем фразы торговца
 [walker@stalker_go_to_trader]
 path_walk = zat_b5_bandit_sultan_2_walk
 path_look = zat_b5_bandit_sultan_2_look
@@ -396,7 +396,7 @@ gather_items_enabled = false
 help_wounded_enabled = false
 corpse_detection_enabled = false
 
-;--Сѓ РЅР°СЃ РµСЃС‚СЊ Р°СЂС‚РµС„Р°РєС‚С‹ РґР°РІР°Р№ РѕСЂСѓР¶РёРµ
+;--у нас есть артефакты давай оружие
 [remark@stalker_speak_trader]
 anim = guard
 target = path | zat_b5_smart_terrain_zat_b5_dolg_trader_1_walk,0
@@ -410,7 +410,7 @@ gather_items_enabled = false
 help_wounded_enabled = false
 corpse_detection_enabled = false
 
-;--Р¶РґРµРј Р°С‚Р°РєРё СЃС‚Р°Р»РєРµСЂРѕРІ
+;--ждем атаки сталкеров
 [walker@stalker_wait]
 path_walk = zat_b5_bandit_sultan_2_walk
 path_look = zat_b5_bandit_sultan_2_look

@@ -4,7 +4,7 @@ use_camp = false
 gather_items_enabled = false
 help_wounded_enabled = false
 corpse_detection_enabled = false
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 
 [logic@pri_b305_medic]
 suitable = {+pri_b305_medic_home -pri_b305_fifth_cam_end =check_npc_name(pri_a25_base_medic)} true
@@ -24,7 +24,7 @@ gather_items_enabled = false
 help_wounded_enabled = false
 corpse_detection_enabled = false
 def_state_standing = wait_na
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 
 [remark@answer_1]:remark@def
 on_info   = {+pri_b305_kirilov_where_you_been_done_end -pri_b305_medik_in_freezer_done} %=play_sound(pri_b305_medik_in_freezer) +pri_b305_medik_in_freezer_done%
@@ -44,17 +44,23 @@ target = path | pri_a16_pri_b305_kirillov_closer_walk, 0
 
 [remark@answer_3]:remark@def
 on_info = {+pri_b305_kirilov_what_next_done_end -pri_b305_medik_dont_know_what_say_done} %=play_sound(pri_b305_medik_dont_know_what_say) +pri_b305_medik_dont_know_what_say_done%
-on_signal = sound_end | {-pri_b305_medik_dont_know_what_say_done_end} %+pri_b305_medik_dont_know_what_say_done_end%
+on_signal = sound_end | {-pri_b305_medik_dont_know_what_say_done_end} remark@i_can_talk %+pri_b305_medik_dont_know_what_say_done_end%
 on_info2 = {+pri_b305_second_cam_end} animpoint@base
 meet = no_meet
 anim = wait_na
 target = path | pri_a16_pri_b305_kirillov_closer_walk, 0
 
+[remark@i_can_talk]:remark@def
+on_info = {+pri_b305_second_cam_end} animpoint@base
+meet = _meet
+anim = wait_na
+target = path | pri_a16_pri_b305_kirillov_closer_walk, 0
+
 [animpoint@base]
 cover_name = pri_a16_animp_medic
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 meet = meet
 out_restr = pri_a16_sr_noweap
 use_camp = false
@@ -63,6 +69,8 @@ help_wounded_enabled = false
 corpse_detection_enabled = false
 
 [meet]
+close_snd_hello = nil
+close_snd_bye 	= nil
 close_anim 		= nil
 close_victim 	= nil
 far_anim 		= nil
@@ -70,3 +78,4 @@ far_victim 		= nil
 use = {=actor_enemy} false, true
 trade_enable 	= false
 allow_break 	= false
+meet_on_talking = false

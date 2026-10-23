@@ -3,7 +3,7 @@
 ----------------------------------------------------------------------------------------------------------------------
 
 local id_start = stalker_ids.property_script
---log("PROPERTY_BASE "..tostring(id_start))
+log("PROPERTY_BASE "..tostring(id_start))
 -- эвалуаторы Глобальные
 global_evaluators          = id_start
 script_evaluator           = id_start + 1

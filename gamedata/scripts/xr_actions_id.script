@@ -3,10 +3,10 @@
 ----------------------------------------------------------------------------------------------------------------------
 
 -- Глобальные
-global_actions           = stalker_ids.action_script			-- 92
-action_script            = stalker_ids.action_script + 1		-- 93
+global_actions           = stalker_ids.action_script
+action_script            = stalker_ids.action_script + 1
 alife                    = stalker_ids.action_alife_planner
-script_combat_planner    = stalker_ids.action_script + 3		-- 95
+script_combat_planner    = stalker_ids.action_script + 3
 reach_task_location  	 = stalker_ids.action_script + 4
 corpse_exist  	 		 = stalker_ids.action_script + 50
 wounded_exist  	 		 = stalker_ids.action_script + 55
@@ -16,7 +16,7 @@ state_mgr                = stalker_ids.action_script + 100
 smartcover_action	     = stalker_ids.action_script + 215
 test_reaction			 = stalker_ids.action_script + 218
 -- Стохе
-stohe_actions = stalker_ids.action_script + 220			-- 312
+stohe_actions = stalker_ids.action_script + 220
 
 stohe_tradeseller_init      = stohe_actions + 1
 
@@ -33,13 +33,14 @@ assistance					= stohe_actions + 100
 death						= stohe_actions + 110
 abuse_base					= stohe_actions + 120
 post_combat					= stohe_actions + 130
-animpoint_action			= stohe_actions + 140		-- 452
+animpoint_action			= stohe_actions + 140
 
 --Sidorovich
-sidor_actions = stohe_actions + 1024					-- 1336
+sidor_actions = stohe_actions + 1024
 
-sidor_act_patrol = sidor_actions + 0
+sidor_act_commander = sidor_actions + 0
 sidor_act_soldier   = sidor_actions + 5
+sidor_act_patrol        = sidor_actions + 0
 sidor_act_wounded_base  = sidor_actions + 10
 sidor_act_bandits_base  = sidor_actions + 20
 sidor_act_swat_base     = sidor_actions + 40

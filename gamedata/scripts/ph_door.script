@@ -13,6 +13,7 @@ function action_door:__init(obj, storage)
 	self.object = obj
 	self.st = storage
 	self.snd_obj = nil
+	
 	storage.door_action = self
 end
 function action_door:reset_scheme(loading)
@@ -61,11 +62,11 @@ function action_door:reset_scheme(loading)
 end
 
 function action_door:update(delta)
-	--printf("_bp: %s action_door:update()",self.object:name(),delta)
+	--printf("_bp: action_door:update()", delta)
 	if not self.initialized then
-		printf("object '%s': door failed to initialize", self.object:name())
+		abort("object '%s': door failed to initialize", self.object:name())
 	end
-	
+
 	if xr_logic.try_switch_to_another_section(self.object, self.st, db.actor) then
 		return
 	end
@@ -236,9 +237,10 @@ function action_door:close_door(disable_snd)
 end
 
 function action_door:try_switch()
-	--printf("_bp: action_door: object '%s': try_switch  on_use=%s", self.object:name(),self.st.on_use)
+	--printf("_bp: action_door: object '%s': try_switch", self.object:name())
 	if self.st.on_use then		
-		if xr_logic.switch_to_section(self.object, self.st.ini,xr_logic.pick_section_from_condlist(db.actor, self.object, self.st.on_use.condlist)) then
+		if xr_logic.switch_to_section(self.object, self.st.ini,
+		   xr_logic.pick_section_from_condlist(db.actor, self.object, self.st.on_use.condlist)) then
 			return true
 		end
 	end
@@ -246,17 +248,34 @@ function action_door:try_switch()
 end
 
 function action_door:use_callback(door, actor)
-	--alun_utils.printf("door=%s actor=%s",door and door:name(),actor and actor:name())
 	if self.st.locked then
 		if self.st.snd_open_start then
             xr_sound.set_sound_play(self.object:id(), self.st.snd_open_start)
 		end
 	end
 
-	self:try_switch()
+	if self:try_switch() then
+		return
+	end
+
+--	local angle = self.joint:get_axis_angle(90)
+
+--	if angle - self.low_limits > self.hi_limits - angle then
+--		self:open_door(false)
+--	else
+--		self:close_door(false)
+--	end
 end
 function action_door:hit_callback(obj, amount, local_direction, who, bone_index)
-	--printf("DOOR: hit_callback: obj='%s', amount=%d, who='%s', bone='%s'", obj and obj:name(), amount, who and who:name(), bone_index)
+	local who_name
+	if who then
+		who_name = who:name()
+	else
+		who_name = "nil"
+	end
+
+	--printf("DOOR: hit_callback: obj='%s', amount=%d, who='%s', bone='%s'", obj:name(), amount, who_name, bone_index)
+	print_table(self.st.hit_on_bone)
 	if self.st.hit_on_bone[bone_index] ~= nil then
 		local section = xr_logic.pick_section_from_condlist(db.actor, self.object, self.st.hit_on_bone[bone_index].state)
 		xr_logic.switch_to_section(obj, self.st.ini, section)
@@ -271,9 +290,7 @@ end
 function add_to_binder(npc, ini, scheme, section, storage)
 	--printf("DEBUG: add_to_binder: scheme='%s', section='%s'", scheme, section)
 
-	npc:register_door_for_npc()
-	
-	db.level_doors[npc:id()] = npc:position()
+	npc:register_door_for_npc	( )
 
 	local new_action = action_door(npc, storage)
 
@@ -283,91 +300,84 @@ end
 
 function set_scheme(npc, ini, scheme, section, gulag_name)
 	local st = xr_logic.assign_storage_and_bind(npc, ini, scheme, section)
-	st.logic = xr_logic.cfg_get_switch_conditions(ini, section, npc)
 
-	local not_for_npcs = { 
-		["dynamics\\door\\bookcase_village_50x90_ph_door_l"] = true,
-		["dynamics\\door\\bookcase_village_50x90_ph_door_r"] = true,
-		["dynamics\\door\\box_wooden_01_door"] = true,
-		["dynamics\\door\\cabinet_child_45x80_01_door"] = true,
-		["dynamics\\door\\cabinet_child_350x200_01_door"] = true,
-		["dynamics\\door\\cabinet_village_140x210_ph_door_l"] = true,
-		["dynamics\\door\\cabinet_village_140x210_ph_door_r"] = true,
-		["dynamics\\door\\codedoor_key"] = true,
-		["dynamics\\door\\codedoor_left"] = true,
-		["dynamics\\door\\codedoor_right"] = true,
-		["dynamics\\door\\door_locker"] = true,
-		["dynamics\\door\\safe_01_ph_door"] = true,
-		["dynamics\\door\\shelf_metal_160x200_door_l"] = true,
-		["dynamics\\door\\shelf_metal_160x200_door_r"] = true,
-		["dynamics\\door\\shkaf_lab_01_door_l"] = true,
-		["dynamics\\door\\shkaf_lab_01_door_r"] = true,
-		["dynamics\\door\\shkaf_work_01_door"] = true,
-		["dynamics\\door\\shop_fridge_1_door_l"] = true,
-		["dynamics\\door\\shop_fridge_1_door_r"] = true,
-		["dynamics\\door\\shop_fridge_2_door"] = true
-	}
+	st.logic     = xr_logic.cfg_get_switch_conditions(ini, section, npc)
+
+	st.closed    = utils.cfg_get_bool(ini, section, "closed", npc, false, true)
+	st.locked    = utils.cfg_get_bool(ini, section, "locked", npc, false)
+	st.no_force  = utils.cfg_get_bool(ini, section, "no_force", npc, false, false)
 	
-	st.closed    			= ini:r_bool_ex(section,"closed",true)
-	st.hit_on_bone 			= utils.parse_data_1v(npc, ini:r_string_ex(section,"hit_on_bone") or "")
-	st.locked    			= ini:r_bool_ex(section,"locked",false)
-	st.no_force  			= ini:r_bool_ex(section,"no_force",false)
-	st.not_for_npc  		= ini:r_bool_ex(section,"not_for_npc",not_for_npcs[npc:get_visual_name()] or false)
-	st.on_use    			= xr_logic.cfg_get_condlist(ini, section, "on_use", npc)
-	st.show_tips 			= ini:r_bool_ex(section,"show_tips",true)
-	st.slider 				= ini:r_bool_ex(section,"slider",false)
-	st.snd_close_start 		= ini:r_string_ex(section,"snd_close_start") or "trader_door_close_start"
-	st.snd_close_stop  		= ini:r_string_ex(section,"snd_close_stop") or "trader_door_close_stop"
-	st.snd_open_start  		= ini:r_string_ex(section,"snd_open_start") or "trader_door_open_start"
-	st.tip_close 			= ini:r_string_ex(section,"tip_close") or "tip_door_close"
-	st.tip_open  			= ini:r_string_ex(section,"tip_open") or "tip_door_open"		
-	st.tip_unlock  			= ini:r_string_ex(section,"tip_open") or "tip_door_locked"
-	st.unlock_for_npc   	= ini:r_bool_ex(section,"unlock_for_npc",false)	
+	st.not_for_npc  = utils.cfg_get_bool(ini, section, "not_for_npc", npc, false, false)
+
+	st.show_tips = utils.cfg_get_bool(ini, section, "show_tips", npc, false, true)
+
+	st.tip_open  = utils.cfg_get_string(ini, section, "tip_open", npc, false, "", "tip_door_open")		
+	st.tip_unlock  = utils.cfg_get_string(ini, section, "tip_open", npc, false, "", "tip_door_locked")
+	st.tip_close = utils.cfg_get_string(ini, section, "tip_close", npc, false, "", "tip_door_close")
 	
-	if (st.unlock_for_npc and npc:is_door_locked_for_npc()) then 
- 		npc:unlock_door_for_npc()
-	elseif (st.locked == true or st.not_for_npc == true) then 
+	st.slider = utils.cfg_get_bool(ini, section, "slider", npc, false, false)
+	
+	
+--	st.snd_init        = utils.cfg_get_string(ini, section, "snd_init", npc, false, "")
+	st.snd_open_start  = utils.cfg_get_string(ini, section, "snd_open_start", npc, false, "", "trader_door_open_start")
+	st.snd_close_start = utils.cfg_get_string(ini, section, "snd_close_start", npc, false, "", "trader_door_close_start")
+	st.snd_close_stop  = utils.cfg_get_string(ini, section, "snd_close_stop", npc, false, "", "trader_door_close_stop")
+	
+	st.on_use    = xr_logic.cfg_get_condlist(ini, section, "on_use", npc)
+
+	if st.locked == true or st.not_for_npc == true then
 		if not npc:is_door_locked_for_npc() then	
 			npc:lock_door_for_npc()
 		end
-	elseif (npc:is_door_locked_for_npc()) then
-		npc:unlock_door_for_npc()
+	else
+		if npc:is_door_locked_for_npc() then
+	 		npc:unlock_door_for_npc()
+	 	end
 	end
+		
+		
+		
+	st.hit_on_bone = utils.parse_data_1v(npc, utils.cfg_get_string(ini, section, "hit_on_bone", npc, false, ""))
 end
 
 
-function try_to_open_door(npc,opened_doors)
+-- Вызывается на апдейте НПС
+-- пробегается по всем дверям и пытается открыть те, которые находятся рядом с НПС
+-- возвращает список дверей, которую открыл данный НПС
+function try_to_open_door(npc)
+	if true then return {} end
+	local opened_doors = {}
 	local npc_position = npc:position()
 	for id,position in pairs(db.level_doors) do
-		if (db.storage[id].ph_door and npc_position:distance_to_sqr(position) <= 3) then
-			local action = db.storage[id].ph_door.door_action					
-			if action.st.not_for_npc == false and action.st.closed == true then
-				action:use_callback()
-				opened_doors[id] = true
-			end
+		if npc_position:distance_to_sqr(position) <= 9 then
+			if db.storage[id].ph_door ~= nil then
+				local action = db.storage[id].ph_door.door_action					
+				if action.st.not_for_npc == false and action.st.closed == true then
+					--printf("OPEN DOOR")
+					action:use_callback()
+					opened_doors[id] = true
+				end
+			end			
 		end
 	end
+	return opened_doors	
 end
 
 function try_to_close_door(npc, doors)
+	if true then return {} end
 	local npc_position = npc:position()
 	local closed_doors = {}
 	for id, v in pairs(doors) do
-		if (db.storage[id].ph_door) then 
-			if (npc_position:distance_to_sqr(db.level_doors[id]) > 3) then
+		if npc_position:distance_to_sqr(db.level_doors[id]) > 9 then
+			if db.storage[id].ph_door ~= nil then
 				local action = db.storage[id].ph_door.door_action					
 				if action.st.not_for_npc == false and action.st.closed ~= true then
+					--printf("CLOSE DOOR")
 					action:use_callback()
 					closed_doors[id] = true
-				else 
-					closed_doors[id] = true
 				end
-			end
-		else 
-			closed_doors[id] = true
+			end			
 		end
 	end
-	for id,v in pairs(closed_doors) do
-		doors[id] = nil
-	end	
+	return closed_doors
 end

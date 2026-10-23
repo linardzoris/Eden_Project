@@ -124,19 +124,19 @@ function set_scheme(npc, ini, scheme, section, gulag_name)
 	local st = xr_logic.assign_storage_and_bind(npc, ini, scheme, section)
 	st.logic = xr_logic.cfg_get_switch_conditions(ini, section, npc)
 
-	st.movement_speed = ini:r_float_ex(section,"movement_speed") or 100
-	st.growing_koef = ini:r_float_ex(section,"growing_koef") or 0.1
-	st.lowering_koef = ini:r_float_ex(section,"lowering_koef") or st.growing_koef
-	st.pp_effector = ini:r_string_ex(section,"pp_effector") or ""
-	st.cam_effector = ini:r_string_ex(section,"cam_effector") or ""
-	st.pp_effector2 = ini:r_string_ex(section,"pp_effector2") or ""
-	st.cam_effector_repeating_time = (ini:r_float_ex(section,"cam_effector_repeating_time") or 10)*1000 -- per second
-	st.noise_sound = ini:r_string_ex(section,"noise_sound") or ""
-	st.heartbeet_sound = ini:r_string_ex(section,"heartbeet_sound") or ""
-	st.health_lost = ini:r_float_ex(section,"health_lost") or 0.01
-	st.disable_bound = ini:r_float_ex(section,"disable_bound") or 0.1
-	st.switch_lower_bound = ini:r_float_ex(section,"switch_lower_bound") or 0.5
-	st.switch_upper_bound = ini:r_float_ex(section,"switch_upper_bound") or 0.75
+	st.movement_speed = utils.cfg_get_number(ini, section, "movement_speed", npc, false, 100)
+	st.growing_koef = utils.cfg_get_number(ini, section, "growing_koef", npc, false, 0.1)
+	st.lowering_koef = utils.cfg_get_number(ini, section, "lowering_koef", npc, false, st.growing_koef)
+	st.pp_effector = utils.cfg_get_string(ini, section, "pp_effector", npc, false, "", "")
+	st.cam_effector = utils.cfg_get_string(ini, section, "cam_effector", npc, false, "", "")
+	st.pp_effector2 = utils.cfg_get_string(ini, section, "pp_effector2", npc, false, "", "")
+	st.cam_effector_repeating_time = utils.cfg_get_number(ini, section, "cam_effector_repeating_time", npc, false, 10)*1000 -- per second
+	st.noise_sound = utils.cfg_get_string(ini, section, "noise_sound", npc, false, "", "")
+	st.heartbeet_sound = utils.cfg_get_string(ini, section, "heartbeet_sound", npc, false, "", "")
+	st.health_lost = utils.cfg_get_number(ini, section, "health_lost", npc, false, 0.01)
+	st.disable_bound = utils.cfg_get_number(ini, section, "disable_bound", npc, false, 0.1)
+	st.switch_lower_bound = utils.cfg_get_number(ini, section, "switch_lower_bound", npc, false, 0.5)
+	st.switch_upper_bound = utils.cfg_get_number(ini, section, "switch_upper_bound", npc, false, 0.75)
 end
 
 

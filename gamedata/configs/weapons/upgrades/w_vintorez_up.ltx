@@ -1,18 +1,18 @@
 [up_sect_firsta_vintorez]
-;РќР°РґРµР¶РЅРѕСЃС‚СЊ(1)10%
+;Надежность(1)10%
 ;--------------
 cost		      		= 1000
 value					= +10
 
-;СѓРІРµР»РёС‡РµРЅРёРµ РґРёСЃРїРµСЂСЃРёРё РІ РїСЂРѕС†РµРЅС‚Р°С… РїСЂРё РјР°РєСЃРёРјР°Р»СЊРЅРѕРј РёР·РЅРѕСЃРµ
+;увеличение дисперсии в процентах при максимальном износе
 fire_dispersion_condition_factor    = -1 ;15
-;С€Р°РЅСЃ РѕСЃРµС‡РєРё РїСЂРё РёР·РЅРѕС€РµРЅРѕСЃС‚Рё Р±РѕР»СЊС€Рµ С‡РµРј misfireStartCondition
+;шанс осечки при изношености больше чем misfireStartCondition
 misfire_start_prob	     	= -0.001
-;С€Р°РЅСЃ РѕСЃРµС‡РєРё РїСЂРё РёР·РЅРѕС€РµРЅРѕСЃС‚Рё Р±РѕР»СЊС€Рµ С‡РµРј misfireEndCondition
+;шанс осечки при изношености больше чем misfireEndCondition
 misfire_end_prob	     	= -0.013 ;0.03
 
 [up_sect_firstc_vintorez]
-;РћС‚РґР°С‡Р°(2)-15%
+;Отдача(2)-15%
 cost		      		= 1500
 value					= -20
 
@@ -26,7 +26,7 @@ zoom_cam_step_angle_horz     = -0.06	;0.5
 
 
 [up_sect_firstd_vintorez]
-;РќР°СЃС‚РёР»СЊРЅРѕСЃС‚СЊ(2)20%
+;Настильность(2)20%
 ;------------------
 cost		      		= 1500
 value					= +20
@@ -35,7 +35,7 @@ bullet_speed            = +85
 fire_dispersion_base    = -0.01 
 
 [up_sect_firste_vintorez]
-;РЈРґРѕР±СЃС‚РІРѕ(3)25%
+;Удобство(3)25%
 ;--------------
 cost		      		= 2000
 value					= +25
@@ -47,7 +47,7 @@ PDM_disp_vel_factor 		= -0.4
 PDM_disp_accel_factor 		= -0.4
 
 [up_sect_firstf_vintorez]
-;РўРѕС‡РЅРѕСЃС‚СЊ(3)30%
+;Точность(3)30%
 ;--------------
 cost		      		= 2000
 value					= +30
@@ -56,33 +56,32 @@ fire_dispersion_base	= -0.03 ;0.7
 fire_dispersion_condition_factor    = -1 ;15
 
 [up_sect_secona_vintorez]
-;РќР°СЃС‚РёР»СЊРЅРѕСЃС‚СЊ(1)10%
+;Настильность(1)10%
 ;------------------
 cost		      		= 1000
 value					= +10
 
 bullet_speed            = +55
-fire_dispersion_base    = -0.01
 
 [up_sect_seconc_vintorez]
-;РќР°РґРµР¶РЅРѕСЃС‚СЊ(2)15%
+;Надежность(2)15%
 ;---------------
 cost		      		= 1500
 value					= +15
 
-;СѓРІРµР»РёС‡РµРЅРёРµ РґРёСЃРїРµСЂСЃРёРё РІ РїСЂРѕС†РµРЅС‚Р°С… РїСЂРё РјР°РєСЃРёРјР°Р»СЊРЅРѕРј РёР·РЅРѕСЃРµ
+;увеличение дисперсии в процентах при максимальном износе
 fire_dispersion_condition_factor    = -1 ;15
-;СѓРІРµР»РёС‡РµРЅРёРµ РёР·РЅРѕС€РµРЅРѕСЃС‚Рё РїСЂРё РІС‹СЃС‚СЂРµР»Рµ РѕС‡РµСЂРµРґСЊСЋ
+;увеличение изношености при выстреле очередью
 condition_queue_shot_dec	= -0.0001 ;0.0013
-;СѓРІРµР»РёС‡РµРЅРёРµ РёР·РЅРѕС€РµРЅРѕСЃС‚Рё РїСЂРё РѕРґРёРЅРѕС‡РЅРѕРј РІС‹СЃС‚СЂРµР»Рµ
+;увеличение изношености при одиночном выстреле
 condition_shot_dec      	= -0.0001 ;0.0011
-;С€Р°РЅСЃ РѕСЃРµС‡РєРё РїСЂРё РёР·РЅРѕС€РµРЅРѕСЃС‚Рё Р±РѕР»СЊС€Рµ С‡РµРј misfireStartCondition
+;шанс осечки при изношености больше чем misfireStartCondition
 misfire_start_prob	     	= -0.002
-;С€Р°РЅСЃ РѕСЃРµС‡РєРё РїСЂРё РёР·РЅРѕС€РµРЅРѕСЃС‚Рё Р±РѕР»СЊС€Рµ С‡РµРј misfireEndCondition
+;шанс осечки при изношености больше чем misfireEndCondition
 misfire_end_prob	     	= -0.023 ;0.03
 
 [up_sect_second_vintorez]
-;РўРѕС‡РЅРѕСЃС‚СЊ(2)20%
+;Точность(2)20%
 ;--------------
 cost		      		= 1500
 value					= +20
@@ -91,16 +90,16 @@ fire_dispersion_base	= -0.02 ;0.7
 fire_dispersion_condition_factor    = -1 ;15
 
 [up_sect_secone_vintorez]
-;РќР°СЃС‚РёР»СЊРЅРѕСЃС‚СЊ(3)30%
+;Настильность(3)30%
 ;------------------
 cost		      		= 2000
 value					= +30
 
 bullet_speed            = +125
 fire_dispersion_base    = -0.02
-
+' 
 [up_sect_thirda_vintorez]
-;РћС‚РґР°С‡Р°(1)-10%
+;Отдача(1)-10%
 ;------------
 cost		      		= 1000
 value					= -10
@@ -114,7 +113,7 @@ zoom_cam_dispersion_inc      = -0.01	;0.5
 zoom_cam_step_angle_horz     = -0.04	;0.5
 
 [up_sect_thirdc_vintorez]
-;РЈРґРѕР±СЃС‚РІРѕ(2)15%
+;Удобство(2)15%
 ;--------------
 cost		      		= 1500
 value					= +15
@@ -126,7 +125,7 @@ PDM_disp_vel_factor 		= -0.2
 PDM_disp_accel_factor 		= -0.2
 
 [up_sect_thirde_vintorez]
-;РЈРґРѕР±СЃС‚РІРѕ(3)25%
+;Удобство(3)25%
 ;--------------
 cost		      		= 2000
 value					= +25
@@ -138,7 +137,7 @@ PDM_disp_vel_factor 		= -0.4
 PDM_disp_accel_factor 		= -0.4
 
 [up_sect_thirdf_vintorez]
-;РћС‚РґР°С‡Р°(3)-30%
+;Отдача(3)-30%
 ;------------
 cost		      		= 2000
 value					= -30
@@ -152,28 +151,28 @@ zoom_cam_dispersion_inc      = -0.03	;0.5
 zoom_cam_step_angle_horz     = -0.1	;0.5
 
 [up_sect_fourta_vintorez]
-;РћРїС‚РёРєР° 4.0РёРєСЃ
+;Оптика 4.0икс
 ;------------------
 cost		      		= 1500
 
 scope_zoom_factor       = -5  
 
 [up_sect_fourtc_vintorez]
-;РљРѕРЅС‚СЂР°СЃС‚РЅС‹Р№ РїСЂРёС†РµР»
+;Контрастный прицел
 ;------------------
 cost		      		= 3000
 
 scope_nightvision = scope_contrast
 
 [up_sect_fourte_vintorez]
-;РџРќР’
+;ПНВ
 ;------------------
 cost		      		= 4500
 
 scope_nightvision = scope_nightvision
 
 [up_sect_fourtf_vintorez]
-;РўРµРїР»РѕРІРёР·РѕСЂ
+;Тепловизор
 ;------------------
 cost		      		= 10000
 
@@ -226,7 +225,7 @@ scheme_index            = 1, 1
 known                   = 1
 effects                 = up_gr_firstef_vintorez
 section                 = up_sect_firstd_vintorez
-property                = prop_bullet_speed, prop_dispersion
+property                = prop_bullet_speed
 
 precondition_functor    = inventory_upgrades.precondition_functor_a
 precondition_parameter  = a & b
@@ -289,7 +288,7 @@ scheme_index            = 0, 1
 known                   = 1
 effects                 = up_gr_seconcd_vintorez
 section                 = up_sect_secona_vintorez
-property                = prop_bullet_speed, prop_dispersion
+property                = prop_bullet_speed
 
 precondition_functor    = inventory_upgrades.precondition_functor_a
 precondition_parameter  = a & b
@@ -351,7 +350,7 @@ scheme_index            = 2, 2
 known                   = 1
 effects                 =
 section                 = up_sect_secone_vintorez
-property                = prop_bullet_speed, prop_dispersion
+property                = prop_bullet_speed
 
 precondition_functor    = inventory_upgrades.precondition_functor_a
 precondition_parameter  = a & b

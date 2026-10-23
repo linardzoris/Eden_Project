@@ -1,5 +1,5 @@
 [up_sect_firsta_pm]
-;РЎРєРѕСЂРѕСЃС‚СЂРµР»СЊРЅРѕСЃС‚СЊ(1)10%
+;Скорострельность(1)10%
 ;----------------------
 cost		      		= 200
 value					= +10
@@ -7,7 +7,7 @@ value					= +10
 rpm						= +20
 
 [up_sect_firstc_pm]
-;РќР°СЃС‚РёР»СЊРЅРѕСЃС‚СЊ(2)20%
+;Настильность(2)20%
 ;------------------
 cost		      		= 400
 value					= +20
@@ -16,7 +16,7 @@ bullet_speed		 	= +45
 fire_dispersion_base	= -0.01 
 
 [up_sect_firstd_pm]
-;РћС‚РґР°С‡Р°(2)-20%
+;Отдача(2)-20%
 ;------------
 cost		      		= 400
 value					= -20
@@ -26,7 +26,7 @@ cam_dispersion_inc		= -0.2		;0.5
 cam_step_angle_horz		= -0.25;    ;1.0
 
 [up_sect_firste_pm]
-;РЎРєРѕСЂРѕСЃС‚СЂРµР»СЊРЅРѕСЃС‚СЊ(3)25%
+;Скорострельность(3)25%
 ;----------------------
 cost		      		= 600
 value					= +25
@@ -34,33 +34,32 @@ value					= +25
 rpm						= +60
 
 [up_sect_secona_pm]
-;РќР°СЃС‚РёР»СЊРЅРѕСЃС‚СЊ(1)10%
+;Настильность(1)10%
 ;------------------
 cost		      		= 200
 value					= +10
 
 bullet_speed		 	= +25
-fire_dispersion_base    = -0.01
 
 [up_sect_seconc_pm]
-;РќР°РґРµР¶РЅРѕСЃС‚СЊ(2)15%
+;Надежность(2)15%
 ;---------------
 cost		      		= 400
 value					= +15
 
-;СѓРІРµР»РёС‡РµРЅРёРµ РґРёСЃРїРµСЂСЃРёРё РІ РїСЂРѕС†РµРЅС‚Р°С… РїСЂРё РјР°РєСЃРёРјР°Р»СЊРЅРѕРј РёР·РЅРѕСЃРµ
+;увеличение дисперсии в процентах при максимальном износе
 fire_dispersion_condition_factor    = -2 ;15
-;СѓРІРµР»РёС‡РµРЅРёРµ РёР·РЅРѕС€РµРЅРѕСЃС‚Рё РїСЂРё РІС‹СЃС‚СЂРµР»Рµ РѕС‡РµСЂРµРґСЊСЋ
+;увеличение изношености при выстреле очередью
 condition_queue_shot_dec	= -0.001 ;0.0013
-;СѓРІРµР»РёС‡РµРЅРёРµ РёР·РЅРѕС€РµРЅРѕСЃС‚Рё РїСЂРё РѕРґРёРЅРѕС‡РЅРѕРј РІС‹СЃС‚СЂРµР»Рµ
+;увеличение изношености при одиночном выстреле
 condition_shot_dec      	= -0.001 ;0.0011
-;С€Р°РЅСЃ РѕСЃРµС‡РєРё РїСЂРё РёР·РЅРѕС€РµРЅРѕСЃС‚Рё Р±РѕР»СЊС€Рµ С‡РµРј misfireStartCondition
+;шанс осечки при изношености больше чем misfireStartCondition
 misfire_start_prob	     	= -0.002
-;С€Р°РЅСЃ РѕСЃРµС‡РєРё РїСЂРё РёР·РЅРѕС€РµРЅРѕСЃС‚Рё Р±РѕР»СЊС€Рµ С‡РµРј misfireEndCondition
+;шанс осечки при изношености больше чем misfireEndCondition
 misfire_end_prob	     	= -0.02 ;0.03
 
 [up_sect_thirda_pm]
-;Р’РµСЃ
+;Вес
 ;------------------
 cost		      		= 200
 value					= -0.35
@@ -74,7 +73,7 @@ PDM_disp_vel_factor 		= -0.15
 PDM_disp_accel_factor 		= -0.15
 
 [up_sect_thirdc_pm]
-;РЈРґРѕР±СЃС‚РІРѕ(2)15%
+;Удобство(2)15%
 ;--------------
 cost		      		= 400
 value					= +15
@@ -86,7 +85,7 @@ PDM_disp_vel_factor 		= -0.35
 PDM_disp_accel_factor 		= -0.35
 
 [up_sect_thirdd_pm]
-;РћС‚РґР°С‡Р°(2)-20%
+;Отдача(2)-20%
 ;------------
 cost		      		= 400
 value					= -20
@@ -96,7 +95,7 @@ cam_dispersion_inc		= -0.2		;0.5
 cam_step_angle_horz		= -0.25;    ;1.0
 
 [up_sect_fourta_pm]
-;РўРѕС‡РЅРѕСЃС‚СЊ(1)10%
+;Точность(1)10%
 ;---------------
 cost		      		= 200
 value					= +10
@@ -105,7 +104,7 @@ fire_dispersion_base	= -0.03
 fire_dispersion_condition_factor    = -1
 
 [up_sect_fourtc_pm]
-;РўРѕС‡РЅРѕСЃС‚СЊ(2)20%
+;Точность(2)20%
 ;---------------
 cost		      		= 400
 value					= +20
@@ -114,7 +113,7 @@ fire_dispersion_base	= -0.05
 fire_dispersion_condition_factor    = -1
 
 [up_sect_fiftha_pm]
-;РЈРІРµР»РёС‡РµРЅРЅС‹Р№ РѕР±СЉРµРј РјР°РіР°Р·РёРЅР°
+;Увеличенный объем магазина
 ;---------------
 cost		      		= 350
 value					= +4
@@ -122,20 +121,20 @@ value					= +4
 ammo_mag_size		 	= +4
 
 [up_sect_fifthc_pm]
-;РЎРјРµРЅР° РєР°Р»РёР±СЂР° РЅР° 9С…19
+;Смена калибра на 9х19
 ;---------------
 cost		      		= 550
 value					= "9x19"
 
 ammo_class		 		= ammo_9x19_fmj, ammo_9x19_pbp
 
-;СѓРІРµР»РёС‡РµРЅРёРµ РёР·РЅРѕС€РµРЅРѕСЃС‚Рё РїСЂРё РІС‹СЃС‚СЂРµР»Рµ РѕС‡РµСЂРµРґСЊСЋ
+;увеличение изношености при выстреле очередью
 condition_queue_shot_dec	= 0.0002 ;0.0013
-;СѓРІРµР»РёС‡РµРЅРёРµ РёР·РЅРѕС€РµРЅРѕСЃС‚Рё РїСЂРё РѕРґРёРЅРѕС‡РЅРѕРј РІС‹СЃС‚СЂРµР»Рµ
+;увеличение изношености при одиночном выстреле
 condition_shot_dec      	= 0.0002 ;0.0011
-;С€Р°РЅСЃ РѕСЃРµС‡РєРё РїСЂРё РёР·РЅРѕС€РµРЅРѕСЃС‚Рё Р±РѕР»СЊС€Рµ С‡РµРј misfireStartCondition
+;шанс осечки при изношености больше чем misfireStartCondition
 misfire_start_prob	     	= 0.0008
-;С€Р°РЅСЃ РѕСЃРµС‡РєРё РїСЂРё РёР·РЅРѕС€РµРЅРѕСЃС‚Рё Р±РѕР»СЊС€Рµ С‡РµРј misfireEndCondition
+;шанс осечки при изношености больше чем misfireEndCondition
 misfire_end_prob	     	= 0.008 ;0.03
 
 [up_firsta_pm]
@@ -166,7 +165,7 @@ scheme_index            = 1, 0
 known                   = 1
 effects                 = up_gr_firstef_pm
 section                 = up_sect_firstc_pm
-property                = prop_bullet_speed, prop_dispersion
+property                = prop_bullet_speed
 
 precondition_functor    = inventory_upgrades.precondition_functor_a
 precondition_parameter  = a & b
@@ -230,7 +229,7 @@ scheme_index            = 0, 1
 known                   = 1
 effects                 = up_gr_seconcd_pm
 section                 = up_sect_secona_pm
-property                = prop_bullet_speed, prop_dispersion
+property                = prop_bullet_speed
 
 precondition_functor    = inventory_upgrades.precondition_functor_a
 precondition_parameter  = a & b

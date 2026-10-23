@@ -4,34 +4,34 @@ character_profile = sim_default_stalker_0
 
 sound_death						=
 sound_anomaly_death				=
-sound_hit						=
+sound_hit						= 
 
-sound_humming					=
-sound_alarm						=
-sound_backup					=
-sound_detour					=
-sound_friendly_fire				=
-sound_panic_human				=
-sound_panic_monster				=
-sound_tolls						=
-sound_wounded					=
-sound_grenade_alarm				=
-sound_friendly_grenade_alarm	=
-sound_need_backup				=
-sound_running_in_danger			=
-sound_walking_in_danger			=
-sound_kill_wounded				=
-sound_enemy_critically_wounded	=
-sound_enemy_killed_or_wounded	=
+sound_humming					= 
+sound_alarm						= 
+sound_backup					= 
+sound_detour					= 
+sound_friendly_fire				= 
+sound_panic_human				= 
+sound_panic_monster				= 
+sound_tolls						= 
+sound_wounded					= 
+sound_grenade_alarm				= 
+sound_friendly_grenade_alarm	= 
+sound_need_backup				= 
+sound_running_in_danger			= 
+sound_walking_in_danger			= 
+sound_kill_wounded				= 
+sound_enemy_critically_wounded	= 
+sound_enemy_killed_or_wounded	= 
 
-sound_attack_no_allies				=
-sound_attack_allies_single_enemy	=
-sound_attack_allies_several_enemies	=
-sound_search1_no_allies				=
-sound_search1_with_allies			=
-sound_enemy_lost_no_allies			=
-sound_enemy_lost_with_allies		=
-sound_throw_grenade					=
+sound_attack_no_allies				= 
+sound_attack_allies_single_enemy	= 
+sound_attack_allies_several_enemies	= 
+sound_search1_no_allies				= 
+sound_search1_with_allies			= 
+sound_enemy_lost_no_allies			= 
+sound_enemy_lost_with_allies		= 
+sound_throw_grenade					= 
 
 [default_duty]:stalker
 $spawn        = "respawn\default_dolg"
@@ -57,14 +57,14 @@ character_profile = default
 $spawn        = "respawn\stalker_monolith_default"
 character_profile = sim_default_monolith_0
 
-[stalker_azazel]:stalker_silent
-$spawn        = "respawn\stalker_azazel"
-character_profile = actor
+
 ;****************************************************************
 ; Simulation
 ;****************************************************************
 
-;***** sim duty *****
+;****************************************************************
+; duty
+;****************************************************************
 
 [sim_default_duty_0]:stalker
 $spawn                     = "respawn\sim_default_duty_0"
@@ -97,7 +97,6 @@ spec_rank = master
 community = dolg
 
 ;***** sim monolith *****
-
 [sim_default_monolith_0]:stalker
 $spawn                     = "respawn\sim_default_monolith_0"
 character_profile     = sim_default_monolith_0
@@ -127,25 +126,6 @@ $spawn                     = "respawn\sim_default_monolith_4"
 character_profile     = sim_default_monolith_4
 spec_rank = master
 community = monolith
-
-[sim_monolith_specnaz_rg6]:stalker
-$spawn                     = "respawn\sim_monolith_specnaz_rg6"
-character_profile     = sim_monolith_specnaz_rg6
-spec_rank = master
-community = monolith
-
-[sim_monolith_sniper]:stalker
-$spawn                     = "respawn\sim_monolith_sniper"
-character_profile     = sim_monolith_sniper
-spec_rank = master
-community = monolith
-
-[sim_monolith_sniper_gauss]:stalker
-$spawn                     = "respawn\sim_monolith_sniper_gauss"
-character_profile     = sim_monolith_sniper_gauss
-spec_rank = master
-community = monolith
-
 
 ;***** sim freedom *****
 
@@ -243,43 +223,43 @@ character_profile     = sim_default_stalker_4
 spec_rank = master
 community = stalker
 
-;***** sim military *****
+;***** military *****
 
 [sim_default_military_0]:stalker
 $spawn                     = "respawn\sim_default_military_0"
 character_profile     = sim_default_military_0
 spec_rank = novice
-community = army
+community = military
 
 [sim_default_military_1]:stalker
 $spawn                     = "respawn\sim_default_military_1"
 character_profile     = sim_default_military_1
 spec_rank = regular
-community = army
+community = military
 
 [sim_default_military_2]:stalker
 $spawn                     = "respawn\sim_default_military_2"
 character_profile     = sim_default_military_2
 spec_rank = experienced
-community = army
+community = military
 
 [sim_default_military_3]:stalker
 $spawn                     = "respawn\sim_default_military_3"
 character_profile     = sim_default_military_3
 spec_rank = veteran
-community = army
+community = military
 
 [sim_default_military_3_sniper]:stalker
 $spawn                     = "respawn\sim_default_military_3_sniper"
 character_profile     = sim_default_military_3_sniper
 spec_rank = veteran
-community = army
+community = military
 
 [sim_default_military_4]:stalker
 $spawn                     = "respawn\sim_default_military_4"
 character_profile     = sim_default_military_4
 spec_rank = master
-community = army
+community = military
 
 ;***** sim merc *****
 
@@ -292,58 +272,26 @@ community = killer
 [sim_default_killer_1]:stalker
 $spawn                     = "respawn\sim_default_killer_1"
 character_profile     = sim_default_killer_1
-spec_rank = regular
+spec_rank = novice
 community = killer
 
 [sim_default_killer_2]:stalker
 $spawn                     = "respawn\sim_default_killer_2"
 character_profile     = sim_default_killer_2
-spec_rank = experienced
+spec_rank = novice
 community = killer
 
 [sim_default_killer_3]:stalker
 $spawn                     = "respawn\sim_default_killer_3"
 character_profile     = sim_default_killer_3
-spec_rank = veteran
+spec_rank = novice
 community = killer
 
 [sim_default_killer_4]:stalker
 $spawn                     = "respawn\sim_default_killer_4"
 character_profile     = sim_default_killer_4
-spec_rank = master
-community = killer
-
-;***** sim csky *****
-
-[sim_default_csky_0]:stalker
-$spawn                     = "respawn\sim_default_csky_0"
-character_profile     = sim_default_csky_0
 spec_rank = novice
-community = csky
-
-[sim_default_csky_1]:stalker
-$spawn                     = "respawn\sim_default_csky_1"
-character_profile     = sim_default_csky_1
-spec_rank = regular
-community = csky
-
-[sim_default_csky_2]:stalker
-$spawn                     = "respawn\sim_default_csky_2"
-character_profile     = sim_default_csky_2
-spec_rank = experienced
-community = csky
-
-[sim_default_csky_3]:stalker
-$spawn                     = "respawn\sim_default_csky_3"
-character_profile     = sim_default_csky_3
-spec_rank = veteran
-community = csky
-
-[sim_default_csky_4]:stalker
-$spawn                     = "respawn\sim_default_csky_4"
-character_profile     = sim_default_csky_4
-spec_rank = master
-community = csky
+community = killer
 
 ;***** sim zombied *****
 
@@ -377,95 +325,14 @@ character_profile 		= actor_visual_stalker
 set_visual 				= actor_visual
 
 
-;***** sim ecolog *****
+;***** test_killer *****
 
-[sim_default_ecolog_0]:stalker
-$spawn                     = "respawn\sim_default_ecolog_0"
-character_profile     = sim_default_ecolog_0
+[test_killer]:stalker
+$spawn                     = "respawn\test_killer"
+character_profile     = test_killer
 spec_rank = novice
-community = ecolog
-
-[sim_default_ecolog_1]:stalker
-$spawn                     = "respawn\sim_default_ecolog_1"
-character_profile     = sim_default_ecolog_1
-spec_rank = regular
-community = ecolog
-
-[sim_default_ecolog_2]:stalker
-$spawn                     = "respawn\sim_default_ecolog_2"
-character_profile     = sim_default_ecolog_2
-spec_rank = experienced
-community = ecolog
-
-[sim_default_ecolog_3]:stalker
-$spawn                     = "respawn\sim_default_ecolog_3"
-character_profile     = sim_default_ecolog_3
-spec_rank = veteran
-community = ecolog
-
-;***** special/task *****
-[companion_task_ecolog_0]:stalker_immune_anomaly
-$spawn                	= "respawn\sim_default_ecolog_0"
-character_profile     	= sim_default_ecolog_0
-spec_rank 				= novice
-community 				= ecolog
-
-[companion_task_bandit_0]:stalker_immune_anomaly
-$spawn                	= "respawn\sim_default_ecolog_0"
-character_profile     	= sim_default_bandit_0
-spec_rank 				= novice
-community 				= bandit
-
-[companion_survival_stalker]:stalker_die_hard
-$spawn                = "respawn\companion_survival_stalker"
-character_profile     = sim_default_stalker_4
-spec_rank = master
-community = stalker
-
-[companion_survival_bandit]:stalker_die_hard
-$spawn                = "respawn\companion_survival_bandit"
-character_profile     = sim_default_bandit_4
-spec_rank = master
-community = bandit
-
-[companion_survival_killer]:stalker_die_hard
-$spawn                = "respawn\companion_survival_killer"
-character_profile     = sim_default_killer_4
-spec_rank = master
 community = killer
 
-[companion_survival_csky]:stalker_die_hard
-$spawn                = "respawn\companion_survival_csky"
-character_profile     = sim_default_csky_4
-spec_rank = master
-community = csky
-
-[companion_survival_army]:stalker_die_hard
-$spawn                = "respawn\companion_survival_army"
-character_profile     = sim_default_military_4
-spec_rank = master
-community = army
-
-[companion_survival_monolith]:stalker_die_hard
-$spawn                = "respawn\companion_survival_monolith"
-character_profile     = sim_default_monolith_4
-spec_rank = master
-community = monolith
-
-[companion_survival_ecolog]:stalker_die_hard
-$spawn                = "respawn\companion_survival_ecolog"
-character_profile     = sim_default_ecolog_3
-spec_rank = master
-community = ecolog
-
-[companion_survival_freedom]:stalker_die_hard
-$spawn                = "respawn\companion_survival_freedom"
-character_profile     = sim_default_freedom_4
-spec_rank = master
-community = freedom
-
-[companion_survival_duty]:stalker_die_hard
-$spawn                = "respawn\companion_survival_duty"
-character_profile     = sim_default_duty_4
-spec_rank = master
-community = dolg
+[conrack_selo_stalker]:stalker
+$spawn                     = "respawn\conrack_selo_stalker"
+character_profile     = jup_b6_freedom_stalker_1

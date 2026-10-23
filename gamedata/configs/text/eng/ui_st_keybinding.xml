@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="windows-1251"?>
+<?xml version="1.0" encoding="windows-1251" ?>
 <string_table>
 	<string id="kb_active_jobs">
 		<text>PDA</text>
@@ -7,13 +7,13 @@
 		<text>Order to attack</text>
 	</string>
 	<string id="kb_always_run">
-		<text>Walk/Low crouch</text>
+		<text>Walk</text>
 	</string>
 	<string id="kb_artefact">
-		<text>Artefact</text>
+		<text>Artifact</text>
 	</string>
 	<string id="kb_backward">
-		<text>Backward</text>
+		<text>Back</text>
 	</string>
 	<string id="kb_binoculars">
 		<text>Binoculars</text>
@@ -25,19 +25,19 @@
 		<text>Chat</text>
 	</string>
 	<string id="kb_chat_team">
-		<text>Team chat</text>
+		<text>Team Chat</text>
 	</string>
 	<string id="kb_console">
 		<text>Console</text>
 	</string>
 	<string id="kb_contacts">
-		<text>Contacts in the PDA</text>
+		<text>Contacts in PDA</text>
 	</string>
 	<string id="kb_crouch">
 		<text>Crouch</text>
 	</string>
 	<string id="kb_crouch_toggle">
-		<text>Crouch toggle</text>
+		<text>Toggle crouch</text>
 	</string>
 	<string id="kb_detector">
 		<text>Detector</text>
@@ -61,7 +61,7 @@
 		<text>Forward</text>
 	</string>
 	<string id="kb_func">
-		<text>Under-barrel grenade launcher</text>
+		<text>Underbarrel grenade launcher</text>
 	</string>
 	<string id="kb_grp_common">
 		<text>General</text>
@@ -70,7 +70,7 @@
 		<text>Direction</text>
 	</string>
 	<string id="kb_grp_inventory">
-		<text>Inventory</text>
+		<text>Backpack</text>
 	</string>
 	<string id="kb_grp_movement">
 		<text>Movement</text>
@@ -79,10 +79,10 @@
 		<text>Multiplayer</text>
 	</string>
 	<string id="kb_grp_weapons">
-		<text>Weapons</text>
+		<text>Weapon</text>
 	</string>
 	<string id="kb_inventory">
-		<text>Inventory</text>
+		<text>Backpack</text>
 	</string>
 	<string id="kb_jump">
 		<text>Jump</text>
@@ -97,13 +97,13 @@
 		<text>Strafe left</text>
 	</string>
 	<string id="kb_map">
-		<text>Map</text>
+		<text>Map in PDA</text>
 	</string>
 	<string id="kb_next_slot">
-		<text>Next weapon</text>
+		<text>Weapon in next slot</text>
 	</string>
 	<string id="kb_night_vision">
-		<text>Night vision</text>
+		<text>Night vision device</text>
 	</string>
 	<string id="kb_pause">
 		<text>Pause</text>
@@ -112,10 +112,10 @@
 		<text>PDA</text>
 	</string>
 	<string id="kb_prev_slot">
-		<text>Previous weapon</text>
+		<text>Weapon in previous slot</text>
 	</string>
 	<string id="kb_quit">
-		<text>Exit</text>
+		<text>Back</text>
 	</string>
 	<string id="kb_reload">
 		<text>Reload</text>
@@ -142,7 +142,7 @@
 		<text>Model selection menu</text>
 	</string>
 	<string id="kb_sprint">
-		<text>Sprint</text>
+		<text>Run</text>
 	</string>
 	<string id="kb_team_menu">
 		<text>Team selection menu</text>
@@ -172,10 +172,10 @@
 		<text>Vote</text>
 	</string>
 	<string id="kb_vote_no">
-		<text>Vote "No"</text>
+		<text>Vote “No”</text>
 	</string>
 	<string id="kb_vote_yes">
-		<text>Vote "Yes"</text>
+		<text>Vote "Yes”</text>
 	</string>
 	<string id="kb_weapon1">
 		<text>Weapon 1</text>
@@ -211,60 +211,15 @@
 		<text>Voice messages (2)</text>
 	</string>
 	<string id="kb_quick_use_1">
-		<text>Quick access slot (1)</text>
+		<text>Quick Access Slot 1</text>
 	</string>
 	<string id="kb_quick_use_2">
-		<text>Quick access slot (2)</text>
+		<text>Quick Access Slot 2</text>
 	</string>
 	<string id="kb_quick_use_3">
-		<text>Quick access slot (3)</text>
+		<text>Quick Access Slot 3</text>
 	</string>
 	<string id="kb_quick_use_4">
-		<text>Quick access slot (4)</text>
-	</string>
-	<string id="kb_cam_1">
-		<text>1st person view</text>
-	</string>
-	<string id="kb_cam_2">
-		<text>3rd person view (1)</text>
-	</string>
-	<string id="kb_cam_3">
-		<text>3rd person view (2)</text>
-	</string>
-	<string id="kb_cam_autoaim">
-		<text>3rd person auto-aim</text>
-	</string>
-	<string id="kb_cam_zoom_in">
-		<text>camera zoom in</text>
-	</string>
-	<string id="kb_cam_zoom_out">
-		<text>camera zoom out</text>
-	</string>
-	<string id="kb_custom1">
-		<text>Companion toggle combat</text>
-	</string>
-	<string id="kb_custom2">
-		<text>Companion toggle movement</text>
-	</string>
-	<string id="kb_custom3">
-		<text>Companion move-to-point</text>
-	</string>
-	<string id="kb_custom4">
-		<text>Companion toggle cover</text>
-	</string>
-	<string id="kb_custom5">
-		<text>Companion toggle looting</text>
-	</string>
-	<string id="kb_custom6">
-		<text>PDA Map</text>
-	</string>
-	<string id="kb_custom7">
-		<text>PDA Relations</text>
-	</string>
-	<string id="kb_custom8">
-		<text>PDA Contacts</text>
-	</string>
-	<string id="kb_custom9">
-		<text>PDA Statistics</text>
+		<text>Quick Access Slot 4</text>
 	</string>
 </string_table>

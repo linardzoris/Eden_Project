@@ -173,8 +173,6 @@
 	    <texture id="ui_inGame2_pda_Filtr_arrow_right_t" x="238" y="65" width="30" height="30" />
 	    <texture id="ui_inGame2_pda_Filtr_arrow_right_d" x="238" y="97" width="30" height="30" />
 
-	    <texture id="ui_ingame2_pda_ranking_icon_over"   x="0" y="0" width="0" height="0" />
-		
 	    <texture id="ui_inGame2_pda_ranking_icon_over_lt"   x="0" y="193" width="2" height="2" />
 	    <texture id="ui_inGame2_pda_ranking_icon_over_l"    x="0" y="195" width="2" height="2" />
 	    <texture id="ui_inGame2_pda_ranking_icon_over_lb"   x="0" y="212" width="2" height="2" />

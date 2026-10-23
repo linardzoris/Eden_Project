@@ -1,11 +1,10 @@
 [logic@zat_a2_stalker_barmen]
 suitable = {=check_npc_name(zat_a2_stalker_barmen)} true
-trade = misc\trade\trade_beard.ltx
+trade = misc\trade\trade_zat_a2_barmen.ltx
 prior = 200
 active = animpoint@bar
 can_select_weapon = false
 level_spot = trader
-dont_keep_items = true
 
 [animpoint@bar]
 cover_name = zat_a2_sc_barmen
@@ -16,13 +15,12 @@ on_info = {+zat_b14_stalker_change_smart -zat_b14_cut_scene_1_point_03} remark@w
 on_info2 = {+zat_b29_rival_sound_played} remark@b29_get_af
 ;on_info3 = {!npc_in_zone(zat_a2_sr_barmen)} %=teleport_npc(zat_stalker_base_smart_spawn_barmen)%
 out_restr = zat_a2_sr_noweap
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 gather_items_enabled = false
 help_wounded_enabled = false
 corpse_detection_enabled = false
-on_info1 = {=obj_on_job(zat_stalker_base_smart:zat_stalker_base_smart_beh_trade_1) =job_on_point(zat_stalker_base_smart:zat_stalker_base_smart_beh_trade_1:1:2:false)} %=trade_job_give_id(zat_stalker_base_smart:zat_stalker_base_smart_beh_trade_1)%
 
 [meet]
 close_snd_hello = {-zat_b30_barmen_under_sultan} zat_a2_stalker_barmen_greeting, zat_a2_stalker_barmen_greeting_angry
@@ -41,15 +39,15 @@ meet_on_talking = false
 meet_on_talking = false
 
 
-;Ğ¡Ñ†ĞµĞ½Ğ° Ğ² Ğ±Ğ°Ñ€Ğµ
+;Ñöåíà â áàğå
 [remark@wait]
 target = story | zat_b14_stalker_1
 anim = ward_noweap
 on_info = {+zat_b14_cut_scene_1_point_01} remark@zat_b14_scene_1_stalker_bye
 meet = no_meet
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = zat_a2_sr_noweap
 gather_items_enabled = false
 help_wounded_enabled = false
@@ -63,9 +61,9 @@ on_info2 = {-zat_b14_cut_scene_linker_have_artefact} %=spawn_item_to_npc(af_ques
 snd_anim_sync = true
 on_signal = sound_end | remark@wait_2 %+zat_b14_cut_scene_1_point_02%
 meet = no_meet
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 gather_items_enabled = false
 help_wounded_enabled = false
 corpse_detection_enabled = false
@@ -75,15 +73,15 @@ target = story | zat_b14_stalker_1
 anim = ward_noweap
 on_info = {+zat_b14_cut_scene_1_point_03} animpoint@bar
 meet = no_meet
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = zat_a2_sr_noweap
 gather_items_enabled = false
 help_wounded_enabled = false
 corpse_detection_enabled = false
 
-;ĞĞ¾ÑˆĞµĞ½Ğ¸Ğµ Ğ°Ñ€Ñ‚ĞµÑ„Ğ°ĞºÑ‚Ğ¾Ğ²
+;Íîøåíèå àğòåôàêòîâ
 
 [remark@b29_get_af]
 target = job | zat_b29_stalker_rival, zat_stalker_base_smart
@@ -96,9 +94,9 @@ on_info4 = {+zat_b29_stalker_rival_1_found_af +zat_b29_linker_take_af_from_rival
 on_info5 = {+zat_b29_stalker_rival_2_found_af +zat_b29_linker_take_af_from_rival +zat_b29_adv_task_given -zat_b29_exclusive_conditions} animpoint@bar %=relocate_item_b29(zat_b29_stalker_rival_default_2:zat_a2_stalker_barmen)%
 on_info6 = {-zat_b29_adv_task_given} animpoint@bar %-zat_b29_rival_sound_played%
 meet = no_meet
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = zat_a2_sr_noweap
 gather_items_enabled = false
 help_wounded_enabled = false

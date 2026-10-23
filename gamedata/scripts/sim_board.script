@@ -1,353 +1,479 @@
 --'******************************************************
---'*Registry of smart terrains. The playing field simulation.
--- Edited by Alundaio
+--'*        Реестр смарт-террейнов. Игровое поле симуляции.
 --'******************************************************
--------------------
-local level,alife,game_graph,math,pairs,tostring,tonumber,tsort,tinsert = level,alife,game_graph,math,pairs,tostring,tonumber,table.sort,table.insert
--------------------
------------------------------------------------------------------------------------
---						Public
------------------------------------------------------------------------------------
-function general_squad_precondition(squad,target)
-	-- duty and freedom target eachother
-	--[[
-	if (squad.player_id == "dolg") then 
-		if (target.player_id == "freedom" or is_squad_monster[target.player_id]) then 
-			return in_time_interval(8,19)
-		end
-	elseif (squad.player_id == "freedom") then 
-		if (target.player_id == "dolg") then 
-			return in_time_interval(8,19)
-		end 
-	end
-	--]]
-	
-	-- if target squad is not monster
-	if (is_squad_monster[target.player_id] ~= true) then 
-		if (squad.player_id == "monster_predatory_day") then 
-			return in_time_interval(6,19)
-		elseif (squad.player_id == "monster_predatory_night") then 
-			return in_time_interval(19,6)
-		elseif (squad.player_id == "monster_zombied_day") then 
-			return in_time_interval(6,19)
-		elseif (squad.player_id == "monster_zombied_night") then 
-			return in_time_interval(19,6)
-		end
-	end 
-	return false
-end
 
-function general_base_precondition(squad,target)
-	local need_squads = 0
-	
-	if (squad.player_id == "dolg") then 
-		if (target.faction == "freedom") then
-			need_squads = 1
-		end
-	elseif (squad.player_id == "freedom") then 
-		if (target.faction == "dolg") then
-			need_squads = 1
-		end	
-	elseif (squad.player_id == "army") then 
-		need_squads = 3
-	elseif (squad.player_id == "monolith") then 
-		need_squads = 1
-	elseif (squad.player_id == "stalker" or squad.player_id == "csky") then 
-		need_squads = 2
-	elseif (squad.player_id == "bandit") then
-		if (target.faction_controlled and target.faction ~= "bandit") then 
-			need_squads = 2
-		end
-	end
-	
-	if need_squads > target.max_population then
-		need_squads = target.max_population
-	end
-	
-	if (SIMBOARD.smarts[target.id]) and (SIMBOARD.smarts[target.id].squads[squad.id] or SIMBOARD.smarts[target.id].population < target.max_population and SIMBOARD.smarts[target.id].population < need_squads) then
-		return true
-	end
+--' В этом ltx хранятся дескрипторы сквадов.
+squad_ltx = system_ini()
+setting_ini = ini_file("misc\\simulation.ltx")
 
-	return in_time_interval(6,10)
-end
+local group_id_by_levels = {zaton = 1,
+							pripyat = 2,
+							jupiter = 3,
+							labx8 = 4,
+							jupiter_underground = 5}
 
-function general_territory_precondition(squad,target)
-	if (squad.player_id == "monster_predatory_day") then 
-		return in_time_interval(6,19)
-	elseif (squad.player_id == "monster_predatory_night") then 
-		return in_time_interval(19,6)
-	elseif (squad.player_id == "monster_zombied_day") then 
-		return in_time_interval(6,19)
-	elseif (squad.player_id == "monster_zombied_night") then 
-		return in_time_interval(19,6)
-	elseif (squad.player_id == "monster_vegetarian" or squad.player_id == "zombied") then 
-		return true
-	end
-	return in_time_interval(10,6)
-end
+local board = nil
 
-function general_resource_precondition(squad,target)
-	return in_time_interval(10,6)
-end
+simulation_activities = {
+	stalker = {
+			squad = nil,
+			smart = { 	base	 = { prec = function(squad, target) return in_time_interval(18,8) and not xr_conditions.surge_started() and not travel_manager.check_squad_for_enemies(squad) and (target:name() == "zat_stalker_base_smart" or target:name() == "jup_a6" or target:name() == "pri_a16") end },
+						surge	 = { prec = function() return xr_conditions.surge_started() end },
+						territory= { prec = function() return in_time_interval(8,18) and not xr_conditions.surge_started() end },
+						resource = { prec = function(squad, target) return in_time_interval(8,18) and not xr_conditions.surge_started() end } -- and squad:has_detector()
+					},
+			actor = nil
+	},
+	bandit = {
+			squad = { 	stalker	 = { prec = function(squad, target) return in_time_interval(8,21) and not xr_conditions.surge_started() and simulation_objects.sim_dist_to(squad, target) <= 150 end }
+					},
+			smart = { 	base	 = { prec = function(squad, target) return in_time_interval(21,8) and not xr_conditions.surge_started() and not travel_manager.check_squad_for_enemies(squad) and (target:name() == "zat_stalker_base_smart" or target:name() == "jup_a10_smart_terrain") end },
+						territory= { prec = function() return in_time_interval(8,21) and not xr_conditions.surge_started() end },
+						surge	 = { prec = function() return xr_conditions.surge_started() end }
+					},
+			actor = { prec = function(squad, target) return has_alife_info("sim_bandit_attack_harder") and simulation_objects.sim_dist_to(squad, target) <= 150 end }
+	},
+	dolg = {
+			squad = { 	freedom	 					= { prec = function(squad, target) return in_time_interval(8,19)	and not xr_conditions.surge_started() and simulation_objects.sim_dist_to(squad, target) <= 150 end	},
+						monster_predatory_day	 	= { prec = function(squad, target) return in_time_interval(8,19)	and not xr_conditions.surge_started() and simulation_objects.sim_dist_to(squad, target) <= 150 end	},
+						monster_predatory_night	 	= { prec = function(squad, target) return in_time_interval(8,19)	and not xr_conditions.surge_started() and simulation_objects.sim_dist_to(squad, target) <= 150 end	},
+						monster_vegetarian	 		= { prec = function(squad, target) return in_time_interval(8,19)	and not xr_conditions.surge_started() and simulation_objects.sim_dist_to(squad, target) <= 150 end	},
+						monster_zombied_day	 		= { prec = function(squad, target) return in_time_interval(8,19)	and not xr_conditions.surge_started() and simulation_objects.sim_dist_to(squad, target) <= 150 end	},
+						monster_special	 			= { prec = function(squad, target) return in_time_interval(8,19)	and not xr_conditions.surge_started() and simulation_objects.sim_dist_to(squad, target) <= 150 end	}
+					},
+			smart = { 	base	 = { prec = function(squad, target) return in_time_interval(19,8) and not xr_conditions.surge_started() and not travel_manager.check_squad_for_enemies(squad) and (target:name() == "zat_stalker_base_smart" or target:name() == "jup_a6" or target:name() == "pri_a16") end },
+						territory= { prec = function() return in_time_interval(8,19) and not xr_conditions.surge_started() end },
+						surge	 = { prec = function() return xr_conditions.surge_started() end }
+					},
+			actor = nil
+	},
+	freedom = {
+			squad = {  	dolg						= { prec = function(squad, target) return in_time_interval(8,19) and not xr_conditions.surge_started() and simulation_objects.sim_dist_to(squad, target) <= 150 end }
+					},
+			smart = { 	base	 = { prec = function(squad, target) return in_time_interval(19,8) and not xr_conditions.surge_started() and not travel_manager.check_squad_for_enemies(squad) and (target:name() == "zat_stalker_base_smart" or target:name() == "jup_a6" or target:name() == "pri_a16") end },
+						territory= { prec = function() return in_time_interval(8,19) and not xr_conditions.surge_started() end },
+						surge	 = { prec = function() return xr_conditions.surge_started() end }
+					},
+			actor = nil
+	},
+	killer = {
+			squad = nil,
+			smart = {	territory= { prec = function() return  not xr_conditions.surge_started()  end },
+						surge	 = { prec = function() return xr_conditions.surge_started() end }
+					},
+			actor = { prec = function(squad, target) return simulation_objects.sim_dist_to(squad, target) <= 150 end }
 
-function general_lair_precondition(squad,target)
-	--[[
-	if (squad.player_id == "monster_predatory_day") then 
-		return in_time_interval(19,6)
-	elseif (squad.player_id == "monster_predatory_night") then 
-		return in_time_interval(6,19)
-	elseif (squad.player_id == "monster_zombied_day") then 
-		return in_time_interval(19,6)
-	elseif (squad.player_id == "monster_zombied_night") then 
-		return in_time_interval(6,19)
-	elseif (squad.player_id == "monster_vegetarian" or squad.player_id == "zombied") then 
-		return true
-	end 
-	return in_time_interval(19,6)
-	--]]
-	return true -- Will fill up all the lairs first, by monster squads
-end
+	},
+	zombied = {
+			squad = nil,
+			smart = {	territory= { prec = function() return true end },
+						lair	 = { prec = function() return true end}
+					},
+			actor = nil
 
---------------------------------------------------------------------------------------------------------
---					SIMULATION BOARD
---------------------------------------------------------------------------------------------------------
+	},
+	monster_predatory_day = {
+			squad = { 	monster_vegetarian			= { prec = function() return in_time_interval(6,19)	end	},
+						stalker						= { prec = function(squad, target) return in_time_interval(6, 19) and simulation_objects.sim_dist_to(squad, target) <= 150 end },
+						bandit						= { prec = function(squad, target) return in_time_interval(6, 19) and simulation_objects.sim_dist_to(squad, target) <= 150 end },
+						dolg						= { prec = function(squad, target) return in_time_interval(6, 19) and simulation_objects.sim_dist_to(squad, target) <= 150 end },
+						freedom						= { prec = function(squad, target) return in_time_interval(6, 19) and simulation_objects.sim_dist_to(squad, target) <= 150 end },
+						killer						= { prec = function(squad, target) return in_time_interval(6, 19) and simulation_objects.sim_dist_to(squad, target) <= 150 end }
+					},
+			smart = { 	territory= { prec = function() return  in_time_interval(6, 19)  end },
+						lair	 = { prec = function() return in_time_interval(19,6) end }
+					},
+			actor = { prec = function(squad, target) return in_time_interval(6, 19) and simulation_objects.sim_dist_to(squad, target) <= 150 end }
+	},
+	monster_predatory_night = {
+			squad = { 	monster_vegetarian			= { prec = function() return in_time_interval(21,6)	end	},
+						stalker						= { prec = function(squad, target) return in_time_interval(19,6) and simulation_objects.sim_dist_to(squad, target) <= 150 end },
+						bandit						= { prec = function(squad, target) return in_time_interval(19,6) and simulation_objects.sim_dist_to(squad, target) <= 150 end },
+						dolg						= { prec = function(squad, target) return in_time_interval(19,6) and simulation_objects.sim_dist_to(squad, target) <= 150 end },
+						freedom						= { prec = function(squad, target) return in_time_interval(19,6) and simulation_objects.sim_dist_to(squad, target) <= 150 end },
+						killer						= { prec = function(squad, target) return in_time_interval(19,6) and simulation_objects.sim_dist_to(squad, target) <= 150 end }
+					},
+			smart = { 	territory= { prec = function() return  in_time_interval(19,6)  end },
+						lair	 = { prec = function() return in_time_interval(6,19) end }
+					},
+			actor = { prec = function(squad, target) return in_time_interval(19,6) and simulation_objects.sim_dist_to(squad, target) <= 150 end }
+	},
+	monster_vegetarian = {
+			squad = nil,
+			smart = {
+						lair	 = { prec = function() return true end }
+					},
+			actor = { prec = function(squad, target) return in_time_interval(6, 19) and simulation_objects.sim_dist_to(squad, target) <= 150 end }
+	},
+	monster_zombied_day = {
+			squad = {	stalker						= { prec = function(squad, target) return in_time_interval(6, 19) and simulation_objects.sim_dist_to(squad, target) <= 150 end },
+						bandit						= { prec = function(squad, target) return in_time_interval(6, 19) and simulation_objects.sim_dist_to(squad, target) <= 150 end },
+						dolg						= { prec = function(squad, target) return in_time_interval(6, 19) and simulation_objects.sim_dist_to(squad, target) <= 150 end },
+						freedom						= { prec = function(squad, target) return in_time_interval(6, 19) and simulation_objects.sim_dist_to(squad, target) <= 150 end },
+						killer						= { prec = function(squad, target) return in_time_interval(6, 19) and simulation_objects.sim_dist_to(squad, target) <= 150 end }
+					 },
+			smart = { 	territory= { prec = function() return  not xr_conditions.surge_started()  end },
+						lair	 = { prec = function() return in_time_interval(19,6) end }
+					},
+			actor = { prec = function(squad, target) return in_time_interval(6, 19) and simulation_objects.sim_dist_to(squad, target) <= 150 end }
+	},
+	monster_zombied_night = {
+			squad = {	stalker						= { prec = function(squad, target) return in_time_interval(19,6) and simulation_objects.sim_dist_to(squad, target) <= 150 end },
+						bandit						= { prec = function(squad, target) return in_time_interval(19,6) and simulation_objects.sim_dist_to(squad, target) <= 150 end },
+						dolg						= { prec = function(squad, target) return in_time_interval(19,6) and simulation_objects.sim_dist_to(squad, target) <= 150 end },
+						freedom						= { prec = function(squad, target) return in_time_interval(19,6) and simulation_objects.sim_dist_to(squad, target) <= 150 end },
+						killer						= { prec = function(squad, target) return in_time_interval(19,6) and simulation_objects.sim_dist_to(squad, target) <= 150 end }
+					 },
+			smart = { 	territory= { prec = function() return  in_time_interval(19,6)  end },
+						lair	 = { prec = function() return in_time_interval(6,19) end }
+					},
+			actor = { prec = function(squad, target) return in_time_interval(19,6) and simulation_objects.sim_dist_to(squad, target) <= 150 end }
+	},
+	monster_special = {
+			squad = nil,
+			smart = { 	lair	 = { prec = function() return true end }
+			},
+			actor = nil
+	},
+}
 
-class "simulation_board"
-function simulation_board:__init()
-	--' smart = {smrt, targets = {}, dangers = {}, squads = {}, stayed_squads = {}}
+
+
+
+
+
+
+
+class "sim_board"
+function sim_board:__init()
+	--' Таблица содержащая смарты и данные о них в формате:
+	--' smart = {smrt, targets = {}, dangers = {}, squads = {}, stayed_squad_quan = 0}
 	self.smarts = {}
+	self.simulation_started = true
+
+	--' Таблица смартов по именам.
 	self.smarts_by_names = {}
-	self.simulation_started = true
+
+	--' Таблица существующих отрядов.
 	self.squads = {}
+
+	--' отрисовывается ли сейчас поле на карте.
+	--self.show_flag = false
+
+	--' Таблица спаунсмартов. Смарт = уровень.
+	self.spawn_smarts = {}
+	-- Таблица для логовов мутантов на уровнях
+	self.mutant_lair = {}
+
+	-- Временная таблица
 	self.tmp_assigned_squad = {}
+	self.tmp_entered_squad = {}
+
+	printf("CREATE NEW SIM BOARD [%s]", tostring(self.sid))
 end
-
-function simulation_board:register_smart(obj)
-	--alun_utils.debug_write(strformat("simulation_board:register_smart %s",obj and obj:name()))
-	if self.smarts[obj.id] ~= nil then
-		printf("Smart already exist in list [%s]", obj:name())
-		return
-	end
-
-	--self.smarts[obj.id] = {smrt = obj, squads = {}, stayed_squads = {}, population = 0}
-	self.smarts[obj.id] = {smrt = obj, squads = {}, population = 0}
-	self.smarts_by_names[obj:name()] = obj
-end
-
-function simulation_board:unregister_smart(obj)
-	--alun_utils.debug_write(strformat("simulation_board:unregister_smart %s",obj and obj:name()))
-	self.smarts[obj.id] = nil
-	self.smarts_by_names[obj:name()] = nil
-end
-
-function simulation_board:start_sim() -- Doesn't seem to be used in 1.6
+function sim_board:start_sim()
 	self.simulation_started = true
 end
-
-function simulation_board:stop_sim() -- Doesn't seem to be used in 1.6
+function sim_board:stop_sim()
 	self.simulation_started = false
 end
-
-function simulation_board:set_actor_community(community)
+-- Перевод игрока в группировку.
+function sim_board:set_actor_community(community)
 	---- Устанавливаем группировку игрока
 	db.actor:set_character_community(actor_communitites[community], 0, 0)
 end
+--' Регистрация нового смарта.
+function sim_board:register_smart(obj)
+	printf("register_smart %s", obj:name())
+	if self.smarts[obj.id] ~= nil then
+		abort("Smart already exist in list [%s]", obj:name())
+	end
 
+	self.smarts[obj.id] = {smrt = obj, squads = {}, stayed_squad_quan = 0}
+
+	self.smarts_by_names[obj:name()] = obj
+
+end
 -- Инициализация смарта
-function simulation_board:init_smart(obj)
-	--alun_utils.debug_write(strformat("simulation_board:init_smart %s",obj and obj:name()))
+function sim_board:init_smart(obj)
 	if self.tmp_assigned_squad[obj.id] ~= nil then
 		for k,v in pairs(self.tmp_assigned_squad[obj.id]) do
 			self:assign_squad_to_smart(v, obj.id)
 		end
 		self.tmp_assigned_squad[obj.id] = nil
 	end
+	if self.tmp_entered_squad[obj.id] ~= nil then
+		for k,v in pairs(self.tmp_entered_squad[obj.id]) do
+			self:enter_smart(v, obj.id)
+		end
+		self.tmp_entered_squad[obj.id] = nil
+	end
+end
+--' АнРегистрация смарта.
+function sim_board:unregister_smart(obj)
+	if self.smarts[obj.id] == nil then
+		abort("Trying to unregister nil smart [%s]", obj:name())
+	end
+
+	self.smarts[obj.id] = nil
 end
 
 --' Создание нового отряда
-function simulation_board:create_squad(spawn_smart, sq_id)
-	--alun_utils.debug_write(strformat("simulation_board:create_squad spawn_smart=%s sq_id=%s",spawn_smart and spawn_smart:name(),sq_id))
+function sim_board:create_squad(spawn_smart, sq_id)
+	printf("create squad called")
 	local squad_id = tostring(sq_id)
-	-- if not (system_ini():section_exist(squad_id)) then
-		-- printf("squad section does not exist: %s",squad_id)
-		-- return
-	-- end
 
-	local squad = alife():create(squad_id,spawn_smart.position,	spawn_smart.m_level_vertex_id,spawn_smart.m_game_vertex_id)
+	local squad = alife():create(squad_id,spawn_smart.position,
+							spawn_smart.m_level_vertex_id,
+							spawn_smart.m_game_vertex_id)
+	--local squad = squad_class(self, squad_id, faction_name, settings_id)
+	--squad:init_squad(spawn_smart)
+	printf("Creating squad[%s] in smart[%s]", squad_id, spawn_smart:name())
+	--' Определяем в каком смарте создать новый отряд
 	squad:create_npc(spawn_smart)
+	squad:set_squad_relation()
 	self:assign_squad_to_smart(squad, spawn_smart.id)
 
-	local sim = alife()
+	--' Пересчитываем Team, Squad, Group
 	for k in squad:squad_members() do
-		local se_obj = k.object or k.id and sim:object(k.id)
-		if (se_obj) then
-			SIMBOARD:setup_squad_and_group(se_obj)
-			-- Alundaio
-			SendScriptCallback("squad_on_npc_creation",squad,se_obj,spawn_smart)
-			-- Alundaio
-		end
-    end
+		local obj = k.object
+		squad.board:setup_squad_and_group(obj)
+	end
 	return squad
 end
 --' Удалить отряд
-
-function simulation_board:remove_squad(squad)
-	--alun_utils.debug_write(strformat("simulation_board:remove_squad %s",squad and squad:name()))
+function sim_board:remove_squad(squad)
+	printf("Remove squad %s", tostring(squad.id))
+	if squad.current_action == nil or
+ 		squad.current_action.dest_smrt == nil
+	then
+		squad.board:exit_smart(squad, squad.smart_id)
+	end
+	--squad:hide()
 
 	self:assign_squad_to_smart(squad, nil)
 
 	squad:remove_squad()
 end
 --' Назначение отряда в смарт.
-function simulation_board:assign_squad_to_smart(squad, smart_id)
-	--alun_utils.debug_write(strformat("simulation_board:assign_squad_to_smart %s smart_id=%s",squad and squad:name(),smart_id))
+function sim_board:assign_squad_to_smart(squad, smart_id)
+	-- Если смарта нету (например на загрузке он еще не загружен), то мы загоняем данные
+	-- во временную таблицу. И на загрузке смарта автодобавляем их.
+	--printf("assigned squad %s to smart [%s].", tostring(squad.id), tostring(smart_id))
 
-	if (smart_id and self.smarts[smart_id] == nil) then
+	if smart_id ~= nil and self.smarts[smart_id] == nil then
+	--	printf("   to tmp")
 		if self.tmp_assigned_squad[smart_id] == nil then
 			self.tmp_assigned_squad[smart_id] = {}
 		end
 		table.insert(self.tmp_assigned_squad[smart_id], squad)
 		return
 	end
-	
-	local old_smart_id = squad.smart_id
-	squad.smart_id = nil
-	
-	-- remove squad from old smart if exist
-	if (old_smart_id and self.smarts[old_smart_id] and self.smarts[old_smart_id].squads[squad.id]) then
+
+
+	--' Убираем отряд из старого смарта
+	local old_smart_id = nil
+	if squad.smart_id ~= nil then
+		old_smart_id = squad.smart_id
+	end
+	if old_smart_id ~= nil and self.smarts[old_smart_id] ~= nil then
 		self.smarts[old_smart_id].squads[squad.id] = nil
-		
-		-- get accurate population count excluding squads using target_smart param
-		self.smarts[old_smart_id].population = smart_terrain.smart_terrain_squad_count(SIMBOARD.smarts[old_smart_id].squads)
+		self.smarts[old_smart_id].smrt:refresh()
 	end
 
 	if smart_id == nil then
-		squad:assign_smart(nil,old_smart_id)
+		squad:assign_smart(nil)
 		return
 	end
 
-	squad:assign_smart(self.smarts[smart_id].smrt,old_smart_id)
+	squad:assign_smart(self.smarts[smart_id].smrt)
 
 	--' Прописываем отряд в новом смарте.
-	if not (self.smarts[smart_id].squads[squad.id]) then
-		self.smarts[smart_id].squads[squad.id] = squad
-		if not (squad:get_script_target()) then
-			-- don't count squads with target_smart
-			self.smarts[smart_id].population = self.smarts[smart_id].population + 1
-		end
-	end
-end
+	self.smarts[smart_id].squads[squad.id] = squad
 
-local community_groups = {}
--- установить squad и group в соответствии с работой
-function simulation_board:setup_squad_and_group(se_obj)
-	--alun_utils.debug_write(strformat("simulation_board:setup_squad_and_group %s",obj and obj:name()))
-	local sim = alife()
-	local squad = se_obj.group_id and se_obj.group_id ~= 65535 and sim:object(se_obj.group_id)
-	if not (squad) then
-		change_team_squad_group(se_obj, se_obj.team, se_obj.squad, 0)
+	self.smarts[smart_id].smrt:refresh()
+end
+--' Отряд покидает смарт (уменьшаются ресурсы)
+function sim_board:exit_smart(squad, smart_id)
+	if smart_id == nil then
 		return
 	end
-	
-	local smart = squad.smart_id and sim:object(squad.smart_id)
-	change_team_squad_group(se_obj, se_obj.team, smart and smart.squad_id or se_obj.squad, 1)
+
+	if squad.entered_smart ~= smart_id then
+		return
+	end
+
+	squad.entered_smart = nil
+
+	local smart = self.smarts[smart_id]
+
+	if smart == nil then
+		abort("Smart nil while smart_id not nil [%s]", tostring(smart_id))
+	end
+
+	printf("Squad %s exit smart %s. Quan = %s", tostring(squad.id), smart.smrt:name(), tostring(smart.stayed_squad_quan))
+	smart.stayed_squad_quan = smart.stayed_squad_quan - 1
+	smart.squads[squad.id] = nil
+
+	--smart.smrt:refresh()
+end
+--' Отряд занимает смарт (увеличиваются ресурсы)
+function sim_board:enter_smart(squad, smart_id, after_load)
+	callstack()
+	if self.smarts[smart_id] == nil then
+		printf("   to tmp")
+		if self.tmp_entered_squad[smart_id] == nil then
+			self.tmp_entered_squad[smart_id] = {}
+		end
+		table.insert(self.tmp_entered_squad[smart_id], squad)
+		return
+	end
+
+	local smart = self.smarts[smart_id]
+
+	if squad.entered_smart ~= nil then
+		abort("Couldn enter to smart, becouse i'm not leave old one. Squad [%s]", squad.id)
+	end
+	squad.entered_smart = smart_id
+	printf("Squad %s enter smart %s. Quan = %s", tostring(squad.id), smart.smrt:name(), tostring(smart.stayed_squad_quan))
+
+	--smart.smrt:refresh()
+
+	smart.stayed_squad_quan = smart.stayed_squad_quan + 1
+	squad.items_spawned = false
+end
+
+-- установить squad и group в соответствии с работой
+function sim_board:setup_squad_and_group(obj)
+	--printf("tsg["..obj:name().."]")
+	local level_name = level.name()
+	--' Группу берем из уровня.
+	local obj = alife():object(obj.id)
+
+	local group = group_id_by_levels[level_name] or 0
+
+	change_team_squad_group(obj, obj.team, obj.squad, group)
+
+	--' Сквад берем из смарта.
+	local squad = alife():object(obj.group_id)
+	if squad == nil then
+		change_team_squad_group(obj, obj.team, 0, obj.group)
+		--printf("TSG1: [%s][%s][%s]", tostring(obj.team), tostring(obj.squad), tostring(obj.group))
+		return
+	end
+
+	local smart = nil
+	if squad.current_action ~= nil and squad.current_action.name == "reach_target" then
+		smart = alife():object(squad.assigned_target_id)
+	elseif squad.smart_id ~= nil then
+		smart = alife():object(squad.smart_id)
+	end
+
+	if smart == nil then
+		change_team_squad_group(obj, obj.team, 0, obj.group)
+		--printf("TSG2: [%s][%s][%s]", tostring(obj.team), tostring(obj.squad), tostring(obj.group))
+		return
+	end
+	local obj_sq = 0
+	if smart:clsid() == clsid.smart_terrain then
+		obj_sq = smart.squad_id
+	end
+	change_team_squad_group(obj, obj.team, obj_sq, obj.group)
+	--printf("TSG3: [%s][%s][%s]", tostring(obj.team), tostring(obj.squad), tostring(obj.group))
 end
 
 --' Заполнение стартового расположения
-function simulation_board:fill_start_position()
-
-	SendScriptCallback("fill_start_position")
-	
+function sim_board:fill_start_position()
 	if self.start_position_filled == true then
 		return
 	end
+	--printf("FILL START POSITION [%s]", self.player_name)
 	self.start_position_filled = true
-	
-	local setting_ini
-	if (IsSurvivalMode()) then 
-		setting_ini = ini_file("misc\\simulation_survival_mode.ltx")
-	else 
-		setting_ini = ini_file("misc\\simulation.ltx")
-	end 
-	
-	local stalker_pop_factor = (axr_main.config:r_value("mm_options","alife_stalker_pop",2) or 1)
-	local monster_pop_factor = (axr_main.config:r_value("mm_options","alife_mutant_pop",2) or 1)
-		
-	local result, squad_section, count, li, lc
-	setting_ini:section_for_each(function(section)
-		lc = setting_ini:line_count(section)
-		for li=0,lc-1 do
-			local smart = self.smarts_by_names[section]
-			if (smart) then
-				result, squad_section, count = setting_ini:r_line(section,li,"","")
-				count = tonumber(count) or 1
-				
-				if (string.find(squad_section,"sim_squad")) then
-					count = count*stalker_pop_factor
-					if (count == 0.5) then -- just randomly 0 or 1 instead of always rounding to 1
-						count = math.random(0,1)
-					else 
-						count = utils.round(count)
-					end
-				elseif (string.find(squad_section,"simulation")) then
-					count = count*monster_pop_factor
-					if (count == 0.5) then 
-						count = math.random(0,1)
-					else 
-						count = utils.round(count)
-					end
+	for level in game_graph():levels() do
+		local section_name = "start_position_" .. alife():level_name(level.id)
+
+		if not setting_ini:section_exist(section_name) then
+			return
+		end
+
+		local n = setting_ini:line_count(section_name)
+		for i=0,n-1 do
+			local result, id, value	= setting_ini:r_line(section_name,i,"","")
+			local smrt_names = utils.parse_names(value)
+			for k,v in pairs(smrt_names) do
+				local smart = self.smarts_by_names[v]
+				if smart == nil then
+					abort("Wrong smart name [%s] in start position", tostring(v))
 				end
-					
-				for i=1,count do
-					self:create_squad(smart,squad_section)
-				end
-			else 
-				printf("sim_board:fill_start_position incorrect smart by name %s",section)
+				local squad = self:create_squad(smart, id)
+				self:enter_smart(squad, smart.id)
+				--squad:update()
 			end
 		end
-        return false
-    end
-	)
+	end
 end
 
+
 --' Возвратить смарт по его имени.
-function simulation_board:get_smart_by_name(name)
+function sim_board:get_smart_by_name(name)
 	return self.smarts_by_names[name]
 end
 --' Возвращает количество отрядов в смарте.
-function simulation_board:get_smart_population(smart)
-	return self.smarts[smart.id].population
+function sim_board:get_smart_population(smart)
+	return self.smarts[smart.id].stayed_squad_quan
 end
 
 --' Получение игрового поля.
 function get_sim_board()
-	if _G.SIMBOARD == nil then
-		_G.SIMBOARD = simulation_board()
+	if board == nil then
+		board = sim_board()
 	end
-	return _G.SIMBOARD
+	return board
 end
 
-function simulation_board:get_squad_target(squad)
+
+function sim_board:get_squad_target(squad)
+	--printf("List of available target for %s", squad.id)
+
+	local available_targets = {}
 	local most_priority_task = nil
-	local most_priority_task_prior = nil
-	local curr_prior = 0
-	local object_registry = simulation_objects.get_sim_obj_registry().objects
-	for k,v in pairs(object_registry) do
-		curr_prior = -1
-		if v.id ~= squad.id and not v.locked == true then
+	local max_prior = 0
+	for k,v in pairs(simulation_objects.get_sim_obj_registry().objects)	do
+		local curr_prior = 0
+		-- Проверка против выдачи таска на себя.
+		if v.id ~= squad.id then
 			curr_prior = v:evaluate_prior(squad)
 		end
-		if (curr_prior >= 0 and v:target_precondition(squad)) and (most_priority_task_prior == nil or curr_prior > most_priority_task_prior) then
-			most_priority_task = v 
-			most_priority_task_prior = curr_prior
+		if curr_prior > 0 then
+			local target_tbl = {prior = curr_prior, target = v}
+			table.insert(available_targets, target_tbl)
 		end
 	end
-
-	return most_priority_task
+	if #available_targets > 0 then
+		table.sort(available_targets, function(a,b) return a.prior > b.prior end)
+		local max_id = math.floor(0.3 * #available_targets)
+		if max_id == 0 then max_id = 1 end
+		most_priority_task = available_targets[math.random(max_id)].target
+	end
+	--print_table(available_targets)
+	--printf("end of List of available target for %s", squad.id)
+	return most_priority_task or (squad.smart_id and alife():object(squad.smart_id)) or squad
 end
 
+local targets_by_squad_id = {}
+
+--[[function sim_board:reset_targets()
+	for k,v in pairs(self.squads) do
+
+
+
+end]]--
 --' Обнуление списка на создании игры.
 function clear()
-	_G.SIMBOARD = nil
+	board = nil
 end
 
+--' Тестовые функции
+function print()
+	--print_table(get_sim_board().smarts)
+end

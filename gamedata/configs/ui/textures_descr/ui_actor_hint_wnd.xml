@@ -31,8 +31,8 @@
 	    <texture id="ui_inGame2_Radar_compass" x="508" y="53" width="9" height="30" />
 
         <texture id="ui_inGame2_Patroni_HUD_main_window" x="782" y="14" width="222" height="126" />
-        <texture id="ui_inGame2_Patroni_HUD_red_bar" x="782" y="144" width="94" height="16" />
-        <texture id="ui_inGame2_Patroni_HUD_blue_bar" x="782" y="167" width="94" height="10" />
+        <texture id="ui_inGame2_Patroni_HUD_red_bar" x="782" y="144" width="138" height="16" />
+        <texture id="ui_inGame2_Patroni_HUD_blue_bar" x="782" y="167" width="138" height="10" />
 
 		<texture id="ui_inGame2_Patroni_HUD_active_items_icon_b" 	x="503" y="92" width="3" height="23" />
 		<texture id="ui_inGame2_Patroni_HUD_active_items_icon_back" x="506" y="92" width="3" height="23" />

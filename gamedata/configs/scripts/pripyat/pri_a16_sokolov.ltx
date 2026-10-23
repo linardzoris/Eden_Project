@@ -1,15 +1,15 @@
 [logic@pri_a16_sokolov]
 active = animpoint@pri_a16_sokolov 
-suitable = {-pri_a20_squad_cutscene_actor_talk_2_complete -pri_b305_fifth_cam_end =check_npc_name(sokolov) =npc_in_zone(pri_surge_hide_a16)} true
+suitable = {-pri_b305_fifth_cam_end =check_npc_name(sokolov) =npc_in_zone(pri_surge_hide_a16)} true
 prior = 200
 
 [animpoint@pri_a16_sokolov]
 cover_name = pri_a16_animp_sokolov
 use_camp = false 
 meet = meet@pri_a16_sokolov
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 on_info = {-pri_a20_sokolov_with_garick_new_way_to_pripyat_3 -pri_a25_rfi_source_eliminated +pri_a17_actor_has_gauss_rifle} walker@a20_stand_base
 out_restr = pri_a16_sr_noweap
 gather_items_enabled = false
@@ -35,9 +35,9 @@ meet_on_talking = false
 meet = no_meet
 path_walk = pri_a20_sokolov_walk
 path_look = pri_a20_sokolov_look
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 def_state_standing = wait_na
 def_state_moving = walk
 on_signal = sound_end | %+pri_a20_way_to_pripyat_1_sound_end%
@@ -54,9 +54,9 @@ use_camp = false
 meet = no_meet
 path_walk = pri_a20_sokolov_walk
 path_look = pri_a20_sokolov_look
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 def_state_standing = wait_na
 def_state_moving = walk
 on_info = {+pri_a25_rfi_source_eliminated} animpoint@pri_a16_sokolov

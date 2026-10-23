@@ -8,10 +8,10 @@ on_signal = actor | animpoint@start %+jup_b219_actor_on_pos%
 def_state_standing = guard_na
 def_state_moving = assault
 meet = no_meet
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = jup_factory_default_in_restrictor
 combat_ignore_keep_when_attacked = true 
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 danger = danger
 gather_items_enabled = false
 help_wounded_enabled = false
@@ -19,14 +19,14 @@ corpse_detection_enabled = false
 
 [animpoint@actor]
 cover_name = jup_b219_actor_smart_cover
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 use_camp = false
 reach_distance = 50
 meet = no_meet
 reach_movement = walk
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = jup_factory_default_in_restrictor
 gather_items_enabled = false
 help_wounded_enabled = false

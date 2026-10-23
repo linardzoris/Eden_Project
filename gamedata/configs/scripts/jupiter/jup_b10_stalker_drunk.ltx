@@ -10,9 +10,9 @@ reach_distance = 2
 use_camp = false
 meet = no_meet
 on_actor_in_zone = jup_b10_sr_warnzone | %=play_sound(jup_b10_stalker_drunk_no_meet) +jup_b10_actor_seen_senka%
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = jup_a6_sr_noweap
 gather_items_enabled = false
 help_wounded_enabled = false

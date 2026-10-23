@@ -4,7 +4,12 @@
 -- Разработчик: Jim
 ----------------------------------------------------------------------------------------------------
 
+local def_min_radius = 10
+local def_mid_radius = 20
+local def_max_radius = 70
+
 class "mob_home"
+
 ----------------------------------------------------------------------------------------------------
 -- CONSTRUCTION SCHEME
 ----------------------------------------------------------------------------------------------------
@@ -17,33 +22,68 @@ end
 -- RESET SCHEME
 ----------------------------------------------------------------------------------------------------
 function mob_home:reset_scheme()
-	mob_state_mgr.set_state(self.object, db.actor, self.st.state)
-	
-	local minr = self.st.home_min_radius or 10
-	local midr = self.st.home_mid_radius or 25
-	local maxr = self.st.home_max_radius or 70
-	
-	if (midr <= minr) then 
-		midr = minr+5 
-	end 
-	if (maxr <= midr) then 
-		maxr = midr+5 
-	end 
-
-	if self.st.gulag_point then
-		local se_obj = alife_object(self.object:id())
-		if (se_obj) then
-			local smart = se_obj.m_smart_terrain_id ~= 65535 and alife_object(se_obj.m_smart_terrain_id)
-			if (smart) then
-				self.object:set_home(smart.m_level_vertex_id, minr, maxr, self.st.aggressive, midr)
-				return
+	printf("DEBUG: reset_scheme: npc:name()='%s'", self.object:name())
+--[[
+Добавлено: Haron
+Описание: Теперь можно задавать радиусы home_min_radius и home_max_radius во флагах
+					пути path_home. Для этого введены флаги minr, maxr. Они должны быть
+					прописаны в первой точке пути. У радиусов заданых в секции приоритет
+					больший чем для тех что заданы во флагах, т.е. если задано и там и там, то
+					берутся значения из секции (сделано для обратной совместимости).
+--]]
+	mob_state_mgr.set_state		(self.object, db.actor, self.st.state)
+	local minr, maxr, midr = def_min_radius, def_max_radius, def_mid_radius
+	local ptr
+	local path_info
+	local r = 0
+	if self.st.home ~= nil then
+		ptr = patrol(self.st.home)
+		path_info = utils.parse_waypoint_data(self.st.home, ptr:flags(0), ptr:name(0))
+	end
+	if self.st.home_min_radius then
+		minr = self.st.home_min_radius
+	else
+		r = path_info.minr
+		if r then
+			r = tonumber(r)
+			if r then
+				minr = r
 			end
 		end
-	end 
-	
-	if (self.st.home and patrol(self.st.home)) then
+	end
+	if self.st.home_max_radius then
+		maxr = self.st.home_max_radius
+	else
+		r = path_info.maxr
+		if r then
+			r = tonumber(r)
+			if r then
+				maxr = r
+			end
+		end
+	end
+	-- check min and max radius
+	if minr > maxr then
+		abort("Mob_Home : Home Min Radius MUST be < Max Radius. Got: min radius = %d, max radius = %d.", minr, maxr)
+	end
+
+	--printf("DEBUG: reset_scheme: [%s] setting home path [%s]", self.object:name(), self.st.home)
+	if self.st.home_mid_radius then
+		midr = self.st.home_mid_radius
+		if midr <= minr or midr >= maxr then
+			midr = minr + (maxr - minr)/2
+		end
+	else
+		midr = minr + (maxr - minr)/2
+	end
+	if self.st.gulag_point then
+		local smrttrn = alife():object(alife():object(self.object:id()).m_smart_terrain_id)
+		local lvid = smrttrn and smrttrn.m_level_vertex_id
+		self.object:set_home(lvid, minr, maxr, self.st.aggressive, midr)
+	else
 		self.object:set_home(self.st.home, minr, maxr, self.st.aggressive, midr)
 	end
+	--self.object:set_home(self.st.home, minr, maxr, self.st.aggressive)
 end
 
 ----------------------------------------------------------------------------------------------------
@@ -71,7 +111,7 @@ function add_to_binder(npc, ini, scheme, section, storage)
 end
 
 ----------------------------------------------------------------------------------------------------
--- set_scheme
+-- SET_SCHEME
 ----------------------------------------------------------------------------------------------------
 function set_scheme(npc, ini, scheme, section, gulag_name)
 	--printf("DEBUG: set_scheme: npc:name()='%s', scheme='%s', section='%s', gulag_name='%s'", npc:name(), scheme, section, gulag_name)
@@ -79,12 +119,12 @@ function set_scheme(npc, ini, scheme, section, gulag_name)
 	local storage				= xr_logic.assign_storage_and_bind(npc, ini, scheme, section)
 
 	storage.logic				= xr_logic.cfg_get_switch_conditions(ini, section, npc)
-	storage.state				= mob_state_mgr.get_state(ini, section, npc)
-	storage.home				= utils.prefix_r_string(ini,section,"path_home",gulag_name)
-	storage.gulag_point			= ini:r_bool_ex(section,"gulag_point",false)
-	storage.home_min_radius		= ini:r_float_ex(section,"home_min_radius") or 10
-	storage.home_mid_radius		= ini:r_float_ex(section,"home_mid_radius") or 25
-	storage.home_max_radius		= ini:r_float_ex(section,"home_max_radius") or 70
-	storage.aggressive			= ini:r_bool_ex(section,"aggressive",false)
+	storage.state				= mob_state_mgr.get_state	(ini, section, npc)
+	storage.home				= utils.cfg_get_string		(ini, section, "path_home",			npc, false, gulag_name,nil)
+	storage.gulag_point			= utils.cfg_get_bool		(ini, section, "gulag_point", 		npc, false, false)
+	storage.home_min_radius		= utils.cfg_get_number		(ini, section, "home_min_radius",	npc, false) --, 20)
+	storage.home_mid_radius		= utils.cfg_get_number		(ini, section, "home_mid_radius",	npc, false) --, 0)
+	storage.home_max_radius		= utils.cfg_get_number		(ini, section, "home_max_radius",	npc, false) --, 40)
+	storage.aggressive			= utils.cfg_get_bool		(ini,   section, "aggressive",    	npc, false, false)
 end
 

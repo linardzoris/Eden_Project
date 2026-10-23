@@ -1,17 +1,6 @@
 [smart_terrain]
-squad_id = 6
-max_population = 3
-;;arrive_dist = 100000
-respawn_params = respawn@pas_b400_track
-respawn_idle = 60000
-
-
-[respawn@pas_b400_track]
-spawn_tushkano
-
-[spawn_tushkano]
-spawn_squads = simulation_tushkano
-spawn_num = {+actor_pass_jupiter_exit_find +actor_pass_pripyat_exit_find} 3, 0
+sim_avail = false
+arrive_dist = 100000
 
 [exclusive]
 pas_b400_zulus_track = underpass\pas_b400_track.ltx

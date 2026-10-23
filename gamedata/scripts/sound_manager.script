@@ -22,13 +22,13 @@ function sound_manager:__init(id)
 end
 --' Зарегистрировать НПС.
 function sound_manager:register_npc(npc_id)
-	--printf("Register sm npc [%s]:[%s]", self.id, npc_id)
+	printf("Register sm npc [%s]:[%s]", self.id, npc_id)
 	table.insert(self.npc, {npc_id = npc_id})
 	--print_table(self.npc)
 end
 --' Отрегистрировать нпс
 function sound_manager:unregister_npc(npc_id)
-	--printf("UnRegister sm npc [%s]:[%s]", self.id, npc_id)
+	printf("UnRegister sm npc [%s]:[%s]", self.id, npc_id)
 
 	if self.last_playing_npc == npc_id and
 		 xr_sound.sound_table[self.last_playing_npc]
@@ -91,6 +91,7 @@ function sound_manager:update()
 		--printf("wait time")
 		return
 	end
+
 
 	--' Выбираем следующую фразу.
 	local next_phrase = self.story:get_next_phrase()
@@ -163,13 +164,38 @@ function sound_manager:update()
 		return
 	end
 
-	--printf("Speaking sm [%s] npc[%s] phrase[%s]", self.id, npc, next_phrase.theme)
+
+	printf("Speaking sm [%s] npc[%s] phrase[%s]", self.id, npc, next_phrase.theme)
 
 	--' Кешируем кто произносит фразу, чтобы отлавливать когда он закончит
 	self.last_playing_npc = npc
 
 	--' Произносим фразу
 	if next_phrase.theme ~= "nil" then
+		if(self.story and self.story.id=="squad_counter_attack") then
+			local npc = alife():object(npc)
+			local board = sim_board.get_sim_board()
+			if(npc) and (board) then
+				local our_squad = get_object_squad(npc)
+				if(our_squad) then
+					local our_smart = our_squad.smart_id
+					local task = task_manager.get_task_manager():get_tasks_by_smart(our_smart)
+					if(next_phrase.who~="teller") then
+						local enemy_faction = task.counter_attack_community
+						xr_sound.set_sound_play(npc.id, next_phrase.theme, enemy_faction)
+						self.phrase_timeout = nil
+						self.phrase_idle = next_phrase.timeout * 1000
+						return
+					end
+					xr_sound.set_sound_play(npc.id, next_phrase.theme, our_squad.player_id, our_smart)
+					self.phrase_timeout = nil
+					self.phrase_idle = next_phrase.timeout * 1000
+					return
+				end
+			end
+		end
+
+
 		xr_sound.set_sound_play(npc, next_phrase.theme)
 	end
 

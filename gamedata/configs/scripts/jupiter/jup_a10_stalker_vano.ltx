@@ -12,10 +12,10 @@ on_info3 = {+jup_a10_vano_give_task_end -jup_a10_vano_max_simpathy} %=actor_frie
 on_actor_dist_le = 2 | {-jup_a10_vano_give_task -jup_a10_vano_need_help_infoporshin +jup_b217_welcome_tech_talked} %=play_sound(jup_a10_vano_need_help) +jup_a10_vano_need_help_infoporshin%
 on_actor_dist_ge_nvis = 100 | {+jup_a10_vano_need_help_infoporshin} %-jup_a10_vano_need_help_infoporshin%
 meet = meet
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
 corpse_detection_enabled = false
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = jup_a6_sr_noweap
 gather_items_enabled = false
 help_wounded_enabled = false

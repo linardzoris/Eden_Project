@@ -130,11 +130,6 @@ pp_eff_name 	= alcohol.ppe
 radius_min		= 0.3
 radius_max		= 1.0
 
-[postprocess_new]
-pp_eff_name		= radiation.ppe
-radius_min		= 0.5
-radius_max		= 1.1
-
 ;-------------------------------------------------------------------------------
 [effector_alcohol]
 pp_eff_name	 = alcohol.ppe
@@ -255,7 +250,7 @@ pp_eff_cyclic 	= 1
 pp_eff_overlap = false
 
 ;-------------------------------------------------------------------------------
-; Р”РµС‚РµРєС‚ РЅР°СЃ РїРѕР»С‚РµСЂРіРµР№СЃС‚Р°РјРё
+; Детект нас полтергейстами
 ;-------------------------------------------------------------------------------
 [poltergeist_detection_effector]
 pp_eff_name 	= poltergeist_scan.ppe
@@ -304,18 +299,3 @@ pp_eff_overlap 	= false
 pp_eff_name 	= fade_to_black_9_sec.ppe
 pp_eff_cyclic 	= 0
 pp_eff_overlap 	= false
-
-[agr_u_fade]
-pp_eff_name 	= agr_u_fade.ppe
-pp_eff_cyclic 	= 0
-pp_eff_overlap 	= false
-
-;-------------------------------------------------------------------------------
-;	Brain Scorcher
-;-------------------------------------------------------------------------------
-[effector_radar_stop]
-;pp_eff_name		= radar_stop.ppe
-;pp_eff_cyclic	= 0
-
-cam_eff_name	= camera_effects\radar_stop.anm
-cam_eff_cyclic	= 0

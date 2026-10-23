@@ -1,459 +1,114 @@
---[[ 	General Scripting TIPS
-
-	1. 	NEVER keep userdata (ie. engine classes) in global scope, instead keep track of game object id, and grab object in the scope you need it in by using level.object_by_id or db.storage table. 
-		Otherwise object can't deconstruct and you will end up with instances were script binder exists but object doesn't or level object exists but server object doesn't. This is because variables in lua are all references.
-			Ex. _G.npc = level.object_by_id(2342) 
-				alife():release(alife_object(2342))
-		Above, 'npc' will not be nil but se_obj will be! scripts will blow up. Pure Virtual Function calls may occur! Or quite possibly silent errors like for example when player goes to talk to npc game crashes because self.object is nil
-		Such thing is 'okay' in db.storage, but that is because on net_destroy db.storage[id] is set nil. So if you are keeping track of objects directly in a table, instead of ID 
-		then you absolutely must rid of every single reference to the userdata so that it can be destroy and garbage collected. Otherwise you end up with undetectable issues.
---]]
 if (jit == nil) then
 	profiler.setup_hook	()
 end
 
-GAME_VERSION = "1.4.22"
 
-if string.find(command_line(), "-dbg") then
-	DEV_DEBUG = true
-	if string.find(command_line(), "-dbgdev") then -- because users all using dbg, need to hide OP features
-		DEV_DEBUG_DEV = true
+function empty	(container)
+	if (type(container) == "function") then
+		for i in container do
+			return	(false)
+		end
+		return		(true)
 	end
+	assert			(type(container) == "table")
+	if (container[1] ~= nil) then
+		return		(false)
+	end
+	for i,j in pairs(container) do
+		return		(false)
+	end
+	return			(true)
 end
 
-USE_INI_MEMOIZE = true
 
--- Improves performance if true, by disabling update methods for squads and smart terrains on levels not linked in configs\ai_tweaks\simulation_objects.ltx
--- But this means simulation will only be active on actor level and linked levels everything else will remain in an idle state
-DEACTIVATE_SIM_ON_NON_LINKED_LEVELS = true
+schemes = {} -- соответствие схем модулям
+stypes = {} -- типv схем
 
--------------------------------------------------------------------------------------------------
--- Use marshal library for saving persistent data (like xr_logic pstor)
--- marshal library can encode tables, functions, strings and numbers to easily allow persistent data storage to file
--- This is used for db.storage[id].pstor, surge_manager, mines, and coc_treasure_manager.script if enabled
--- See alife_storage_manager.script for implementation
-
-USE_MARSHAL = marshal ~= nil
+-- іагружает схему из файла на диске и активирует в мотиваторе.
+-- ідесь:
+-- 	filename - имя файла, в котором реализована схема, без расширения
+-- 	scheme - имя схем
+function load_scheme(filename, scheme, stype)
+	schemes[scheme] = filename
+	stypes[scheme] = stype
+end
 
 ----------------------------------------------------------------------
+dev_debug = false
+sim_debug = false
 mus_vol = 0
 amb_vol = 0
 b_discard_settings_shown = false
 ----------------------------------------------------------------------
-
-function log(str) 
-    if DebugLog then
-        SemiLog(str)
-    end
-	if DebuggerMode then
-		LuaPanda.printToVSCode(str,1,2)
-	end
-end
-
-function start_game_callback()
-	math.randomseed(os.time())
-	printf("Call of Chernobyl version %s",GAME_VERSION)
-	if (USE_MARSHAL) then
-		printf("using marshal library")
-	end
-	
-	sound_theme.load_sound()
-		
-	-- Alundaio
-	if (axr_main) then axr_main.on_game_start() end
-	-- End Alundaio
-
-	SIMBOARD = nil
-	sim_board.get_sim_board()
-
-	smart_names.init_smart_names_table()
-	task_manager.clear_task_manager()
-	--xr_sound.start_game_callback()
-	dialog_manager.fill_phrase_table()
-
-	sim_objects.clear()
-	sr_light.clean_up ()
-	pda.add_quick_slot_items_on_game_start()
-end
-
-function alife_object(id)
-	if (id == nil or id >= 65535) then
-		callstack()
-		printf("ALIFE OBJECT ID IS %s!",id)
-		return
-	end
-	return alife():object(id)
-end
--------------------------------------------------------------------------------------------------------
--- 											SCRIPTED CALLBACKS
--------------------------------------------------------------------------------------------------------
-function RegisterScriptCallback(name,func_or_userdata)
-	axr_main.callback_set(name,func_or_userdata)
-end
-
-function UnregisterScriptCallback(name,func_or_userdata)
-	axr_main.callback_unset(name,func_or_userdata)
-end
-
--- Call this from a script to create a new callback to functions that register for it with RegisterScriptCallback
--- Every time this function is executed it will callback to all registered members
--- If axr_main.script has a function by this name, it will automatically trigger it!
-function SendScriptCallback(name,...)
-	--alun_utils.debug_write(strformat("BEFORE SendScriptCallback %s",name))
-	-- callback to all registered functions
-	axr_main.make_callback(name,...)
-		--alun_utils.debug_write(strformat("AFTER SendScriptCallback %s",name))
-		-- check if axr_main has it's own function to execute
-	if (axr_main[name]) then
-		axr_main[name](...)
-	end
-end
---------------------------------------------
--- Displays message on middle-top of screen for n amount of milliseconds
--- Overwritten with each use!
--- param 1 - Message as string
--- param 2 - Milliseconds as number
---------------------------------------------
-function SetHudMsg(msg,n)
-	msg = tostring(msg)
-	local hud = get_hud()
-	if (hud) then
-		hud:AddCustomStatic("not_enough_money_mine", true)
-		hud:GetCustomStatic("not_enough_money_mine"):wnd():TextControl():SetTextST(msg)
-	end
-	bind_stalker_ext.ShowMessageTime = time_global() + n*1000
-end
-
---------------------------------------------------------------------------------------------
--- 								Delayed Event Queue
---
--- Events must have a unique id. Such as object id or another identifier unique to the occasion.
--- Action id must be unique to the specific Event. This allows a single event to have many queued
--- actions waiting to happen.
---
--- Returning true will remove the queued action. Returning false will execute the action continuously.
--- This allows for events to wait for a specific occurrence, such as triggering after a certain amount of
--- time only when object is offline
---
--- param 1 - Event ID as type<any>
--- param 2 - Action ID as type<any>
--- param 3 - Timer in seconds as type<number>
--- param 4 - Function to execute as type<function>
--- extra params are passed to executing function as table as param 1
-
--- see on_game_load or state_mgr_animation.script for example uses
--- This does not persists through saves! So only use for non-important things.
--- For example, do not try to destroy npcs unless you do not care that it can fail before player saved then loaded.
-----------------------------------------------------------------------------------------------
-local ev_queue = {}
-function CreateTimeEvent(ev_id,act_id,timer,f,...)
-	if not (ev_queue[ev_id]) then
-		ev_queue[ev_id] = {}
-		ev_queue[ev_id].__size = 0
-	end
-
-	if not (ev_queue[ev_id][act_id]) then
-		ev_queue[ev_id][act_id] = {}
-		ev_queue[ev_id][act_id].timer = time_global() + timer*1000
-		ev_queue[ev_id][act_id].f = f
-		ev_queue[ev_id][act_id].p = {...}
-		ev_queue[ev_id].__size = ev_queue[ev_id].__size + 1
-	end
-end
-function RemoveTimeEvent(ev_id,act_id)
-	if (ev_queue[ev_id] and ev_queue[ev_id][act_id]) then
-		ev_queue[ev_id][act_id] = nil
-		ev_queue[ev_id].__size = ev_queue[ev_id].__size - 1
-	end
-end
-
-function ResetTimeEvent(ev_id,act_id,timer)
-	if (ev_queue[ev_id] and ev_queue[ev_id][act_id]) then
-		ev_queue[ev_id][act_id].timer = time_global() + timer*1000
-	end
-end
-
-function ProcessEventQueue(force)
-	-- if (has_alife_info("sleep_active")) then
-		-- return false
-	-- end
-	
-	for event_id,actions in pairs(ev_queue) do
-		for action_id,act in pairs(actions) do
-			--alun_utils.debug_write(strformat("event_queue: event_id=%s action_id=%s",event_id,action_id))
-			if (action_id ~= "__size") then
-				if (force) or (time_global() >= act.timer) then
-					if (act.f(unpack(act.p)) == true) then
-						ev_queue[event_id][action_id] = nil
-						ev_queue[event_id].__size = ev_queue[event_id].__size - 1
-					end
-				end
-			end
-		end
-
-		if (ev_queue[event_id].__size == 0) then
-			ev_queue[event_id] = nil
-		end
-	end
-	
-	return false
-end
-function ProcessEventQueueState(m_data,save)
-	if (save) then
-		m_data.event_queue = ev_queue
-	else
-		ev_queue = m_data.event_queue or ev_queue
-	end
-end
-
-function SetSwitchDistance(dist)
-	if (alife()) then
-		local p = net_packet()
-		p:w_begin(18)
-		p:w_float(dist or 2.0)
-		level.send(p,true,true)
-	end
-end
-
-function ChangeLevel(pos,lvid,gvid,angle)
--- IMPORTANT: You must realize that when you send this event it will happen immediately
--- if done in lua code it will not execute the rest of the block, level changes immediately happen!
---[[
-		NET_Packet	p;
-		p.w_begin	(M_CHANGE_LEVEL); -- M_CHANGE_LEVEL == 13
-		p.w			(&m_game_vertex_id,sizeof(m_game_vertex_id));
-		p.w			(&m_level_vertex_id,sizeof(m_level_vertex_id));
-		p.w_vec3	(m_position);
-		p.w_vec3	(m_angles);
-		Level().Send(p,net_flags(TRUE));
---]]
-	-- requires OpenXRay
-	local p = net_packet()
-	p:w_begin(13)
-	p:w_u16(gvid)
-	p:w_u32(lvid)
-	p:w_vec3(pos)
-	p:w_vec3(angle)
-	level.send(p,true)
-end
-
--- Wrapper for level.add_call 
--- For some reason in 1.6 engine level.remove_call does not work! If you know why, please contact me @alundaio
-local level_add_call_unique = {}
-function AddUniqueCall(functor_a)
-
-	if (level_add_call_unique[functor_a]) then 
-		return 
-	end 
-	
-	local function wrapper()
-		if not (level_add_call_unique[functor_a]) then 
-			return true 
-		end
-		
-		if (functor_a()) then
-			level_add_call_unique[functor_a] = nil
-			return true
-		end
-		
-		return false
-	end
-	
-	level_add_call_unique[functor_a] = true
-	
-	level.add_call(wrapper,function() end)
-end 
-
-function RemoveUniqueCall(functor_a)
-	level_add_call_unique[functor_a] = nil
-end
-
-function JumpToLevel(new_level)
-	-- requires OpenXray
-	local level_name = level.name()
-	if (level_name == new_level) then
-		return false
-	end
-	
-	local cvertex
-	local sim,gg = alife(),game_graph()
-	-- first try to find a smart_terrain on specified level
-	for id,smart in pairs(db.smart_terrain_by_id) do
-		cvertex = smart and gg:vertex(smart.m_game_vertex_id)
-		if (cvertex and sim:level_name(cvertex:level_id()) == new_level) then
-			ChangeLevel(cvertex:level_point(),cvertex:level_vertex_id(),smart.m_game_vertex_id,vector():set(0,0,0))
-			return true
-		end
-	end
-
-	-- in case level has no smarts then just teleport to first found gvid for level
-	for gvid=0, 4860 do
-		if gg:valid_vertex_id(gvid) then
-			cvertex = gg:vertex(gvid)
-			lvl = sim:level_name(cvertex:level_id())
-			if (lvl == new_level) then
-				ChangeLevel(cvertex:level_point(),cvertex:level_vertex_id(),gvid,vector():set(0,0,0))
-				return true
-			end
-		else
-			break
-		end
-	end
-	return false
-end
-
-function TeleportObject(id,pos,lvid,gvid)
-	-- Requires OpenXray
-	if (db.offline_objects[id]) then
-		db.offline_objects[id].level_vertex_id = nil
-	end
-	db.spawned_vertex_by_id[id] = nil
-	alife():teleport_object(id,gvid,lvid,pos)
-end
-
-function TeleportSquad(squad,pos,lvid,gvid)
-	-- Requires OpenXray
-	local sim = alife()
-	sim:teleport_object(squad.id,gvid,lvid,pos)
-	for k in squad:squad_members() do
-		if (db.offline_objects[k.id]) then
-			db.offline_objects[k.id].level_vertex_id = nil
-		end
-		db.spawned_vertex_by_id[k.id] = nil
-		sim:teleport_object(k.id,gvid,lvid,pos)
-	end
-end
-
-function IsSurvivalMode()
-	return axr_main.config and axr_main.config:r_value("character_creation","new_game_survival_mode",1) == true or alife_storage_manager.get_state().enable_survival_mode == true
-end
---------------------------------------------------------------------
--- Serialization of userdata for Marshal Library
---------------------------------------------------------------------
-if (marshal) then
-	function game_CTime___persist(self)
-		local Y, M, D, h, m, s, ms = 0,0,0,0,0,0,0
-		if (self and self.get) then
-			Y, M, D, h, m, s, ms = self:get(Y, M, D, h, m, s, ms)
-		end
-		return function ()
-			local t = game.CTime()
-			t:set(Y, M, D, h, m, s, ms)
-			return t
-		end
-	end
-	getmetatable(game.CTime()).__persist = game_CTime___persist
-end
-
--- debug to find objects that shouldn't be calling game_object:alive()
---[[
-game_object.alive = function(self)
-	callstack()
-	printf("alive %s",self:name())
-	local se_obj = alife_object(self:id())
-	return se_obj:alive()
-end
---]]
---------------------------------------------------------------------
-function is_empty(t)
-	if not (t) then
-		return true
-	end
-	for i,j in pairs(t) do
-		return false
-	end
-	return true
-end
-
-function strformat(text,...)
-	if not (text) then return end
-	local i = 0
-	local p = {...}
-	local function sr(a)
-		i = i + 1
-		if (type(p[1]) == "userdata") then
-			return "userdata"
-		end
-		return tostring(p[i])
-	end
-	-- so that it doesn't return gsub's multiple returns
-	local s = string.gsub(text,"%%s",sr)
-	return s
-end
-
--- Used by modules.script for generic module management
-schemes = {}
-schemes_by_stype = {}
-function LoadScheme(filename, scheme, ...)
-	if not (_G[filename]) then
-		printf("ERROR: Trying to load scheme that does not exist! %s",filename)
-		return
-	end
-	schemes[scheme] = filename
-		local p = {...}
-	for i=1,#p do
-		if not (schemes_by_stype[p[i]]) then
-			schemes_by_stype[p[i]] = {}
-		end
-		schemes_by_stype[p[i]][scheme] = true
-	end
-end
-
+local scripts_to_print =	{
+							["stalker_generic"] = true,
+							["xr_smartcover"] = true,
+							["xr_logic"] = true,
+							["xr_conditions"] = true,
+							["xr_cover"] = true,
+							["xr_motivator"] = true,
+							["xr_walker"] = true,
+							["xr_camper"] = true,
+							["xr_kamp"] = true,
+							["restrictor_manager"] = true,
+							["sim_board"] = true,
+							["sim_faction"] = true,
+							["post_combat_idle"] = true,
+							["xr_death"] = true,
+							["xr_sound"] = true,
+							["utils"] = true,
+							["treasure_manager"] = true,
+							["object_collection"] = true,
+							["se_actor"] = true,
+							["smart_terrain"] = true,
+							["bind_physic_object"] = true,
+							["bind_heli"] = true,
+							["bind_anomaly_zone"] = true,
+							["bind_stalker"] = true,
+							["state_mgr_animation"] = true,
+							["se_stalker"] = true,
+							["db"] = true,
+							["sim_squad_generic"] = true,
+							["sim_squad_scripted"] = true,
+							["se_smart_cover"] = true,
+							["se_monster"] = true,
+							["dialog_manager"] = true,
+							["xr_combat_ignore"] = true,
+							["xr_remark"] = true,
+							["cover_manager"] = true,
+							["xr_danger"]	 = true,
+							["task_manager"] = true,
+							["task_objects"]	 = true
+							}
 function printf(fmt,...)
-	if not (fmt) then return end
-	local fmt = tostring(fmt)
 
-	if (select('#',...) >= 1) then
-		local i = 0
-		local p = {...}
-		local function sr(a)
-			i = i + 1
-			if (type(p[i]) == 'userdata') then
-				if (p[i].x and p[i].y) then
-					return vec_to_str(p[i])
-				end
-				return 'userdata'
-			end
-			return tostring(p[i])
-		end
-		fmt = string.gsub(fmt,"%%s",sr)
+	local is_g = 0
+	local result = fmt
+	if debug == nil then
+		log(string.format(fmt,...))
+		return
 	end
-	if (log) then
-		log(fmt)
-		--get_console():execute("flush")
+	local info_table = debug.getinfo(2)
+	local script_name = string.gsub(info_table.short_src, "%.script", "")
+	script_name = string.gsub(script_name, "gamedata\\scripts\\", "")
+
+	if scripts_to_print[script_name] == false then return end
+
+	script_name,is_g = string.gsub(script_name, "_g", "")
+	if is_g == 0 then
+		result = script_name..":("..info_table.currentline.."):"..fmt
 	else
-		get_console():execute("load ~#debug msg:"..fmt)
-	end	
+		result = fmt
+	end
+	log(string.format(result,...))
+
 end
 
-function spairs(t, order)
-    -- collect the keys
-    local keys = {}
-    for k in pairs(t) do keys[#keys+1] = k end
-
-    -- if order function given, sort by it by passing the table and keys a, b,
-    -- otherwise just sort the keys
-    if order then
-        table.sort(keys, function(a,b) return order(t, a, b) end)
-    else
-        table.sort(keys)
-    end
-
-    -- return the iterator function
-    local i = 0
-    return function()
-        i = i + 1
-        if keys[i] then
-            return keys[i], t[keys[i]]
-        end
-    end
-end
 ----------------------------------------------------------------------
-function time_global()
-	return device():time_global()
+if nil == time_global then
+	time_global = function () return device():time_global() end
 end
 
---[[ does not work?
 function wait_game(time_to_wait)
 	verify_if_thread_is_running()
 	if (time_to_wait == nil) then
@@ -477,30 +132,41 @@ function wait(time_to_wait)
 		end
 	end
 end
---]]
 
 function action(obj,...)
 	local arg = {...}
-	local e_act = entity_action()
-	for i=1,#arg do 
-		e_act:set_action(arg[i])
-	end 
-	if (obj ~= nil) then
-		obj:command(e_act,false)
+	local act = entity_action()
+	local i = 1
+	while true do
+		if (arg[i] ~= nil) then
+			act:set_action(arg[i])
+		else
+			break
+		end
+		i = i + 1
 	end
-	return entity_action(e_act)
+	if (obj ~= nil) then
+		obj:command(act,false)
+	end
+	return  entity_action(act)
 end
 
 function action_first(obj,...)
 	local arg = {...}
-	local e_act = entity_action()
-	for i=1,#arg do 
-		e_act:set_action(arg[i])
-	end 
-	if (obj ~= nil) then
-		obj:command(e_act,true)
+	local act = entity_action()
+	local i = 1
+	while true do
+		if (arg[i] ~= nil) then
+			act:set_action(arg[i])
+		else
+			break
+		end
+		i = i + 1
 	end
-	return entity_action(e_act)
+	if (obj ~= nil) then
+		obj:command(act,true)
+	end
+	return  entity_action(act)
 end
 
 function round (value)
@@ -509,6 +175,7 @@ function round (value)
 	if value - min > max - value then return max end
 	return min
 end
+
 
 function distance_between(obj1, obj2)
 	return obj1:position():distance_to(obj2:position())
@@ -520,11 +187,16 @@ function distance_between_safe(obj1, obj2)
 	return obj1:position():distance_to(obj2:position())
 end
 
+local aa = nil
 --' іроверка на инфопоршнv, даже если игрока не су	ествует
 function has_alife_info(info_id)
-	local sim = alife()
-	return sim:has_info(0, info_id)
+	if aa == nil then
+		return false
+	end
+	return aa:has_info(0, info_id)
 end
+
+
 
 function reset_action (npc, script_name)
 	if npc:get_script () then
@@ -549,13 +221,35 @@ end
 
 function random_choice(...)
 	local arg = {...}
-	if (#arg > 0) then
-		local r = math.random(1, #arg)
-		return arg[r]
+	local r = math.random(1, #arg)
+	return arg[r]
+end
+
+function if_then_else(cond, if_true, if_false)
+	if cond then
+		return if_true
 	end
+	return if_false
+end
+
+
+function set_current_time (hour, min, sec)
+	local current_time_factor = level.get_time_factor ()
+	printf ("Need time : %d:%d:%d", hour, min, sec)
+	local current_time = game.time ()
+	local c_day = math.floor (current_time / 86400000)
+	local c_time = current_time - c_day * 86400000
+	local n_time = (sec + min * 60 + hour * 3600) * 1000
+
+	if c_time > n_time then c_day = c_day + 1 end
+	n_time = n_time + c_day * 86400000
+	level.set_time_factor (10000)
+	while game.time () < n_time do wait () end
+	level.set_time_factor (current_time_factor)
 end
 
 function random_number (min_value, max_value)
+	math.randomseed (device ():time_global ())
 	if min_value == nil and max_value == nil then
 		return math.random ()
 	else
@@ -563,10 +257,11 @@ function random_number (min_value, max_value)
 	end
 end
 
+
 function parse_names( s )
 	local t = {}
-	--for name in string.gmatch( s, "([%w_\\]+)%p*" ) do
-	for name in string.gmatch( s, "([%w_%-.\\]+)%p*" ) do
+	for name in string.gfind( s, "([%w_\\]+)%p*" ) do
+		--for name in string.gfind( s, "%s*([^%,]+)%s*" ) do
 		table.insert( t, name )
 	end
 	return t
@@ -578,7 +273,7 @@ function parse_key_value( s )
 		return nil
 	end
 	local key, nam = nil, nil
-	for name in string.gmatch( s, "([%w_\\]+)%p*" ) do
+	for name in string.gfind( s, "([%w_\\]+)%p*" ) do
 		if key == nil then
 			key = name
 		else
@@ -591,24 +286,20 @@ end
 
 function parse_nums( s )
 	local t = {}
-	for entry in string.gmatch( s, "([%-%d%.]+)%,*" ) do
+	for entry in string.gfind( s, "([%-%d%.]+)%,*" ) do
 		table.insert( t, tonumber( entry ) )
 	end
 	return t
 end
 
-function get_clsid(obj)
-	if not (obj) then
-		callstack()
-		printf("ERROR: get_clsid - obj is nil!")
-		return
-	end
-	if not (obj.clsid) then
-		callstack()
-		printf("ERROR: no clsid method for %s",obj:name())
-		return
-	end
-	return obj:clsid()
+-- Находится ли обьект в онлайне.
+function is_object_online(obj_id)
+	return level.object_by_id(obj_id) ~= nil
+end
+
+function get_clsid(npc)
+	if npc == nil then return nil end
+	return npc:clsid()
 end
 
 --Tvчисляет yaw в радианах
@@ -634,37 +325,21 @@ function vector_rotate_y(v, angle)
 end
 
 -- очистка таблицы.
-function iempty_table (t)
-	if not (t) then
-		return {}
-	end
+function clear_table (t)
 	while #t > 0 do
-		table.remove(t)
+		table.remove (t, #t)
 	end
-	return t
-end
-
-function empty_table(t)
-	if not (t) then
-		return {}
-	end
-	for k,v in pairs(t) do
-		t[k] = nil
-	end
-	return t
 end
 
 function stop_play_sound(obj)
-	if (IsStalker(obj) and not obj:alive()) then
-		return
+	if obj:alive() == true then
+		obj:set_sound_mask(-1)
+		obj:set_sound_mask(0)
 	end
-	obj:set_sound_mask(-1)
-	obj:set_sound_mask(0)
 end
 
 -- Печатает таблицу как дерево.
 function print_table(table, subs)
-	--[[
 	local sub
 	if subs ~= nil then
 		sub = subs
@@ -673,38 +348,34 @@ function print_table(table, subs)
 	end
 	for k,v in pairs(table) do
 		if type(v) == "table" then
-			print_table(v, sub.."["..k.."]----->")
+			printf(sub.."%s:", tostring(k))
+			print_table(v, sub.."    ")
 		elseif type(v) == "function" then
-			printf(sub.."%s = function",k)
+			printf(sub.."%s:function", tostring(k))
 		elseif type(v) == "userdata" then
-			if (v.x) then
-				printf(sub.."%s = %s",k,alun_utils.vector_to_string(v))
-			else
-				printf(sub.."%s = userdata", k)
-			end
+			printf(sub.."%s:userdata", tostring(k))
 		elseif type(v) == "boolean" then
 					if v == true then
 							if(type(k)~="userdata") then
-									printf(sub.."%s = true",k)
+									printf(sub.."%s:true", tostring(k))
 							else
-									printf(sub.."userdata = true")
+									printf(sub.."userdata:true")
 							end
 					else
 							if(type(k)~="userdata") then
-									printf(sub.."%s = false", k)
+									printf(sub.."%s:false", tostring(k))
 							else
-									printf(sub.."userdata = false")
+									printf(sub.."userdata:false")
 							end
 					end
 		else
 			if v ~= nil then
-				printf(sub.."%s = %s", k,v)
+				printf(sub.."%s:%s", tostring(k),v)
 			else
-				printf(sub.."%s = nil", k,v)
+				printf(sub.."%s:nil", tostring(k),v)
 			end
 		end
 	end
-	--]]
 end
 function store_table(table, subs)
 	local sub
@@ -730,316 +401,34 @@ function store_table(table, subs)
 	end
 	printf(sub.."},")
 end
-----------------------------------------
-function IsWounded(o)
-	if not (o:clsid() == clsid.script_stalker and o:alive()) then 
-		return false 
-	end 
-	
-	if (o:critically_wounded() or o:in_smart_cover()) then 
-		return false 
-	end
-	
-	if o:best_enemy() and utils.load_var(o, "wounded_fight") == "true" then
-		return false
-	end
-	
-	local state = tostring(utils.load_var(o, "wounded_state"))
-	if (state == "nil") then
-		return false
-	end
-	
-	return true
-end
+
 -------------------------------------------------------------------------------------------
--- 										CLASS TESTING
+local monster_classes = {}
+local stalker_classes = {}
+local weapon_classes = {}
+local artefact_classes = {}
+
+function IsMonster (object, class_id)
+		local id = class_id or get_clsid(object)
+		return monster_classes[id] == true
+end
+function IsStalker (object, class_id)
+		local id = class_id or get_clsid(object)
+		return stalker_classes[id] == true
+end
+
+function isWeapon(object, class_id)
+	local id = class_id or get_clsid(object)
+	return weapon_classes[id] == true
+end
+
+function isArtefact(object, class_id)
+		local id = class_id or get_clsid(object)
+	return artefact_classes[id] == true
+end
+
+
 -------------------------------------------------------------------------------------------
-local monster_classes
-local weapon_classes
-local artefact_classes
-
-function IsOutfit(o,c)
-	if not c then
-		c = o and o:clsid()
-	end
-	return c and (c == clsid.equ_stalker_s or c == clsid.equ_stalker)
-end
-
-function IsHeadgear(o,c)
-	if not c then
-		c = o and o:clsid()
-	end
-	return c and (c == clsid.equ_helmet_s or c == clsid.helmet)
-end
-
-function IsExplosive(o,c)
-	if not c then
-		c = o and o:clsid()
-	end
-	return c and (c == clsid.obj_explosive_s or  c == clsid.obj_explosive)
-end
-
-function IsPistol(o,c)
-	if not (c) then
-		c = o and o:clsid()
-	end
-	local pistol = {
-					[clsid.wpn_pm_s] = true,
-					[clsid.wpn_walther_s] = true,
-					[clsid.wpn_usp45_s] = true,
-					[clsid.wpn_hpsa_s] = true,
-					[clsid.wpn_lr300_s] = true,
-					[clsid.wpn_pm] = true,
-					[clsid.wpn_walther] = true,
-					[clsid.wpn_usp45] = true,
-					[clsid.wpn_hpsa] = true,
-					[clsid.wpn_lr300] = true
-	}
-	return c and pistol[c] or false
-end
-
-function IsSniper(o,c)
-	if not (c) then
-		c = o and o:clsid()
-	end
-	local sniper = {
-				[clsid.wpn_svu_s] = true,
-				[clsid.wpn_svd_s] = true,
-				[clsid.wpn_vintorez_s] = true,
-				[clsid.wpn_svu] = true,
-				[clsid.wpn_svd] = true,
-				[clsid.wpn_vintorez] = true
-	}
-	return c and sniper[c] or false
-end
-
-function IsLauncher(o,c)
-	if not (c) then
-		c = o and o:clsid()
-	end
-	local launcher = {
-					[clsid.wpn_rg6_s] = true,
-					[clsid.wpn_rpg7_s] = true,
-					[clsid.wpn_rg6] = true,
-					[clsid.wpn_rpg7] = true
-	}
-	return c and launcher[c] or false
-end
-
-function IsShotgun(o,c)
-	if not (c) then
-		c = o and o:clsid()
-	end
-	local shotgun = {
-				[clsid.wpn_bm16_s] = true,
-				[clsid.wpn_shotgun_s] = true,
-				[clsid.wpn_auto_shotgun_s] = true,
-				[clsid.wpn_bm16] = true,
-				[clsid.wpn_shotgun] = true
-				--[clsid.wpn_auto_shotgun] = true
-	}
-	return c and shotgun[c] or false
-end
-
-function IsRifle(o,c)
-	if not (c) then
-		c = o and o:clsid()
-	end
-	local rifle = {
-				[clsid.wpn_ak74_s] = true,
-				[clsid.wpn_groza_s] = true,
-				[clsid.wpn_val_s] = true,
-				[clsid.wpn_ak74] = true,
-				[clsid.wpn_groza] = true,
-				[clsid.wpn_val] = true
-	}
-	return c and rifle[c] or false
-end
-
-function IsMonster(o,c)
-	if not (c) then
-		c = o and o:clsid()
-	end
-	if not (monster_classes) then
-		monster_classes = {
-		[clsid.bloodsucker_s] 			= true,
-		[clsid.boar_s] 					= true,
-		[clsid.dog_s] 					= true,
-		[clsid.flesh_s] 				= true,
-		[clsid.pseudodog_s] 			= true,
-		[clsid.burer_s] 				= true,
-		[clsid.cat_s] 					= true,
-		[clsid.rat] 					= true,
-		[clsid.rat_s]					= true,
-		[clsid.chimera_s] 				= true,
-		[clsid.controller_s] 			= true,
-		[clsid.fracture_s] 				= true,
-		[clsid.poltergeist_s] 			= true,
-		[clsid.gigant_s] 				= true,
-		[clsid.zombie_s] 				= true,
-		[clsid.snork_s] 				= true,
-		[clsid.tushkano_s] 				= true,
-		[clsid.psy_dog_s] 				= true,
-		[clsid.psy_dog_phantom_s] 		= true
-		}
-	end
-	return c and monster_classes[c] or false
-end
-
-function IsStalker(o,c)
-	if not (c) then
-		c = o and o:clsid()
-	end
-	return c and (c == clsid.script_stalker or c == clsid.script_actor) or false
-end
-
-function IsTrader(o,c)
-	if not (c) then
-		c = o and o:clsid()
-	end
-	return c and (c == clsid.script_trader) or false
-end 
-
-function IsHelicopter(o,c)
-	if not (c) then
-		c = o and o:clsid()
-	end
-	return c and (c == clsid.helicopter or c == clsid.car or c == clsid.script_heli) or false
-end
-
-function IsWeapon(o,c)
-	if not (c) then
-		c = o and o:clsid()
-	end
-	if not (weapon_classes) then
-		weapon_classes = {
-				[clsid.wpn_vintorez_s] 			= true,
-				[clsid.wpn_ak74_s] 				= true,
-				[clsid.wpn_lr300_s] 			= true,
-				[clsid.wpn_hpsa_s] 				= true,
-				[clsid.wpn_pm_s] 				= true,
-				[clsid.wpn_shotgun_s] 			= true,
-				[clsid.wpn_auto_shotgun_s]		= true,
-				[clsid.wpn_bm16_s] 				= true,
-				[clsid.wpn_svd_s] 				= true,
-				[clsid.wpn_svu_s] 				= true,
-				[clsid.wpn_rg6_s] 				= true,
-				[clsid.wpn_rpg7_s] 				= true,
-				[clsid.wpn_val_s] 				= true,
-				[clsid.wpn_walther_s] 			= true,
-				[clsid.wpn_usp45_s] 			= true,
-				[clsid.wpn_groza_s] 			= true,
-				[clsid.wpn_knife_s] 			= true,
-				[clsid.wpn_vintorez] 			= true,
-				[clsid.wpn_ak74] 				= true,
-				[clsid.wpn_lr300] 				= true,
-				[clsid.wpn_hpsa] 				= true,
-				[clsid.wpn_pm] 					= true,
-				[clsid.wpn_shotgun] 			= true,
-				--[clsid.wpn_auto_shotgun]		= true,
-				[clsid.wpn_bm16] 				= true,
-				[clsid.wpn_svd] 				= true,
-				[clsid.wpn_svu] 				= true,
-				[clsid.wpn_rg6] 				= true,
-				[clsid.wpn_rpg7] 				= true,
-				[clsid.wpn_val] 				= true,
-				[clsid.wpn_walther] 			= true,
-				[clsid.wpn_usp45] 				= true,
-				[clsid.wpn_groza] 				= true,
-				[clsid.wpn_knife] 				= true
-		}
-	end
-	return c and weapon_classes[c] or false
-end
-
-function IsAmmo(o,c)
-	if not (c) then
-		c = o and o:clsid()
-	end
-	return c and (c == clsid.wpn_ammo or c == clsid.wpn_ammo_s)
-end
-
-function IsGrenade(o,c)
-	if not (c) then
-		c = o and o:clsid()
-	end
-	if not (grenade_classes) then
-		grenade_classes = {
-				[clsid.wpn_grenade_f1_s] 		= true,
-				[clsid.wpn_grenade_rgd5_s] 		= true,
-				[clsid.wpn_grenade_launcher_s] 	= true,
-				[clsid.wpn_grenade_fake] 		= true,
-				[clsid.wpn_grenade_f1]			= true,
-				[clsid.wpn_grenade_launcher] 	= true,
-				[clsid.wpn_grenade_rgd5] 		= true,
-				[clsid.wpn_grenade_rpg7]		= true
-		}
-	end
-	return c and grenade_classes[c] or false
-end
-
-function IsArtefact(o,c)
-	if not (c) then
-		c = o and o:clsid()
-	end
-	if not (artefact_classes) then
-		artefact_classes = {
-		[clsid.art_bast_artefact] 		= true,
-		[clsid.art_black_drops] 		= true,
-		[clsid.art_dummy] 				= true,
-		[clsid.art_electric_ball] 		= true,
-		[clsid.art_faded_ball] 			= true,
-		[clsid.art_galantine] 			= true,
-		[clsid.art_gravi] 				= true,
-		[clsid.art_gravi_black] 		= true,
-		[clsid.art_mercury_ball] 		= true,
-		[clsid.art_needles] 			= true,
-		[clsid.art_rusty_hair] 			= true,
-		[clsid.art_thorn] 				= true,
-		[clsid.art_zuda] 				= true,
-		[clsid.artefact] 				= true,
-		[clsid.artefact_s] 				= true
-		}
-	end
-	return c and artefact_classes[c] or false
-end
-
-function IsInvbox(o,c)
-	if not (c) then
-		c = o and o:clsid()
-	end
-	return c and (c == clsid.inventory_box_s or c == clsid.inventory_box)
-end
--------------------------------------------------------------
--- 					SQUAD BEHAVIOR TESTING
--------------------------------------------------------------
-is_squad_monster = {
-		["monster_predatory_day"] 	= true,
-		["monster_predatory_night"] = true,
-		["monster_vegetarian"] 		= true,
-		["monster_zombied_day"] 	= true,
-		["monster_zombied_night"] 	= true,
-		["monster_special"] 		= true,
-		["monster"]					= true
-}squad_community_by_behaviour = {
-		["stalker"]							= "stalker",
-		["bandit"]							= "bandit",
-        ["csky"]							= "csky",
-		["dolg"]							= "dolg",
-		["freedom"]							= "freedom",
-		["army"]							= "army",
-		["ecolog"]							= "ecolog",
-		["killer"]							= "killer",
-		["zombied"]							= "zombied",
-		["monolith"]						= "monolith",
-		["monster"]							= "monster",
-		["monster_predatory_day"]			= "monster",
-		["monster_predatory_night"]			= "monster",
-		["monster_vegetarian"]				= "monster",
-		["monster_zombied_day"]				= "monster",
-		["monster_zombied_night"]			= "monster",
-		["monster_special"]					= "monster"
-}-------------------------------------------------------------------------------------------
 function get_object_community(obj)
 	if type(obj.id) == "function" then
 		return character_community(obj)
@@ -1049,9 +438,6 @@ function get_object_community(obj)
 end
 
 function character_community (obj)
-	if not (obj) then
-		return
-	end
 	if IsStalker(obj) then
 		return obj:character_community()
 	end
@@ -1059,9 +445,6 @@ function character_community (obj)
 end
 
 function alife_character_community (obj)
-	if not (obj) then
-		return
-	end
 	if IsStalker(obj, obj:clsid()) then
 		return obj:community()
 	end
@@ -1091,27 +474,10 @@ function id_by_sid( sid )
 	return nil
 end
 
-function abort(msg, ...)
-	if not (msg) then return end
-	local fmt = tostring(msg)
-
-	if (select('#',...) >= 1) then
-		local i = 0
-		local p = {...}
-		local function sr(a)
-			i = i + 1
-			if (type(p[i]) == 'userdata') then
-				return 'userdata'
-			end
-			return tostring(p[i])
-		end
-		fmt = string.gsub(fmt,"%%s",sr)
-	end
-		callstack()
-	log(fmt)
-	--[[
-	error(fmt, 2)
-	--]]
+-- Крешнуть игру (после вывода сообщения об ошибке в лог)
+function abort(fmt, ...)
+	local reason = string.format(fmt, ...)
+	--error_log(reason)
 end
 
 function set_inactivate_input_time(delta)
@@ -1119,6 +485,16 @@ function set_inactivate_input_time(delta)
 	db.storage[db.actor:id()].disable_input_idle = delta
 	level.disable_input()
 end
+
+-- іринимает: позициі положения, позициі куда смотреть, время сна в минутах.
+--[[
+function set_sleep_relocate(point, look, timeout)
+	db.storage[db.actor:id()].sleep_relocate_time = game.get_game_time()
+	db.storage[db.actor:id()].sleep_relocate_idle = timeout*60
+	db.storage[db.actor:id()].sleep_relocate_point = point
+	db.storage[db.actor:id()].sleep_relocate_look = look
+end
+]]--
 
 -- проверяет целую часть числа на нечетность
 function odd( x )
@@ -1129,10 +505,114 @@ end
 function npc_in_actor_frustrum(npc)
 	local actor_dir = device().cam_dir
 	--local actor_dir = db.actor:direction()
-	local npc_dir = vector():sub(npc:position(),db.actor:position())
+	local npc_dir = npc:position():sub(db.actor:position())
 	local yaw = yaw_degree3d(actor_dir, npc_dir)
 	--printf("YAW %s", tostring(yaw))
 	return yaw < 35
+end
+
+function start_game_callback()
+	aa = alife()
+
+	squad_community_by_behaviour = {
+		["stalker"]							= "stalker",
+		["bandit"]							= "bandit",
+		["dolg"]							= "dolg",
+		["freedom"]							= "freedom",
+		["army"]							= "army",
+		["ecolog"]							= "ecolog",
+		["killer"]							= "killer",
+		["zombied"]							= "zombied",
+		["monolith"]						= "monolith",
+		["monster"]							= "monster",
+		["monster_predatory_day"]			= "monster",
+		["monster_predatory_night"]			= "monster",
+		["monster_vegetarian"]				= "monster",
+		["monster_zombied_day"]				= "monster",
+		["monster_zombied_night"]			= "monster",
+		["monster_special"]					= "monster"
+	}
+
+
+
+
+	monster_classes = {
+		[clsid.bloodsucker_s] 			= true,
+		[clsid.boar_s] 					= true,
+		[clsid.dog_s] 					= true,
+		[clsid.flesh_s] 				= true,
+		[clsid.pseudodog_s] 			= true,
+		[clsid.burer_s] 				= true,
+--		[clsid.cat_s] 					= true,
+		[clsid.chimera_s] 				= true,
+		[clsid.controller_s] 			= true,
+--		[clsid.fracture_s] 				= true,
+		[clsid.poltergeist_s] 			= true,
+		[clsid.gigant_s] 				= true,
+--		[clsid.zombie_s] 				= true,
+		[clsid.snork_s] 				= true,
+		[clsid.tushkano_s] 				= true,
+		[clsid.psy_dog_s] 				= true,
+		[clsid.psy_dog_phantom_s] 		= true}
+
+	stalker_classes = {
+		[clsid.script_actor] 			= true,
+		[clsid.script_stalker] 			= true}
+
+	weapon_classes = {
+		[clsid.wpn_vintorez_s] 			= true,
+		[clsid.wpn_ak74_s] 				= true,
+		[clsid.wpn_lr300_s] 			= true,
+		[clsid.wpn_hpsa_s] 				= true,
+		[clsid.wpn_pm_s] 				= true,
+		[clsid.wpn_shotgun_s] 			= true,
+		[clsid.wpn_auto_shotgun_s]		= true,
+		[clsid.wpn_bm16_s] 				= true,
+		[clsid.wpn_svd_s] 				= true,
+		[clsid.wpn_svu_s] 				= true,
+		[clsid.wpn_rg6_s] 				= true,
+		[clsid.wpn_rpg7_s] 				= true,
+		[clsid.wpn_val_s] 				= true,
+		[clsid.wpn_walther_s] 			= true,
+		[clsid.wpn_usp45_s] 			= true,
+		[clsid.wpn_groza_s] 			= true,
+		[clsid.wpn_knife_s] 			= true,
+		[clsid.wpn_grenade_f1_s] 		= true,
+		[clsid.wpn_grenade_rgd5_s] 		= true,
+		[clsid.wpn_grenade_launcher] 	= true,
+		[clsid.wpn_grenade_fake] 		= true}
+
+	artefact_classes = {
+		[clsid.art_bast_artefact] 		= true,
+		[clsid.art_black_drops] 		= true,
+		[clsid.art_dummy] 				= true,
+		[clsid.art_electric_ball] 		= true,
+		[clsid.art_faded_ball] 			= true,
+		[clsid.art_galantine] 			= true,
+		[clsid.art_gravi] 				= true,
+		[clsid.art_gravi_black] 		= true,
+		[clsid.art_mercury_ball] 		= true,
+		[clsid.art_needles] 			= true,
+		[clsid.art_rusty_hair] 			= true,
+		[clsid.art_thorn] 				= true,
+		[clsid.art_zuda] 				= true,
+		[clsid.artefact] 				= true,
+		[clsid.artefact_s] 				= true}
+
+	printf	("start_game_callback called")
+	smart_names.init_smart_names_table()
+	task_manager.clear_task_manager()
+	sound_theme.load_sound()
+	xr_sound.start_game_callback()
+	dialog_manager.fill_phrase_table()
+	xr_s.init()
+	sim_objects.clear()
+	sim_board.clear()
+	sr_light.clean_up ()
+	pda.add_quick_slot_items_on_game_start()
+	-- Tестирование оптимизации
+	--local test_object = test_object.test_object_class()
+	--test_object:test()
 end
 
 --' Lсталость
@@ -1172,19 +652,11 @@ end
 
 function give_info (info)
 	db.actor:give_info_portion(info)
-	--printf("DEBUG: GIVE INFO %s",info)
-	--if (xrs_debug_tools and xrs_debug_tools.actor_info) then
-	--	xrs_debug_tools.actor_info[info] = true
-	--end
 end
 function disable_info (info)
 	if has_alife_info(info) then
-		--printf("DEBUG: DISABLE INFO %s",info)
-		--printf("*INFO*: disabled npc='single_player' id='%s'", info)
+		printf("*INFO*: disabled npc='single_player' id='%s'", info)
 		db.actor:disable_info_portion(info)
-		--if (xrs_debug_tools and xrs_debug_tools.actor_info) then
-		--	xrs_debug_tools.actor_info[info] = nil
-		--end
 	end
 end
 
@@ -1203,6 +675,28 @@ function create_ammo(section, position, lvi, gvi, pid, num)
 	return t
 end
 
+ammo_section = {}
+ammo_section["ammo_9x18_fmj"]		= true
+ammo_section["ammo_9x18_pmm"]		= true
+ammo_section["ammo_9x19_fmj"]		= true
+ammo_section["ammo_9x19_pbp"]		= true
+ammo_section["ammo_5.45x39_fmj"]	= true
+ammo_section["ammo_5.45x39_ap"]		= true
+ammo_section["ammo_5.56x45_ss190"]	= true
+ammo_section["ammo_5.56x45_ap"]		= true
+ammo_section["ammo_5.7x28_fmj"]		= true
+ammo_section["ammo_5.7x28_ap"]		= true
+ammo_section["ammo_7.62x54_7h1"]	= true
+ammo_section["ammo_9x39_pab9"]		= true
+ammo_section["ammo_gauss"]			= true
+ammo_section["ammo_9x39_ap"]		= true
+ammo_section["ammo_11.43x23_fmj"]	= true
+ammo_section["ammo_11.43x23_hydro"]	= true
+ammo_section["ammo_12x70_buck"]		= true
+ammo_section["ammo_12x76_zhekan"]	= true
+ammo_section["ammo_pkm_100"]		= true
+
+quest_section = {}
 -- преобразует строку в соответствии со значением
 function get_param_string(src_string , obj)
 	--printf("src_string is [%s] obj name is [%s]", tostring(src_string), obj:name())
@@ -1215,46 +709,63 @@ function get_param_string(src_string , obj)
 	end
 end
 
-local save_marker_result = {}
+local save_markers = {}
+
 -- Функции для проверки корректности сейв лоад
 function set_save_marker(p, mode, check, prefix)
-	prefix = tostring(prefix)
-		if (check ~= true) then
-		if mode == "save" then
-			save_marker_result[prefix] = p:w_tell() or 0
-			if p:w_tell() > 16000 then
-				abort("ERROR: You are saving too much")
-			end
-		else
-			save_marker_result[prefix] = p:r_tell() or 0
-		end
-		return
-	end
-		if not (save_marker_result[prefix]) then
-		abort("ERROR set_save_marker:%s: Trying to check without marker mode=%s",prefix,mode)
-		if (mode == "save") then
-			p:w_u16(0)
-		elseif (mode == "load") then
-			p:r_u16()
-		end
-		return
-	end
-		if mode == "save" then
-		local dif = p:w_tell() - save_marker_result[prefix]
-		if dif >= 8000 then
-			printf("ERROR set_save_marker:%s: WARNING! may be this is problem save point dif=%s",prefix,dif)
-		end
-		p:w_u16(dif)
-	else
-		local c_dif = p:r_tell() - save_marker_result[prefix]
-		local dif = p:r_u16()
-		if dif ~= c_dif then
-			printf("ERROR set_save_marker:%s: INCORRECT LOAD dif=%s c_dif=%s", prefix, dif, c_dif)
-		end
-	end
-		save_marker_result[prefix] = nil
-end
 
+	-- определяем ключ маркера.
+	local result = ""
+--	if debug ~= nil then
+--		local info_table = debug.getinfo(2)
+--		local script_name = string.gsub(info_table.short_src, "%.script", "")
+--		script_name = string.gsub(script_name, "gamedata\\scripts\\", "")
+--		result = script_name
+--	end
+
+--	if prefix ~= nil then
+		result = result .. "_" .. prefix
+--	end
+
+	if check == true then
+		if save_markers[result] == nil then
+			abort("Trying to check without marker %s", result)
+		end
+
+		if mode == "save" then
+			local dif = p:w_tell() - save_markers[result]
+			printf(result..": SAVE DIF: %s", dif)
+			if dif >= 8000 then
+				printf("WARNING! may be this is problem save point")
+			end
+			if dif >= 10240 then
+--				abort("You are saving too much")
+			end
+			p:w_u16(dif)
+		else
+			local c_dif = p:r_tell() - save_markers[result]
+			local dif = p:r_u16()
+			 if dif ~= c_dif then
+			 	abort("INCORRECT LOAD [%s].[%s][%s]", result, dif, c_dif)
+			 else
+			 	printf(result..": LOAD DIF: %s", dif)
+			 end
+		end
+		return
+	end
+
+	if mode == "save" then
+		printf(result..": set save marker: %s", p:w_tell())
+		save_markers[result] = p:w_tell()
+		if p:w_tell() > 16000 then
+			abort("You are saving too much")
+		end
+	else
+		printf(result..": set load marker: %s", p:r_tell())
+		save_markers[result] = p:r_tell()
+	end
+
+end
 -- переводит вектор в строку.
 function vec_to_str (vector)
 	if vector == nil then return "nil" end
@@ -1262,8 +773,8 @@ function vec_to_str (vector)
 end
 -- выводит в лог стэк вызова функций.
 function callstack()
-	if (log and debug and type(debug.traceback) == 'function') then
-		log(debug.traceback('\n', 2))
+	if debug ~= nil then
+		log(debug.traceback(2))
 	end
 end
 -- меняет team:squad:group обьекта.
@@ -1283,24 +794,18 @@ function add_story_object(obj_id , story_obj_id)
 	story_objects.get_story_objects_registry():register(obj_id , story_obj_id)
 end
 
-function get_story_se_object(story_obj_id)
-	local obj_id = story_obj_id and story_objects.get_story_objects_registry():get(story_obj_id)
-	if obj_id == nil then return nil end
-	return alife_object(obj_id)
-end
-
 function get_story_object(story_obj_id)
-	local obj_id = story_obj_id and story_objects.get_story_objects_registry():get(story_obj_id)
+	local obj_id = story_objects.get_story_objects_registry():get(story_obj_id)
 	if obj_id == nil then return nil end
 	return (db.storage[obj_id] and db.storage[obj_id].object) or (level ~= nil and level.object_by_id(obj_id))
 end
 
 function get_object_story_id(obj_id)
-	return obj_id and story_objects.get_story_objects_registry():get_story_id(obj_id)
+	return story_objects.get_story_objects_registry():get_story_id(obj_id)
 end
 
 function get_story_object_id(story_obj_id)
-	return story_obj_id and story_objects.get_story_objects_registry():get(story_obj_id)
+	return story_objects.get_story_objects_registry().id_by_story_id[story_obj_id]
 end
 
 function unregister_story_object_by_id(obj_id)
@@ -1313,21 +818,24 @@ end
 
 -----------------------------------------------------------------------------------------------
 -- Получить сквад обьекта!!!!!
-function get_object_squad(object,caller)
-	if not (object) then
-		return
+function get_object_squad(object)
+	if object == nil then abort("You are trying to get squad_object from NIL object!!!") end
+	local obj_id = nil
+	if type(object.id) == "function" then
+		obj_id = object:id()
+	else
+		obj_id = object.id
 	end
-		if (object.group_id ~= nil and object.group_id ~= 65535) then
-		return alife_object(object.group_id)
+	local se_obj = alife():object(obj_id)
+	if se_obj and se_obj.group_id ~= 65535 then
+		return alife():object(se_obj.group_id)
 	end
-		local sim = alife()
-	local se_obj = type(object.id) == "function" and sim:object(object:id())
-	return se_obj and se_obj.group_id ~= 65535 and sim:object(se_obj.group_id) or nil
+	return nil
 end
 
 function get_story_squad(story_id)
 	local squad_id = get_story_object_id(story_id)
-	return squad_id and alife_object(squad_id)
+	return squad_id and alife():object(squad_id)
 end
 
 --Проверка по временному интервалу.
@@ -1341,376 +849,21 @@ function in_time_interval(val1, val2)
 end
 
 function show_all_ui(show)
-	local hud = get_hud()
-	if not (hud) then
-		return
-	end
-	if(show) then
-		level.show_indicators()
---	    db.actor:restore_weapon()
-		db.actor:disable_hit_marks(false)
-		hud:show_messages()
-	else
-		if db.actor:is_talking() then
-			db.actor:stop_talk()
-		end
-		level.hide_indicators_safe()
-		hud:HideActorMenu()
-		hud:HidePdaMenu()
-		hud:hide_messages()
---	    db.actor:hide_weapon()
-		db.actor:disable_hit_marks(true)
-	end
-end
-
-------------------------------------------------------------------------------------------------------
--- ENGINE EXPORTS!!!
-------------------------------------------------------------------------------------------------------
--- called when an inventory item is eaten/used
--- returning false will prevent the item from being used
-function CInventory__eat(npc,item)
-	local return_flag = true
-	SendScriptCallback("on_before_item_use",npc,item,return_flag)
-	return return_flag
-end
-
--- Called before actor hit callback
--- returning false will ignore the hit completely
-function CActor__BeforeHitCallback(actor,shit,bone_id)
-	--[[
-	local hit_to_section = {
-		[hit.light_burn] = "light_burn",
-		[hit.burn] = "burn",
-		[hit.strike] = "strike",
-		[hit.shock] = "shock",
-		[hit.wound] = "wound",
-		[hit.radiation] = "radiation",
-		[hit.telepatic] = "telepatic",
-		[hit.chemical_burn] = "chemical_burn",
-		[hit.explosion] = "explosion",
-		[hit.fire_wound] = "fire_wound",
-	}
-	printf("power=%s impuse=%s type=%s dir=%s who=%s",shit.power,shit.impulse,hit_to_section[shit.type],shit.direction and vec_to_str(shit.direction),shit.draftsman and shit.draftsman:name())
-	--]]
-	if (shit.type ~= hit.strike) then
-		if (bind_stalker_ext.invulnerable_time and time_global() < bind_stalker_ext.invulnerable_time) then 
-			if (db.actor) then
-				if (db.actor.bleeding > 0) then 
-					db.actor.bleeding = 0.2
-				end
-				if (db.actor.radiation > 0) then 
-					db.actor.radiation = -1
-				end
-			end
-			bind_stalker_ext.invulnerable_time = bind_stalker_ext.invulnerable_time - 500
-			return false
-		end
-	end
-	
-	if (shit.power > 0) then 
-		if (shit.draftsman and shit.draftsman:id() ~= 0 and IsStalker(shit.draftsman) and shit.draftsman:relation(db.actor) == game_object.friend) then 
-			return false 
-		end
-	end
-	
-	local flags = { ret_value = true }
-	SendScriptCallback("actor_on_before_hit",shit,bone_id,flags)
-	return flags.ret_value
-end
-
--- called in CSE_ALifeDynamicObject::on_unregister()
--- good place to remove ids from persistent tables
-function CSE_ALifeDynamicObject_on_unregister(id)
-	local m_data = alife_storage_manager.get_state()
-	if (m_data) then 
-		if (m_data.companion_borrow_item) then
-			m_data.companion_borrow_item[id] = nil 
-		end
-	end
-end
-
-get_console():execute("r__clear_models_on_unload 0")
-function CALifeUpdateManager__on_before_change_level(packet)
---[[
-	C++:
-	net_packet.r					(&graph().actor()->m_tGraphID,sizeof(graph().actor()->m_tGraphID));
-	net_packet.r					(&graph().actor()->m_tNodeID,sizeof(graph().actor()->m_tNodeID));
-	net_packet.r_vec3				(graph().actor()->o_Position);
-	net_packet.r_vec3				(graph().actor()->o_Angle);
---]]
--- Here you can do stuff when level changes BEFORE save is called, even change destination!. Packet is constructed as stated above
-
-	-- Release dead bodies on level change (TODO: Determine if it's a bad idea to do this here)
-	--[[
-	local rbm = release_body_manager.get_release_body_manager()
-	if (rbm) then
-		rbm:clear(true)
-	end
-	--]]
-	
-	-- READ PACKET
-	local pos,angle = vector(),vector()
-	local gvid = packet:r_u16()
-	local lvid = packet:r_u32()
-	packet:r_vec3(pos)
-	packet:r_vec3(angle)
-	-- crazy hack to help prevent crash on Trucks Cemetery
-	local gg = game_graph()
-	if (gg:valid_vertex_id(gvid) and alife():level_name(gg:vertex(gvid):level_id()) == "k02_trucks_cemetery") then
-		log("k02_trucks_cemetery hack r__clear_models_on_unload 1")
-		get_console():execute("r__clear_models_on_unload 1")
-	end
-	--printf("CALifeUpdateManager__on_before_change_level pos=%s gvid=%s lvid=%s angle=%s",pos,gvid,lvid,angle)
-	-- fix for car in 1.6 (TODO*kinda For some reason after loading a game ALL physic objects will not be teleported by TeleportObject need to investigate as to why, possibly something to do with object flags)
-	local car = db.actor and db.actor:get_attached_vehicle()
-	if (car) then
-		TeleportObject(car:id(),pos,lvid,gvid)
-	end
-		-- REPACK it for engine method to read as normal
-	--[[
-	packet:w_begin(13)
-	packet:w_u16(gvid)
-	packet:w_u32(lvid)
-	packet:w_vec3(pos)
-	packet:w_vec3(angle)
-	--]]
-	-- reset read pointer
-	packet:r_seek(2)
-		
-	if (bind_container.containers) then
-		for id,t in pairs(bind_container.containers) do
-			if (t.id) then
-				pos.y = pos.y+100
-				TeleportObject(t.id,pos,lvid,gvid)
-			end
-		end	
-	end
-end
-
--- 'Запуск динамического окна.
-function run_dynamic_element(folder,close_inv)
-   if close_inv==false then
-      folder:ShowDialog(true)
-   elseif close_inv==true then
-		folder:ShowDialog(true)
 		local hud = get_hud()
-		if (hud) then
+	if(show) then
+			level.show_indicators()
+--	    db.actor:restore_weapon()
+			db.actor:disable_hit_marks(false)
+			hud:show_messages()
+	else
+			if db.actor:is_talking() then
+					db.actor:stop_talk()
+			end
+			level.hide_indicators_safe()
 			hud:HideActorMenu()
 			hud:HidePdaMenu()
-		end
-		level.show_weapon(false)
-   else
-      folder:ShowDialog(true)
-   end
-end
-
--- 'Создание предмета в рюкзаке ГГ.
-function give_object_to_actor(obj,count)
-  if count==nil then count=1 end
-  for i=1, count do
-     alife():create(obj,db.actor:position(),db.actor:level_vertex_id(),db.actor:game_vertex_id(),db.actor:id())
-  end
-end
-
--- INI Extensions
-local ini_cache = { [system_ini()] = {} }
-function clear_ini_cache(ini)
-	ini_cache[ini] = empty_table(ini_cache[ini])
-end
-if (USE_INI_MEMOIZE) then
-	-- memoize ini results
-	local function r_memoize(ini,s,k,def,typ)
-		if not (s) then
-			callstack()
-		end
-		
-		if (ini_cache[ini]) then
-			local key = s.."&"..k
-			if (ini_cache[ini][key]) then
-				return ini_cache[ini][key]
-			end
-		end
-		
-		if not (ini:section_exist(s) and ini:line_exist(s,k)) then
-			return def
-		end
-		
-		local result = ini:r_string(s,k)
-		if (result) then
-			if (typ == 0) then
-				result = result == "true" or result == "1" or false
-			elseif (typ == 1) then
-				result = tonumber(result)
-			end
-			
-			if (result ~= nil) then
-				if (ini_cache[ini]) then
-					local key = s.."&"..k
-					if (ini_cache[ini][key]) then
-						ini_cache[ini][key] = result
-					end
-				end
-			end
-		end
-		
-		return result == nil and def or result
+			hud:hide_messages()
+--	    db.actor:hide_weapon()
+			db.actor:disable_hit_marks(true)
 	end
-
-	function ini_file.r_string_ex(ini,s,k,def)
-		return r_memoize(ini,s,k,def)
-	end
-
-	-- It is wise to use the def with r_bool_ex, because false and nil are consider 'not'. def is only returned on nil
-	function ini_file.r_bool_ex(ini,s,k,def)
-		return r_memoize(ini,s,k,def,0)
-	end
-	function ini_file.r_float_ex(ini,s,k,def)
-		return r_memoize(ini,s,k,def,1)
-	end
-	function ini_file.r_line_ex(ini,s,k)
-		if not (ini_cache[ini]) then
-			ini_cache[ini] = {}
-		end
-		
-		if (ini_cache[ini]) then
-			local key = s .. "&" .. k
-			if (ini_cache[ini][key]) then
-				return unpack(ini_cache[ini][key])
-			end
-		end
-		
-		local a,b,c = ini:r_line(s,k,"","")
-		
-		if (ini_cache[ini]) then
-			local key = s.."&"..k
-			if (ini_cache[ini][key]) then
-				ini_cache[ini][key] = {a,b,c}
-			end
-		end
-		
-		return a,b,c
-	end
-else
-	function ini_file.r_string_ex(ini,s,k)
-		--callstack()
-		--printf("r_string_ex(%s,%s)",s,k)
-		return ini:section_exist(s) and ini:line_exist(s,k) and ini:r_string(s,k) or nil
-	end
-		function ini_file.r_float_ex(ini,s,k)
-		--callstack()
-		--printf("r_float_ex(%s,%s)",s,k)
-		return ini:section_exist(s) and ini:line_exist(s,k) and ini:r_float(s,k) or nil
-	end
-		function ini_file.r_bool_ex(ini,s,k,def)
-		--callstack()
-		if not (ini:section_exist(s) and ini:line_exist(s,k)) then
-			return def
-		end
-		--printf("r_bool_ex(%s,%s)",s,k)
-		local v = ini:r_string(s,k)
-		return v == nil and def or v == "true" or v == "1" or false
-	end
-		function ini_file.r_line_ex(ini,s,k)
-		--callstack()
-		return ini:r_line(s,k,"","")
-	end
-end
-
------------------------------------------
--- New INI wrapper to replace alun_utils.cfg_file
-class "ini_file_ex"
-function ini_file_ex:__init(fname,advanced_mode)
-	self.fname = getFS():update_path('$game_config$', '')..fname
-	self.ini = ini_file(fname)
-	self.cache = {}
-	if (advanced_mode) then
-		self.ini:set_override_names(true)
-		self.ini:set_readonly(false)
-		--self.ini:save_at_end(true)
-	end
-end
-
-function ini_file_ex:save()
-	self.ini:save_as(self.fname)
-end
-
--- r_value and w_value cache results
-function ini_file_ex:r_value(s,k,typ,def)
-	local cache_result = self.cache[s.."&"..k]
-	if (cache_result) then
-		return cache_result
-	end
-	if not (self.ini:section_exist(s) and self.ini:line_exist(s,k)) then
-		return def
-	end
-	local v = self.ini:r_string(s,k)
-	if (typ == 1) then
-		v = v == nil and def or v == "true" or false
-	elseif (typ == 2) then
-		v = tonumber(v) or def
-	end
-	self.cache[s.."&"..k] = v
-	return v == nil and def or v
-end
-
-function ini_file_ex:w_value(s,k,val,comment)
-	self.cache[s.."&"..k] = val
-	self.ini:w_string(s,k,val ~= nil and tostring(val) or "",comment ~= nil and tostring(comment) or "")
-end
-
-function ini_file_ex:collect_section(section)
-	local _t = {}
-
-	local n = self.ini:section_exist(section) and self.ini:line_count(section) or 0
-	if (n > 0) then
-		for i = 0,n-1 do
-			local res,id,val = self.ini:r_line(section,i,"","")
-			_t[id] = val
-		end
-	end
-
-	return _t
-end
-
-function ini_file_ex:get_sections(keytable)
-	local t = {}
-	local function itr(section)
-		if (keytable) then
-			t[section] = true
-		else
-			table.insert(t,section)
-		end
-
-        return false
-	end
-	self.ini:section_for_each(itr)
-	return t
-end
-
-function ini_file_ex:remove_line(section,key)
-	self.ini:remove_line(section,key)
-end
-
-function ini_file_ex:section_exist(section)
-	return self.ini:section_exist(section)
-end
-
-function ini_file_ex:line_exist(section,key)
-	return self.ini:section_exist(section) and self.ini:line_exist(section,key)
-end
-
-function ini_file_ex:r_string_ex(s,k)
-	return self.ini:section_exist(s) and self.ini:line_exist(s,k) and self.ini:r_string(s,k) or nil
-end
-
-function ini_file_ex:r_bool_ex(s,k,def)
-	if not(self.ini:section_exist(s) and self.ini:line_exist(s,k)) then
-		return def
-	end
-	local v = self.ini:r_string(s,k)
-	return v == nil and def or v == "true" or v == "1" or false
-end
-
-function ini_file_ex:r_float_ex(s,k)
-	return self.ini:section_exist(s) and self.ini:line_exist(s,k) and tonumber(self.ini:r_string(s,k)) or nil
 end

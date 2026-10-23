@@ -21,11 +21,3 @@ af_electra_moonlight	= 1, prob=0.003 \n
 af_dummy_battery		= 1, prob=0.003 \n
 af_dummy_dummy			= 1, prob=0.001 \n
 af_ice					= 1, prob=0.001 \n
-af_drops                = 1, prob=0.001 \n
-af_ameba_slime          = 1, prob=0.003 \n
-af_ameba_slug           = 1, prob=0.001 \n
-af_ameba_mica           = 1, prob=0.001 \n
-af_dummy_spring         = 1, prob=0.001 \n
-af_rusty_thorn          = 1, prob=0.003 \n
-af_rusty_kristall		= 1, prob=0.001 \n
-af_rusty_sea			= 1, prob=0.001 \n

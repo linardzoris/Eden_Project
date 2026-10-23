@@ -4,6 +4,7 @@ end
 
 -- Таблица, содержащая кемпы
 camps = {}
+CAMP_SECTION = "camp"
 
 ----------------------------------------------------------------------------------------------------
 class "camp_binder" ( object_binder )
@@ -14,32 +15,31 @@ function camp_binder:reload(section)
 end
 function camp_binder:reinit()
 	object_binder.reinit(self)
+
+	camps[self.object:id()] = { object = self.object }
 end
 function camp_binder:net_spawn(data)
 	if not object_binder.net_spawn( self,data ) then
 		return false
 	end
 
-	--[[ No reason for this because all camp use scripts\\camp.ltx
-	local spawn_ini = self.object:spawn_ini()
-	local filename = spawn_ini and spawn_ini:r_string_ex("camp","cfg") or "scripts\\camp.ltx"
-	if (filename) then 
-		local ini = ini_file(filename)
-		if not (ini) then 
-			printf("WARNING: camp_binder:net_spawn %s  no 'camp' section in spawn ini!",self.object:name())
-			return true
+	local ini = self.object:spawn_ini()
+
+	if ini:section_exist(CAMP_SECTION) then
+		local filename = utils.cfg_get_string(ini, CAMP_SECTION, "cfg", nil, false, "", nil)
+		if filename then
+			ini = ini_file(filename)
 		end
-		
-		camps[self.object:id()] = { object = self.object, camp = sr_camp.CCampManager(self.object, ini) }
+	
+		--printf("!!!!!")
+		camps[self.object:id()].camp = sr_camp.CCampManager(self.object, ini)
 	end
-	--]]
-	
-	camps[self.object:id()] = { object = self.object, camp = sr_camp.CCampManager(self.object) }
-	
+
 	return true
 end
 function camp_binder:net_destroy()
 	camps[self.object:id()] = nil
+
 	object_binder.net_destroy(self)
 end
 -- вызывается из обновления актёра!

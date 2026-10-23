@@ -7,7 +7,7 @@ corpse_detection_enabled = false
 
 [logic@jup_b6_zombie_1_anom_2]
 active = walker@stay
-suitable = {=npc_community(zombied)} true
+suitable = {=target_squad_name(jup_b6_zombie_squad_) +jup_b6_zombied_attack_start -jup_b6_task_fail} true, {=check_npc_name(jup_b19_zombied_) +jup_b6_zombied_attack_start -jup_b6_task_fail} true
 prior = 70
 
 [walker@stay]:walker@generic
@@ -20,7 +20,7 @@ out_restr = jup_b6_anom_2_guard_zone
 
 [logic@jup_b6_zombie_2_anom_2]
 active = walker@stay_2
-suitable = {=npc_community(zombied)} true
+suitable = {=target_squad_name(jup_b6_zombie_squad_) +jup_b6_zombied_attack_start -jup_b6_task_fail} true, {=check_npc_name(jup_b19_zombied_) +jup_b6_zombied_attack_start -jup_b6_task_fail} true
 prior = 70
 
 [walker@stay_2]:walker@generic
@@ -33,7 +33,7 @@ out_restr = jup_b6_anom_2_guard_zone
 
 [logic@jup_b6_zombie_3_anom_2]
 active = walker@stay_3
-suitable = {=npc_community(zombied)} true
+suitable = {=target_squad_name(jup_b6_zombie_squad_) +jup_b6_zombied_attack_start -jup_b6_task_fail} true, {=check_npc_name(jup_b19_zombied_) +jup_b6_zombied_attack_start -jup_b6_task_fail} true
 prior = 70
 
 [walker@stay_3]:walker@generic
@@ -46,7 +46,7 @@ out_restr = jup_b6_anom_2_guard_zone
 
 [logic@jup_b6_zombie_4_anom_2]
 active = walker@stay_4
-suitable = {=npc_community(zombied)} true
+suitable = {=target_squad_name(jup_b6_zombie_squad_) +jup_b6_zombied_attack_start -jup_b6_task_fail} true, {=check_npc_name(jup_b19_zombied_) +jup_b6_zombied_attack_start -jup_b6_task_fail} true
 prior = 70
 
 [walker@stay_4]:walker@generic
@@ -59,7 +59,7 @@ out_restr = jup_b6_anom_2_guard_zone
 
 [logic@jup_b6_zombie_5_anom_2]
 active = walker@stay_5
-suitable = {=npc_community(zombied)} true
+suitable = {=target_squad_name(jup_b6_zombie_squad_) +jup_b6_zombied_attack_start -jup_b6_task_fail} true, {=check_npc_name(jup_b19_zombied_) +jup_b6_zombied_attack_start -jup_b6_task_fail} true
 prior = 70
 
 [walker@stay_5]:walker@generic
@@ -72,7 +72,7 @@ out_restr = jup_b6_anom_2_guard_zone
 
 [logic@jup_b6_zombie_6_anom_2]
 active = walker@stay_6
-suitable = {=npc_community(zombied)} true
+suitable = {=target_squad_name(jup_b6_zombie_squad_) +jup_b6_zombied_attack_start -jup_b6_task_fail} true, {=check_npc_name(jup_b19_zombied_) +jup_b6_zombied_attack_start -jup_b6_task_fail} true
 prior = 70
 
 [walker@stay_6]:walker@generic
@@ -85,7 +85,7 @@ out_restr = jup_b6_anom_2_guard_zone
 
 [logic@jup_b6_zombie_7_anom_2]
 active = walker@stay_7
-suitable = {=npc_community(zombied)} true
+suitable = {=target_squad_name(jup_b6_zombie_squad_) +jup_b6_zombied_attack_start -jup_b6_task_fail} true, {=check_npc_name(jup_b19_zombied_) +jup_b6_zombied_attack_start -jup_b6_task_fail} true
 prior = 70
 
 [walker@stay_7]:walker@generic
@@ -98,7 +98,7 @@ out_restr = jup_b6_anom_2_guard_zone
 
 [logic@jup_b6_zombie_8_anom_2]
 active = walker@stay_8
-suitable = {=npc_community(zombied)} true
+suitable = {=target_squad_name(jup_b6_zombie_squad_) +jup_b6_zombied_attack_start -jup_b6_task_fail} true, {=check_npc_name(jup_b19_zombied_) +jup_b6_zombied_attack_start -jup_b6_task_fail} true
 prior = 70
 
 [walker@stay_8]:walker@generic
@@ -111,7 +111,7 @@ out_restr = jup_b6_anom_2_guard_zone
 
 [logic@jup_b6_zombie_9_anom_2]
 active = walker@stay_9
-suitable = {=npc_community(zombied)} true
+suitable = {=target_squad_name(jup_b6_zombie_squad_) +jup_b6_zombied_attack_start -jup_b6_task_fail} true, {=check_npc_name(jup_b19_zombied_) +jup_b6_zombied_attack_start -jup_b6_task_fail} true
 prior = 70
 
 [walker@stay_9]:walker@generic
@@ -124,7 +124,7 @@ out_restr = jup_b6_anom_2_guard_zone
 
 [logic@jup_b6_zombie_10_anom_2]
 active = walker@stay_10
-suitable = {=npc_community(zombied)} true
+suitable = {=target_squad_name(jup_b6_zombie_squad_) +jup_b6_zombied_attack_start -jup_b6_task_fail} true, {=check_npc_name(jup_b19_zombied_) +jup_b6_zombied_attack_start -jup_b6_task_fail} true
 prior = 70
 
 [walker@stay_10]:walker@generic

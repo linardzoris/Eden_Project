@@ -4,17 +4,17 @@ reach_movement = walk_noweap
 avail_animations = ward_noweap
 out_restr = pri_a16_sr_noweap
 corpse_detection_enabled = false
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 use_camp = false
 meet = meet@col
 
 [remark@def]
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
 out_restr = pri_a16_sr_noweap
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 gather_items_enabled = false
 help_wounded_enabled = false
 corpse_detection_enabled = false
@@ -23,10 +23,10 @@ meet = meet@col
 use_camp = false
 
 [walker@def]
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
 out_restr = pri_a16_sr_noweap
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 gather_items_enabled = false
 help_wounded_enabled = false
 corpse_detection_enabled = false
@@ -37,6 +37,14 @@ meet = meet@col
 [meet@col]
 close_snd_hello = nil
 close_snd_bye = nil
+close_anim 		= nil
+close_victim 	= nil
+far_anim 		= nil
+far_victim 		= nil
+use = {=actor_enemy} false, true
+trade_enable 	= false
+allow_break 	= false
+meet_on_talking = false
 
 ;************************************
 [logic@pri_b305_kovalskiy]
@@ -85,7 +93,7 @@ meet = no_meet
 [animpoint@rest]:animpoint@b305_def
 reach_movement = walk
 on_info = {+pri_b305_third_cam_go} walker@strelok_operation_start %=teleport_npc(pri_a16_pri_b305_kovalskiy_strelok_operation_walk) +fuck%
-meet = no_meet
+;meet = no_meet
 
 [walker@strelok_operation_start]:walker@def
 path_walk = pri_b305_kovalskiy_strelok_operation_walk

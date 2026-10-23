@@ -1,4 +1,3 @@
-----------------------------------------------------------------------------------------------------
 function zat_b30_owl_stalker_trader_actor_has_item_to_sell(first_speaker, second_speaker)
 	local items_table = {
 						"zat_b20_noah_pda",
@@ -237,6 +236,7 @@ end
 function zat_b7_give_bandit_reward_to_actor(first_speaker, second_speaker)
 	local amount = math.random(15, 30)*100
 	dialogs.relocate_money_to_actor(first_speaker, second_speaker, amount)
+	treasure_manager.get_treasure_manager():give_treasure("zat_hiding_place_30")
 end
 
 function zat_b7_give_stalker_reward_to_actor(first_speaker, second_speaker)
@@ -253,6 +253,7 @@ function zat_b7_give_stalker_reward_to_actor(first_speaker, second_speaker)
 		dialogs.relocate_item_section_to_actor(first_speaker, second_speaker, "antirad",3)
 		dialogs.relocate_item_section_to_actor(first_speaker, second_speaker, "vodka", 4)
 	end
+	treasure_manager.get_treasure_manager():give_treasure("zat_hiding_place_29")
 end
 
 function zat_b7_give_stalker_reward_2_to_actor(first_speaker, second_speaker)
@@ -816,26 +817,28 @@ function zat_b30_transfer_af_from_actor(first_speaker, second_speaker)
 	local amount = 10000
 	dialogs.relocate_item_section_from_actor(first_speaker, second_speaker, "af_compass")
 	dialogs.relocate_money_to_actor(first_speaker, second_speaker, amount)
+	treasure_manager.get_treasure_manager():give_treasure("zat_hiding_place_49")
+	treasure_manager.get_treasure_manager():give_treasure("zat_hiding_place_15")
 end
 
 function zat_b30_barmen_has_percent(first_speaker, second_speaker)
 	local actor = dialogs.who_is_actor(first_speaker, second_speaker)
-	local cnt = utils.load_var(actor, "zat_b30_days_cnt", 0)
+	local cnt = xr_logic.pstor_retrieve(actor, "zat_b30_days_cnt", 0)
 	return cnt > 0
 end
 
 function zat_b30_barmen_do_not_has_percent(first_speaker, second_speaker)
 	local actor = dialogs.who_is_actor(first_speaker, second_speaker)
-	local cnt = utils.load_var(actor, "zat_b30_days_cnt", 0)
+	local cnt = xr_logic.pstor_retrieve(actor, "zat_b30_days_cnt", 0)
 	return cnt < 1
 end
 
 function zat_b30_transfer_percent(first_speaker, second_speaker)
 	local amount = math.random(5,25)*100
-	local days = utils.load_var(db.actor, "zat_b30_days_cnt", 0)
+	local days = xr_logic.pstor_retrieve(db.actor, "zat_b30_days_cnt", 0)
 	amount = amount * days
 	dialogs.relocate_money_to_actor(first_speaker, second_speaker, amount)
-	utils.save_var(db.actor, "zat_b30_days_cnt", 0)
+	xr_logic.pstor_store(db.actor, "zat_b30_days_cnt", 0)
 end
 
 function zat_b30_npc_has_detector(first_speaker, second_speaker)
@@ -1498,7 +1501,7 @@ function zat_b53_transfer_medkit_to_npc(first_speaker, second_speaker)
 		section = "medkit_scientic"
 	end
 
-	alife():release(alife_object(db.actor:object(section):id()), true)
+	alife():release(alife():object(db.actor:object(section):id()), true)
 
 	news_manager.relocate_item(db.actor, "out", section, 1)
 
@@ -1519,6 +1522,7 @@ end
 
 function zat_b57_stalker_reward_to_actor_detector(first_speaker, second_speaker)
 	dialogs.relocate_item_section_to_actor(first_speaker, second_speaker, "detector_elite")
+	treasure_manager.get_treasure_manager():give_treasure("zat_hiding_place_54")
 end
 
 function actor_has_gas(first_speaker, second_speaker)
@@ -1620,6 +1624,7 @@ end
 
 function zat_b5_stalker_transfer_money(first_speaker, second_speaker)
 	dialogs.relocate_money_to_actor(first_speaker, second_speaker, 2500)
+	treasure_manager.get_treasure_manager():give_treasure("zat_hiding_place_7")
 end
 
 function zat_b5_dealer_full_revard(first_speaker, second_speaker)
@@ -1632,10 +1637,11 @@ end
 
 function zat_b5_bandits_revard(first_speaker, second_speaker)
 	dialogs.relocate_money_to_actor(first_speaker, second_speaker, 5000)
+	treasure_manager.get_treasure_manager():give_treasure("zat_hiding_place_20")
 end
 
 function zat_b106_give_reward(first_speaker, second_speaker)
-
+	treasure_manager.get_treasure_manager():give_treasure("zat_hiding_place_50")
 end
 
 function zat_b3_tech_drinks_precond(first_speaker, second_speaker)

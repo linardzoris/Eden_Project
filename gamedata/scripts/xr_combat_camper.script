@@ -145,7 +145,7 @@ function action_look_around:hit_callback( obj, amount, local_direction, who, bon
 end
 
 --------------------------------------------------------------------------------------------------------------
-function add_to_binder(npc,ini,st,planner,temp)
+function add_to_binder( npc, ini, st, planner )
 	local properties  = {}
 	properties["state_mgr_logic_active"] 	= xr_evaluators_id.state_mgr + 4
 

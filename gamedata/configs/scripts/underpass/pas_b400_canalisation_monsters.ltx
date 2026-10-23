@@ -18,7 +18,7 @@ monster_job = true
 
 [mob_home@tushkano_canalisation_home]
 path_home = tushkano_spawn
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 home_min_radius = 2
 home_max_radius = 5
 aggressive = false
@@ -29,7 +29,7 @@ out_restr = pas_b400_sr_canalisation_tushkano_in
 
 [mob_home@tushkano_canalisation_1]
 path_home = tushkano_1_walk 
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 home_min_radius = 2
 home_max_radius = 5
 aggressive = false
@@ -40,7 +40,7 @@ out_restr = pas_b400_sr_canalisation_tushkano_revert
 
 [mob_home@tushkano_canalisation_home_2]
 path_home = tushkano_home
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 home_min_radius = 2
 home_max_radius = 5
 aggressive = false
@@ -62,7 +62,7 @@ monster_job = true
 [mob_walker@snork_canalisation_2_walk]
 path_walk = snork_2_walk 
 path_look = snork_2_look
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 npc_friendly = true
 out_restr = pas_b400_sr_canalisation_snork_2_in
 on_info = {=actor_in_zone(pas_b400_sr_canalisation_2) !actor_in_zone(pas_b400_sr_canalisation_1)} mob_walker@snork_canalisation_3_walk %+pas_b400_canalisation_tushkano_attacked%
@@ -71,7 +71,7 @@ on_info2 = {+pas_b400_canalisation_tushkano_attacked} mob_walker@snork_canalisat
 [mob_walker@snork_canalisation_3_walk]
 path_walk = snork_3_walk 
 path_look = snork_3_look
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 npc_friendly = true
 out_restr = pas_b400_sr_canalisation_snork_2_in
 on_signal = path_end | mob_jump@snork_canalisation_2_jump
@@ -117,7 +117,7 @@ prior = 200
 [walker@canalisation_1_zombied_1]
 path_walk = 1_zombied_1_walk
 on_info = {+pas_b400_way_door_opened} walker@canalisation_1_zombied_attack
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 
 [logic@pas_b400_canalisation_1_zombied_2]
 active = walker@canalisation_1_zombied_2
@@ -127,7 +127,7 @@ prior = 200
 [walker@canalisation_1_zombied_2]
 path_walk = 1_zombied_2_walk
 on_info = {+pas_b400_way_door_opened} walker@canalisation_1_zombied_attack
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 
 [walker@canalisation_1_zombied_attack]
 path_walk = 1_zombied_attack
@@ -142,7 +142,7 @@ prior = 200
 [walker@canalisation_3_zombied_1]
 path_walk = 3_zombied_1_1_walk
 on_info = {+pas_b400_canalisation_zombied_3_attacked} walker@canalisation_3_zombied_1_attack
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 
 [logic@pas_b400_canalisation_3_zombied_2]
 active = walker@canalisation_3_zombied_2
@@ -152,7 +152,7 @@ prior = 200
 [walker@canalisation_3_zombied_2]
 path_walk = 3_zombied_2_1_walk
 on_info = {+pas_b400_canalisation_zombied_3_attacked} walker@canalisation_3_zombied_2_attack
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 
 [logic@pas_b400_canalisation_3_zombied_3]
 active = walker@canalisation_3_zombied_3
@@ -162,7 +162,7 @@ prior = 200
 [walker@canalisation_3_zombied_3]
 path_walk = 3_zombied_3_1_walk
 on_info = {+pas_b400_canalisation_zombied_3_attacked} walker@canalisation_3_zombied_1_attack
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 
 [logic@pas_b400_canalisation_3_zombied_4]
 active = walker@canalisation_3_zombied_4
@@ -172,7 +172,7 @@ prior = 200
 [walker@canalisation_3_zombied_4]
 path_walk = 3_zombied_4_1_walk
 on_info = {+pas_b400_canalisation_zombied_3_attacked} walker@canalisation_3_zombied_2_attack
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 
 [logic@pas_b400_canalisation_3_zombied_5]
 active = walker@canalisation_3_zombied_5
@@ -182,7 +182,7 @@ prior = 200
 [walker@canalisation_3_zombied_5]
 path_walk = 3_zombied_5_1_walk
 on_info = {+pas_b400_canalisation_zombied_3_attacked} walker@canalisation_3_zombied_1_attack
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 
 [logic@pas_b400_canalisation_3_zombied_6]
 active = walker@canalisation_3_zombied_6
@@ -192,7 +192,7 @@ prior = 200
 [walker@canalisation_3_zombied_6]
 path_walk = 3_zombied_6_1_walk
 on_info = {+pas_b400_canalisation_zombied_3_attacked} walker@canalisation_3_zombied_2_attack
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 
 [walker@canalisation_3_zombied_1_attack]
 path_walk = 3_zombied_1_attack
@@ -211,7 +211,7 @@ on_hit = hit@zombied
 [walker@canalisation_5_zombied_1]
 path_walk = 5_zombied_1_1_walk
 on_info = {+pas_b400_canalisation_zombied_5_attacked} walker@canalisation_5_zombied_1_attack
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 
 [logic@pas_b400_canalisation_5_zombied_2]
 active = walker@canalisation_5_zombied_2
@@ -222,7 +222,7 @@ on_hit = hit@zombied
 [walker@canalisation_5_zombied_2]
 path_walk = 5_zombied_2_1_walk
 on_info = {+pas_b400_canalisation_zombied_5_attacked} walker@canalisation_5_zombied_2_attack
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 
 [logic@pas_b400_canalisation_5_zombied_3]
 active = walker@canalisation_5_zombied_3
@@ -233,7 +233,7 @@ on_hit = hit@zombied
 [walker@canalisation_5_zombied_3]
 path_walk = 5_zombied_3_1_walk
 on_info = {+pas_b400_canalisation_zombied_5_attacked} walker@canalisation_5_zombied_1_attack
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 
 [logic@pas_b400_canalisation_5_zombied_4]
 active = walker@canalisation_5_zombied_4
@@ -244,7 +244,7 @@ on_hit = hit@zombied
 [walker@canalisation_5_zombied_4]
 path_walk = 5_zombied_4_1_walk
 on_info = {+pas_b400_canalisation_zombied_5_attacked} walker@canalisation_5_zombied_2_attack
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 
 [logic@pas_b400_canalisation_5_zombied_5]
 active = walker@canalisation_5_zombied_5
@@ -255,7 +255,7 @@ on_hit = hit@zombied
 [walker@canalisation_5_zombied_5]
 path_walk = 5_zombied_5_1_walk
 on_info = {+pas_b400_canalisation_zombied_5_attacked} walker@canalisation_5_zombied_1_attack
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 
 [logic@pas_b400_canalisation_5_zombied_6]
 active = walker@canalisation_5_zombied_6
@@ -266,7 +266,7 @@ on_hit = hit@zombied
 [walker@canalisation_5_zombied_6]
 path_walk = 5_zombied_6_1_walk
 on_info = {+pas_b400_canalisation_zombied_5_attacked} walker@canalisation_5_zombied_2_attack
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 
 [walker@canalisation_5_zombied_1_attack]
 path_walk = 5_zombied_1_attack

@@ -1,6 +1,5 @@
 [logic]
-;active = ph_door@close
-active = ph_door@close_3
+active = ph_door@close
 
 [ph_door@close]
 locked = false
@@ -41,7 +40,7 @@ snd_open_start = metal_small_open
 snd_close_start = metal_small_close_start
 snd_close_stop = metal_small_close_stop
 on_use = {+lx8_toilet_burer_dead} ph_door@close_2
-on_info = {-lx8_toilet_door_open_again} %+lx8_toilet_door_open_again%
+;on_info = {-lx8_toilet_door_open_again} %+lx8_toilet_door_open_again%
 
 [ph_door@close_2]
 locked = false
@@ -49,8 +48,8 @@ closed = true
 snd_open_start = metal_small_open ;trader_door_open_start
 snd_close_start = metal_small_close_start ;trader_door_close_start
 snd_close_stop = metal_small_close_stop ;trader_door_close_stop
-;on_use = ph_door@open_2
-on_use = ph_door@free
+on_use = ph_door@open_2
+
 
 [ph_door@free]
 locked = false
@@ -59,29 +58,4 @@ snd_open_start = trader_door_open_start
 snd_close_start = trader_door_close_start
 snd_close_stop = trader_door_close_stop
 no_force = true
-;on_use = ph_door@open_2
-on_use = ph_door@close_2
-
-[ph_door@close_3]
-locked = false
-closed = true
-snd_open_start = metal_small_open
-snd_close_start = metal_small_close_start
-snd_close_stop = metal_small_close_stop
-on_use = ph_door@open_3
-hit_on_bone = 1|ph_door@free_3|2|ph_door@free_3
-
-[ph_door@open_3]
-locked = false
-closed = false
-snd_open_start = metal_small_open
-snd_close_start = metal_small_close_start
-snd_close_stop = metal_small_close_stop
-on_use = ph_door@close_3
-hit_on_bone = 1|ph_door@free_3|2|ph_door@free_3
-
-[ph_door@free_3]
-locked = false
-closed = true
-no_force = true
-on_use = ph_door@open_3
+on_use = ph_door@open_2

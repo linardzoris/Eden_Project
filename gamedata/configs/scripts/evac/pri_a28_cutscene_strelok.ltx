@@ -4,9 +4,9 @@ def_state_standing = threat_na
 def_state_moving = assault
 meet = no_meet
 use_camp = false
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 gather_items_enabled = false
 help_wounded_enabled = false
 corpse_detection_enabled = false
@@ -26,7 +26,7 @@ active = smartcover@strelok
 
 [smartcover@strelok]:walker@ignore
 cover_name = pri_a28_heli_cover_32
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 meet = no_meet
 on_info = {+pri_a28_team_heli_run} walker@strelok_run
 on_info2 = {+pri_a28_strelok_dead} %=destroy_object%

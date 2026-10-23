@@ -1,35 +1,35 @@
 <?xml version="1.0" encoding="windows-1251" ?>
 <string_table>
     <string id="st_ixray_title">
-        <text>S.T.A.L.K.E.R.: Р—РѕРІ РџСЂРёРїСЏС‚Рё</text>
+        <text>S.T.A.L.K.E.R.: Зов Припяти</text>
     </string>
     <string id="st_discord_menu">
-        <text>Р“Р»Р°РІРЅРѕРµ РјРµРЅСЋ</text>
+        <text>Главное меню</text>
     </string>
     <string id="st_discord_level">
-        <text>РЈСЂРѕРІРµРЅСЊ:</text>
+        <text>Уровень:</text>
     </string>
     <string id="quicksave">
-        <text>Р±С‹СЃС‚СЂРѕРµ СЃРѕС…СЂР°РЅРµРЅРёРµ</text>
+        <text>быстрое сохранение</text>
     </string>
     <string id="autosave">
-        <text>Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРµ СЃРѕС…СЂР°РЅРµРЅРёРµ</text>
+        <text>автоматическое сохранение</text>
     </string>
 
     <string id="ui_mm_r_actor_shadow">
-        <text>РўРµРЅСЊ РѕС‚ РїСЂРѕС‚Р°РіРѕРЅРёСЃС‚Р°</text>
+        <text>Тень от протагониста</text>
     </string>
     <string id="ui_mm_r2_details_shadows">
-        <text>РўРµРЅСЊ РѕС‚ С‚СЂР°РІС‹</text>
+        <text>Тень от травы</text>
     </string>
     <string id="ui_mm_r4_hud_shadows">
-        <text>РўРµРЅРё РЅР° СЂСѓРєР°С…</text>
+        <text>Тени на руках</text>
     </string>
     <string id="ui_mm_r2_cloud_shadows">
-        <text>РўРµРЅРё РѕС‚ РѕР±Р»Р°РєРѕРІ</text>
+        <text>Тени от облаков</text>
     </string>
     <string id="ui_mm_vid_scale">
-        <text>РњР°СЃС€С‚Р°Р± РІРёР·СѓР°Р»РёР·Р°С†РёРё</text>
+        <text>Масштаб визуализации</text>
     </string>
     <string id="fxaa">
         <text>FXAA</text>
@@ -41,13 +41,13 @@
         <text>TAA</text>
     </string>
     <string id="ui_mm_r_scale_mode">
-        <text>РњР°СЃС€С‚Р°Р±РёСЂРѕРІР°РЅРёРµ</text>
+        <text>Масштабирование</text>
     </string>
     <string id="st_filter_linear">
-        <text>РЎС‚Р°РЅРґР°СЂРЅРѕРµ (Р›РёРЅРµР№РЅРѕРµ)</text>
+        <text>Стандарное (Линейное)</text>
     </string>
     <string id="st_filter_point">
-        <text>Р¦РµР»РѕС‡РёСЃР»РµРЅРЅРѕРµ</text>
+        <text>Целочисленное</text>
     </string>
     <string id="st_filter_dlss">
         <text>DLSS</text>
@@ -59,13 +59,13 @@
 		<text>Intel XeSS</text>
 	</string>
     <string id="st_freemp">
-        <text>РЎРІРѕР±РѕРґРЅС‹Р№</text>
+        <text>Свободный</text>
     </string>
     <string id="ui_mm_mt_tex_load">
-        <text>РњРЅРѕРіРѕРїРѕС‚. Р·Р°РіСЂСѓР·РєР° С‚РµРєСЃС‚СѓСЂ</text>
+        <text>Многопот. загрузка текстур</text>
     </string>
     <string id="ui_mm_r__smap_size">
-        <text>РљР°СЂС‚Р° С‚РµРЅРµР№</text>
+        <text>Карта теней</text>
     </string>
     <string id="1024">
         <text>1024x1024</text>
@@ -83,118 +83,118 @@
         <text>Always Active</text>
     </string>
     <string id="car_trunk_use">
-        <text>РћС‚РєСЂС‹С‚СЊ Р±Р°РіР°Р¶РЅРёРє ($$ACTION_USE$$)</text>
+        <text>Открыть багажник ($$ACTION_USE$$)</text>
     </string>
     <string id="car_use">
-        <text>РСЃРїРѕР»СЊР·РѕРІР°С‚СЊ ($$ACTION_USE$$)</text>
+        <text>Использовать ($$ACTION_USE$$)</text>
     </string>
     <string id="st_m">
-        <text>Рј</text>
+        <text>м</text>
     </string>
     <string id="ui_inv_dist">
-        <text>Р”РёСЃС‚Р°РЅС†РёСЏ СѓРґР°СЂР°</text>
+        <text>Дистанция удара</text>
     </string>
     <string id="ui_mm_dof_reload">
-        <text>DoF РїСЂРё РїРµСЂРµР·Р°СЂСЏРґРєРµ</text>
+        <text>DoF при перезарядке</text>
     </string>
     <string id="ui_mm_dof_talk">
-        <text>DoF РїСЂРё РґРёР°Р»РѕРіРµ</text>
+        <text>DoF при диалоге</text>
     </string>
     <string id="ui_rs_fps_show">
-        <text>РЎС‡РµС‚С‡РёРє С„РїСЃ</text>
+        <text>Счетчик фпс</text>
     </string>
     <string id="ui_mm_cas_sharpening">
-        <text>Р РµР·РєРѕСЃС‚СЊ</text>
+        <text>Резкость</text>
     </string>
     <string id="ui_mm_hashed_alpha_test">
-        <text>Р¤РёР»СЊС‚СЂ. РїСЂРѕР·СЂР°С‡РЅРѕСЃС‚Рё</text>
+        <text>Фильтр. прозрачности</text>
     </string>
     <string id="ui_mm_gtao">
         <text>GTAO</text>
     </string>
     <string id="ui_mm_vignette">
-        <text>Р’РёРЅСЊРµС‚РєР°</text>
+        <text>Виньетка</text>
     </string>
     <string id="ui_mm_aberration">
-        <text>РҐСЂРѕРјР°С‚. Р°Р±РµСЂСЂР°С†РёСЏ</text>
+        <text>Хромат. аберрация</text>
     </string>
     <string id="ui_mm_sslr_water">
-        <text>РћС‚СЂР°Р¶РµРЅРёСЏ РЅР° РІРѕРґРµ</text>
+        <text>Отражения на воде</text>
     </string>
     <string id="ui_mm_r_scale_preset">
-        <text>РљР°С‡РµСЃС‚РІРѕ РјР°СЃС€С‚Р°Р±.</text>
+        <text>Качество масштаб.</text>
     </string>
     <string id="st_scale_native">
-        <text>РЎРіР»Р°Р¶РёРІР°РЅРёРµ</text>
+        <text>Сглаживание</text>
     </string>
     <string id="st_scale_quality">
-        <text>РљР°С‡РµСЃС‚РІРѕ</text>
+        <text>Качество</text>
     </string>
     <string id="st_scale_balanced">
-        <text>РЎР±Р°Р»Р°РЅСЃРёСЂРѕРІР°РЅРЅРѕРµ</text>
+        <text>Сбалансированное</text>
     </string>
     <string id="st_scale_performance">
-        <text>РџСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚СЊ</text>
+        <text>Производительность</text>
     </string>
     <string id="st_scale_ultraperformance">
-        <text>РЈР»СЊС‚СЂР°РїСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚СЊ</text>
+        <text>Ультрапроизводительность</text>
     </string>
     <string id="st_scale_custom">
-        <text>РџРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРѕРµ</text>
+        <text>Пользовательское</text>
     </string>
     <string id="st_common_settings">
-        <text>РћР±С‰РёРµ РЅР°СЃС‚СЂРѕР№РєРё</text>
+        <text>Общие настройки</text>
     </string>
     <string id="st_surface_options">
-        <text>РќР°СЃС‚СЂРѕР№РєРё РїРѕРІРµСЂС…РЅРѕСЃС‚РµР№</text>
+        <text>Настройки поверхностей</text>
     </string>
     <string id="st_aa_options">
-        <text>РќР°СЃС‚СЂРѕР№РєРё СЃРіР»Р°Р¶РёРІР°РЅРёСЏ Рё РјР°СЃС€С‚Р°Р±РёСЂРѕРІР°РЅРёСЏ</text>
+        <text>Настройки сглаживания и масштабирования</text>
     </string>
     <string id="st_lights_options">
-        <text>РќР°СЃС‚СЂРѕР№РєРё РѕСЃРІРµС‰РµРЅРёСЏ</text>
+        <text>Настройки освещения</text>
     </string>
     <string id="st_sunlight_options">
-        <text>РќР°СЃС‚СЂРѕР№РєРё СЃРѕР»РЅРµС‡РЅРѕРіРѕ СЃРІРµС‚Р°</text>
+        <text>Настройки солнечного света</text>
     </string>
     <string id="st_effects_options">
-        <text>Р­С„С„РµРєС‚С‹</text>
+        <text>Эффекты</text>
     </string>
     <string id="st_postprocess_options">
-        <text>РџРѕСЃС‚РѕР±СЂР°Р±РѕС‚РєР°</text>
+        <text>Постобработка</text>
     </string>
     <string id="ui_mm_saturation">
-        <text>РќР°СЃС‹С‰РµРЅРЅРѕСЃС‚СЊ</text>
+        <text>Насыщенность</text>
     </string>
     <string id="st_take_to">
-        <text>РІР·СЏС‚СЊ</text>
+        <text>взять</text>
     </string>
     <string id="st_take_all">
-        <text>РІР·СЏС‚СЊ РІСЃРµ</text>
+        <text>взять все</text>
     </string>
     <string id="ui_st_put_all">
-        <text>РЎР»РѕР¶РёС‚СЊ РІСЃРµ</text>
+        <text>Сложить все</text>
     </string>
     <string id="ui_st_put_all_hint">
-        <text>РџРµСЂРµРјРµСЃС‚РёС‚СЊ РІСЃРµ РІРµС‰Рё</text>
+        <text>Переместить все вещи</text>
     </string>
     <string id="st_move_to">
-        <text>РїРµСЂРµРјРµСЃС‚РёС‚СЊ</text>
+        <text>переместить</text>
     </string>
     <string id="st_move_all">
-        <text>РїРµСЂРµРјРµСЃС‚РёС‚СЊ РІСЃС‘</text>
+        <text>переместить всё</text>
     </string>
     <string id="renderer_r4_dx10">
-        <text>РЈР». РїРѕР»РЅРѕРµ РѕСЃРІРµС‰РµРЅРёРµ (DX10)</text>
+        <text>Ул. полное освещение (DX10)</text>
     </string>
     <string id="Ultra">
-        <text>СѓР»СЊС‚СЂР°</text>
+        <text>ультра</text>
     </string>
     <string id="st_proc">
         <text>%</text>
     </string>
     <string id="st_parse">
-        <text>СЂР°Р·РѕР±СЂР°С‚СЊ</text>
+        <text>разобрать</text>
     </string>
     <string id="WP_BINOC">
         <text>Binocular</text>
@@ -344,16 +344,16 @@
         <text>Hanging lamp</text>
     </string>
     <string id="ui_mm_lights_details">
-        <text>Р Р°СЃС€РёСЂРµРЅРЅС‹Рµ С‚РµРЅРё С‚СЂР°РІС‹</text>
+        <text>Расширенные тени травы</text>
     </string>
     <string id="ui_mm_puddles">
-        <text>РћР±СЉС‘РјРЅС‹Рµ Р»СѓР¶Рё</text>
+        <text>Объёмные лужи</text>
     </string>
     <string id="ui_mm_grass_distance">
-        <text>Р”Р°Р»СЊРЅРѕСЃС‚СЊ РІРёРґРёРјРѕСЃС‚Рё С‚СЂР°РІС‹</text>
+        <text>Дальность видимости травы</text>
     </string>
     <string id="ui_mm_screenshot_format">
-        <text>Р¤РѕСЂРјР°С‚ СЃРєСЂРёРЅС€РѕС‚РѕРІ</text>
+        <text>Формат скриншотов</text>
     </string>
     <string id="ss_jpg">
         <text>.jpg</text>
@@ -365,63 +365,63 @@
         <text>.png</text>
     </string>
 	<string id="st_client_connecting_to">
-		<text>РљР»РёРµРЅС‚: РЎРѕРµРґРёРЅРµРЅРёРµ СЃ</text>
+		<text>Клиент: Соединение с</text>
 	</string>
 	<string id="st_client_spawning">
-		<text>РљР»РёРµРЅС‚: РЎРѕР·РґР°РЅРёРµ</text>
+		<text>Клиент: Создание</text>
 	</string>
 	<string id="st_client_synchronising">
-		<text>РљР»РёРµРЅС‚: РЎРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ</text>
+		<text>Клиент: Синхронизация</text>
 	</string>
 	<string id="st_creating_new_game">
-		<text>РЎРѕР·РґР°РЅРёРµ РЅРѕРІРѕР№ РёРіСЂС‹</text>
+		<text>Создание новой игры</text>
 	</string>
 	<string id="ui_mm_lang">
-		<text>РЇР·С‹Рє</text>
+		<text>Язык</text>
 	</string>
     <string id="rus">
-		<text>Р СѓСЃСЃРєРёР№</text>
+		<text>Русский</text>
 	</string>
 	<string id="eng">
 		<text>English</text>
 	</string>
 	<string id="ui_inv_max_weight">
-		<text>РјР°РєСЃ.</text>
+		<text>макс.</text>
 	</string>
 	<string id="st_track_opt_off">
-		<text>РІС‹РєР».</text>
+		<text>выкл.</text>
 	</string>
 	<string id="st_track_opt_on">
-		<text>РІРєР».</text>
+		<text>вкл.</text>
 	</string>
 	<string id="Contacts">
-		<text>РљРѕРЅС‚Р°РєС‚С‹</text>
+		<text>Контакты</text>
 	</string>
 	<string id="pda_btn_contacts">
-		<text>РљРѕРЅС‚Р°РєС‚С‹</text>
+		<text>Контакты</text>
 	</string>
 	<string id="pda_btn_contacts_hint">
-		<text>РџРѕРєР°Р·Р°С‚СЊ СЃРїРёСЃРѕРє РєРѕРЅС‚Р°РєС‚РѕРІ СЃС‚Р°Р»РєРµСЂРѕРІ</text>
+		<text>Показать список контактов сталкеров</text>
 	</string>
 	<string id="st_undress_backpack">
-		<text>СЃРЅСЏС‚СЊ СЂСЋРєР·Р°Рє</text>
+		<text>снять рюкзак</text>
 	</string>
 	<string id="st_dress_backpack">
-		<text>РЅР°РґРµС‚СЊ СЂСЋРєР·Р°Рє</text>
+		<text>надеть рюкзак</text>
 	</string>
 	<string id="ui_mm_bobbing_factor">
-		<text>РЎРёР»Р° РєР°С‡Р°РЅРёСЏ РєР°РјРµСЂС‹</text>
+		<text>Сила качания камеры</text>
 	</string>
 	<string id="ui_mm_hit_slowmo">
-		<text>Р—Р°РјРµРґР»РµРЅРёРµ РїРѕСЃР»Рµ СѓСЂРѕРЅР°</text>
+		<text>Замедление после урона</text>
 	</string>
 	<string id="ui_mm_wpn_aim_toggle">
-		<text>РџСЂРёС†РµР»РёРІР°РЅРёРµ РїРѕ РєР»РёРєСѓ</text>
+		<text>Прицеливание по клику</text>
 	</string>
 	<string id="kb_clear_gasmask">
-		<text>РџСЂРѕС‚РёСЂР°РЅРёРµ РјР°СЃРєРё</text>
+		<text>Протирание маски</text>
 	</string>
 	<string id="ui_mm_mouse_sense_ui">
-		<text>Р§СѓРІСЃС‚РІРёС‚РµР»СЊРЅРѕСЃС‚СЊ РјС‹С€Рё РІ UI</text>
+		<text>Чувствительность мыши в UI</text>
 	</string>
 </string_table>

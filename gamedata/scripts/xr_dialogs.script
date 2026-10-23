@@ -150,7 +150,7 @@ end
 
 -- подготовка новой фразы
 function dialog_mgr:new_phrase()
-	empty_table( avail )
+	clear_table( avail )
 
 	-- если диалог уже был начат (т.е. есть текущий говорящий)
 	if self.a.cur_npc then

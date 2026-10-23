@@ -20,7 +20,7 @@ function mob_walker:__init(obj, storage)
 end
 
 function mob_walker:reset_scheme()
-	--printf("_bp: mob_walker:reset_scheme: %s", self.object:name())
+	printf("_bp: mob_walker:reset_scheme: %s", self.object:name())
 
 	mob_state_mgr.set_state(self.object, db.actor, self.st.state)
 
@@ -107,9 +107,9 @@ function mob_walker:arrived_to_first_waypoint()
 end
 
 function mob_walker:waypoint_callback(obj, action_type, index)
-	--printf("mob_walker:waypoint_callback(): name=%s, index=%d", self.object:name(), index)
+	printf("mob_walker:waypoint_callback(): name=%s, index=%d", self.object:name(), index)
 	if index == -1 or index == nil then
-		printf("ERROR: mob_walker: waypoint_callback: index is %s", index)
+		printf("ERROR: mob_walker: waypoint_callback: index is %s", if_then_else(index == -1, "-1", "nil"))
 		return
 	end
 
@@ -141,7 +141,7 @@ function mob_walker:waypoint_callback(obj, action_type, index)
 		local scheme = db.storage[npc_id]["active_scheme"]
 		local signals = db.storage[npc_id][scheme].signals
 		signals[sig] = true
-		--printf("_bp: mob_walker [%s]: SIGNALLING: %s", self.object:name(), sig)
+		printf("_bp: mob_walker [%s]: SIGNALLING: %s", self.object:name(), sig)
 	end
 
 	local beh = self.path_walk_info[index]["b"]
@@ -150,18 +150,12 @@ function mob_walker:waypoint_callback(obj, action_type, index)
 	else
 		mob_state_mgr.set_state(self.object, db.actor, self.st.state)
 	end
-	
-	if not (self.patrol_look) then
-		self.state = state_standing
-		self:update_standing_state()	
-		return
-	end
 
 	local search_for = self.path_walk_info[index].flags
 	if search_for:get() == 0 then
-		self.state = state_standing
-		self:update_standing_state()
-		self:look_at_waypoint(0)
+		-- TODO: запретить одноточечные пути без соответствующего path_look по аналогии с move_mgr
+		printf("_bp: no flags")
+		self:update_movement_state() -- идти дальше
 		return
 	end
 
@@ -184,7 +178,7 @@ function mob_walker:waypoint_callback(obj, action_type, index)
 			if suggested_anim_set == "nil" then
 				suggested_anim_set = nil
 			end
-			self.cur_anim_set = anim[xr_logic.pick_section_from_condlist(db.actor, self.object, suggested_anim_set)] or default_anim_standing
+			self.cur_anim_set = anim[xr_logic.pick_section_from_condlist(db.actor, self.object, suggested_anim_set)]
 		else
 			self.cur_anim_set = default_anim_standing
 		end
@@ -212,7 +206,7 @@ function mob_walker:waypoint_callback(obj, action_type, index)
 end
 
 function mob_walker:update_movement_state()
---	printf("_bp [%s]: update_movement_state", self.object:name())
+	printf("_bp [%s]: update_movement_state", self.object:name())
 	xr_logic.mob_capture(self.object, true)
 
 	local m
@@ -225,7 +219,7 @@ function mob_walker:update_movement_state()
 	end
 
 	if self.scheduled_snd then
-	--	printf("_bp [%s]: playing scheduled sound", self.object:name())
+		printf("_bp [%s]: playing scheduled sound", self.object:name())
 		action(self.object, move(m, patrol(self.st.path_walk, patrol.next, patrol.continue)),
 			sound(sound[self.scheduled_snd]), cond(cond.move_end))
 		self.scheduled_snd = nil
@@ -235,10 +229,10 @@ function mob_walker:update_movement_state()
 end
 
 function mob_walker:update_standing_state()
-	--printf("_bp [%s]: update_standing_state", self.object:name())
+	printf("_bp [%s]: update_standing_state", self.object:name())
 	xr_logic.mob_capture(self.object, true)
 	if self.scheduled_snd then
-		--printf("_bp [%s]: playing scheduled sound", self.object:name())
+		printf("_bp [%s]: playing scheduled sound", self.object:name())
 		action(self.object, anim(self.cur_anim_set, 0),
 			sound(sound[self.scheduled_snd]), cond(cond.time_end, self.pt_wait_time))
 		self.scheduled_snd = nil
@@ -257,7 +251,7 @@ function mob_walker:look_at_waypoint(pt)
 		return
 	end
 
-	local look_pt = vector():set(self.patrol_look:point(pt)):sub(self.object:position())
+	local look_pt = utils.vector_copy_by_val(self.patrol_look:point(pt)):sub(self.object:position())
 	look_pt:normalize()
 	--self.object:set_sight(look.direction, look_pt, 0)
 
@@ -269,7 +263,7 @@ end
 
 ---------------------------------------------------------------------------------------------------------------------
 function add_to_binder(npc, ini, scheme, section, storage)
-	--printf("DEBUG: add_to_binder: npc:name()='%s', scheme='%s', section='%s'", npc:name(), scheme, section)
+	printf("DEBUG: add_to_binder: npc:name()='%s', scheme='%s', section='%s'", npc:name(), scheme, section)
 
 	local new_action = mob_walker(npc, storage)
 
@@ -280,11 +274,11 @@ end
 function set_scheme(npc, ini, scheme, section, gulag_name)
 	local st = xr_logic.assign_storage_and_bind(npc, ini, scheme, section)
 
-	st.logic     		= xr_logic.cfg_get_switch_conditions(ini, section, npc)
-	st.state           	= mob_state_mgr.get_state(ini, section, npc)
-	st.no_reset        	= ini:r_bool_ex(section,"no_reset",false)
-	st.path_walk       	= utils.prefix_r_string(ini,section,"path_walk",gulag_name)
-	st.path_look       	= utils.prefix_r_string(ini,section,"path_look",gulag_name)
+	st.logic     = xr_logic.cfg_get_switch_conditions(ini, section, npc)
+	st.state           = mob_state_mgr.get_state(ini, section, npc)
+	st.no_reset        = utils.cfg_get_bool(ini, section, "no_reset", npc, false)
+	st.path_walk       = utils.cfg_get_string(ini, section, "path_walk", npc, true,  gulag_name)
+	st.path_look       = utils.cfg_get_string(ini, section, "path_look", npc, false, gulag_name)
 
 	if st.path_walk == st.path_look then
 		abort("You are trying to set 'path_look' equal to 'path_walk' in section [%s] for npc [%s]", section, npc:name())

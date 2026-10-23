@@ -37,8 +37,8 @@ function eva_state_mgr_animstate_locked:evaluate()
 --	if self.st.fast_set == true then
 --		return false
 --	end
-
-	return self.st.animstate.states.anim_marker ~= nil and self.st.animstate.states.anim_marker ~= 3  -- MARKER_IDLE
+	
+	return self.st.animstate.states.anim_marker ~= nil and self.st.animstate.states.anim_marker ~= 3  -- MARKER_IDLE 
 end
 
 
@@ -53,7 +53,7 @@ function act_state_mgr_animstate_start:__init(name, st) super (nil, name)
 end
 function act_state_mgr_animstate_start:initialize()
 	action_base.initialize(self)
-
+	
 	self.st.animstate:set_state(state_lib.states[self.st.target_state].animstate)
 	self.st.animstate:set_control()
 end
@@ -72,7 +72,7 @@ function act_state_mgr_animstate_stop:__init(name, st) super (nil, name)
 end
 function act_state_mgr_animstate_stop:initialize()
 	action_base.initialize(self)
-
+	
 	self.st.animstate:set_state(nil, self.st.fast_set or state_lib.states[self.st.target_state].fast_set)
 	self.st.animstate:set_control()
 end

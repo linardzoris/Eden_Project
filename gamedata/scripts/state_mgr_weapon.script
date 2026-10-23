@@ -6,41 +6,62 @@ function eva_state_mgr_weapon:__init(name, st) super (nil, name)
 	self.st = st
 end
 function eva_state_mgr_weapon:evaluate()
-	--alun_utils.debug_write("eva_state_mgr_weapon")
+--	printf("EVA WEAPON [%s]", self.object:name())
+	
 	local weapon = state_lib.states[self.st.target_state].weapon
-	if not (weapon) then
+	if (weapon == nil) then
+--		printf("    no weapon")
 		return true
 	end
 	
-	local activeitem = self.object:active_item()
-	if (activeitem == nil) and (weapon == "none" or weapon == "drop" or weapon == "strapped") then 
+	if not isWeapon(self.object:best_weapon()) then
+--		printf("isWeapon = false")
+--		if self.object:best_weapon() == nil then
+--			printf(" weapon nil")
+--		else
+--			abort(" corrupted weapon %s  clsid %s", self.object:best_weapon():name(), self.object:best_weapon():clsid())
+--		end
 		return true
 	end
-	
 	local bestweapon = self.object:best_weapon()
-	if not (bestweapon) then
-		return false 
-	end 
+	local activeitem = self.object:active_item()
 	
-	if not (activeitem and activeitem:id() == bestweapon:id()) then 
-		return false 
+	if (weapon == "strapped" and
+	   ((strappable_weapon(bestweapon) and 
+	   self.object:weapon_strapped() and self.object:is_weapon_going_to_be_strapped(bestweapon)) or
+	   (not strappable_weapon(bestweapon) and activeitem == nil))) then
+	   
+--	   printf("    weapon realy strapped")
+		return true
+	end
+			
+	if	(
+			(
+				(weapon == "unstrapped") or
+				(weapon == "fire") or
+				(weapon == "sniper_fire")
+			) and			
+			(activeitem ~= nil) and
+			(bestweapon ~= nil) and
+			(activeitem:id() == bestweapon:id()) and
+			(not self.object:is_weapon_going_to_be_strapped(bestweapon) and self.object:weapon_unstrapped())
+			
+		) then
+--		printf(" weapon realy unstrapped")
+		return true
+	end
+			
+	if (weapon == "none" and
+	   activeitem == nil) then
+--	   	printf("  no weapon")
+		return true
 	end
 	
-	if (weapon == "strapped") then
-		if (state_mgr_weapon.strappable_weapon(bestweapon)) then 
-			if (self.object:weapon_strapped() and self.object:is_weapon_going_to_be_strapped(bestweapon)) then 
-				return true
-			end
-		end
-		return false
+	if (weapon == "drop" and
+	   activeitem == nil) then
+--	   	printf("  drop weapon")
+		return true
 	end
-	
-	if (weapon == "unstrapped" or weapon == "fire" or weapon == "sniper_fire") then
-		if (not self.object:is_weapon_going_to_be_strapped(bestweapon) and self.object:weapon_unstrapped()) then 
-			return true 
-		end
-	end
-
 	return false
 end
 --' Лочим ли мы все это для оружия или нет?
@@ -48,39 +69,32 @@ class "eva_state_mgr_weapon_locked" (property_evaluator)
 function eva_state_mgr_weapon_locked:__init(name, st) super (nil, name)
 	self.st = st
 end
+function eva_state_mgr_weapon_locked:evaluate()
+	local weapon_strapped = self.object:weapon_strapped()
+	local weapon_unstrapped = self.object:weapon_unstrapped()
 
-function weapon_locked(npc)
-	--alun_utils.debug_write("weapon_locked")
-	local bw = npc:active_item()
-	if not (bw) then
-		return false
-	end
-	
-	if not (IsWeapon(bw)) then 
-		return false 
-	end
-	
-	local s = bw:get_state()
-	if (s == 5 or s == 6) then 
-		return true -- gun is firing!
-	end
-
-	local weapon_strapped = npc:weapon_strapped()
-	local weapon_unstrapped = npc:weapon_unstrapped()
-
+	--log(string.format("%s [%s] [%s]", self.object:name(), tostring(weapon_strapped), tostring(weapon_unstrapped)))
 	if not (weapon_unstrapped or weapon_strapped) then
-		return false
-	end
-
-	if (npc:is_weapon_going_to_be_strapped(bw)) and (not weapon_strapped or weapon_unstrapped) then
 		return true
 	end
 
-	return false
-end
+	local bestweapon = self.object:best_weapon()
+	if bestweapon == nil then
+		return false
+	end
 
-function eva_state_mgr_weapon_locked:evaluate()
-	return weapon_locked(self.object)
+	
+	local is_weapon_going_to_be_strapped = self.object:is_weapon_going_to_be_strapped(bestweapon)
+	
+	if is_weapon_going_to_be_strapped and not weapon_strapped then
+		return true
+	end
+
+	if not is_weapon_going_to_be_strapped and not weapon_unstrapped and self.object:active_item() ~= nil then
+		return true
+	end
+
+	return false 
 end
 
 --' Необходимо ли повесить оружие на спину
@@ -97,15 +111,15 @@ function eva_state_mgr_weapon_strapped_now:__init(name) super (nil, name)
 end
 function eva_state_mgr_weapon_strapped_now:evaluate()
 	local best_weapon = self.object:best_weapon()
-	if not (best_weapon) then 
-		return true 
-	end 
-	
-	if not IsWeapon(best_weapon) then
+
+	if not isWeapon(best_weapon) then
 		return true
 	end
 
-	return (not strappable_weapon(best_weapon) and self.object:active_item() == nil) or (self.object:is_weapon_going_to_be_strapped(best_weapon) and self.object:weapon_strapped())
+	local active_item = self.object:active_item()
+
+	return (not strappable_weapon(best_weapon) and active_item == nil) or
+		   (self.object:is_weapon_going_to_be_strapped(best_weapon) and self.object:weapon_strapped())
 end
 
 --' Необходимо ли держать оружие в руках
@@ -124,16 +138,11 @@ function eva_state_mgr_weapon_unstrapped_now:__init(name) super (nil, name)
 end
 function eva_state_mgr_weapon_unstrapped_now:evaluate()
 	local active_item = self.object:active_item()
-	if not (active_item) then 
-		return false 
-	end 
-	
 	local best_weapon = self.object:best_weapon()
-	if not (best_weapon) then 
-		return false 
-	end 
-	
-	return active_item:id() == best_weapon:id() and (not self.object:is_weapon_going_to_be_strapped(best_weapon) and self.object:weapon_unstrapped())
+	return  active_item ~= nil and		
+			best_weapon ~= nil and
+			active_item:id() == best_weapon:id() and
+			(not self.object:is_weapon_going_to_be_strapped(best_weapon) and self.object:weapon_unstrapped())
 end
 
 
@@ -143,7 +152,7 @@ function eva_state_mgr_weapon_none:__init(name, st) super (nil, name)
 	self.st = st
 end
 function eva_state_mgr_weapon_none:evaluate()
-	return state_lib.states[self.st.target_state].weapon == "none"
+	return state_lib.states[self.st.target_state].weapon == "none"			
 end
 --' Спрятано ли оружие вообще.
 class "eva_state_mgr_weapon_none_now" (property_evaluator)
@@ -159,7 +168,7 @@ function eva_state_mgr_weapon_drop:__init(name, st) super (nil, name)
 	self.st = st
 end
 function eva_state_mgr_weapon_drop:evaluate()
-	return state_lib.states[self.st.target_state].weapon == "drop"
+	return state_lib.states[self.st.target_state].weapon == "drop"			
 end
 
 --' Необходимо ли стрелять
@@ -168,7 +177,8 @@ function eva_state_mgr_weapon_fire:__init(name, st) super (nil, name)
 	self.st = st
 end
 function eva_state_mgr_weapon_fire:evaluate()
-	return state_lib.states[self.st.target_state].weapon == "fire" or state_lib.states[self.st.target_state].weapon == "sniper_fire"
+	return state_lib.states[self.st.target_state].weapon == "fire" or
+	       state_lib.states[self.st.target_state].weapon == "sniper_fire"
 end
 
 
@@ -179,13 +189,7 @@ function act_state_mgr_weapon_unstrapp:__init(name, st) super (nil, name)
 end
 function act_state_mgr_weapon_unstrapp:initialize()
 	action_base.initialize(self)
-	--printf("act_state_mgr_weapon_unstrapp %s",self.object:name())
-	local wpn = get_weapon(self.object, self.st.target_state)
-	if not (wpn) then 
-		return 
-	end
-	SendScriptCallback("npc_on_weapon_unstrapped",self.object,wpn)
-	self.object:set_item(get_idle_state(self.st.target_state), wpn)
+	self.object:set_item(get_idle_state(self.st.target_state), get_weapon(self.object, self.st.target_state))
 end
 function act_state_mgr_weapon_unstrapp:execute()
 	action_base.execute(self)
@@ -203,14 +207,13 @@ function act_state_mgr_weapon_strapp:initialize()
 	action_base.initialize(self)
 	local weap = get_weapon(self.object, self.st.target_state)
 	--' printf("weapon is: %s movement type is: %s", tostring(weap), tostring(self.object:movement_type()))
-	if (weap and strappable_weapon(weap)) then
+	if strappable_weapon(weap) then
 		self.object:set_item(object.strap, weap)
-		SendScriptCallback("npc_on_weapon_strapped",self.object,weap)
 	else
 		self.object:set_item(object.idle, nil)
 	end
 end
-function act_state_mgr_weapon_strapp:execute()
+function act_state_mgr_weapon_strapp:execute()	
 	action_base.execute(self)
 end
 function act_state_mgr_weapon_strapp:finalize()
@@ -241,10 +244,9 @@ end
 function act_state_mgr_weapon_drop:initialize()
 	action_base.initialize(self)
 	local weap = get_weapon(self.object, self.st.target_state)
-	if (weap and strappable_weapon(weap)) then
-		--self.object:set_item(object.drop, weap)
-		death_manager.set_weapon_drop_condition(self.object,weap)
-		SendScriptCallback("npc_on_weapon_drop",self.object,weap)
+	if strappable_weapon(weap) then
+		self.object:set_item(object.drop, weap)
+		death_manager.set_weapon_drop_condition(weap)
 	else
 		self.object:set_item(object.idle, nil)
 	end
@@ -268,11 +270,40 @@ function get_idle_state(target_state)
 end
 
 function get_weapon(obj, target_state)
-	return state_lib.states[target_state].weapon_slot and obj:item_in_slot(state_lib.states[target_state].weapon_slot) or obj:best_weapon()
+	if state_lib.states[target_state].weapon_slot == nil then
+		return obj:best_weapon()
+	else
+		return obj:item_in_slot(state_lib.states[target_state].weapon_slot)
+	end
 end
 
 function strappable_weapon(obj)
-	return system_ini():r_string_ex(obj:section(),"strap_bone0") ~= nil
+	local section = obj:section()
+
+	local ini = system_ini()
+	
+	if ini:line_exist(section, "strap_bone0") then
+		return true
+	else
+		return false
+	end	
+
+--[[
+    local id = get_clsid(obj)
+    if id == nil then return false end
+
+    if id == clsid.wpn_vintorez_s then return true
+    elseif id == clsid.wpn_ak74_s then return true
+    elseif id == clsid.wpn_lr300_s then return true
+    elseif id == clsid.wpn_shotgun_s then return true
+    elseif id == clsid.wpn_bm16_s then return true    
+    elseif id == clsid.wpn_svd_s then return true
+    elseif id == clsid.wpn_svu_s then return true
+    elseif id == clsid.wpn_rpg7_s then return true
+    elseif id == clsid.wpn_val_s then return true
+    elseif id == clsid.wpn_groza_s then return true
+    else return false end
+]]    
 end
 
 local state_queue_params = {
@@ -286,17 +317,15 @@ local state_queue_params = {
 	bloodsucker_panic    = {30, 100, 0}
 }
 
-function get_queue_params(npc, st, override)
-	local a = state_queue_params[st.animation] or override
+function get_queue_params(npc, target, st)
+	local a = state_queue_params[st.animation]
 	if a ~= nil then
 		if a[3] ~= nil then
 			local weap = npc:best_weapon()
-			if (weap) then
-				local old_aim_time = npc:aim_time(weap)
-				if old_aim_time ~= a[3] then
-					db.storage[npc:id()].old_aim_time = old_aim_time
-					npc:aim_time(weap, a[3])
-				end
+			local old_aim_time = npc:aim_time(weap)
+			if old_aim_time ~= a[3] then
+				db.storage[npc:id()].old_aim_time = old_aim_time
+				npc:aim_time(weap, a[3])
 			end
 		end
 		if db.storage[npc:id()].old_aim_time ~= nil then
@@ -306,11 +335,8 @@ function get_queue_params(npc, st, override)
 		return a[1], a[2]
 	end
 	if db.storage[npc:id()].old_aim_time ~= nil then
-		local bw = npc:best_weapon()
-		if (bw) then
-			npc:aim_time(bw, db.storage[npc:id()].old_aim_time)
-		end
-			db.storage[npc:id()].old_aim_time = nil
+		npc:aim_time(npc:best_weapon(), db.storage[npc:id()].old_aim_time)
+		db.storage[npc:id()].old_aim_time = nil
 	end
 	return 3, 1000
 end

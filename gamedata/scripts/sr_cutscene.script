@@ -17,13 +17,13 @@ function cam_effector_set:__init(set,storage)
 end
 
 function cam_effector_set:start_effect(eff)
-	--printf("playing effect [camera_effects\\"..eff.anm..".anm], time [%s]", device():time_global())
+	--printf("playing effect [camera_effects\\"..eff.anim..".anm], time [%s]", device():time_global())
 	--callstack()
 
 	if not (eff.global_cameffect) then
-		level.add_cam_effector("camera_effects\\"..eff.anm..".anm", 210408, false, "sr_cutscene.effector_callback")
+		level.add_cam_effector("camera_effects\\"..eff.anim..".anm", 210408, false, "sr_cutscene.effector_callback")
 	else
-		level.add_cam_effector2("camera_effects\\"..eff.anm..".anm", 210408, false, "sr_cutscene.effector_callback", self.st.fov or db.actor:fov()*0.75)
+		level.add_cam_effector2("camera_effects\\"..eff.anim..".anm", 210408, false, "sr_cutscene.effector_callback", self.st.fov or db.actor:fov()*0.75)
 	end
 	self.playing = true
 end
@@ -194,8 +194,8 @@ end
 function action_cutscene:select_next_motion()
 	local motion = self.st.cam_effector[self.motion_id]
 
-	if (cam_effector_sets == nil or cam_effector_sets[motion] == nil) then --Это имя файла, а не имя таблицы.
-		self.motion = cam_effector_set({start={},idle={{anm=motion, looped=false, global_cameffect = self.st.global_cameffect}},finish={}}, self.st)
+	if cam_effector_sets[motion] == nil then --Это имя файла, а не имя таблицы.
+		self.motion = cam_effector_set({start={},idle={{anim=motion, looped=false, global_cameffect = self.st.global_cameffect}},finish={}}, self.st)
 	else
 		self.motion = cam_effector_set(cam_effector_sets[motion], self.st)
 	end
@@ -249,15 +249,15 @@ function set_scheme(obj, ini, scheme, section, gulag_name)
 	local st = xr_logic.assign_storage_and_bind(obj, ini, scheme, section)
 	st.logic = xr_logic.cfg_get_switch_conditions(ini, section, obj)
 
-	st.point = ini:r_string_ex(section,"point") or "none"
-	st.look = ini:r_string_ex(section,"look") or "none"
-	st.global_cameffect = ini:r_bool_ex(section,"global_cameffect",false)
-	st.pp_effector = tostring(ini:r_string_ex(section,"pp_effector"))..".ppe"
-	st.cam_effector = parse_names(ini:r_string_ex(section,"cam_effector") or "")
-	st.fov = ini:r_float_ex(section,"fov")
+	st.point = utils.cfg_get_string(ini, section, "point", obj, true, "", "none")
+	st.look = utils.cfg_get_string(ini, section, "look", obj, true, "", "none")
+	st.global_cameffect = utils.cfg_get_bool(ini, section, "global_cameffect", obj, false, false)
+	st.pp_effector = utils.cfg_get_string(ini, section, "pp_effector", obj, false, "", "nil")..".ppe"
+	st.cam_effector = parse_names(utils.cfg_get_string(ini, section, "cam_effector", obj, true, ""))
+	st.fov = utils.cfg_get_number(ini, section, "fov", obj, true)
 
-	st.enable_ui_on_end = ini:r_bool_ex(section,"enable_ui_on_end",true)
-	st.outdoor = ini:r_bool_ex(section,"outdoor",false)
+	st.enable_ui_on_end = utils.cfg_get_bool(ini, section, "enable_ui_on_end", obj, false, true)
+	st.outdoor = utils.cfg_get_bool(ini, section, "outdoor", obj, false, false)
 end
 function effector_callback(obj)
 	xr_logic.issue_event(object_scene, storage_scene, "cutscene_callback")

@@ -6,7 +6,7 @@ function mob_remark:__init(obj, storage)
 end
 
 function mob_remark:reset_scheme()
-	--printf("_bp: mob_remark:reset_scheme: %s", self.object:name())
+	printf("_bp: mob_remark:reset_scheme: %s", self.object:name())
 
 	mob_state_mgr.set_state(self.object, db.actor, self.st.state)
 
@@ -146,7 +146,7 @@ end
 
 ---------------------------------------------------------------------------------------------------------------------
 function add_to_binder(npc, ini, scheme, section, storage)
-	--printf("DEBUG: add_to_binder: npc:name()='%s', scheme='%s', section='%s'", npc:name(), scheme, section)
+	printf("DEBUG: add_to_binder: npc:name()='%s', scheme='%s', section='%s'", npc:name(), scheme, section)
 
 	local new_action = mob_remark(npc, storage)
 
@@ -164,13 +164,13 @@ function set_scheme(npc, ini, scheme, section, gulag_name)
 	st.dialog_cond    = xr_logic.cfg_get_condlist(ini, section, "dialog_cond", npc)
 	-- Не работает, т.к. при переключении схем в данный момент монстр всегда
 	-- уходит из под скрипта, соответственно, сбрасывает свою очередь actions.
-
+	--st.no_reset       = utils.cfg_get_bool(ini, section, "no_reset", npc, false)
 	st.no_reset = true
-	st.anim           = ini:r_string_ex(section,"anim")
-	st.anim_movement   = ini:r_bool_ex(section, "anim_movement",false)
-	st.anim_head      = ini:r_string_ex(section,"anim_head")
-	st.tip            = ini:r_string_ex(section,"tip")
-	st.snd            = ini:r_string_ex(section,"snd")
-	st.time           = ini:r_string_ex(section,"time")
+	st.anim           = utils.cfg_get_string(ini, section, "anim", npc, false, "")
+	st.anim_movement   = utils.cfg_get_bool(ini, section, "anim_movement", npc, false, false) --' Анимация с перемещением или нет
+	st.anim_head      = utils.cfg_get_string(ini, section, "anim_head", npc, false, "")
+	st.tip            = utils.cfg_get_string(ini, section, "tip", npc, false, "")
+	st.snd            = utils.cfg_get_string(ini, section, "snd", npc, false, "")
+	st.time           = utils.cfg_get_string(ini, section, "time", npc, false, "")
 
 end

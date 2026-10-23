@@ -8,7 +8,7 @@ function fake_monster:__init( obj , storage)
 end
 
 function fake_monster:reset_scheme()
-	--printf("_bp: sr_idle: fake_monster:reset_scheme: self.object:name()='%s'", self.object:name())
+	printf("_bp: sr_idle: fake_monster:reset_scheme: self.object:name()='%s'", self.object:name())
 	self.st.idle_end = 0
 	self.st.signals = {}
 	self.is_actor_inside = false
@@ -150,7 +150,7 @@ end
 
 ---------------------------------------------------------------------------------------------------------------------
 function add_to_binder( npc, ini, scheme, section, storage )
-	--printf("DEBUG: add_to_binder: scheme='%s', section='%s'", scheme, section)
+	printf("DEBUG: add_to_binder: scheme='%s', section='%s'", scheme, section)
 
 	local new_action = fake_monster(npc, storage)
 
@@ -162,13 +162,13 @@ function set_scheme( obj, ini, scheme, section, gulag_name )
 	local st        = xr_logic.assign_storage_and_bind( obj, ini, scheme, section )
 	st.logic        = xr_logic.cfg_get_switch_conditions( ini, section, obj )
 	
-    st.snd_obj      = ini:r_string_ex(section,"snd")
-	st.delay        = ini:r_float_ex(section,"delay") or 0
-	st.idle         = (ini:r_float_ex(section,"idle") or 30) * 10000 -- секунды->мс
-	local path      = ini:r_string_ex(section,"sound_path") or ""
+    st.snd_obj      = utils.cfg_get_string( ini, section, "snd", obj, false, "", nil )
+	st.delay        = utils.cfg_get_number( ini, section, "delay",    obj, false, 0 )
+	st.idle         = utils.cfg_get_number( ini, section, "idle",     obj, false, 30 ) * 10000 -- секунды->мс
+	local path      = utils.cfg_get_string( ini, section, "sound_path", obj, false, "", nil )
 	st.path_table   = parse_names(path)
-    st.monster      = ini:r_string_ex(section,"monster_section")
-	st.sound_slide_vel	= ini:r_float_ex(section,"slide_velocity") or 7
+    st.monster      = utils.cfg_get_string( ini, section, "monster_section", obj, false, "", nil) 
+	st.sound_slide_vel	= utils.cfg_get_number(ini, section, "slide_velocity",	obj, false, 7)
 	
 end
 

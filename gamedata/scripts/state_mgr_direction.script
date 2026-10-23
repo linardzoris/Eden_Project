@@ -7,77 +7,47 @@ function eva_state_mgr_direction:__init(name, st) super (nil, name)
 	self.st = st
 end
 function eva_state_mgr_direction:evaluate()
-	--alun_utils.debug_write("eva_state_mgr_direction:evaluate() start")
 	-- Если мы идем в смарткавер
 	if self.st.target_state == "smartcover" then
-		--alun_utils.debug_write("eva_state_mgr_direction:evaluate() end 1")
 		return true
 	end
-	
+
 	local sight_type = self.object:sight_params()
 
-	if (self.st.look_dir) then 
-		if (look_object_type(self.object, self.st)) then
-			self.st.look_dir.y = 0
-		end
-		
-		self.st.look_dir:normalize()
-		if utils.vector_cmp_prec(sight_type.m_vector, self.st.look_dir, 0.01) ~= true then
-			--alun_utils.debug_write("eva_state_mgr_direction:evaluate() end 8")
+	-- Если задан объект на который смотреть
+	if self.st.look_object ~= nil then
+		if sight_type.m_object == nil or
+					 sight_type.m_object:id() ~= self.st.look_object or
+			 self.st.point_obj_dir ~= look_object_type(self.object, self.st)
+		then
 			return false
 		end
 
-		--alun_utils.debug_write("eva_state_mgr_direction:evaluate() end 9")
-		self:callback()
-		return true	
-	end 
-	
-	-- Если задан объект на который смотреть
-	if (self.st.look_object) then
-		if not (sight_type.m_object) then
-			--alun_utils.debug_write("eva_state_mgr_direction:evaluate() end 2")
-			return false 
-		end 
-		
-		if (sight_type.m_object:id() ~= self.st.look_object) then 
-			--alun_utils.debug_write("eva_state_mgr_direction:evaluate() end 3")
-			return false 
-		end 
-		
-		if (self.st.point_obj_dir ~= look_object_type(self.object, self.st)) then
-			--alun_utils.debug_write("eva_state_mgr_direction:evaluate() end 4")
-			return false 
-		end
-
-		--alun_utils.debug_write("eva_state_mgr_direction:evaluate() end 5")
 		self:callback()
 		return true
 	end
 
 	-- Если задана позиция в которую смотреть
-	if (self.st.look_position) then
-		if (sight_type.m_sight_type == CSightParams.eSightTypeAnimationDirection) then
-			self:callback()
-			return true 
-		end 
-		
-		local s = look_position_type(self.object, self.st)
-		if (sight_type.m_sight_type ~= s) then
-			--alun_utils.debug_write("eva_state_mgr_direction:evaluate() end 6")
+	if self.st.look_position ~= nil then
+		if sight_type.m_sight_type ~= look_position_type(self.object, self.st) then
+			--printf("false type")
 			return false
+		elseif sight_type.m_sight_type == CSightParams.eSightTypeAnimationDirection then
+			return true
 		end
-		
+
 		local dir = vector():sub(self.st.look_position, self.object:position())
-		if (look_object_type(self.object, self.st)) then
+		if look_object_type(self.object, self.st) == true then
 			dir.y = 0
 		end
 		dir:normalize()
 		if utils.vector_cmp_prec(sight_type.m_vector, dir, 0.01) ~= true then
-			--alun_utils.debug_write("eva_state_mgr_direction:evaluate() end 8")
+			--printf("%s false vector", self.object:name())
+			--printf("%s %s %s", sight_type.m_vector.x, sight_type.m_vector.y, sight_type.m_vector.z)
+			--printf("%s %s %s", dir.x, dir.y, dir.z)
 			return false
 		end
 
-		--alun_utils.debug_write("eva_state_mgr_direction:evaluate() end 9")
 		self:callback()
 		return true
 	end
@@ -85,22 +55,23 @@ function eva_state_mgr_direction:evaluate()
 	-- Если не задано куда смотреть.
 	-- И если мы до этого куда то смотрели
 	if sight_type.m_object ~= nil then
-		--alun_utils.debug_write("eva_state_mgr_direction:evaluate() end 10")
 		return false
 	end
 
+
+
 	--' Или если мы смотрели не так как надо
 	if sight_type.m_sight_type ~= look_position_type(self.object, self.st) then
-		--alun_utils.debug_write("eva_state_mgr_direction:evaluate() end 11")
 		return false
 	end
 
 	self:callback()
-	--alun_utils.debug_write("eva_state_mgr_direction:evaluate() end 12")
 	return true
 end
 function eva_state_mgr_direction:callback()
-	if self.st.callback and self.st.callback.turn_end_func then
+	if self.st.callback ~= nil and
+		 self.st.callback.turn_end_func ~= nil
+	then
 		self.st.callback.turn_end_func(self.st.callback.obj)
 		if self.st.callback ~= nil	then
 			self.st.callback.turn_end_func = nil
@@ -113,7 +84,7 @@ function eva_state_mgr_direction_search:__init(name, st) super (nil, name)
 	self.st = st
 end
 function eva_state_mgr_direction_search:evaluate()
-	if self.st.look_dir or self.st.look_position or self.st.look_object then
+	if self.st.look_position ~= nil or self.st.look_object ~= nil then
 		return false
 	end
 	return true
@@ -138,20 +109,50 @@ function act_state_mgr_direction_turn:finalize()
 	action_base.finalize(self)
 end
 function act_state_mgr_direction_turn:turn()
-	turn(self.object,self.st,true)
+	self.st.point_obj_dir = look_object_type(self.object, self.st)
+
+	if self.st.look_object ~= nil and
+		 level.object_by_id(self.st.look_object) ~= nil
+	then
+		look_at_object(self.object, self.st)
+	elseif self.st.look_position ~= nil then
+
+		--' Если принудительно задано тип смотрения
+		if state_lib.states[self.st.target_state].direction then
+			--printf("SET STATE SIGHT! %s", tostring(self.st.target_state))
+			self.object:set_sight(CSightParams.eSightTypeAnimationDirection, false,false)
+			return
+		end
+
+
+		local dir = vector():sub(self.st.look_position, self.object:position())
+		if self.st.point_obj_dir == true then
+			dir.y = 0
+		end
+		dir:normalize()
+		if utils.vector_cmp(dir, vector():set(0,0,0)) then
+			callstack()
+			printf("Before normalize direction [%s]", vec_to_str(vector():sub(self.st.look_position, self.object:position())))
+			printf("You are trying to set wrong direction %s (look_pos = [%s] npc_pos = [%s])!!!", vec_to_str(dir), vec_to_str(self.st.look_position), vec_to_str(self.object:position()))
+			-- Затычка, если дирекшн плохой, то ставим текущий и меняем позицию куда смотреть(для эвалуатора)
+			self.st.look_position = vector():set(self.object:position().x + self.object:direction().x,self.object:position().y + self.object:direction().y,self.object:position().z + self.object:direction().z)
+			dir = self.object:direction()
+		end
+		--printf("SET_SIGHT!!!act_state_mgr_direction_turn:turn() %s", vec_to_str(dir))
+		self.object:set_sight(look.direction, dir, true)
+	end
 end
 
 function look_at_object(npc, st)
-	local obj = db.storage[st.look_object] and db.storage[st.look_object].object or level.object_by_id(st.look_object)
-	if (obj) then
-		st.point_obj_dir = look_object_type(npc, st)
-		if st.point_obj_dir == true then
-			npc:set_sight(obj,true, false, false)
-		else
-			npc:set_sight(obj,true, true)
-		end
+	st.point_obj_dir = look_object_type(npc, st)
+	if st.point_obj_dir == true then
+		npc:set_sight(level.object_by_id(st.look_object),true, false, false)
+	else
+		npc:set_sight(level.object_by_id(st.look_object),true, true)
 	end
 end
+
+
 
 --' Включаем поворот в никуда
 class "act_state_mgr_direction_search" (action_base)
@@ -161,14 +162,12 @@ end
 function act_state_mgr_direction_search:initialize()
 	action_base.initialize(self)
 
-	--alun_utils.debug_write("direction_search 1")
 	--' Если принудительно задано тип смотрения
 	if state_lib.states[self.st.target_state].direction and state_lib.states[self.st.target_state].direction == CSightParams.eSightTypeAnimationDirection then
 		self.object:set_sight(CSightParams.eSightTypeAnimationDirection, false,false)
 	else
 		self.object:set_sight(look_position_type(self.object, self.st), nil, 0)
 	end
-	--alun_utils.debug_write("direction_search 2")
 end
 function act_state_mgr_direction_search:execute()
 	action_base.execute(self)
@@ -177,13 +176,24 @@ function act_state_mgr_direction_search:finalize()
 	action_base.finalize(self)
 end
 
+
+
+
+
+
+
+
+
+
+
+
+
+
 local look_direction_states = {
 --	threat = true,
-	animpoint_reach = true,
 	threat_na = true,
 	wait_na = true,
-	guard_na = true,
-	hide_na = true
+	guard_na = true
 	}
 
 function look_object_type(npc, st)
@@ -200,51 +210,49 @@ function look_position_type(npc, st)
 		return look.path_dir
 	end
 
+	--' Если принудительно задано тип смотрения
 	if state_lib.states[st.target_state].direction then
 		return state_lib.states[st.target_state].direction
 	end
 
-	if st.look_position or st.look_dir then
-		return look.direction
-	end
-	
-	--[[
-	if (state_lib.states[st.target_state].movement ~= move.stand) then
+	--' Для движения
+	if not st.planner:evaluator(st.properties["movement_stand"]):evaluate() then
+		if st.look_position ~= nil then
+			return look.direction
+		end
 		return look.path_dir
 	end
 
+	--' Смотрим в позицию
+	if st.look_position ~= nil then
+		 return look.direction
+	end
+
 	return look.danger
-	--]]
-	return look.path_dir
 end
 
-function turn(npc, st,check)
-	if (st.look_dir) then
-		if (look_object_type(npc,st)) then
-			st.look_dir.y = 0
-		end
-		st.look_dir:normalize()
-		npc:set_sight(look.direction, st.look_dir, true)		
-	elseif (st.look_object) then
+--' поворот
+function turn(npc, st)
+	st.point_obj_dir = look_object_type(npc, st)
+
+	if st.look_object ~= nil and
+		 level.object_by_id(st.look_object) ~= nil
+	then
 		look_at_object(npc, st)
-	elseif (st.look_position) then
-		if (check) then
-			if (state_lib.states[st.target_state].direction) then 
-				npc:set_sight(CSightParams.eSightTypeAnimationDirection, false,false)
-				return
-			end
-		end
+	elseif st.look_position ~= nil then
 		local dir = vector():sub(st.look_position, npc:position())
-		if (look_object_type(npc,st)) then
+		if st.point_obj_dir == true then
 			dir.y = 0
 		end
 		dir:normalize()
 		if utils.vector_cmp(dir, vector():set(0,0,0)) then
+			callstack()
+			printf("Before normalize direction [%s]", vec_to_str(vector():sub(st.look_position, npc:position())))
+			printf("You are trying to set wrong direction %s (look_pos = [%s] npc_pos = [%s])!!!", vec_to_str(dir), vec_to_str(st.look_position), vec_to_str(npc:position()))
+			-- Затычка, если дирекшн плохой, то ставим текущий и меняем позицию куда смотреть(для эвалуатора)
 			st.look_position = vector():set(npc:position().x + npc:direction().x,npc:position().y + npc:direction().y,npc:position().z + npc:direction().z)
 			dir = npc:direction()
 		end
 		npc:set_sight(look.direction, dir, true)
-	else
-	
 	end
 end

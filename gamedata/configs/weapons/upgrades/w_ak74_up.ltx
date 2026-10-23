@@ -1,36 +1,36 @@
 [up_sect_firsta_ak74]
-;РћС‚РґР°С‡Р°(1)-10%
+;Отдача(1)-10%
 ;------------
 cost		      		= 550
 value					= -10
 
 cam_dispersion              = -0.16		;0.5
 cam_dispersion_inc         	= -0.06		;0.5
-cam_step_angle_horz        	= -0.02		;1.5 [0.73 РІ РѕСЃС‚Р°С‚РєРµ]
+cam_step_angle_horz        	= -0.02		;1.5 [0.73 в остатке]
 
-zoom_cam_dispersion         = -0.12		;0.5 [0.093 РІ РѕСЃС‚Р°С‚РєРµ]
+zoom_cam_dispersion         = -0.12		;0.5 [0.093 в остатке]
 zoom_cam_dispersion_inc     = -0.07		;0.5
-zoom_cam_step_angle_horz    = -0.02 	;1.0 [0.505 РІ РѕСЃС‚Р°С‚РєРµ]
+zoom_cam_step_angle_horz    = -0.02 	;1.0 [0.505 в остатке]
 
 [up_sect_firstc_ak74]
-;РќР°РґРµР¶РЅРѕСЃС‚СЊ(2)15%
+;Надежность(2)15%
 ;---------------
 cost		      		= 850
 value					= +15
 
-;СѓРІРµР»РёС‡РµРЅРёРµ РґРёСЃРїРµСЂСЃРёРё РІ РїСЂРѕС†РµРЅС‚Р°С… РїСЂРё РјР°РєСЃРёРјР°Р»СЊРЅРѕРј РёР·РЅРѕСЃРµ
+;увеличение дисперсии в процентах при максимальном износе
 fire_dispersion_condition_factor    = -1.5 ;15
-;СѓРІРµР»РёС‡РµРЅРёРµ РёР·РЅРѕС€РµРЅРѕСЃС‚Рё РїСЂРё РІС‹СЃС‚СЂРµР»Рµ РѕС‡РµСЂРµРґСЊСЋ
+;увеличение изношености при выстреле очередью
 condition_queue_shot_dec	= -0.0001 ;0.0013
-;СѓРІРµР»РёС‡РµРЅРёРµ РёР·РЅРѕС€РµРЅРѕСЃС‚Рё РїСЂРё РѕРґРёРЅРѕС‡РЅРѕРј РІС‹СЃС‚СЂРµР»Рµ
+;увеличение изношености при одиночном выстреле
 condition_shot_dec      	= -0.0001 ;0.0011
-;С€Р°РЅСЃ РѕСЃРµС‡РєРё РїСЂРё РёР·РЅРѕС€РµРЅРѕСЃС‚Рё Р±РѕР»СЊС€Рµ С‡РµРј misfireStartCondition
+;шанс осечки при изношености больше чем misfireStartCondition
 misfire_start_prob	     	= -0.0015
-;С€Р°РЅСЃ РѕСЃРµС‡РєРё РїСЂРё РёР·РЅРѕС€РµРЅРѕСЃС‚Рё Р±РѕР»СЊС€Рµ С‡РµРј misfireEndCondition
+;шанс осечки при изношености больше чем misfireEndCondition
 misfire_end_prob	     	= -0.015 ;0.03
 
 [up_sect_firste_ak74]
-;РўРѕС‡РЅРѕСЃС‚СЊ(3)30%
+;Точность(3)30%
 ;---------------
 cost		      		= 1150
 value					= +30
@@ -39,21 +39,21 @@ fire_dispersion_base	= -0.09 ;0.7
 fire_dispersion_condition_factor    = -1 ;15
 
 [up_sect_firstf_ak74]
-;РћС‚РґР°С‡Р°(3)-30%
+;Отдача(3)-30%
 ;------------
 cost		      		= 1150
 value					= -30
 
 cam_dispersion              = -0.3		;0.5
 cam_dispersion_inc         	= -0.16		;0.5
-cam_step_angle_horz        	= -0.11		;1.5 [0.73 РІ РѕСЃС‚Р°С‚РєРµ]
+cam_step_angle_horz        	= -0.11		;1.5 [0.73 в остатке]
 
-zoom_cam_dispersion         = -0.31		;0.5 [0.093 РІ РѕСЃС‚Р°С‚РєРµ]
+zoom_cam_dispersion         = -0.31		;0.5 [0.093 в остатке]
 zoom_cam_dispersion_inc     = -0.17		;0.5
-zoom_cam_step_angle_horz    = -0.11 	;1.0 [0.505 РІ РѕСЃС‚Р°С‚РєРµ]
+zoom_cam_step_angle_horz    = -0.11 	;1.0 [0.505 в остатке]
 
 [up_sect_secona_ak74]
-;РЈРґРѕР±СЃС‚РІРѕ(1)10%
+;Удобство(1)10%
 ;--------------
 cost		      		= 550
 value					= +10
@@ -65,7 +65,7 @@ PDM_disp_vel_factor 		= -0.25 ;1.5
 PDM_disp_accel_factor 		= -0.25 ;1.5
 
 [up_sect_seconc_ak74]
-;РўРѕС‡РЅРѕСЃС‚СЊ(2)20%
+;Точность(2)20%
 ;---------------
 cost		      		= 850
 value					= +20
@@ -74,7 +74,7 @@ fire_dispersion_base	= -0.07 ;0.7
 fire_dispersion_condition_factor    = -1 ;15
 
 [up_sect_second_ak74]
-;РЎРєРѕСЂРѕСЃС‚СЂРµР»СЊРЅРѕСЃС‚СЊ(2)15%
+;Скорострельность(2)15%
 ;----------------------
 cost		      		= 850
 value					= +15
@@ -82,7 +82,7 @@ value					= +15
 rpm                     = +75
 
 [up_sect_secone_ak74]
-;РќР°СЃС‚РёР»СЊРЅРѕСЃС‚СЊ(3)30%
+;Настильность(3)30%
 ;------------------
 cost		      		= 1150
 value					= +30
@@ -91,24 +91,24 @@ bullet_speed            = +110
 fire_dispersion_base	= -0.03 ;0.7
 
 [up_sect_thirda_ak74]
-;РќР°РґРµР¶РЅРѕСЃС‚СЊ(1)10%
+;Надежность(1)10%
 ;---------------
 cost		      		= 550
 value					= +10
 
-;СѓРІРµР»РёС‡РµРЅРёРµ РґРёСЃРїРµСЂСЃРёРё РІ РїСЂРѕС†РµРЅС‚Р°С… РїСЂРё РјР°РєСЃРёРјР°Р»СЊРЅРѕРј РёР·РЅРѕСЃРµ
+;увеличение дисперсии в процентах при максимальном износе
 fire_dispersion_condition_factor    = -1 ;15
-;СѓРІРµР»РёС‡РµРЅРёРµ РёР·РЅРѕС€РµРЅРѕСЃС‚Рё РїСЂРё РІС‹СЃС‚СЂРµР»Рµ РѕС‡РµСЂРµРґСЊСЋ
+;увеличение изношености при выстреле очередью
 condition_queue_shot_dec	= -0.0001 ;0.0013
-;СѓРІРµР»РёС‡РµРЅРёРµ РёР·РЅРѕС€РµРЅРѕСЃС‚Рё РїСЂРё РѕРґРёРЅРѕС‡РЅРѕРј РІС‹СЃС‚СЂРµР»Рµ
+;увеличение изношености при одиночном выстреле
 condition_shot_dec      	= -0.0001 ;0.0011
-;С€Р°РЅСЃ РѕСЃРµС‡РєРё РїСЂРё РёР·РЅРѕС€РµРЅРѕСЃС‚Рё Р±РѕР»СЊС€Рµ С‡РµРј misfireStartCondition
+;шанс осечки при изношености больше чем misfireStartCondition
 misfire_start_prob	     	= -0.0005
-;С€Р°РЅСЃ РѕСЃРµС‡РєРё РїСЂРё РёР·РЅРѕС€РµРЅРѕСЃС‚Рё Р±РѕР»СЊС€Рµ С‡РµРј misfireEndCondition
+;шанс осечки при изношености больше чем misfireEndCondition
 misfire_end_prob	     	= -0.01 ;0.03
 
 [up_sect_thirdc_ak74]
-;РќР°СЃС‚РёР»СЊРЅРѕСЃС‚СЊ(2)20%
+;Настильность(2)20%
 ;------------------
 cost		      		= 850
 value					= +20
@@ -117,22 +117,22 @@ bullet_speed            = +75
 fire_dispersion_base	= -0.02 ;0.7
 
 [up_sect_thirdd_ak74]
-;РћС‚РґР°С‡Р°(2)-20%
+;Отдача(2)-20%
 ;------------
 cost		      		= 850
 value					= -20
 
 cam_dispersion              = -0.21		;0.5
 cam_dispersion_inc         	= -0.1		;0.5
-cam_step_angle_horz        	= -0.06		;1.5 [0.73 РІ РѕСЃС‚Р°С‚РєРµ]
+cam_step_angle_horz        	= -0.06		;1.5 [0.73 в остатке]
 
-zoom_cam_dispersion         = -0.21		;0.5 [0.093 РІ РѕСЃС‚Р°С‚РєРµ]
+zoom_cam_dispersion         = -0.21		;0.5 [0.093 в остатке]
 zoom_cam_dispersion_inc     = -0.12		;0.5
-zoom_cam_step_angle_horz    = -0.04 	;1.0 [0.505 РІ РѕСЃС‚Р°С‚РєРµ]
+zoom_cam_step_angle_horz    = -0.04 	;1.0 [0.505 в остатке]
 
 
 [up_sect_thirde_ak74]
-;РЎРєРѕСЂРѕСЃС‚СЂРµР»СЊРЅРѕСЃС‚СЊ(3)25%
+;Скорострельность(3)25%
 ;----------------------
 cost		      		= 1150
 value					= +25
@@ -140,7 +140,7 @@ value					= +25
 rpm                     = +125
 
 [up_sect_fourta_ak74]
-;Р’РµСЃ
+;Вес
 ;------------------
 cost		      		= 550
 value					= -1.3
@@ -148,7 +148,7 @@ value					= -1.3
 inv_weight = -1.3
 
 [up_sect_fourtc_ak74]
-;РЈРґРѕР±СЃС‚РІРѕ(2)15%
+;Удобство(2)15%
 ;--------------
 cost		      		= 850
 value					= +15
@@ -160,7 +160,7 @@ PDM_disp_vel_factor 		= -0.35 ;1.5
 PDM_disp_accel_factor 		= -0.35 ;1.5
 
 [up_sect_fourte_ak74]
-;РЈРґРѕР±СЃС‚РІРѕ(3)25%
+;Удобство(3)25%
 ;--------------
 cost		      		= 1150
 value					= +25
@@ -172,26 +172,26 @@ PDM_disp_vel_factor 		= -0.4 ;1.5
 PDM_disp_accel_factor 		= -0.4 ;1.5
 
 [up_sect_fiftha_ak74]
-;РљСЂРµРїР»РµРЅРёРµ РґР»СЏ РѕРїС‚РёРєРё
+;Крепление для оптики
 ;--------------
 cost		      		= 1200
 scope_status = 2
 scopes_sect				= scope_ak74, scope_x2.7_ak74, scope_live_detector_ak74, scope_night_ak74
 
 [up_sect_fifthc_ak74]
-;РЎРјРµРЅР° РљР°Р»Р»РёР±СЂР°
+;Смена Каллибра
 ;--------------
 cost		      		= 2500
 value					= "5.56x45"
 ammo_class          	= ammo_5.56x45_ss190, ammo_5.56x45_ap
 
-;СѓРІРµР»РёС‡РµРЅРёРµ РёР·РЅРѕС€РµРЅРѕСЃС‚Рё РїСЂРё РІС‹СЃС‚СЂРµР»Рµ РѕС‡РµСЂРµРґСЊСЋ
+;увеличение изношености при выстреле очередью
 condition_queue_shot_dec	= 0.0001 ;0.0013
-;СѓРІРµР»РёС‡РµРЅРёРµ РёР·РЅРѕС€РµРЅРѕСЃС‚Рё РїСЂРё РѕРґРёРЅРѕС‡РЅРѕРј РІС‹СЃС‚СЂРµР»Рµ
+;увеличение изношености при одиночном выстреле
 condition_shot_dec      	= 0.0001 ;0.0011
-;С€Р°РЅСЃ РѕСЃРµС‡РєРё РїСЂРё РёР·РЅРѕС€РµРЅРѕСЃС‚Рё Р±РѕР»СЊС€Рµ С‡РµРј misfireStartCondition
+;шанс осечки при изношености больше чем misfireStartCondition
 misfire_start_prob	     	= 0.0005
-;С€Р°РЅСЃ РѕСЃРµС‡РєРё РїСЂРё РёР·РЅРѕС€РµРЅРѕСЃС‚Рё Р±РѕР»СЊС€Рµ С‡РµРј misfireEndCondition
+;шанс осечки при изношености больше чем misfireEndCondition
 misfire_end_prob	     	= 0.005 ;0.03
 
 [up_firsta_ak74]
@@ -346,7 +346,7 @@ scheme_index            = 2, 2
 known                   = 1
 effects                 =
 section                 = up_sect_secone_ak74
-property                = prop_bullet_speed, prop_dispersion
+property                = prop_bullet_speed
 
 precondition_functor    = inventory_upgrades.precondition_functor_a
 precondition_parameter  = true
@@ -385,7 +385,7 @@ icon                    = ui_inGame2_upgrade_AKM_74_2_9
 scheme_index            = 1, 3
 effects                 = up_gr_thirdef_ak74
 section                 = up_sect_thirdc_ak74
-property                = prop_bullet_speed, prop_dispersion
+property                = prop_bullet_speed
 
 known                   = 1
 

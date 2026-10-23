@@ -14,9 +14,9 @@ on_info3 = {+jup_a12_stalker_assaulter_3_argue} %=play_sound(jup_a12_stalker_dip
 on_info4 = {!actor_in_zone(jup_a12_sr_stalkers_argue)} animpoint@stand_start %-jup_a12_stalker_assaulter_argued +jup_a12_stalker_diplomat_argued%
 on_info5 = {+jup_a12_stalker_assaulter_told_story} animpoint@stand_start
 meet = meet@stand_start_meet
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = jup_a6_sr_noweap
 gather_items_enabled = false
 help_wounded_enabled = false
@@ -29,9 +29,9 @@ use_camp = false
 on_info = {-jup_a12_stalker_assaulter_told_story +jup_b217_welcome_tech_talked =actor_in_zone(jup_a12_sr_stalkers_argue) +jup_a12_stalker_assaulter_argued} animpoint@argue
 on_info2 = {+jup_a12_stalker_prisoner_free} animpoint@stand_after
 meet = meet@stand_start_meet
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = jup_a6_sr_noweap
 gather_items_enabled = false
 help_wounded_enabled = false
@@ -41,7 +41,7 @@ corpse_detection_enabled = false
 cover_name = jup_a6_animp_diplomat
 use_camp = false
 meet = meet@stand_start_meet
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
 out_restr = jup_a6_sr_noweap
 gather_items_enabled = false

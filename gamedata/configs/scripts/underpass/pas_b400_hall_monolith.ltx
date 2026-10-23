@@ -189,7 +189,7 @@ def_state_campering = hide_na
 def_state_campering_fire = hide_fire
 out_restr = pas_b400_sr_hall_sniper_1_in
 on_signal = path_end | remark@sniper_1_wait
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 wounded = wounded@no_wound
 
 [remark@sniper_1_wait]
@@ -198,7 +198,7 @@ anim = hide_na
 on_info = {=actor_in_zone(pas_b400_sr_hall_control_up)} remark@sniper_1 %+pas_b400_hall_monolith_snipers_attacked%
 on_info2 = {=actor_in_zone(pas_b400_sr_hall_6)} remark@sniper_1 %+pas_b400_hall_monolith_snipers_attacked%
 out_restr = pas_b400_sr_hall_sniper_1_in
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 wounded = wounded@no_wound
 
 [remark@sniper_1]
@@ -238,7 +238,7 @@ def_state_campering = hide_na
 def_state_campering_fire = hide_fire
 out_restr = pas_b400_sr_hall_sniper_2_in
 on_signal = path_end | remark@sniper_2_wait
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 wounded = wounded@no_wound
 
 [remark@sniper_2_wait]
@@ -247,7 +247,7 @@ anim = hide_na
 on_info = {=actor_in_zone(pas_b400_sr_hall_control_up)} remark@sniper_2 %+pas_b400_hall_monolith_snipers_attacked%
 on_info2 = {=actor_in_zone(pas_b400_sr_hall_6)} remark@sniper_2 %+pas_b400_hall_monolith_snipers_attacked%
 out_restr = pas_b400_sr_hall_sniper_2_in
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 wounded = wounded@no_wound
 
 [remark@sniper_2]
@@ -287,7 +287,7 @@ def_state_campering = hide_na
 def_state_campering_fire = hide_fire
 out_restr = pas_b400_sr_hall_2
 on_signal = path_end | remark@sniper_3_wait
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 wounded = wounded@no_wound
 
 [remark@sniper_3_wait]
@@ -296,7 +296,7 @@ anim = hide_na
 on_info5 = {=actor_in_zone(pas_b400_sr_hall_control_up)} remark@sniper_3
 on_info6 = {=actor_in_zone(pas_b400_sr_hall_6)} remark@sniper_3
 out_restr = pas_b400_sr_hall_2
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 wounded = wounded@no_wound
 
 [remark@sniper_3]
@@ -334,7 +334,7 @@ def_state_campering = hide_na
 def_state_campering_fire = hide_fire
 out_restr = pas_b400_sr_hall_9
 on_signal = path_end | remark@sniper_4_wait
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 wounded = wounded@no_wound
 
 [remark@sniper_4_wait]
@@ -345,7 +345,7 @@ on_info2 = {=actor_in_zone(pas_b400_sr_hall_3)} remark@sniper_4
 on_info3 = {=actor_in_zone(pas_b400_sr_hall_7)} remark@sniper_4
 on_info4 = {=actor_in_zone(pas_b400_sr_hall_9)} remark@sniper_4
 out_restr = pas_b400_sr_hall_9
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 wounded = wounded@no_wound
 
 [remark@sniper_4]

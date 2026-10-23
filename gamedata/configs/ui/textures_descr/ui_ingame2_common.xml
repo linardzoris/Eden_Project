@@ -253,16 +253,6 @@
 
     <texture id="ui_am_propery_11" 	x="173" y="524" width="19" height="19" />
 
-	
-	<!-- new wound_protection -->
-	<texture id="ui_am_prop_wound" 	x="78" y="505" width="19" height="19" />
-	
-	<!-- explosion -->
-	<texture id="ui_am_prop_explo" 	x="97" y="505" width="19" height="19" />
-	
-	<!-- new strike -->
-	<texture id="ui_am_prop_strike" 	x="116" y="505" width="19" height="19" />
-	
    </file>
 </w>
 

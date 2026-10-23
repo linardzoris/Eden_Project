@@ -19,7 +19,7 @@ on_signal = snork_normal_1 | mob_jump@snork_normal_1
 out_restr = pri_a28_school_in_restrictor
 on_info = %-pri_b301_snork_1_teleport_home%
 on_info2 = {!npc_in_zone(pri_b301_zatichka_spawn_snork)} %=teleport_npc(pri_b301_spawn_point_1a)%
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 
 [mob_jump@snork_normal_1]
 path_jump = snork_normal_1_jump
@@ -27,7 +27,7 @@ ph_jump_factor = 0.9
 offset = 0,0,0
 on_signal = jumped | mob_home@attack0_snork_normal_1
 out_restr = pri_a28_school_in_restrictor
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 
 [death@snork_normal_1]
 on_info = {=killed_by_actor} %+pri_b301_monster_death +pri_b301_monster_death_1%, %+pri_b301_monster_death_1%
@@ -41,7 +41,8 @@ on_info2 = {+pri_b301_snork_attack_1} mob_home@attack1_snork_normal_1
 on_info3 = %-pri_b301_snork_1_teleport_home%
 on_game_timer = 20 | {=npc_in_zone(pri_a28_school_in_restrictor)} mob_walker@snork_normal_1
 out_restr = pri_b301_monster_out_restr
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore = true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
 
 [mob_home@attack1_snork_normal_1]
@@ -100,7 +101,7 @@ on_signal = snork_normal_2 | mob_jump@snork_normal_2
 out_restr = pri_a28_school_in_restrictor
 on_info = %-pri_b301_snork_2_teleport_home%
 on_info2 = {!npc_in_zone(pri_b301_zatichka_spawn_snork)} %=teleport_npc(pri_b301_spawn_point_1a)%
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 
 [mob_jump@snork_normal_2]
 path_jump = snork_normal_2_jump
@@ -108,7 +109,7 @@ ph_jump_factor = 0.9
 offset = 0,0,0
 on_signal = jumped | mob_home@attack0_snork_normal_2
 out_restr = pri_a28_school_in_restrictor
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 
 [mob_home@attack0_snork_normal_2]
 path_home = home_1
@@ -119,7 +120,8 @@ on_info2 = {+pri_b301_snork_attack_1} mob_home@attack1_snork_normal_2
 on_info3 = %-pri_b301_snork_2_teleport_home%
 on_game_timer = 20 | {=npc_in_zone(pri_a28_school_in_restrictor)} mob_walker@snork_normal_2
 out_restr = pri_b301_monster_out_restr
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore = true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
 
 [mob_home@attack1_snork_normal_2]
@@ -177,7 +179,7 @@ on_signal = snork_normal_3 | mob_jump@snork_normal_3
 out_restr = pri_a28_school_in_restrictor
 on_info = %-pri_b301_snork_3_teleport_home%
 on_info2 = {!npc_in_zone(pri_b301_zatichka_spawn_snork)} %=teleport_npc(pri_b301_spawn_point_1a)%
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 
 [mob_jump@snork_normal_3]
 path_jump = snork_normal_3_jump
@@ -185,7 +187,7 @@ ph_jump_factor = 0.9
 offset = 0,0,0
 on_signal = jumped | mob_home@attack0_snork_normal_3
 out_restr = pri_a28_school_in_restrictor
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 
 [mob_home@attack0_snork_normal_3]
 path_home = home_1
@@ -196,7 +198,8 @@ on_info2 = {+pri_b301_snork_attack_1} mob_home@attack1_snork_normal_3
 on_info3 = %-pri_b301_snork_3_teleport_home%
 on_game_timer = 20 | {=npc_in_zone(pri_a28_school_in_restrictor)} mob_walker@snork_normal_3
 out_restr = pri_b301_monster_out_restr
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore = true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
 
 [mob_home@attack1_snork_normal_3]
@@ -255,7 +258,7 @@ on_signal = snork_normal_4 | mob_jump@snork_normal_4
 out_restr = pri_a28_school_in_restrictor
 on_info = %-pri_b301_snork_4_teleport_home%
 on_info2 = {!npc_in_zone(pri_b301_zatichka_spawn_snork)} %=teleport_npc(pri_b301_spawn_point_1a)%
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 
 [mob_jump@snork_normal_4]
 path_jump = snork_normal_4_jump
@@ -263,7 +266,7 @@ ph_jump_factor = 0.9
 offset = 0,0,0
 on_signal = jumped | mob_home@attack0_snork_normal_4
 out_restr = pri_a28_school_in_restrictor
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 
 [mob_home@attack0_snork_normal_4]
 path_home = home_1
@@ -274,7 +277,8 @@ on_info2 = {+pri_b301_snork_attack_1} mob_home@attack1_snork_normal_4
 on_info3 = %-pri_b301_snork_4_teleport_home%
 on_game_timer = 20 | {=npc_in_zone(pri_a28_school_in_restrictor)} mob_walker@snork_normal_4
 out_restr = pri_b301_monster_out_restr
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore = true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
 
 [mob_home@attack1_snork_normal_4]
@@ -333,7 +337,7 @@ on_signal = snork_normal_5 | mob_jump@snork_normal_5
 out_restr = pri_a28_school_in_restrictor
 on_info = %-pri_b301_snork_5_teleport_home%
 on_info2 = {!npc_in_zone(pri_b301_zatichka_spawn_snork)} %=teleport_npc(pri_b301_spawn_point_1a)%
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 
 [mob_jump@snork_normal_5]
 path_jump = snork_normal_5_jump
@@ -341,7 +345,7 @@ ph_jump_factor = 0.9
 offset = 0,0,0
 on_signal = jumped | mob_home@attack0_snork_normal_5
 out_restr = pri_a28_school_in_restrictor
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 
 [mob_home@attack0_snork_normal_5]
 path_home = home_1
@@ -352,7 +356,8 @@ on_info2 = {+pri_b301_snork_attack_1} mob_home@attack1_snork_normal_5
 on_info3 = %-pri_b301_snork_5_teleport_home%
 on_game_timer = 20 | {=npc_in_zone(pri_a28_school_in_restrictor)} mob_walker@snork_normal_5
 out_restr = pri_b301_monster_out_restr
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore = true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
 
 [mob_home@attack1_snork_normal_5]

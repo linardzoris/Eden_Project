@@ -1,5 +1,5 @@
 [logic]
-active = nil ;sr_idle@spawn_corps
+active = sr_idle@spawn_corps
 
 [sr_idle@spawn_corps]
 on_info = {-zat_b100_military_corps_spawned} sr_idle@poltergeist %=spawn_corpse(zat_b100_military_1:zat_b100_heli_2_look) =spawn_corpse(zat_b100_military_2:zat_b100_poltergeist_01_walk) =spawn_corpse(zat_b100_military_3:zat_b100_poltergeist_02_walk) +zat_b100_military_corps_spawned%
@@ -37,7 +37,7 @@ on_info = {-zat_b100_scenario_save_heli_2_searched} %+zat_b100_scenario_save_hel
 on_info2 = {+zat_b100_scenario_save_heli_2_searched} sr_idle@polter_respawn
 
 [sr_idle@polter_respawn]
-on_info = {+zat_b100_heli_2_searched !obj_on_job(logic@zat_b100_poltergeist_02:zat_b100) !squad_exist(zat_b100_poltergeist_squad_01) =distance_to_obj_ge(zat_b100_heli_2:100)} sr_idle@timer
+on_info = {+zat_b100_heli_2_searched !is_obj_on_job(logic@zat_b100_poltergeist_02:zat_b100) !squad_exist(zat_b100_poltergeist_squad_01) =distance_to_obj_ge(zat_b100_heli_2:100)} sr_idle@timer
 on_info2 = {+zat_b100_spawn_new_wave} %-zat_b100_spawn_new_wave%
 
 [sr_idle@timer]

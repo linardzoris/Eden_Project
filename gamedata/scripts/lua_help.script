@@ -358,23 +358,6 @@ C++ class key_bindings {
     const kWPN_RELOAD = 34;
     const kWPN_ZOOM = 31;
     
-	-- custom keybinds
-	const kCUSTOM1 = 67;
-	const kCUSTOM2 = 68;
-	const kCUSTOM3 = 69;
-	const kCUSTOM4 = 70;
-	const kCUSTOM5 = 71;
-	const kCUSTOM6 = 72;
-	const kCUSTOM7 = 73;
-	const kCUSTOM8 = 74;
-	const kCUSTOM9 = 75;
-	const kCUSTOM10 = 76;
-	const kCUSTOM11 = 77;
-	const kCUSTOM12 = 78;
-	const kCUSTOM13 = 79;
-	const kCUSTOM14 = 80;
-	const kCUSTOM15 = 81;
-	const kCAM_AUTOAIM = 82;
 };
 
 C++ class GAME_TYPE {
@@ -572,12 +555,12 @@ C++ class clsid {
     const equ_scientific = 62;
     const equ_stalker = 63;
     const equ_stalker_s = 65;
-    const equ_helmet_s = 70;
     const flesh = 24;
     const flesh_group = 25;
     const flesh_s = 117;
     const fracture = 26;
     const fracture_s = 119;
+    const game = 70;
     const game_cl_artefact_hunt = 45;
     const game_cl_capture_the_artefact = 46;
     const game_cl_deathmatch = 47;
@@ -1643,9 +1626,6 @@ C++ class alife_simulator {
     function create(alife_simulator*, string, const vector&, number, number, number);
     function create(alife_simulator*, string, const vector&, number, number);
 
-	--Alundaio: START
-	function teleport_object(number,number,number,vector&); -- (id,game_vertex_id,level_vertex_id,position)
-	--Alundaio: END
 };
 
 C++ class CALifeSmartTerrainTask {
@@ -9151,8 +9131,6 @@ C++ class CUIComboBox : CUIWindow {
     function AddItem(string, number);
 
     function GetText();
-	
-	function GetTextOf(number);
 
     function SetAutoDelete(boolean);
 
@@ -9168,7 +9146,7 @@ C++ class CUIComboBox : CUIWindow {
 
     function SetWndPos(vector2);
 
-    function SetCurrentOptValue();
+    function SetCurrentValue();
 
     function SetVertScroll(boolean);
 
@@ -11915,9 +11893,6 @@ namespace  {
     function IsImportantSave();
     function GetFontLetterica25();
     function system_ini();
-	--Alundaio: START
-	function reload_system_ini();        -- Reloads system_ini. Can be done in-game
-	--Alundaio: END
     function GetFontMedium();
     function alife();
     function flush();
@@ -12003,12 +11978,6 @@ namespace  {
         function start_weather_fx_from_time(string, number);
         function hide_indicators_safe();
         function debug_actor();
-		--Alundaio: START
-		function get_target_obj(); --returns target game_object at cursor
-		function get_target_dist(); -- returns distance of target at cursor 
-		function get_target_element(); -- return number (bone id)
-		function send(net_packet&,boolean bReliable = 0, boolean bSequential = 1, boolean bHighPriority = 0, boolean bSendImmediately = 0); -- update level packet
-		--Alundaio: END
     };
  
     namespace relation_registry {

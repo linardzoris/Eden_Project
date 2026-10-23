@@ -3,6 +3,61 @@
 Чугай Саша
 --------------------------------------------------------------------------------------------------------------------]]
 
+-- типы звуков для зон
+local sound_types = {
+	floor_wooden = {
+		"ambient\\floor_creak1",
+		"ambient\\floor_creak2",
+		"ambient\\floor_creak3"
+	},
+	random = {
+		"ambient\\random\\new_drone1",
+		"ambient\\random\\new_drone2",
+		"ambient\\random\\rnd_3dmbridge",
+		"ambient\\random\\rnd_ak47_1",
+		"ambient\\random\\rnd_ak47_2",
+		"ambient\\random\\rnd_crow",
+		"ambient\\random\\rnd_disgusting",
+		"ambient\\random\\rnd_distantmortar3",
+		"ambient\\random\\rnd_dog6",
+		"ambient\\random\\rnd_drone1",
+		"ambient\\random\\rnd_drone2",
+		"ambient\\random\\rnd_fallscream",
+		"ambient\\random\\rnd_horror3",
+		"ambient\\random\\rnd_horror4",
+		"ambient\\random\\rnd_m-16_3",
+		"ambient\\random\\rnd_m-16_4",
+		"ambient\\random\\rnd_m-249",
+		"ambient\\random\\rnd_moan",
+		"ambient\\random\\rnd_moan1",
+		"ambient\\random\\rnd_moan2",
+		"ambient\\random\\rnd_moan3",
+		"ambient\\random\\rnd_moan4",
+		"ambient\\random\\rnd_moan5",
+		"ambient\\random\\rnd_scr1",
+		"ambient\\random\\rnd_scr2",
+		"ambient\\random\\rnd_scr3",
+		"ambient\\random\\rnd_scr4",
+		"ambient\\random\\rnd_scr5",
+		"ambient\\random\\rnd_scr7",
+		"ambient\\random\\rnd_scr8",
+		"ambient\\random\\rnd_scr9",
+		"ambient\\random\\rnd_scr10",
+		"ambient\\random\\rnd_the_horror1",
+		"ambient\\random\\rnd_the_horror2",
+		"ambient\\random\\rnd_the_horror3",
+		"ambient\\random\\rnd_the_horror4",
+		"ambient\\random\\rnd_thunder",
+		"ambient\\random\\rnd_wolfhowl01",
+		"ambient\\random\\rnd_wolfhowl02",
+		"ambient\\random\\rt_coo1-m",
+		"ambient\\random\\rt_sickened1",
+		"ambient\\random\\rt_sickened2",
+		"ambient\\random\\rt_swamp_thing1"
+	}
+}
+
+
 -- включить в dest все элементы из src. Таблицы индексированы
 function table_include( dest, src )
 	if dest and src then
@@ -14,8 +69,8 @@ end
 
 -- прочитать число из ini
 function r_num( spawn_ini, section, line, default )
-	if spawn_ini and spawn_ini:line_exist( section, line ) then
-		return spawn_ini:r_float_ex( section, line )
+	if spawn_ini:line_exist( section, line ) then
+		return spawn_ini:r_float( section, line )
 	else
 		return default
 	end
@@ -33,65 +88,11 @@ function zone_sound:__init( zone, binder, ini )
 	local sect = "sound"
 
 	if ini:line_exist( sect, "snd" ) then
-		table_include( self.sound_names, parse_names( ini:r_string_ex( sect, "snd" ) ) )
+		table_include( self.sound_names, parse_names( ini:r_string( sect, "snd" ) ) )
 	end
 
 	if ini:line_exist( sect, "type" ) then
-		local t = parse_names( ini:r_string_ex( sect, "type" ) )
-
-		-- типы звуков для зон
-		local sound_types = {
-			floor_wooden = {
-				"ambient\\floor_creak1",
-				"ambient\\floor_creak2",
-				"ambient\\floor_creak3"
-			},
-			random = {
-				"ambient\\random\\new_drone1",
-				"ambient\\random\\new_drone2",
-				"ambient\\random\\rnd_3dmbridge",
-				"ambient\\random\\rnd_ak47_1",
-				"ambient\\random\\rnd_ak47_2",
-				"ambient\\random\\rnd_crow",
-				"ambient\\random\\rnd_disgusting",
-				"ambient\\random\\rnd_distantmortar3",
-				"ambient\\random\\rnd_dog6",
-				"ambient\\random\\rnd_drone1",
-				"ambient\\random\\rnd_drone2",
-				"ambient\\random\\rnd_fallscream",
-				"ambient\\random\\rnd_horror3",
-				"ambient\\random\\rnd_horror4",
-				"ambient\\random\\rnd_m-16_3",
-				"ambient\\random\\rnd_m-16_4",
-				"ambient\\random\\rnd_m-249",
-				"ambient\\random\\rnd_moan",
-				"ambient\\random\\rnd_moan1",
-				"ambient\\random\\rnd_moan2",
-				"ambient\\random\\rnd_moan3",
-				"ambient\\random\\rnd_moan4",
-				"ambient\\random\\rnd_moan5",
-				"ambient\\random\\rnd_scr1",
-				"ambient\\random\\rnd_scr2",
-				"ambient\\random\\rnd_scr3",
-				"ambient\\random\\rnd_scr4",
-				"ambient\\random\\rnd_scr5",
-				"ambient\\random\\rnd_scr7",
-				"ambient\\random\\rnd_scr8",
-				"ambient\\random\\rnd_scr9",
-				"ambient\\random\\rnd_scr10",
-				"ambient\\random\\rnd_the_horror1",
-				"ambient\\random\\rnd_the_horror2",
-				"ambient\\random\\rnd_the_horror3",
-				"ambient\\random\\rnd_the_horror4",
-				"ambient\\random\\rnd_thunder",
-				"ambient\\random\\rnd_wolfhowl01",
-				"ambient\\random\\rnd_wolfhowl02",
-				"ambient\\random\\rt_coo1-m",
-				"ambient\\random\\rt_sickened1",
-				"ambient\\random\\rt_sickened2",
-				"ambient\\random\\rt_swamp_thing1"
-			}
-		}
+		local t = parse_names( ini:r_string( sect, "type" ) )
 
 		for i, v in t do
 			if v == "random" then

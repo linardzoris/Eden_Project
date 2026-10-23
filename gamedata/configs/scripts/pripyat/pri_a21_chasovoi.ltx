@@ -12,7 +12,7 @@ avail_animations = pri_a21_sentry_madness
 corpse_detection_enabled = false
 gather_items_enabled = false
 help_wounded_enabled = false
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true 
 on_info = %=play_sound(pri_a21_sentr_crazy_1)%
 on_info2 = {=dist_to_actor_le(10)} remark@self_murder
@@ -24,7 +24,7 @@ anim = pri_a21_sentry_madness_suicide
 corpse_detection_enabled = false
 gather_items_enabled = false
 help_wounded_enabled = false
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true 
 on_signal = anim_end | %=stop_sound =kill_npc%
 on_info = %=play_sound(pri_a21_sentr_crazy_2)%

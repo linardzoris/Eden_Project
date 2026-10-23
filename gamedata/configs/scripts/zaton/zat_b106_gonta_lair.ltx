@@ -11,9 +11,9 @@ path_look = gonta_lair_1_look
 def_state_moving1 = patrol
 def_state_standing = guard_na
 on_signal = start | walker@start_timer 
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 danger = danger
 meet = no_meet
 wounded = wounded
@@ -27,9 +27,9 @@ path_walk = gonta_lair_1_walk
 path_look = gonta_lair_1_look
 def_state_moving1 = patrol
 def_state_standing = guard_na
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 on_info = {=see_actor -zat_b106_remark} %+zat_b106_remark%
 on_info2 = {+zat_b106_remark_done !is_playing_sound} remark@to_actor  
 danger = danger
@@ -250,7 +250,7 @@ corpse_detection_enabled = false
 anim = threat_fire
 target = story | zat_b106_chimera
 meet = no_meet
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 danger = danger
 on_game_timer = 40 | walker@fire
 out_restr = zat_b106_chimera_restr

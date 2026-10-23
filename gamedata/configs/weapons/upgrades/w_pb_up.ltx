@@ -1,5 +1,5 @@
 [up_sect_firsta_pb]
-;РЎРєРѕСЂРѕСЃС‚СЂРµР»СЊРЅРѕСЃС‚СЊ(1)10%
+;Скорострельность(1)10%
 ;----------------------
 cost		      		= 250
 value					= +10
@@ -7,24 +7,24 @@ value					= +10
 rpm						= +30
 
 [up_sect_firstc_pb]
-;РќР°РґРµР¶РЅРѕСЃС‚СЊ(2)15%
+;Надежность(2)15%
 ;---------------
 cost		      		= 500
 value					= +15
 
-;СѓРІРµР»РёС‡РµРЅРёРµ РґРёСЃРїРµСЂСЃРёРё РІ РїСЂРѕС†РµРЅС‚Р°С… РїСЂРё РјР°РєСЃРёРјР°Р»СЊРЅРѕРј РёР·РЅРѕСЃРµ
+;увеличение дисперсии в процентах при максимальном износе
 fire_dispersion_condition_factor    = -2 ;15
-;СѓРІРµР»РёС‡РµРЅРёРµ РёР·РЅРѕС€РµРЅРѕСЃС‚Рё РїСЂРё РІС‹СЃС‚СЂРµР»Рµ РѕС‡РµСЂРµРґСЊСЋ
+;увеличение изношености при выстреле очередью
 condition_queue_shot_dec	= -0.0015 ;0.0013
-;СѓРІРµР»РёС‡РµРЅРёРµ РёР·РЅРѕС€РµРЅРѕСЃС‚Рё РїСЂРё РѕРґРёРЅРѕС‡РЅРѕРј РІС‹СЃС‚СЂРµР»Рµ
+;увеличение изношености при одиночном выстреле
 condition_shot_dec      	= -0.0015 ;0.0011
-;С€Р°РЅСЃ РѕСЃРµС‡РєРё РїСЂРё РёР·РЅРѕС€РµРЅРѕСЃС‚Рё Р±РѕР»СЊС€Рµ С‡РµРј misfireStartCondition
+;шанс осечки при изношености больше чем misfireStartCondition
 misfire_start_prob	     	= -0.0025
-;С€Р°РЅСЃ РѕСЃРµС‡РєРё РїСЂРё РёР·РЅРѕС€РµРЅРѕСЃС‚Рё Р±РѕР»СЊС€Рµ С‡РµРј misfireEndCondition
+;шанс осечки при изношености больше чем misfireEndCondition
 misfire_end_prob	     	= -0.025 ;0.03
 
 [up_sect_firstd_pb]
-;РћС‚РґР°С‡Р°(2)-20%
+;Отдача(2)-20%
 ;------------
 cost		      		= 500
 value					= -20
@@ -34,7 +34,7 @@ cam_dispersion_inc		= -0.125	;0.3
 cam_step_angle_horz		= -0.25		;1.0
 
 [up_sect_firste_pb]
-;РќР°СЃС‚РёР»СЊРЅРѕСЃС‚СЊ(3)30%
+;Настильность(3)30%
 ;------------------
 cost		      		= 750
 value					= +30
@@ -43,7 +43,7 @@ bullet_speed		 	= +60
 fire_dispersion_base	= -0.02 
 
 [up_sect_secona_pb]
-;РћС‚РґР°С‡Р°(1)-10%
+;Отдача(1)-10%
 ;------------
 cost		      		= 250
 value					= -10
@@ -54,7 +54,7 @@ cam_step_angle_horz		= -0.15	;1.0
 
 
 [up_sect_seconc_pb]
-;РћС‚РґР°С‡Р°(2)-20%
+;Отдача(2)-20%
 ;------------
 cost		      		= 500
 value					= -20
@@ -65,7 +65,7 @@ cam_step_angle_horz		= -0.25		;1.0
 
 
 [up_sect_thirda_pb]
-;Р’РµСЃ
+;Вес
 ;------------------
 cost		      		= 250
 value					= -0.2
@@ -78,7 +78,7 @@ PDM_disp_vel_factor 		= -0.15
 PDM_disp_accel_factor 		= -0.15
 
 [up_sect_thirdc_pb]
-;РЈРґРѕР±СЃС‚РІРѕ(2)15%
+;Удобство(2)15%
 ;--------------
 cost		      		= 500
 value					= +15
@@ -90,7 +90,7 @@ PDM_disp_vel_factor 		= -0.35
 PDM_disp_accel_factor 		= -0.35
 
 [up_sect_thirde_pb]
-;РўРѕС‡РЅРѕСЃС‚СЊ(3)30%
+;Точность(3)30%
 ;---------------
 cost		      		= 750
 value					= +30
@@ -98,7 +98,7 @@ value					= +30
 fire_dispersion_base	= -0.05
 
 [up_sect_fourta_pb]
-;РўРѕС‡РЅРѕСЃС‚СЊ(1)10%
+;Точность(1)10%
 ;---------------
 cost		      		= 250
 value					= +10
@@ -106,7 +106,7 @@ value					= +10
 fire_dispersion_base	= -0.02
 
 [up_sect_fourtc_pb]
-;РўРѕС‡РЅРѕСЃС‚СЊ(2)20%
+;Точность(2)20%
 ;---------------
 cost		      		= 500
 value					= +20
@@ -114,7 +114,7 @@ value					= +20
 fire_dispersion_base	= -0.03
 
 [up_sect_fiftha_pb]
-;РЈРІРµР»РёС‡РµРЅРЅС‹Р№ РѕР±СЉРµРј РјР°РіР°Р·РёРЅР°
+;Увеличенный объем магазина
 ;---------------
 cost		      		= 650
 value					= +4
@@ -191,7 +191,7 @@ scheme_index            = 2, 0
 known                   = 1
 effects                 =
 section                 = up_sect_firste_pb
-property                = prop_bullet_speed, prop_dispersion
+property                = prop_bullet_speed
 
 precondition_functor    = inventory_upgrades.precondition_functor_a
 precondition_parameter  = a & b

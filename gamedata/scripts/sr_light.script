@@ -1,18 +1,8 @@
 local light_zones = {}
 
 local indoor_levels = {
-	jupiter_underground 	= true,
-
-	-- Call of Chernobyl
-	l03u_agr_underground 	= true,
-	l04u_labx18 			= true,
-	l08u_brainlab 			= true,
-	l10u_bunker 			= true,
-	l12u_sarcofag 			= true,
-	l12u_control_monolith 	= true,
-	l13u_warlab 			= true
+	jupiter_underground = true
 }
-
 ---------------------------------------------------------------------------------------------------------------------
 class "action_light"
 function action_light:__init (obj, storage)
@@ -22,18 +12,21 @@ function action_light:__init (obj, storage)
 	self.id = obj:id()
 end
 function action_light:reset_scheme()
-	light_zones[self.id] = self
+    printf("Light zone insert")
+    light_zones[self.id] = self
 end
 function action_light:update(delta)
 	if xr_logic.try_switch_to_another_section(self.object, self.st, db.actor) then
-		self.active = false
-		light_zones[self.id] = nil
-		return
-	end
+	   self.active = false     
+	   self.stalkers = {}
+       printf("Light zone set nil")
+	   light_zones[self.id] = nil
+	   return
+	end	
 	self.active = true
 end
 function action_light:check_stalker(stalker)
-    if self.active == false then
+    if self.active == false then 
        return false, false
     end
 
@@ -54,118 +47,93 @@ end
 function set_scheme(npc, ini, scheme, section, gulag_name)
 	local st = xr_logic.assign_storage_and_bind(npc, ini, scheme, section)
 	st.logic = xr_logic.cfg_get_switch_conditions(ini, section, npc)
-	st.light = ini:r_bool_ex(section,"light_on",false)
+	st.light = utils.cfg_get_bool (ini, section, "light_on", npc, false, false)
 end
 
 
 
 ---------------------------------------------------------------------------------------------------------------------
 function check_light(stalker)
+--'	printf("[check_light %s] start", stalker:name())
+    if stalker == nil then 
+       return 
+    end
 
-	local st = db.storage[stalker:id()]
-	local tg = time_global()
-
-	if (st.srlight_timer and tg < st.srlight_timer) then
-		return
-	end
-	st.srlight_timer = tg + 2000 + math.random(100)
-
+--'	printf("[check_light %s] start_passed", stalker:name())
     local torch = stalker:object("device_torch")
+    if torch == nil then
+       return
+    end
 
-	-- Stalker dead or sleep animstate; release torch
-	local anm = state_mgr.get_state(stalker)
-	if (not stalker:alive() or anm == "zat_b106_wounded_idle" or anm == "sleep" or anm == "play_guitar" or string.find(anm,"animpoint") or string.find(anm,"sneak")) then
-		if (torch) then
-			if (torch:attachable_item_enabled()) then
-				torch:enable_attachable_item(false)
+--'	printf("[check_light %s] torch_passed", stalker:name())
+	local light = false
+	local forced = false
+	
+	if benchmark.light then
+		light  = true
+		forced = true
+	end
+	
+	if stalker:alive() == false then
+		light  = false
+		forced = true
+	end
+
+--'	printf("[check_light %s] alive_passed: light=%s, forced=%s", stalker:name(), tostring(light), tostring(forced))
+    --' Проверка по лайтзонам
+    if not forced then
+	    for k,v in pairs(light_zones) do
+			light, forced = v:check_stalker(stalker)
+			if forced == true then
+				break
 			end
-			local sim = alife()
-			sim:release(sim:object(torch:id()),true)
-		end
-		return
+	    end
 	end
 
-	-- Stalker in danger mode; release torch
-	if (st.danger_flag) then
-		if (torch) then
-			if (torch:attachable_item_enabled()) then
-				torch:enable_attachable_item(false)
-			end
-			local sim = alife()
-			sim:release(sim:object(torch:id()),true)
-		end
-		return
-	end
-
-	-- Non-headlamp scheme in use; release torch
-	local scheme = st.active_scheme
-	if (scheme == "kamp" or scheme == "camper" or scheme == "sleeper") then
-		if (torch) then
-			if (torch:attachable_item_enabled()) then
-				torch:enable_attachable_item(false)
-			end
-			local sim = alife()
-			sim:release(sim:object(torch:id()),true)
-		end
-		return
-	end
-
-	-- Stalker has enemy and is not underground; release torch
-	if (stalker:best_enemy() and not indoor_levels[level.name()]) then
-		if (torch) then
-			if (torch:attachable_item_enabled()) then
-				torch:enable_attachable_item(false)
-			end
-			local sim = alife()
-			sim:release(sim:object(torch:id()),true)
-		end
-		return
-	end
-
-	local forced, light = false, false
-
-	for k,v in pairs(light_zones) do
-		light, forced = v:check_stalker(stalker)
-		if forced == true then
-			break
-		end
-	end
-
+--'	printf("[check_light %s] lightzone_passed: light=%s, forced=%s", stalker:name(), tostring(light), tostring(forced))
 	if not forced then
+		--' Проверка по времени суток (ночью всегда включено)
 		local htime = level.get_time_hours()
-		if htime <= 4 or htime >= 20 then
+		if htime <= 4 or htime >= 22 then
 			light = true
 		end
-
+	
+		--' Проверка на индор-аутдор (внутри всегда включено)
 		if light == false then
 			if indoor_levels[level.name()] == true then
 				light = true
 			end
 		end
+	end			
+
+--'	printf("[check_light %s] timezone_passed: light=%s, forced=%s", stalker:name(), tostring(light), tostring(forced))
+	--' Проверка по активному действию
+	if not forced and light == true then
+		--' Фонарики должны быть выключены у костра
+		local scheme = db.storage[stalker:id()].active_scheme
+		if scheme == "kamp" or
+		   scheme == "camper" or
+		   scheme == "sleeper"
+		then
+			light = false
+			forced = true
+		end
 	end
 
-	if (light) then
-		if (torch) then
-			if not (torch:attachable_item_enabled()) then
-				torch:enable_attachable_item(true)
-			end
-		else
-			local sim = alife()
-			sim:create("device_torch", vector(), 0, 0, stalker:id())
-		end
-	else
-		if (torch) then
-			if (torch:attachable_item_enabled()) then
-				torch:enable_attachable_item(false)
-			end
-			local sim = alife()
-			sim:release(sim:object(torch:id()),true)
-		end
+--'	printf("[check_light %s] scheme_passed: light=%s, forced=%s", stalker:name(), tostring(light), tostring(forced))	
+	if not forced and light == true then
+		--' Фонарики должны быть выключены в бою. Но если в бою идет поиск врага - то включены.
+		if stalker:best_enemy() ~= nil and indoor_levels[level.name()] ~= true then
+			light = false
+		end				
+	end
+	
+	if light ~= nil then
+		torch:enable_attachable_item(light)
 	end
 end
 
 function clean_up ()
-	for k,v in pairs(light_zones) do
-		light_zones[k] = nil
-	end
+--'   printf("Light zones cleanup")
+   light_zones = {} 
 end

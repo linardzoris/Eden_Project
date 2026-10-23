@@ -2,8 +2,6 @@
 squad_id = 49
 max_population = 2
 respawn_params = respawn@jup_b205
-respawn_idle = 60000
-
 
 [respawn@jup_b205]
 spawn_zombied
@@ -11,11 +9,11 @@ spawn_burers
 
 [spawn_zombied]
 spawn_squads = zombied_sim_squad_novice, zombied_sim_squad_advanced
-spawn_num = 1
+spawn_num = {+jup_b205_evacuation_visited} 2, 0
 
 [spawn_burers]
 spawn_squads = simulation_burer
-spawn_num = 1
+spawn_num = {+jup_b205_evacuation_visited} 1, 0
 
 [exclusive]
 zombie_work_01 = jupiter\jup_b205_zombie.ltx

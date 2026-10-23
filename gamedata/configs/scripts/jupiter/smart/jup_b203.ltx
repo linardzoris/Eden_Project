@@ -1,16 +1,14 @@
 [smart_terrain]
 squad_id = 11
-max_population = 3
+max_population = 1
 respawn_params = respawn@jup_b203
-respawn_idle = 60000
-
 
 [respawn@jup_b203]
 spawn_zombied
 
 [spawn_zombied]
 spawn_squads = zombied_sim_squad_novice, zombied_sim_squad_advanced, zombied_sim_squad_advanced, zombied_sim_squad_veteran
-spawn_num = 2
+spawn_num = {+jup_b16_oasis_artifact_spawn} 2, 0
 
 [exclusive]
 work_1 = jupiter\jup_b203_zombied.ltx

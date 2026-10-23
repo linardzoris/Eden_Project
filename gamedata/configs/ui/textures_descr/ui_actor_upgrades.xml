@@ -81,7 +81,6 @@
 	<texture id="ui_inGame2_upgrade_Vintar_VS_15" x="360" y="220" width="90" height="44" />
 	<texture id="ui_inGame2_upgrade_Vintar_VS_16" x="450" y="220" width="90" height="44" />
 	<texture id="ui_inGame2_upgrade_Vintar_VS_17" x="450" y="264" width="90" height="44" />
-	<texture id="ui_inGame2_upgrade_Vintar_VS_18" x="270" y="176" width="90" height="44" />
 
 	<texture id="ui_inGame2_upgrade_Volker_P9M_1" x="270" y="308" width="90" height="44" />
 	<texture id="ui_inGame2_upgrade_Volker_P9M_2" x="360" y="308" width="90" height="44" />
@@ -307,7 +306,6 @@
     <texture id="ui_inGame2_upgrade_SVDm2_14" x="630" y="924" width="90" height="44" />
     <texture id="ui_inGame2_upgrade_SVDm2_15" x="720" y="924" width="90" height="44" />
     <texture id="ui_inGame2_upgrade_SVDm2_16" x="720" y="968" width="90" height="44" />
-    <texture id="ui_inGame2_upgrade_SVDm2_17" x="540" y="968" width="90" height="44" />
   </file>
 
   <file name="ui\ui_actor_upgrades_3">
@@ -328,7 +326,6 @@
     <texture id="ui_inGame2_upgrade_SVUmk2_14" x="180" y="220" width="90" height="44" />
     <texture id="ui_inGame2_upgrade_SVUmk2_15" x="180" y="264" width="90" height="44" />
     <texture id="ui_inGame2_upgrade_SVUmk2_16" x="0" y="264" width="90" height="44" />
-	<texture id="ui_inGame2_upgrade_SVUmk2_17" x="90" y="264" width="90" height="44" />
 
     <texture id="ui_inGame2_upgrade_SGI_5K_1" x="0" y="308" width="90" height="44" />
     <texture id="ui_inGame2_upgrade_SGI_5K_2" x="90" y="308" width="90" height="44" />

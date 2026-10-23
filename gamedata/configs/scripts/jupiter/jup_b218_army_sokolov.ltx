@@ -7,9 +7,9 @@ prior = 200
 path_walk = pri_a15_sokolov_walk
 path_look = pri_a15_sokolov_look
 meet = meet
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = jup_b41_sr_light
 gather_items_enabled = false
 help_wounded_enabled = false
@@ -21,9 +21,9 @@ use_camp = false
 meet = meet
 on_info = {!npc_in_zone(jup_b41_sr_light)} %=teleport_npc(jup_b41_pri_a15_sokolov_walk)%
 out_restr = jup_b41_sr_light
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 gather_items_enabled = false
 help_wounded_enabled = false
 corpse_detection_enabled = false

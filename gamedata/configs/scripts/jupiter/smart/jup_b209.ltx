@@ -1,17 +1,15 @@
 [smart_terrain]
 squad_id = 17
-max_population = 2
-;arrive_dist = 150
+max_population = 1
+arrive_dist = 150
 respawn_params = respawn@jup_b209
-respawn_idle = 45000
-
 
 [respawn@jup_b209]
 spawn_snork
 
 [spawn_snork]
 spawn_squads =  simulation_snork
-spawn_num = 1
+spawn_num = {+jup_b209_hypotheses_end} 1, 0
 
 [exclusive]
 jup_b209_snork_1 = jupiter\jup_b209_snork_1.ltx

@@ -56,18 +56,18 @@ function add_to_binder(npc, ini, scheme, section, storage)
 end
 
 function set_scheme(npc, ini, scheme, section, gulag_name)
-    --printf("ph_code <set_scheme>: START [%s]", npc:name())
+    printf("ph_code <set_scheme>: START [%s]", npc:name())
 
     local st = xr_logic.assign_storage_and_bind(npc, ini, scheme, section)
     st.logic = xr_logic.cfg_get_switch_conditions(ini, section, npc)
 
-	st.tips  = ini:r_string_ex(section,"tips") or "st_codelock"
+	st.tips  = utils.cfg_get_string(ini, section, "tips", npc, false, "", "st_codelock")
     npc:set_tip_text(st.tips)
     
-    st.code = ini:r_float_ex(section,"code")   
+    st.code = utils.cfg_get_number(ini, section, "code", npc, false)    
     if st.code then
         st.on_code = xr_logic.cfg_get_condlist(ini, section, "on_code", npc)
-        --printf("ph_code <set_scheme>: on_code [%d]", st.code)
+        printf("ph_code <set_scheme>: on_code [%d]", st.code)
     else
         st.on_check_code = {}
 
@@ -76,11 +76,11 @@ function set_scheme(npc, ini, scheme, section, gulag_name)
 
         while cc do
             st.on_check_code[cc.v1] = cc.condlist
-            --printf("ph_code <set_scheme>: on_check_code [%s]", cc.v1)
+            printf("ph_code <set_scheme>: on_check_code [%s]", cc.v1)
             i = i + 1
             cc = xr_logic.cfg_get_string_and_condlist(ini, section, "on_check_code" .. i, npc)
         end
     end
 
-    --printf("ph_code <set_scheme>: END [%s]", npc:name())
+    printf("ph_code <set_scheme>: END [%s]", npc:name())
 end

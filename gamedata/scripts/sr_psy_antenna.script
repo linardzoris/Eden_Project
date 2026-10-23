@@ -1,11 +1,7 @@
 --[[------------------------------------------------------------------------------------------------
 Зоны пси-излучения. Отыгрывают постпроцесс и фантомов по настройкам из custom_data
 --------------------------------------------------------------------------------------------------]]
-local state_outside = 0 -- актер снаружи
-local state_inside  = 1 -- актер внутри
-local state_void  = 2 -- неизвестный статус
 
-psy_antenna = false
 
 class "PsyAntenna"
 function PsyAntenna:__init				()
@@ -14,8 +10,8 @@ function PsyAntenna:__init				()
 -- ----------------------------------------------------------------------------------------
 -- phantom gen
 -- ----------------------------------------------------------------------------------------
-	self.phantom_max 					= 4 --10	-- max phantoms
-	self.phantom_spawn_probability		= 0.5	-- spawn probability (0..1)
+	self.phantom_max 					= 8 --10	-- max phantoms
+	self.phantom_spawn_probability		= 0	-- spawn probability (0..1)
 	self.phantom_spawn_radius			= 30.0	-- average radius 30.0m +-15m
 	self.phantom_spawn_height			= 2.5 --3	-- average height from actor pos +-1.5m
 	self.phantom_fov					= 45   -- ширина сектора перед глазами актёра, в котором могут рождаться фантомы
@@ -57,19 +53,12 @@ function PsyAntenna:destroy				()
 	self.sound_obj_right:stop()
 	self.sound_obj_left:stop()
 	level.set_snd_volume				(self.snd_volume)
-	local hud = get_hud()
-	if (hud) then
-		hud:enable_fake_indicators(false)
-	end
+	get_hud():enable_fake_indicators(false)
 end
 function PsyAntenna:construct			()
 end
 function PsyAntenna:update_psy_hit(dt)
 	local hud = get_hud()
-	if not (hud) then
-		return 
-	end 
-	
 	local custom_static = hud:GetCustomStatic("cs_psy_danger")
 	if self.hit_intensity > 0.0001 then
 		if custom_static == nil and not self.no_static then
@@ -81,7 +70,6 @@ function PsyAntenna:update_psy_hit(dt)
 			hud:RemoveCustomStatic("cs_psy_danger")
 		end
 	end
-
 	if time_global() - self.hit_time > self.hit_freq then
 		self.hit_time					= time_global()
 
@@ -100,10 +88,10 @@ function PsyAntenna:update_psy_hit(dt)
 			psy_hit.draftsman 			= db.actor
 			local hit_value = ((power <= 1) and power) or 1
 			if self.hit_type == "chemical" then
-				hud:update_fake_indicators(2, hit_value)
+				get_hud():update_fake_indicators(2, hit_value)
 				psy_hit.type = hit.chemical_burn
 			else
-				hud:update_fake_indicators(3, hit_value)
+				get_hud():update_fake_indicators(3, hit_value)
 				psy_hit.type = hit.telepatic
 			end
 
@@ -123,25 +111,18 @@ function PsyAntenna:update_psy_hit(dt)
 	end
 end
 function PsyAntenna:generate_phantoms()
-	if (sr_psy_antenna.psy_antenna.global_state ~= 1) then 
-		return 
-	end
-	if (db.actor:is_talking()) then 
-		return 
-	end
 	if self.phantom_idle == nil then
 		self.phantom_idle = math.random(2000,5000)
 	end
 	if time_global() - self.phantom_time > self.phantom_idle then
-		self.phantom_time = time_global()
+		self.phantom_time				= time_global()
 		self.phantom_idle = math.random(5000,10000)
-		if (math.random(1,100)/100) < self.phantom_spawn_probability then
+		if math.random() < self.phantom_spawn_probability then
 			if phantom_manager:phantom_count() < self.phantom_max then
 				local radius = self.phantom_spawn_radius * ( math.random()/2.0+0.5 )
 				local ang    = self.phantom_fov * math.random() - self.phantom_fov * 0.5
 				local dir    = vector_rotate_y( db.actor:direction(), ang )
 
-				--printf("spawn_phantom")
 				phantom_manager.spawn_phantom( db.actor:position():add( dir:mul(radius) ) )
 			end
 		end
@@ -177,13 +158,9 @@ function PsyAntenna:update_postprocess(pp)
 	return true
 end
 function PsyAntenna:update(dt)
-	if (db.actor == nil or device().precache_frame > 1) then
-		return 
-	end 
-	
 	self.eff_time					= self.eff_time + dt
 
-	local function update_intensity(intensity_base, intensity)
+	function update_intensity(intensity_base, intensity)
 		local di = self.intensity_inertion * dt * 0.01
 		local ii = intensity_base
 		if math.abs(intensity_base - intensity) >= di then
@@ -217,41 +194,8 @@ function PsyAntenna:update(dt)
 
 	self:update_psy_hit(dt)
 end
-
-function PsyAntenna:save_state(m_data)
-	--alun_utils.debug_write("PsyAntenna:save_state BEFORE")
-	m_data.PsyAntenna = {}
-	m_data.PsyAntenna.hit_intensity = self.hit_intensity
-	m_data.PsyAntenna.sound_intensity = self.sound_intensity
-	m_data.PsyAntenna.sound_intensity_base = self.sound_intensity_base
-	m_data.PsyAntenna.mute_sound_threshold = self.mute_sound_threshold
-	m_data.PsyAntenna.no_static = self.no_static
-	m_data.PsyAntenna.no_mumble = self.no_mumble
-	m_data.PsyAntenna.hit_type = self.hit_type
-	m_data.PsyAntenna.hit_freq = self.hit_freq
-	m_data.PsyAntenna.postprocess = self.postprocess
-	--alun_utils.debug_write("PsyAntenna:save_state AFTER")
-end 
-
-function PsyAntenna:load_state(m_data)
-	if not (m_data.PsyAntenna) then 
-		return 
-	end
-	--alun_utils.debug_write("PsyAntenna:load_state BEFORE")
-	self.hit_intensity = m_data.PsyAntenna.hit_intensity or 0
-	self.sound_intensity = m_data.PsyAntenna.sound_intensity or 0
-	self.sound_intensity_base = m_data.PsyAntenna.sound_intensity_base or 0
-	self.mute_sound_threshold = m_data.PsyAntenna.mute_sound_threshold or 0
-	self.no_static = m_data.PsyAntenna.no_static or false
-	self.no_mumble = m_data.PsyAntenna.no_mumble or false
-	self.hit_type = m_data.PsyAntenna.hit_type or "wound"
-	self.hit_freq = m_data.PsyAntenna.hit_freq or 5000
-	self.postprocess = m_data.PsyAntenna.postprocess or 0
-	--alun_utils.debug_write("PsyAntenna:load_state AFTER")
-end 
-
 function PsyAntenna:save(p)
-	--printf("Psy Antenna SAVE")
+	printf("Psy Antenna SAVE")
 	set_save_marker(p, "save", false, "psy_antenna_obj")
 	p:w_float(self.hit_intensity)
 	p:w_float(self.sound_intensity)
@@ -272,7 +216,7 @@ function PsyAntenna:save(p)
 	set_save_marker(p, "save", true, "psy_antenna_obj")
 end
 function PsyAntenna:load(p)
-	--printf("Psy Antenna LOAD")
+	printf("Psy Antenna LOAD")
 	set_save_marker(p, "load", false, "psy_antenna_obj")
 	self.hit_intensity  = p:r_float()
 	self.sound_intensity  = p:r_float()
@@ -303,7 +247,11 @@ end
 ----------------------------------------------------------------------------------------------------
 
 
+local state_outside = 0 -- актер снаружи
+local state_inside  = 1 -- актер внутри
+local state_void  = 2 -- неизвестный статус
 
+psy_antenna = false
 
 
 class "action_psy_antenna"
@@ -314,7 +262,7 @@ function action_psy_antenna:__init( obj, storage )
 end
 function action_psy_antenna:reset_scheme( loading )
 		if loading then
-			self.state = utils.load_var( self.object, "inside"  )
+			self.state = xr_logic.pstor_retrieve( self.object, "inside"  )
 		end
 		if self.state == state_inside then
 			self:zone_leave()
@@ -355,13 +303,9 @@ end
 function action_psy_antenna:zone_enter()
 --'	printf("[psy_antenna] zone_enter")
 	self.state = state_inside
-	psy_antenna.global_state = state_inside
 
 	--включаем фейковый индикатор хита.
-	local hud = get_hud()
-	if (hud) then
-		hud:enable_fake_indicators(true)
-	end
+	get_hud():enable_fake_indicators(true)
 
 	psy_antenna.sound_intensity_base = psy_antenna.sound_intensity_base + self.st.intensity
 	psy_antenna.mute_sound_threshold = psy_antenna.mute_sound_threshold + self.st.mute_sound_threshold
@@ -390,13 +334,9 @@ end
 function action_psy_antenna:zone_leave()
 --'		printf("[psy_antenna] zone_leave. hit_intensity=%s", tostring(psy_antenna.hit_intensity))
 	self.state = state_outside
-	psy_antenna.global_state = state_outside
-	
+
 	--выключаем фейковый индикатор хита.
-	local hud = get_hud()
-	if (hud) then
-		hud:enable_fake_indicators(false)
-	end
+	get_hud():enable_fake_indicators(false)
 
 	psy_antenna.sound_intensity_base = psy_antenna.sound_intensity_base - self.st.intensity
 	psy_antenna.mute_sound_threshold = psy_antenna.mute_sound_threshold - self.st.mute_sound_threshold
@@ -415,16 +355,13 @@ function action_psy_antenna:zone_leave()
 	end
 end
 function action_psy_antenna:save()
-	utils.save_var( self.object, "inside", self.state )
+	xr_logic.pstor_store( self.object, "inside", self.state )
 end
 
 ---------------------------------------------------------------------------------------------------------------------
 function save( p )
-	if (USE_MARSHAL) then 
-		return
-	end
 	set_save_marker(p, "save", false, "sr_psy_antenna")
-	if psy_antenna and psy_antenna.global_state ~= state_outside and not utils.level_changing() then
+	if psy_antenna and not utils.level_changing() then
 		p:w_bool( true )
 
 		psy_antenna:save( p )
@@ -435,9 +372,6 @@ function save( p )
 end
 
 function load(p)
-	if (USE_MARSHAL) then
-		return 
-	end
 	set_save_marker(p, "load", false, "sr_psy_antenna")
 	local b = p:r_bool()
 
@@ -455,12 +389,11 @@ function load(p)
 end
 
 function add_to_binder(npc, ini, scheme, section, storage)
-	--printf("DEBUG: add_to_binder: scheme='%s', section='%s'", scheme, section)
+	printf("DEBUG: add_to_binder: scheme='%s', section='%s'", scheme, section)
 
 	if not psy_antenna then
 		psy_antenna = PsyAntenna()
 		psy_antenna:construct()
-		psy_antenna.global_state = state_void
 	end
 
 	local new_action = action_psy_antenna(npc, storage)
@@ -473,16 +406,17 @@ function set_scheme(npc, ini, scheme, section, gulag_name)
 	local st = xr_logic.assign_storage_and_bind(npc, ini, scheme, section)
 	st.logic = xr_logic.cfg_get_switch_conditions(ini, section, npc)
 
-	st.intensity     = (ini:r_float_ex(section,"eff_intensity") or 0) * 0.01
-	st.postprocess	 = ini:r_string_ex(section,"postprocess") or "psy_antenna.ppe"
+	st.intensity     = utils.cfg_get_number(ini, section, "eff_intensity", npc, true) * 0.01
+	st.postprocess	 = utils.cfg_get_string(ini, section, "postprocess", npc, false, "", "psy_antenna.ppe")
 
-	st.hit_intensity = (ini:r_float_ex(section,"hit_intensity") or 0) * 0.01
-	st.phantom_prob  = (ini:r_float_ex(section,"phantom_prob") or 0) * 0.01
+	st.hit_intensity = utils.cfg_get_number(ini, section, "hit_intensity", npc, true) * 0.01
+	st.phantom_prob  = utils.cfg_get_number(ini, section, "phantom_prob",  npc, false, 0) * 0.01
 
-	st.mute_sound_threshold   = ini:r_float_ex(section,"mute_sound_threshold") or 0
+	st.mute_sound_threshold   = utils.cfg_get_number(ini, section, "mute_sound_threshold",  npc, false, 0)
 
-	st.no_static 	= ini:r_bool_ex(section,"no_static",false)
-	st.no_mumble 	= ini:r_bool_ex(section,"no_mumble",false)
-	st.hit_type	 	= ini:r_string_ex(section,"hit_type") or "wound"
-	st.hit_freq 	= ini:r_float_ex(section,"hit_freq") or 5000
+	st.no_static 	= utils.cfg_get_bool(ini, section, "no_static", npc, false, false)
+	st.no_mumble 	= utils.cfg_get_bool(ini, section, "no_mumble", npc, false, false)
+	st.hit_type	 	= utils.cfg_get_string(ini, section, "hit_type", npc, false, "", "wound")
+	st.hit_freq 	= utils.cfg_get_number(ini, section, "hit_freq", npc, false, 5000)
+
 end

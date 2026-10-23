@@ -114,6 +114,15 @@
 	<string id="name_bandit_9">
 		<text>Bodya</text>
 	</string>
+	<string id="name_captain_0">
+		<text>Captain</text>
+	</string>
+	<string id="name_lieutenant_0">
+		<text>Lieutenant</text>
+	</string>
+	<string id="name_private_0">
+		<text>Private</text>
+	</string>
 	<string id="name_science_0">
 		<text>Andrey</text>
 	</string>
@@ -474,34 +483,10 @@
 	<string id="name_stalker_99">
 		<text>Yasha</text>
 	</string>
-	<string id="name_private_0">
-		<text>Private</text>
-	</string>
 	<string id="name_private_1">
-		<text>Senior Private</text>
-	</string>
-	<string id="name_sergeant_0">
-		<text>Junior Sergeant</text>
-	</string>
-	<string id="name_sergeant_1">
-		<text>Sergeant</text>
-	</string>
-	<string id="name_senior_sergeant_0">
-		<text>Senior Sergeant</text>
-	</string>
-	<string id="name_senior_sergeant_1">
 		<text>Master Sergeant</text>
 	</string>
-	<string id="name_lieutenant_0">
-		<text>Junior Lieutenant</text>
-	</string>
-	<string id="name_lieutenant_1">
-		<text>Lieutenant</text>
-	</string>
-	<string id="name_lieutenant_2">
-		<text>Senior Lieutenant</text>
-	</string>
-	<string id="name_captain_0">
-		<text>Captain</text>
+	<string id="name_sergeant_0">
+		<text>Sergeant</text>
 	</string>
 </string_table>

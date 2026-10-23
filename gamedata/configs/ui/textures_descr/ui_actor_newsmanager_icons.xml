@@ -107,16 +107,9 @@
 	<texture id="ui_inGame2_Sklad_dolga" x="332" y="705" width="83" height="47" />
 	<texture id="ui_inGame2_Chuzhie_zaslugi" x="332" y="752" width="83" height="47" />
 	<texture id="ui_inGame2_Osobiy_zakaz" x="332" y="799" width="83" height="47" />
-	<!-- AtmosFear Fallout -->
-	<texture id="ui_inGame2_Fallout_rad" x="332" y="846" width="83" height="47" />
-	<texture id="ui_inGame2_Fallout_acid" x="332" y="893" width="83" height="47" />	
-	<!-- AtmosFear Psi Storm -->
-	<texture id="ui_inGame2_psi_storm" x="332" y="940" width="83" height="47" />	
-	<!-- Call of Chernobyl Achievements -->
-	<texture id="ui_inGame2_PD_Ecologist" x="415" y="47" width="83" height="47" />
-	<texture id="ui_inGame2_PD_Tourist" x="415" y="94" width="83" height="47" />
-	<texture id="ui_inGame2_PD_RagAndBone" x="415" y="141" width="83" height="47" />
-	<texture id="ui_inGame2_PD_WishfulThinking" x="415" y="188" width="83" height="47" />
-	<texture id="ui_inGame2_PD_DownToEarth" x="415" y="235" width="83" height="47" />
+
+
+		
+
    </file>
 </w>

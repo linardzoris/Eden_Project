@@ -1,5 +1,5 @@
 [logic]
-active = nil ;sr_idle@wait_for_start
+active = sr_idle@wait_for_start
 
 [sr_idle@wait_for_start]
 on_info = {-zat_b30_task_start +zat_b5_task_end !talking} %+zat_b30_task_start%
@@ -11,11 +11,11 @@ on_info = {+zat_b30_actor_in_tempting_business} sr_idle@novikov_transfer %=give_
 
 [sr_idle@novikov_transfer]
 on_info = {+zat_b30_actor_gave_detector} sr_idle@wait_for_owl_trouble
-;Р·Р°С‚С‹С‡РєР°
+;затычка
 ;on_info2 = {-zat_b30_actor_gave_detector} %+zat_b30_actor_gave_detector%
 
 [sr_idle@wait_for_owl_trouble]
-on_game_timer = 39600 | sr_idle@owl_in_trouble
+on_game_timer = 7200 | sr_idle@owl_in_trouble
 
 [sr_idle@owl_in_trouble]
 on_info = {!actor_in_zone(zat_a2_sr_noweap)} sr_idle@owl_must_pay %+zat_b30_owl_in_trouble =play_sound(zat_b30_owl_about_trouble) +zat_b30_owl_trouble_dialog_info%

@@ -15,7 +15,7 @@ function action_hit:__init(obj, storage)
 end
 
 function action_hit:reset_scheme()
-	--printf("_hr: action_hit:reset_scheme: self.object:name()='%s'", self.object:name())
+	printf("_hr: action_hit:reset_scheme: self.object:name()='%s'", self.object:name())
 	
 	local p1 = patrol(self.st.dir_path):point(0)
 	local p2 = self.object:position()
@@ -24,14 +24,14 @@ function action_hit:reset_scheme()
 	h.impulse   = self.st.impulse
 	h:bone(self.st.bone)
 	h.type      = hit.strike
-	h.direction = vector():set(p1):sub(p2)
+	h.direction = utils.vector_copy_by_val(p1):sub(p2)
 	h.draftsman = self.object
 	self.object:hit(h)
 	
 	--printf("_hr: action_hit:reset_scheme: p1=%f,%f,%f", p1.x, p1.y, p1.z)
 	--printf("_hr: action_hit:reset_scheme: p2=%f,%f,%f", p2.x, p2.y, p2.z)
 	--printf("_hr: action_hit:reset_scheme: bone = %d", h.bone)
-	--printf("_hr: action_hit:reset_scheme: direction=%f,%f,%f", h.direction.x, h.direction.y, h.direction.z)
+	printf("_hr: action_hit:reset_scheme: direction=%f,%f,%f", h.direction.x, h.direction.y, h.direction.z)
 end
 
 function action_hit:update(delta)
@@ -73,7 +73,7 @@ end
 
 ---------------------------------------------------------------------------------------------------------------------
 function add_to_binder(npc, ini, scheme, section, storage)
-	--printf("DEBUG: add_to_binder: scheme='%s', section='%s'", scheme, section)
+	printf("DEBUG: add_to_binder: scheme='%s', section='%s'", scheme, section)
 
 	local new_action = action_hit(npc, storage)
 
@@ -86,8 +86,8 @@ function set_scheme(npc, ini, scheme, section, gulag_name)
 
 	st.logic = xr_logic.cfg_get_switch_conditions(ini, section, npc)
 	
-	st.power    = ini:r_float_ex(section,"power") or 0
-	st.impulse  = ini:r_float_ex(section,"impulse") or 1000
-	st.bone     = ini:r_string_ex(section,"bone")
-	st.dir_path = ini:r_string_ex(section,"dir_path")
+	st.power    = utils.cfg_get_number(ini, section, "power", npc, false, 0)
+	st.impulse  = utils.cfg_get_number(ini, section, "impulse", npc, false, 1000)
+	st.bone     = utils.cfg_get_string(ini, section, "bone", npc, true, "")
+	st.dir_path = utils.cfg_get_string(ini, section, "dir_path", npc, true, "")
 end

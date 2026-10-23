@@ -5,9 +5,9 @@ on_hit = hit
 [remark@start]
 meet = no_meet
 use_camp = false
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 gather_items_enabled = false
 help_wounded_enabled = false
 corpse_detection_enabled = false
@@ -18,9 +18,9 @@ on_game_timer = 50 | remark@stand_up
 [remark@stand_up]
 meet = no_meet
 use_camp = false
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 gather_items_enabled = false
 help_wounded_enabled = false
 corpse_detection_enabled = false
@@ -31,9 +31,9 @@ on_game_timer = 30 | remark@speak_radio
 [remark@speak_radio]
 meet = no_meet
 use_camp = false
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 gather_items_enabled = false
 help_wounded_enabled = false
 corpse_detection_enabled = false
@@ -45,9 +45,9 @@ on_signal = sound_end | remark@speak_radio_2 %+pri_a20_squad_cutscene_actor_talk
 [remark@speak_radio_2]
 meet = no_meet
 use_camp = false
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 gather_items_enabled = false
 help_wounded_enabled = false
 corpse_detection_enabled = false

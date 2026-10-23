@@ -8,7 +8,7 @@ path_walk = soldier_walk
 path_look = soldier_look
 on_signal = soldier | walker %+jup_b219_soldier_on_pos%
 def_state_standing = guard_na
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 meet = no_meet
 out_restr = jup_factory_default_in_restrictor
 gather_items_enabled = false
@@ -23,8 +23,8 @@ on_info = {+jup_b219_start_one_soldier} remark@start_one_soldier
 on_info2 = {+jup_b219_start_all} remark@start_all
 on_info3 = {+jup_b219_start_soldier_vano} remark@start_soldier_vano
 on_info4 = {+jup_b219_start_soldier_monolith} remark@start_soldier_monolith
-invulnerable = {!actor_enemy} true, false
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+invulnerable = true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true 
 danger = danger
 meet = no_meet
@@ -35,9 +35,9 @@ corpse_detection_enabled = false
 
 [remark@start_one_soldier]
 anim = jup_b219_soldier_one
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true 
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 danger = danger
 meet = no_meet
 out_restr = jup_factory_default_in_restrictor
@@ -47,9 +47,9 @@ corpse_detection_enabled = false
 
 [remark@start_all]
 anim = jup_b219_soldier_all
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true 
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 danger = danger
 meet = no_meet
 out_restr = jup_factory_default_in_restrictor
@@ -59,9 +59,9 @@ corpse_detection_enabled = false
 
 [remark@start_soldier_vano]
 anim = jup_b219_soldier_soldier_vano
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true 
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 danger = danger
 meet = no_meet
 out_restr = jup_factory_default_in_restrictor
@@ -71,9 +71,9 @@ corpse_detection_enabled = false
 
 [remark@start_soldier_monolith]
 anim = jup_b219_soldier_soldier_monolith
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true 
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 danger = danger
 meet = no_meet
 out_restr = jup_factory_default_in_restrictor

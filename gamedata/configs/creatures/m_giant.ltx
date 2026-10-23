@@ -9,7 +9,7 @@ $npc			     = on						; option for Level Editor
 $prefetch 			 = 16
 Scheduled		     = on						; option for ALife Simulator
 Human		     	 = off						; option for ALife Simulator
-Health			     = 1000						; option for ALife Simulator
+Health			     = 400						; option for ALife Simulator
 MinSpeed		     = 1.0						; option for ALife Simulator
 MaxSpeed		     = 5.0						; option for ALife Simulator
 going_speed          = 3;4.5                      ; option for ALife Simulator
@@ -18,10 +18,8 @@ search_speed         = 1.5                       ; option for ALife Simulator
 visual				 = monsters\psevdogigant\psevdogigant
 corpse_visual	     = monsters\psevdogigant\psevdogigant_dead
 icon				 = ui_npc_monster_psevdogigant
-
-;spawn_phantom 		= m_phantom_gigant
-can_spawn_phantom 	= false
-
+MaxHealthValue		     = 200			; range [0..200]
+DynamicObjectsCount	 = 32
 smart_terrain_choose_interval	= 00:15:00
 
 ef_creature_type	= 19							; option for evaluation functions
@@ -75,10 +73,10 @@ ph_mass 		     = 5000		;370
 destroyed_vis_name	 = dynamics\Dead_Body\skelet_crash
 
 ;---------------------------------------------------------------------
-ph_skeleton_airr_lin_factor   = 2.0 ;550.0 (РёР·РјРµРЅРЅРѕ РёР·-Р·Р° С‚РѕРіРѕ, С‡С‚Рѕ СѓР±СЂР°РЅРѕ РґРѕРјРЅРѕР¶РµРЅРёРµ РєРѕСЌС„С„РёС†РёРµРЅС‚ 0.002 РёР· РєРѕРґР°)
-ph_skeleton_airr_ang_factor   = 0.0 ;0.0 (РёР·РјРµРЅРЅРѕ РёР·-Р·Р° С‚РѕРіРѕ, С‡С‚Рѕ СѓР±СЂР°РЅРѕ РґРѕРјРЅРѕР¶РµРЅРёРµ РЅР° РєРѕСЌС„С„РёС†РёРµРЅС‚ 0.3 РёР· РєРѕРґР° (0.0*0.3=0.0))
-ph_skeleton_hinger_factor1    = 1.0 ;1.0 (РёР·РјРµРЅРЅРѕ РёР·-Р·Р° С‚РѕРіРѕ, С‡С‚Рѕ СѓР±СЂР°РЅРѕ РґРѕРјРЅРѕР¶РµРЅРёРµ РЅР° РєРѕСЌС„С„РёС†РёРµРЅС‚ 5.0 РёР· РєРѕРґР°)
-ph_skeleton_ddelay	     	  = 15.0 ;Р’СЂРµРјСЏ РёР·РјРµРЅРµРЅРёСЏ Р·РЅР°С‡РµРЅРёСЏ С‚СЂРµРЅРёСЏ РІ СЃСѓСЃС‚Р°РІРµ СЃ РјРѕРјРµРЅС‚Р° СЃРѕР·РґР°РЅРёСЏ С€РµР»Р»Р°, СЃРµРє
+ph_skeleton_airr_lin_factor   = 2.0 ;550.0 (изменно из-за того, что убрано домножение коэффициент 0.002 из кода)
+ph_skeleton_airr_ang_factor   = 0.0 ;0.0 (изменно из-за того, что убрано домножение на коэффициент 0.3 из кода (0.0*0.3=0.0))
+ph_skeleton_hinger_factor1    = 1.0 ;1.0 (изменно из-за того, что убрано домножение на коэффициент 5.0 из кода)
+ph_skeleton_ddelay	     	  = 15.0 ;Время изменения значения трения в суставе с момента создания шелла, сек
 
 ph_skel_fatal_impulse_factor  = 12.0
 ph_after_death_velocity_factor= 0.75
@@ -121,12 +119,12 @@ Run_Attack_Delay		= 3000,		6000
 
 ;-----------------------------------------------------------------------
 
-DayTime_Begin		= 21			; 
-DayTime_End			= 5		; 
-Min_Satiety			= 0.00055		; 
-Max_Satiety			= 0.75		; 
+DayTime_Begin		= 0			; 
+DayTime_End			= 21		; 
+Min_Satiety			= 0.6		; 
+Max_Satiety			= 0.9		; 
 
-distance_to_corpse	= 1.3		; 
+distance_to_corpse	= 1.2		; 
 
 selector_approach		= 20.0,1.0,1000.0,0.0,0.0, 1000.0,	10000.0,      
 
@@ -137,26 +135,26 @@ hit_type				= wound
 ;----------------------------------------------------------------------------------------
 ;Entity Condition
 ;----------------------------------------------------------------------------------------
-satiety_v 			= 0.00001			;СЃРєРѕСЂРѕСЃС‚СЊ СѓРјРµРЅСЊС€РµРЅРёСЏ СЃС‹С‚РѕСЃС‚Рё СЃРѕ РІСЂРµРјРµРЅРµРј
-radiation_v 		= 0.00001 ;0.004	;СЃРєРѕСЂРѕСЃС‚СЊ СѓРјРµРЅСЊС€РµРЅРёСЏ СЂР°РґРёР°С†РёРё
-satiety_power_v 	= 0.001	;0.01		;СѓРІРµР»РёС‡РµРЅРёРµ СЃРёР»С‹ РїСЂРё СѓРјРµРЅСЊС€РµРЅРёРё СЃС‹С‚РѕСЃС‚Рё 
-satiety_health_v 	= 0.001				;СѓРІРµР»РёС‡РµРЅРёРµ Р·РґРѕСЂРѕРІСЊСЏ РїСЂРё СѓРјРµРЅСЊС€РµРЅРёРё СЃС‹С‚РѕСЃС‚Рё 
-satiety_critical 	= -1.0	;0.25		;РєСЂРёС‚РёС‡РµСЃРєРѕРµ Р·РЅР°С‡РµРЅРёСЏ СЃС‹С‚РѕСЃС‚Рё (РІ РїСЂРѕС†РµРЅС‚Р°С… РѕС‚ 0..1) РєРѕРіРґР° Р·РґРѕСЂРѕРІСЊРµ РЅР°С‡РёР°РЅР°РµС‚ СѓРјРµРЅСЊС€Р°С‚СЊСЃСЏ
-radiation_health_v 	= 0.01	;0.006		;СѓРјРµРЅСЊС€РµРЅРёРµ Р·РґРѕСЂРѕРІСЊСЏ РїСЂРё РІРѕР·РґРµР№СЃС‚РІРёРё СЂР°РґРёР°С†РёРё
-morale_v			= 0.01				;СЃРєРѕСЂРѕСЃС‚СЊ РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёСЏ РјРѕСЂР°Р»Рё
-health_hit_part 	= 1	;0.8			;РїСЂРѕС†РµРЅС‚ С…РёС‚Р°, СѓС…РѕРґСЏС‰РёР№ РЅР° РѕС‚РЅРёРјР°РЅРёРµ Р·РґРѕСЂРѕРІСЊСЏ
-power_hit_part 		= 1	;0.9			;РїСЂРѕС†РµРЅС‚ С…РёС‚Р°, СѓС…РѕРґСЏС‰РёР№ РЅР° РѕС‚РЅРёРјР°РЅРёРµ СЃРёР»С‹
-psy_health_v		= 0.1				;СЃРєРѕСЂРѕСЃС‚СЊ РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёСЏ psy-Р·РґРѕСЂРѕРІСЊСЏ
+satiety_v 			= 0.00001			;скорость уменьшения сытости со временем
+radiation_v 		= 0.00001 ;0.004	;скорость уменьшения радиации
+satiety_power_v 	= 0.001	;0.01		;увеличение силы при уменьшении сытости 
+satiety_health_v 	= 0.001				;увеличение здоровья при уменьшении сытости 
+satiety_critical 	= -1.0	;0.25		;критическое значения сытости (в процентах от 0..1) когда здоровье начианает уменьшаться
+radiation_health_v 	= 0.01	;0.006		;уменьшение здоровья при воздействии радиации
+morale_v			= 0.01				;скорость восстановления морали
+health_hit_part 	= 1	;0.8			;процент хита, уходящий на отнимание здоровья
+power_hit_part 		= 1	;0.9			;процент хита, уходящий на отнимание силы
+psy_health_v		= 0.1				;скорость восстановления psy-здоровья
 
 immunities_sect				= giant_immunities
 protections_sect			= giant_protections
 
-;РѕС‚РєСЂС‹С‚С‹Рµ СЂР°РЅС‹
-bleeding_v					= 0.01						;РїРѕС‚РµСЂСЏ РєСЂРѕРІРё РїСЂРё РЅРѕРјРёРЅР°Р»СЊРЅРѕР№ СЂР°РЅРµ РІ СЃРµРєСѓРЅРґСѓ
-wound_incarnation_v			= 0.02				;РєСЂСѓС‚РёР·РЅР° РєСЂРёРІРѕР№ Р·Р°Р¶РёРІР»РµРЅРёСЏ (РєР°РєРѕР№ РїСЂРѕС†РµРЅС‚ СЂР°РЅС‹ РѕСЃС‚Р°РЅРµС‚СЃСЏ РїРѕСЃР»Рµ Р·Р°Р¶РёРІР»РµРЅРёСЏ РІ РёРіСЂРѕРІСѓСЋ СЃРµРєСѓРЅРґСѓ)
+;открытые раны
+bleeding_v					= 0.01						;потеря крови при номинальной ране в секунду
+wound_incarnation_v			= 0.02				;крутизна кривой заживления (какой процент раны останется после заживления в игровую секунду)
 min_wound_size				= 0.01
 
-sleep_health 			= 1.0		;1.5	;РєРѕСЌС„С„РёС†РёРµРЅС‚С‹ СЃРєРѕСЂРѕСЃС‚РµР№ РёР·РјРµРЅРµРЅРёСЏ РїР°СЂР°РјРµС‚СЂРѕРІ РІРѕ РІСЂРµРјСЏ СЃРЅР°
+sleep_health 			= 1.0		;1.5	;коэффициенты скоростей изменения параметров во время сна
 sleep_power 			= 1.0		;1.5
 sleep_satiety 			= 1.0		;0.8
 sleep_radiation 		= 1.0	;1.1
@@ -167,9 +165,9 @@ satiety_threshold		= 0.5							; below this value monster fill hunger
 
 ;----------------------------------------------------------------------------------------
 
-eat_freq			=	5.0		; С‡Р°СЃС‚РѕС‚Р° СѓРєСѓСЃРѕРІ РІ СЃРµРє
-eat_slice			=	0.001	; СѓРІРµР»РёС‡РµРЅРёРµ СЃС‹С‚РѕСЃС‚Рё РїСЂРё 1 СѓРєСѓСЃРµ
-eat_slice_weight	=	10.0	; СѓРјРµРЅСЊС€РµРЅРёРµ РµРґС‹ Сѓ С‚СЂСѓРїР°
+eat_freq			=	5.0		; частота укусов в сек
+eat_slice			=	0.001	; увеличение сытости при 1 укусе
+eat_slice_weight	=	10.0	; уменьшение еды у трупа
 
 ;----------------------------------------------------------------------------------------
 
@@ -279,38 +277,38 @@ critical_wound_decrease_quant	= 0.
 ; Vision
 ;-------------------------------------------------------------------------
 eye_fov				 = 100	;120
-eye_range			 = 95	;40	;80
+eye_range			 = 40	;80
 
 vision_free_section			= giant_vision_free
 vision_danger_section		= giant_vision_danger
 
-; Р—РќРђР§Р•РќРРЇ visibility_threshold Р”РћР›Р–РќР« Р‘Р«РўР¬ Р РђР’РќР« РґР»СЏ РґРµРЅР¶РµСЂР° Рё С„СЂРё,
-; РёРЅР°С‡Рµ РІРѕР·РЅРёРєР°СЋС‚ Р°СЂС‚РµС„Р°РєС‚С‹ СЃ РїРѕС‚РµСЂРµР№ РІРёРґРёРјРѕСЃС‚Рё РїСЂРё РїРµСЂРµС…РѕРґРµ РѕС‚ РґРµРЅР¶РµСЂР° РІРѕ С„СЂРё.
+; ЗНАЧЕНИЯ visibility_threshold ДОЛЖНЫ БЫТЬ РАВНЫ для денжера и фри,
+; иначе возникают артефакты с потерей видимости при переходе от денжера во фри.
 
 [giant_vision_free]
-min_view_distance   		= 0.5				; РєРѕСЌС„С„РёС†РёРµРЅС‚, РєРѕС‚РѕСЂС‹Р№ РјРЅРѕР¶РёС‚СЃСЏ РЅР° eye_range, РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ СѓРіР»Р°
-max_view_distance	 		= 1.0				; РєРѕСЌС„С„РёС†РёРµРЅС‚, РєРѕС‚РѕСЂС‹Р№ РјРЅРѕР¶РёС‚СЃСЏ РЅР° eye_range, РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ СѓРіР»Р°
-visibility_threshold	 	= 100.0				; Р·РЅР°С‡РµРЅРёРµ, РїСЂРё РґРѕСЃС‚РёР¶РµРЅРёРё СЃСѓРјРјРѕР№ РєРѕС‚РѕСЂРѕРіРѕ РѕР±СЉРµРєС‚ СЃС‡РёС‚Р°РµС‚СЃСЏ РІРёРґРёРјС‹Рј
+min_view_distance   		= 0.5				; коэффициент, который множится на eye_range, в зависимости от угла
+max_view_distance	 		= 1.0				; коэффициент, который множится на eye_range, в зависимости от угла
+visibility_threshold	 	= 100.0				; значение, при достижении суммой которого объект считается видимым
 always_visible_distance 	= 0.3
 time_quant					= 0.001
-decrease_value				= 0.01				; Р·РЅР°С‡РµРЅРёРµ, РЅР° РєРѕС‚РѕСЂРѕРµ СѓРјРµРЅСЊС€Р°РµС‚СЃСЏ РІРµСЃ, РµСЃР»Рё РѕР±СЉРµРєС‚ РїРѕРїР°Р» РІ С„СЂСѓСЃС‚СѓРј, РЅРѕ РѕС‚СЃС‘РєСЃСЏ РїРѕ РєР°РєРёРј-С‚Рѕ РїСЂРёС‡РёРЅР°Рј
+decrease_value				= 0.01				; значение, на которое уменьшается вес, если объект попал в фрустум, но отсёкся по каким-то причинам
 velocity_factor		     	= 0.5
-luminocity_factor			= 0.5 				; С„Р°РєС‚РѕСЂ РѕСЃРІРµС‰РµРЅРёСЏ (С‚РѕР»СЊРєРѕ РґР»СЏ РђРєС‚С‘СЂР°)
+luminocity_factor			= 0.5 				; фактор освещения (только для Актёра)
 transparency_threshold		= 0.25
 
 [giant_vision_danger]
-min_view_distance   		= 0.5				; РєРѕСЌС„С„РёС†РёРµРЅС‚, РєРѕС‚РѕСЂС‹Р№ РјРЅРѕР¶РёС‚СЃСЏ РЅР° eye_range, РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ СѓРіР»Р°
-max_view_distance	 		= 1.0				; РєРѕСЌС„С„РёС†РёРµРЅС‚, РєРѕС‚РѕСЂС‹Р№ РјРЅРѕР¶РёС‚СЃСЏ РЅР° eye_range, РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ СѓРіР»Р°
-visibility_threshold	 	= 100.0				; Р·РЅР°С‡РµРЅРёРµ, РїСЂРё РґРѕСЃС‚РёР¶РµРЅРёРё СЃСѓРјРјРѕР№ РєРѕС‚РѕСЂРѕРіРѕ РѕР±СЉРµРєС‚ СЃС‡РёС‚Р°РµС‚СЃСЏ РІРёРґРёРјС‹Рј
+min_view_distance   		= 0.5				; коэффициент, который множится на eye_range, в зависимости от угла
+max_view_distance	 		= 1.0				; коэффициент, который множится на eye_range, в зависимости от угла
+visibility_threshold	 	= 100.0				; значение, при достижении суммой которого объект считается видимым
 always_visible_distance 	= 0.3
 time_quant					= 0.001
-decrease_value				= 0.01				; Р·РЅР°С‡РµРЅРёРµ, РЅР° РєРѕС‚РѕСЂРѕРµ СѓРјРµРЅСЊС€Р°РµС‚СЃСЏ РІРµСЃ, РµСЃР»Рё РѕР±СЉРµРєС‚ РїРѕРїР°Р» РІ С„СЂСѓСЃС‚СѓРј, РЅРѕ РѕС‚СЃС‘РєСЃСЏ РїРѕ РєР°РєРёРј-С‚Рѕ РїСЂРёС‡РёРЅР°Рј
+decrease_value				= 0.01				; значение, на которое уменьшается вес, если объект попал в фрустум, но отсёкся по каким-то причинам
 velocity_factor		     	= 0.5
-luminocity_factor			= 0.5 				; С„Р°РєС‚РѕСЂ РѕСЃРІРµС‰РµРЅРёСЏ (С‚РѕР»СЊРєРѕ РґР»СЏ РђРєС‚С‘СЂР°)
+luminocity_factor			= 0.5 				; фактор освещения (только для Актёра)
 transparency_threshold		= 0.25
 
 [giant_protections]
-
+skin_armor = 0.6
 hit_fraction_monster = 0.2
 
 ;=========================================================================================
@@ -319,14 +317,14 @@ hit_fraction_monster = 0.2
 
 [m_giant_damage]
 ;bone_name		 = <hit_scale>,-1,<wound_scale>
-;<hit_scale>	- РєРѕСЌС„С„. РёР·РјРµРЅРµРЅРёСЏ С…РёС‚Р° (СѓРјРµРЅСЊС€РµРЅРёСЏ Р·РґРѕСЂРѕРІСЊСЏ) 
-;<wound_scale>	- РєРѕСЌС„С„. РёР·РјРµРЅРµРЅРёСЏ РІРµР»РёС‡РёРЅС‹ РѕС‚РєСЂС‹С‚РѕР№ СЂР°РЅС‹
+;<hit_scale>	- коэфф. изменения хита (уменьшения здоровья) 
+;<wound_scale>	- коэфф. изменения величины открытой раны
 
 default				= 1, -1, 0.1
 tail				= 1, -1, 0.1
 spine 				= 1, -1, 0.1
 hip 				= 1, -1, 0.5
-head 				= 5, -1, 0.2, 10
+head 				= 2, -1, 0.2, 10
 
 ;=========================================================================================
 ; Attack Animation Params
@@ -414,7 +412,7 @@ ce_power			= 1.3 ;0.7
 ; IMMUNITIES
 ;===========================================================================
 [giant_immunities]
-burn_immunity 			= 0.1			;РєРѕСЌС„С„РёС†РёРµРЅС‚С‹ РёРјРјСѓРЅРёС‚РµС‚Р° 
+burn_immunity 			= 0.1			;коэффициенты иммунитета 
 strike_immunity 		= 0.0
 shock_immunity 			= 0.01
 wound_immunity 			= 0.01		
@@ -433,84 +431,4 @@ icon				= ui_npc_monster_psevdogigant
 rank				= 20
 spec_rank			= normal
 community			= pseudo_gigant
-MaxHealthValue		     = 1.0			; range [0..200]
 
-skin_armor = 0.6
-
-[gigant_strong]:m_gigant_e
-$spawn				= "monsters\gigants\gigant_strong"
-visual				= monsters\psevdogigant\psevdogigant_big
-corpse_visual	     = monsters\psevdogigant\psevdogigant_big_dead
-icon				= ui_npc_monster_psevdogigant
-rank				= 20
-spec_rank			= strong
-community			= pseudo_gigant
-MaxHealthValue		     = 1.25			; range [0..200]
-
-skin_armor = 0.75
-
-immunities_sect				= giant_immunities_strong
-attack_params			= m_gigant_attack_params_strong
-
-[giant_immunities_strong]
-burn_immunity 			= 0.07			;РєРѕСЌС„С„РёС†РёРµРЅС‚С‹ РёРјРјСѓРЅРёС‚РµС‚Р° 
-strike_immunity 		= 0.0
-shock_immunity 			= 0.008
-wound_immunity 			= 0.008		
-radiation_immunity 		= 0.0
-telepatic_immunity 		= 0.0
-chemical_burn_immunity	= 0.08
-explosion_immunity 		= 0.065
-fire_wound_immunity  	= 0.035
-
-[m_gigant_attack_params_strong]
-;---------------------------------------------------------------------------------------------------------------------------------------------
-;	anim			| time[0..1] | hit_power | impulse | impulse_dir (x,y,z)   |	Field of hit_test  (left,right, top, bottom) |	Test Dist
-;---------------------------------------------------------------------------------------------------------------------------------------------
-;Bite
-stand_attack_0 =	  	0.25,		1.15,	    200,        0.5, 1.0, 0.5,		 -0.8, 0.8, -1.8, 1.8,					  2.6
-;Left leg Strike
-stand_attack_1 =	  	0.40,		1.15,	    250,        5.0, 2.5, 4.0,		 -0.6, 0.6, -1.8, 1.8,					  3.2
-;Bite2
-stand_attack_2 =	  	0.25,		1.15,	    200,        0.5, 1.0, 5.0,		 -0.8, 0.8, -1.8, 1.8,					  2.6
-stand_attack_run_0=     0.5,		1.15,	    650,        0.5, 1.0, 5.0,		 -0.6, 1.3, -1.8, 1.8,					  3.3
-jump_attack_1	=		0.1,		3.00,		1850,       0.5, 1.0, 5.0,		 -1.0, 1.3, -1.6, 1.6,					  5.5
-
-[gigant_weak]:m_gigant_e
-$spawn				= "monsters\gigants\gigant_weak"
-visual				= monsters\psevdogigant\mini_psevdogigant
-corpse_visual	     = monsters\psevdogigant\mini_psevdogigant_dead
-icon				= ui_npc_monster_psevdogigant
-rank				= 2
-spec_rank			= weak
-community			= pseudo_gigant
-MaxHealthValue		     = 0.75			; range [0..200]
-
-skin_armor = 0.5
-
-immunities_sect				= giant_immunities_weak
-attack_params			= m_gigant_attack_params_weak
-
-[giant_immunities_weak]
-burn_immunity 			= 0.8			;РєРѕСЌС„С„РёС†РёРµРЅС‚С‹ РёРјРјСѓРЅРёС‚РµС‚Р° 
-strike_immunity 		= 0.0
-shock_immunity 			= 0.8
-wound_immunity 			= 0.8		
-radiation_immunity 		= 0.0
-telepatic_immunity 		= 0.0
-chemical_burn_immunity	= 0.8
-explosion_immunity 		= 0.65
-fire_wound_immunity  	= 0.35
-
-[m_gigant_attack_params_weak]
-;---------------------------------------------------------------------------------------------------------------------------------------------
-;	anim			| time[0..1] | hit_power | impulse | impulse_dir (x,y,z)   |	Field of hit_test  (left,right, top, bottom) |	Test Dist
-;---------------------------------------------------------------------------------------------------------------------------------------------
-;Bite
-stand_attack_0 =	  	0.25,		0.2,	    20,        0.5, 1.0, 0.5,		 -0.8, 0.8, -1.8, 1.8,					  2.6
-;Left leg Strike
-stand_attack_1 =	  	0.40,		0.2,	    80,        5.0, 2.5, 4.0,		 -0.6, 0.6, -1.8, 1.8,					  3.2
-;Bite2
-stand_attack_2 =	  	0.25,		0.2,	    75,        0.5, 1.0, 5.0,		 -0.8, 0.8, -1.8, 1.8,					  2.6
-stand_attack_run_0=     0.5,		0.2,	    250,        0.5, 1.0, 5.0,		 -0.6, 1.3, -1.8, 1.8,					  3.3
-jump_attack_1	=		0.1,		0.50,		550,       0.5, 1.0, 5.0,		 -1.0, 1.3, -1.6, 1.6,					  5.5

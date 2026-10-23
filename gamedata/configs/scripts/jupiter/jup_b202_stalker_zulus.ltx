@@ -1,11 +1,11 @@
-; СЃСЋРґР° Р—СѓР»СѓСЃР° РЅРµ РїРµСЂРµРІРѕРґРёС‚СЊ
+; сюда Зулуса не переводить
 [animpoint@zulus_basic]
 cover_name = jup_b15_sc_zulus
 avail_animations = jup_b15_zulus_sit_idle
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 on_info33 = {!npc_in_zone(jup_b15_sr_light)} %=teleport_npc(jup_a6_jup_b218_squad_member_arrive_walk)%
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 use_camp = false
 meet = meet
 out_restr = jup_a6_sr_noweap_zulus

@@ -1,52 +1,10 @@
 <?xml version="1.0" encoding="windows-1251" ?>
 <string_table>
-    <string id="dm_dialog_add_trade">
-        <text>So... I hear you do some trading on the side.</text>
-    </string>
-    <string id="dm_dialog_add_repair">
-        <text>Rumour has it you are handy with a file. Can you repair my gear?</text>
-    </string>
-	<string id="dm_dialog_character_history">
-		<text>Tell me about yourself.</text>
-	</string>
-<!-- General -->
-	<string id="actor_break_dialog_0">
-		<text>Goodbye.</text>
-	</string>
-	<string id="actor_break_dialog_1">
-		<text>See you later.</text>
-	</string>
-	<string id="actor_break_dialog_2">
-		<text>Peace.</text>
-	</string>
-	<string id="actor_break_dialog_3">
-		<text>Bye.</text>
-	</string>
-<!-- Wish Granter -->
-	<string id="st_wish_1">
-		<text>I want the Zone to disappear!</text>
-	</string>
-	<string id="st_wish_2">
-		<text>Humanity is corrupt, mankind must be controlled!</text>
-	</string>
-	<string id="st_wish_3">
-		<text>I wish for world peace!</text>
-	</string>
-	<string id="st_wish_4">
-		<text>I desire all the riches of the Zone!</text>
-	</string>
-	<string id="st_wish_5">
-		<text>Make me immortal!</text>
-	</string>
-	<string id="st_wish_99">
-		<text>[Say nothing]</text>
-	</string>
-<!-- About Quests Bandit -->
 	<string id="about_quests_dialog_bandit_0">
-		<text>Heard any news around here lately?</text>
+		<text>Listen, I have a question for you...</text>
 	</string>
 	<string id="about_quests_dialog_bandit_1">
-		<text>Like what?</text>
+		<text>Spit it out, then.</text>
 	</string>
 	<string id="about_quests_dialog_bandit_10">
 		<text>What do you think about Nimble?</text>
@@ -58,10 +16,10 @@
 		<text>You hear anything about the Oasis?</text>
 	</string>
 	<string id="about_quests_dialog_bandit_111">
-		<text>Well, I heard a funny story once. Basically, the boys at Garbage started a rumour about where the Oasis is, and made it real believable, too. Then, they went to that location and waited. Well, what can I say? So many gullible losers showed up to share their stuff that the boys who started the whole thing left the Zone soon afterwards. And why not? Fellas were set for life. Only one of them stayed behind, some guy called Yoga...</text>
+		<text>Well, I heard a funny story once. Basically, the boys at Garbage started a rumor about where the Oasis is, and made it real believable, too. Then, they went to that location and waited. Well, what can I say? So many gullible losers showed up to share their stuff that the boys who started the whole thing left the Zone soon afterwards. And why not? Fellas were set for life. Only one of them stayed behind, some guy called Yoga...</text>
 	</string>
 	<string id="about_quests_dialog_bandit_112">
-		<text>That if you go there all your problems will be solved... I reckon that's gotta be handy - no more hangovers or haemorrhoids has gotta be good! Find it, set up a resort and let the cash pile up.</text>
+		<text>That, if you go there all your problems will be solved... I reckon that's gotta be handy - no more hangovers or hemorrhoids has gotta be good! Find it, set up a resort and let the cash pile up.</text>
 	</string>
 	<string id="about_quests_dialog_bandit_113">
 		<text>Why would I bother listening to that crap? All it is, is cheap talk for losers... Real men don't believe that shit. You know, you're sitting in a bar with a cold one in your hand and the stalkers are buzzing all around, arguing over where the Oasis is. And every one of those suckers swears he knows the location... Though for some reason it differs from sucker to sucker.</text>
@@ -223,13 +181,13 @@
 		<text>That's an easy one - our boys will do it.  I mean they didn't go to school or anything but they'll take whoever you want and measure them real good. Once they have the measurements, all they need is a nice grave and that's no problem either!</text>
 	</string>
 	<string id="about_quests_dialog_bandit_8">
-		<text>I found a very strange artefact. Can you suggest a buyer?</text>
+		<text>I found a very strange artifact. Can you suggest a buyer?</text>
 	</string>
 	<string id="about_quests_dialog_bandit_81">
-		<text>A strange artefact, you say? Let's have a look at it... Hand it over so I can see it better... Hah, relax buddy - I'm just kidding, but if I were you I'd keep that kind of thing out of sight. Others might not have such a good sense of humour.</text>
+		<text>A strange artifact, you say? Let's have a look at it... Hand it over so I can see it better... Hah, relax buddy - I'm just kidding, but if I were you I'd keep that kind of thing out of sight. Others might not have such a good sense of humor.</text>
 	</string>
 	<string id="about_quests_dialog_bandit_83">
-		<text>You've got balls to be flashing that artefact around here. Respect. Here's the thing: the man to see for that shit is Beard over at Skadovsk. We don't know how he's getting the artefacts out of the Zone yet, so you should be able to sell yours no problem.</text>
+		<text>You've got balls to be flashing that artifact around here. Respect. Here's the thing: the man to see for that shit is Beard over at Skadovsk. We don't know how he's getting the artifacts out of the Zone yet, so you should be able to sell yours no problem.</text>
 	</string>
 	<string id="about_quests_dialog_bandit_9">
 		<text>I found a whole bloodsucker lair nearby. What are we gonna do?</text>
@@ -238,14 +196,13 @@
 		<text>Err, what's there to do? Run the hell away, that's what!</text>
 	</string>
 	<string id="about_quests_dialog_bandit_98">
-		<text>Okay, forget about it.</text>
+		<text>OK, forget about it.</text>
 	</string>
-<!-- About Quests Duty -->
 	<string id="about_quests_dialog_dolg_0">
-		<text>Heard any news around here lately?</text>
+		<text>Listen, I have a question for you...</text>
 	</string>
 	<string id="about_quests_dialog_dolg_1">
-		<text>Like what?</text>
+		<text>Ask away.</text>
 	</string>
 	<string id="about_quests_dialog_dolg_10">
 		<text>What do you think about Nimble?</text>
@@ -263,7 +220,7 @@
 		<text>Ah, that place where wounds heal by themselves and your energy is magically replenished? I got news for you, friend: it don't exist. Stalkers invent that crap to make the Zone sound less dangerous than it is, but the harsh reality is that there are no safe places in the Zone. And you gotta keep a firm grasp on that reality out here, buddy - dreamer types don't last long in the Zone.</text>
 	</string>
 	<string id="about_quests_dialog_dolg_113">
-		<text>Yeah, and all the artefacts there are worth their weight in gold and are presented to you on a silver platter while you're getting your feet rubbed... I'm joking, of course. I doubt it exists, although it would be nice if it did. We could even set up a hospital there without the need for any medics - folks could just show up there and heal... Damn, what a pipe dream that is.</text>
+		<text>Yeah, and all the artifacts there are worth their weight in gold and are presented to you on a silver platter while you're getting your feet rubbed... I'm joking, of course. I doubt it exists, although it would be nice if it did. We could even set up a hospital there without the need for any medics - folks could just show up there and heal... Damn, what a pipe dream that is.</text>
 	</string>
 	<string id="about_quests_dialog_dolg_12">
 		<text>Ever meet a stalker called Magpie?</text>
@@ -344,7 +301,7 @@
 		<text>Our commander, of course. Report everything you know to Shulga and you'll get Duty's gratitude for sure.</text>
 	</string>
 	<string id="about_quests_dialog_dolg_22">
-		<text>Yeah, our scouts saw a military helicopter descend towards the reserve pads by Jupiter. They said they kept signalling them to change course but I guess the pilots had other things to worry about. I wonder if the army boys managed to get out of the mine field okay.</text>
+		<text>Yeah, our scouts saw a military helicopter descend towards the reserve pads by Jupiter. They said they kept signaling them to change course but I guess the pilots had other things to worry about. I wonder if the army boys managed to get out of the mine field OK.</text>
 	</string>
 	<string id="about_quests_dialog_dolg_23">
 		<text>Not around here, no. Our presence here is limited... try asking our boys near Yanov.</text>
@@ -404,7 +361,7 @@
 		<text>Duty's presence in this area is limited. Speak to our people at Yanov.</text>
 	</string>
 	<string id="about_quests_dialog_dolg_52">
-		<text>There's a rumour that the scientists have a military guy in their bunker. He hasn't got much of a way out, though. You see, the scientists are there for twelve to eighteen months and he's not going to get to the edge of the Zone on foot and on his own. Considering that, I bet he'd be interested.</text>
+		<text>There's a rumor that the scientists have a military guy in their bunker. He hasn't got much of a way out, though. You see, the scientists are there for twelve to eighteen months and he's not going to get to the edge of the Zone on foot and on his own. Considering that, I bet he'd be interested.</text>
 	</string>
 	<string id="about_quests_dialog_dolg_53">
 		<text>I suggest you look among people who're after adventures. For example, there's a stalker called Vano over at Yanov station. He doesn't care what kind of shit he gets himself into and he could be useful - that boy can find a way through an anomaly with his eyes closed.</text>
@@ -434,13 +391,13 @@
 		<text>Who'd want to work there if the bunker is protected by Freedom? Those friggin' pacifists are so stoned most of the time they're just as likely to shoot each other as the enemy.</text>
 	</string>
 	<string id="about_quests_dialog_dolg_8">
-		<text>I found a very strange artefact. Can you suggest a buyer?</text>
+		<text>I found a very strange artifact. Can you suggest a buyer?</text>
 	</string>
 	<string id="about_quests_dialog_dolg_81">
-		<text>Artefacts are all strange and I wouldn't advise carrying it on you either. Hand it over to the experts and be done with it.</text>
+		<text>Artifacts are all strange and I wouldn't advise carrying it on you either. Hand it over to the experts and be done with it.</text>
 	</string>
 	<string id="about_quests_dialog_dolg_83">
-		<text>You should show that thing to stalkers - they're experts in that kind of shit. Better still, show it to the person they sell their artefacts to.</text>
+		<text>You should show that thing to stalkers - they're experts in that kind of shit. Better still, show it to the person they sell their artifacts to.</text>
 	</string>
 	<string id="about_quests_dialog_dolg_9">
 		<text>I found a whole bloodsucker lair nearby. What are we gonna do?</text>
@@ -449,14 +406,13 @@
 		<text>Duty squads are not currently engaging in purging operations in this area, so the lair will have to wait.</text>
 	</string>
 	<string id="about_quests_dialog_dolg_98">
-		<text>Okay, forget about it.</text>
+		<text>OK, forget about it.</text>
 	</string>
-<!-- About Quests Freedom -->
 	<string id="about_quests_dialog_freedom_0">
-		<text>Heard any news around here lately?</text>
+		<text>Listen, I have a question for you...</text>
 	</string>
 	<string id="about_quests_dialog_freedom_1">
-		<text>Like what?</text>
+		<text>Shoot.</text>
 	</string>
 	<string id="about_quests_dialog_freedom_10">
 		<text>What do you think about Nimble?</text>
@@ -525,7 +481,7 @@
 		<text>Who can unblock a memory module?</text>
 	</string>
 	<string id="about_quests_dialog_freedom_171">
-		<text>Well, Tukarev in the scientists' bunker can do it. He's fast, good and polite. There's also Nitro at Yanov, the Duty hanger-on. He's cheap and shitty, but he'll probably do the job.</text>
+		<text>Well, Novikov in the scientists' bunker can do it. He's fast, good and polite. There's also Nitro at Yanov, the Duty hanger-on. He's cheap and shitty, but he'll probably do the job.</text>
 	</string>
 	<string id="about_quests_dialog_freedom_172">
 		<text>A skilled technician, I guess. The local one is more about mechanical stuff, so unless you need your memory module's barrel rifled, I suggest you ask at Jupiter.</text>
@@ -555,7 +511,7 @@
 		<text>Loki, no question about it. He's our leader here at Yanov. Even if he doesn't know what to do with the info - the main thing is that Duty doesn't get its hands on it. Can you imagine how much propaganda bullshit that'll generate? I get a friggin' headache just thinking about it.</text>
 	</string>
 	<string id="about_quests_dialog_freedom_22">
-		<text>Yeah, you heard that story about the chopper in the mine field? Basically, the jar-heads crashed onto the reserve landing pad which their fellow jar-heads mined six years back. Now some folks say they did it out of stupidity, but I figure there's more to it than that. Look at it like this: nobody is gonna go there, so once the army boys complete their mission they can return to the chopper, patch it up a bit and off they go. I'd love to know what their mission is...</text>
+		<text>Yeah, you heard that story about the chopper in the mine field? Basically, the jarheads crashed onto the reserve landing pad which their fellow jarheads mined six years back. Now some folks say they did it out of stupidity, but I figure there's more to it than that. Look at it like this: nobody is gonna go there, so once the army boys complete their mission they can return to the chopper, patch it up a bit and off they go. I'd love to know what their mission is...</text>
 	</string>
 	<string id="about_quests_dialog_freedom_23">
 		<text>I ain't a local buddy, I don't know shit. Pop in to see us at Yanov - our boys will tell you everything you want to know and everything you don't for good measure.</text>
@@ -573,16 +529,16 @@
 		<text>Pilot for sure, man. He's the main free stalker guide around here - if you want to talk maps, he's the one you want.</text>
 	</string>
 	<string id="about_quests_dialog_freedom_31">
-		<text>Chill, dude. There ain't no cops, no jar-heads and no friggin' militia around here - you're as safe as can be in the Zone.</text>
+		<text>Chill, dude. There ain't no cops, no jarheads and no friggin' militia around here - you're as safe as can be in the Zone.</text>
 	</string>
 	<string id="about_quests_dialog_freedom_35">
-		<text>No, but some fellas told me they saw an army unit crawling through the mine field by the helipads. Those fellas thought about helping them but decided against it. The jar-heads are an unpredictable breed, you never know when they'll snap and shoot you in the back.</text>
+		<text>No, but some fellas told me they saw an army unit crawling through the mine field by the helipads. Those fellas thought about helping them but decided against it. The jarheads are an unpredictable breed, you never know when they'll snap and shoot you in the back.</text>
 	</string>
 	<string id="about_quests_dialog_freedom_36">
-		<text>I ain't seen any myself but rumour has it that there's a jar-head at the scientists' bunker. Ozersky, the biologist, said that he's from that chopper which crashed into the plant... The joke doing the rounds is that the nerds have got themselves a pet soldier.</text>
+		<text>I ain't seen any myself but rumor has it that there's a jarhead at the scientists' bunker. Ozersky, the biologist, said that he's from that chopper which crashed into the plant... The joke doing the rounds is that the nerds have got themselves a pet soldier.</text>
 	</string>
 	<string id="about_quests_dialog_freedom_37">
-		<text>Not personally, but I heard some things from free stalkers. They said that a jar-head was spotted by the Volkhov AA complex. Gotta be a ghost or a zombie that's woken up... what do you reckon?</text>
+		<text>Not personally, but I heard some things from free stalkers. They said that a jarhead was spotted by the Volkhov AA complex. Gotta be a ghost or a zombie that's woken up... what do you reckon?</text>
 	</string>
 	<string id="about_quests_dialog_freedom_38">
 		<text>Nah. This one fella was sayin' that he saw seven soldiers following a free stalker past the radio plant towards Pripyat. There ain't been any weed in the Zone for a while, so I figure that's gotta be crazy talk, pure and simple.</text>
@@ -606,7 +562,7 @@
 		<text>You know, I ain't got a clue. Just can't find the time to go there... I'd ask Pilot in the camp, yeah? He's a free stalker and knows the area better than anyone.</text>
 	</string>
 	<string id="about_quests_dialog_freedom_44">
-		<text>Bro, if I knew I'd have gone there a long time ago. Getting away from Duty, the jar-heads and all this fighting would be worth it...</text>
+		<text>Bro, if I knew I'd have gone there a long time ago. Getting away from Duty, the jarheads and all this fighting would be worth it...</text>
 	</string>
 	<string id="about_quests_dialog_freedom_5">
 		<text>Can you suggest anyone that's not too tied down who'd be willing to make a move for Pripyat?</text>
@@ -615,7 +571,7 @@
 		<text>Sorry, friend, I don't know anyone at Zaton... Take my advice and ask our boys at Yanov.</text>
 	</string>
 	<string id="about_quests_dialog_freedom_52">
-		<text>You know the scientists' bunker? Well, they've got a situation on their hands over there. First Garry, the stalker, decided to make for Pripyat and now the jar-head who's there got the same idea. Garry is a loner and proud of it, but that jar-head is exactly what you're looking for.</text>
+		<text>You know the scientists' bunker? Well, they've got a situation on their hands over there. First Garry, the stalker, decided to make for Pripyat and now the jarhead who's there got the same idea. Garry is a loner and proud of it, but that jarhead is exactly what you're looking for.</text>
 	</string>
 	<string id="about_quests_dialog_freedom_53">
 		<text>Vano at Yanov is as good as any. He's a decent fella and he could have joined Freedom any time if he wanted. I gather he ain't keen on our struggle with Duty... or any kind of struggle, for that matter. That's his view of things and we respect it!</text>
@@ -645,13 +601,13 @@
 		<text>Me and the boys would love to do it, but Duty's guarding the bunker these days. Popping in to see the scientists is a problem as it is, but being there every day just wouldn't be healthy, that's for damn sure.</text>
 	</string>
 	<string id="about_quests_dialog_freedom_8">
-		<text>I found a very strange artefact. Can you suggest a buyer?</text>
+		<text>I found a very strange artifact. Can you suggest a buyer?</text>
 	</string>
 	<string id="about_quests_dialog_freedom_81">
 		<text>You need a collector, buddy. You won't find one at Yanov , seeing as even some stalkers are afraid of coming here. You'd best ask at Zaton, it's a bit quieter in those parts.</text>
 	</string>
 	<string id="about_quests_dialog_freedom_83">
-		<text>You know Beard, the barman in the free stalker camp? He buys up artefacts and don't rip you off too much either. A nice fella, whichever way you look at it. It's a pity he don't work for us, really.</text>
+		<text>You know Beard, the barman in the free stalker camp? He buys up artifacts and don't rip you off too much either. A nice fella, whichever way you look at it. It's a pity he don't work for us, really.</text>
 	</string>
 	<string id="about_quests_dialog_freedom_9">
 		<text>I found a whole bloodsucker lair nearby. What are we gonna do?</text>
@@ -660,14 +616,13 @@
 		<text>Man, you gotta warn the free stalkers - they've got their main camp around here, after all. The Zone's wildlife is valuable, to be sure, but I'm more concerned about the people in this place.</text>
 	</string>
 	<string id="about_quests_dialog_freedom_98">
-		<text>Okay, forget about it.</text>
+		<text>OK, forget about it.</text>
 	</string>
-<!-- About Quests Stalker -->
 	<string id="about_quests_dialog_stalkers_0">
-		<text>Heard any news around here lately?</text>
+		<text>Listen, I have a question for you...</text>
 	</string>
 	<string id="about_quests_dialog_stalkers_1">
-		<text>Like what?</text>
+		<text>Ask away.</text>
 	</string>
 	<string id="about_quests_dialog_stalkers_10">
 		<text>What do you think about Nimble?</text>
@@ -685,7 +640,7 @@
 		<text>Well, they say that wounds heal instantly there and your energy is replenished in minutes... They say no disease or sickness can last in the Oasis, not even radiation poisoning! The one thing I know for sure, though, is its whereabouts... Wanna know? It's in the center of the Zone! But you gotta keep this between us, not a word to anyone!</text>
 	</string>
 	<string id="about_quests_dialog_stalkers_113">
-		<text>I heard that any mutant you meet there will just walk on by without so much as looking at you. They also say that there's an artefact there called the Heart of the Oasis... Nobody knows what it does exactly, but one thing's for sure: you shouldn't touch it. Anyone who takes it won't have no place in the Zone no more... Location? Man, everyone knows it's in Pripyat under the Ferris wheel! I mean, where else would it be?</text>
+		<text>I heard that any mutant you meet there will just walk on by without so much as looking at you. They also say that there's an artifact there called the Heart of the Oasis... Nobody knows what it does exactly, but one thing's for sure: you shouldn't touch it. Anyone who takes it won't have no place in the Zone no more... Location? Man, everyone knows it's in Pripyat under the Ferris wheel! I mean, where else would it be?</text>
 	</string>
 	<string id="about_quests_dialog_stalkers_12">
 		<text>Ever meet a stalker called Magpie?</text>
@@ -745,7 +700,7 @@
 		<text>You know, buddy, I didn't come to the Zone to search for tools. Think about it, how much use is a radioactive hammer?</text>
 	</string>
 	<string id="about_quests_dialog_stalkers_168">
-		<text>I heard a rumour that you can pick up bits and pieces at the old service center... You might be able to find tools there, too. But just as with anything else: the only way to get the good stuff is to get to it first.</text>
+		<text>I heard a rumor that you can pick up bits and pieces at the old service center... You might be able to find tools there, too. But just as with anything else: the only way to get the good stuff is to get to it first.</text>
 	</string>
 	<string id="about_quests_dialog_stalkers_169">
 		<text>Good question... I'd check in the old train under the bridge if I were you. Don't ask why... My gut tells me you might find something.</text>
@@ -754,7 +709,7 @@
 		<text>Who can unblock a memory module?</text>
 	</string>
 	<string id="about_quests_dialog_stalkers_171">
-		<text>Let me think... Well, Nitro at Yanov will be able to do it for sure. Other than that, there's also Tukarev, the scientists' technician and a real pro. You gotta think about what you want though, 'cause Nitro is a lot cheaper.</text>
+		<text>Let me think... Well, Nitro at Yanov will be able to do it for sure. Other than that, there's also Novikov, the scientists' technician and a real pro. You gotta think about what you want though, 'cause Nitro is a lot cheaper.</text>
 	</string>
 	<string id="about_quests_dialog_stalkers_172">
 		<text>Well, you'll need a technician, but the only one around here is Cardan. Thing is, after that many years at the bottom of a bottle, he's not exactly safe around complex electronics. I'd ask around at Jupiter if I were you - they've got the right experts there.</text>
@@ -793,16 +748,16 @@
 		<text>I saw one myself... It didn't look like it crashed but it wasn't flying good either. It was swinging from side to side until it landed on a plateau in the south of Zaton... It'd be interesting to see whether anyone survived... If we only knew a way to get up there. Actually, I heard Noah from the psycho barge might know...</text>
 	</string>
 	<string id="about_quests_dialog_stalkers_22">
-		<text>I heard about a few military choppers crashing not far from here... People say different things, but there's one I remember clearly. They said it landed on the reserve helipad that jar-heads themselves mined back in the day. Can you believe the irony in that shit? My old man used to say: "Don't dig a hole for another, 'cause you'll be the one that falls in it." True, ain't it?</text>
+		<text>I heard about a few military choppers crashing not far from here... People say different things, but there's one I remember clearly. They said it landed on the reserve helipad that jarheads themselves mined back in the day. Can you believe the irony in that shit? My old man used to say: "Don't dig a hole for another, 'cause you'll be the one that falls in it." True, ain't it?</text>
 	</string>
 	<string id="about_quests_dialog_stalkers_23">
-		<text>A buddy of mine told me this story... He went to the Iron Forest to get some artefacts and as soon as he got there he heard this crash behind him. He turned to see what it was and saw a chopper coming towards him at full speed, taking down pylons and shit on its way. He bolted the hell outta there... I'm surprised he made it out without landing in an anomaly. You won't have much trouble finding the Iron Forest - you can see it from miles off. It's full of friggin' poltergeists, too, so keep your wits about ya.</text>
+		<text>A buddy of mine told me this story... He went to the Iron Forest to get some artifacts and as soon as he got there he heard this crash behind him. He turned to see what it was and saw a chopper coming towards him at full speed, taking down pylons and shit on its way. He bolted the hell outta there... I'm surprised he made it out without landing in an anomaly. You won't have much trouble finding the Iron Forest - you can see it from miles off. It's full of friggin' poltergeists, too, so keep your wits about ya.</text>
 	</string>
 	<string id="about_quests_dialog_stalkers_24">
 		<text>I heard one landed on the southern plateau but getting up there ain't easy. The other thing I heard is that someone spotted Noah on the edge of that plateau, which means that psycho knows a way of getting to it.</text>
 	</string>
 	<string id="about_quests_dialog_stalkers_25">
-		<text>I've not seen any myself but rumour has it that one crashed right into the plant... Nobody wants to check it out though - the place is just too dangerous.</text>
+		<text>I've not seen any myself but rumor has it that one crashed right into the plant... Nobody wants to check it out though - the place is just too dangerous.</text>
 	</string>
 	<string id="about_quests_dialog_stalkers_26">
 		<text>One stalker told me he saw several military helis getting into some trouble... He saw the engine on one light up and then it went straight down into a swamp full of anomalies. You'll be able to get there easy enough, but the swamp itself is a friggin' nightmare... It's no place for humans, believe you me.</text>
@@ -823,22 +778,22 @@
 		<text>I didn't see any myself but I heard a story about some soldiers getting down from the southern plateau on the sewerage works side. Apparently they tried to get down all proper at first, using cables and shit. But then gave up and slid down on their asses, hah! Zone bobsled - gotta love it!</text>
 	</string>
 	<string id="about_quests_dialog_stalkers_32">
-		<text>I heard a conversation at Skadovsk about five or so jar-heads who were spotted coming out of a drainage tunnel by the swamp. They said the soldiers were dirty as hell, and one of them you couldn't even tell from a swamp bloodsucker, covered in slime from head to toe.</text>
+		<text>I heard a conversation at Skadovsk about five or so jarheads who were spotted coming out of a drainage tunnel by the swamp. They said the soldiers were dirty as hell, and one of them you couldn't even tell from a swamp bloodsucker, covered in slime from head to toe.</text>
 	</string>
 	<string id="about_quests_dialog_stalkers_33">
-		<text>Not personally, but a friend of mine saw a military unit engage a group of mercs by the processing station. But by the time he found a nice spot to enjoy the show it was over 'cause the jar-heads fell back. No casualties on either side either... typical, ain't it?</text>
+		<text>Not personally, but a friend of mine saw a military unit engage a group of mercs by the processing station. But by the time he found a nice spot to enjoy the show it was over 'cause the jarheads fell back. No casualties on either side either... typical, ain't it?</text>
 	</string>
 	<string id="about_quests_dialog_stalkers_34">
-		<text>Apparently ten or so jar-heads were spotted hanging around Noah's barge. Now, given that the psycho was alive at this point, he probably came to some sort of agreement with them... which is just like him. Obviously nobody wanted to ask Noah about what happened - you never know what to expect from that crazy son of a bitch.</text>
+		<text>Apparently ten or so jarheads were spotted hanging around Noah's barge. Now, given that the psycho was alive at this point, he probably came to some sort of agreement with them... which is just like him. Obviously nobody wanted to ask Noah about what happened - you never know what to expect from that crazy son of a bitch.</text>
 	</string>
 	<string id="about_quests_dialog_stalkers_35">
-		<text>I heard something explode at night and then someone at Yanov told me that they saw a dead jar-head in the old mine field and an abandoned army chopper behind him. Seems they couldn't tell where they landed in the dark and went straight across the mines. Nobody knows how many of them made it out of there, but I doubt he flew that chopper in on his own.</text>
+		<text>I heard something explode at night and then someone at Yanov told me that they saw a dead jarhead in the old mine field and an abandoned army chopper behind him. Seems they couldn't tell where they landed in the dark and went straight across the mines. Nobody knows how many of them made it out of there, but I doubt he flew that chopper in on his own.</text>
 	</string>
 	<string id="about_quests_dialog_stalkers_36">
-		<text>I've not really seen any military... but I've heard rumours that a jar-head is hanging around with the scientists. The story goes that Garry, a stalker, found him when he went into the missile complex to look for his buddies. Now, the complex is crawling with zombies who aren't exactly friendly to stray humans, so Garry basically saved him from certain death.</text>
+		<text>I've not really seen any military... but I've heard rumors that a jarhead is hanging around with the scientists. The story goes that Garry, a stalker, found him when he went into the missile complex to look for his buddies. Now, the complex is crawling with zombies who aren't exactly friendly to stray humans, so Garry basically saved him from certain death.</text>
 	</string>
 	<string id="about_quests_dialog_stalkers_37">
-		<text>No, but I heard that a jar-head was spotted by the Volkhov AA complex. I don't really believe it though... They could be lying or maybe they just can't tell a zombie from a soldier.</text>
+		<text>No, but I heard that a jarhead was spotted by the Volkhov AA complex. I don't really believe it though... They could be lying or maybe they just can't tell a zombie from a soldier.</text>
 	</string>
 	<string id="about_quests_dialog_stalkers_38">
 		<text>Military? Well, I heard people saying that "a whole military unit lead by a stalker" was making its way past the Jupiter plant, but I didn't pay much attention to that gossip.</text>
@@ -862,13 +817,13 @@
 		<text>What I know for sure is that there's no way of getting there from Zaton. Everyone who was bursting to get to Pripyat headed towards Jupiter, so you should ask around in those parts.</text>
 	</string>
 	<string id="about_quests_dialog_stalkers_42">
-		<text>Well, rumour has it that there are secret tunnels to Pripyat underneath the Jupiter plant... The thing is, these rumours usually get told after the second round, and then Jupiter is such a friggin' nightmare that nobody dares goes near it.</text>
+		<text>Well, rumor has it that there are secret tunnels to Pripyat underneath the Jupiter plant... The thing is, these rumors usually get told after the second round, and then Jupiter is such a friggin' nightmare that nobody dares goes near it.</text>
 	</string>
 	<string id="about_quests_dialog_stalkers_43">
 		<text>How should I know, dude? You got any easier questions for me? All I can say is that you should find Pilot and talk to him - if anyone can help you, it's him.</text>
 	</string>
 	<string id="about_quests_dialog_stalkers_44">
-		<text>Hah, if I knew the way to Pripyat I wouldn't be here. Why do you think I went towards the center of the Zone? Pripyat is full of artefacts, man! Whoever gets there first is gonna be living the high life!</text>
+		<text>Hah, if I knew the way to Pripyat I wouldn't be here. Why do you think I went towards the center of the Zone? Pripyat is full of artifacts, man! Whoever gets there first is gonna be living the high life!</text>
 	</string>
 	<string id="about_quests_dialog_stalkers_5">
 		<text>Can you suggest anyone that's not too tied down who'd be willing to make a move for Pripyat?</text>
@@ -877,7 +832,7 @@
 		<text>I don't think there's anyone like that around here. Everyone who wanted to be closer to the center of the Zone left for Jupiter. That's where I'd ask if I were you.</text>
 	</string>
 	<string id="about_quests_dialog_stalkers_52">
-		<text>You heard about the jar-head who's with the scientists at the moment? I reckon he ain't got much to lose by going with you. The scientists are not leaving any time soon, he can't reach the Cordon on his own, so he just might be dumb enough to go to Pripyat with you!</text>
+		<text>You heard about the jarhead who's with the scientists at the moment? I reckon he ain't got much to lose by going with you. The scientists are not leaving any time soon, he can't reach the Cordon on his own, so he just might be dumb enough to go to Pripyat with you!</text>
 	</string>
 	<string id="about_quests_dialog_stalkers_53">
 		<text>You know Vano over at Yanov station? He's an honest fella, a good stalker and gullible as hell. Now there's a cat who's better off around anomalies than people - so long as he's here there will always be someone to take advantage of him.</text>
@@ -916,7 +871,7 @@
 		<text>No clue, fella. We got enough of our own shit to worry about here.</text>
 	</string>
 	<string id="about_quests_dialog_stalkers_8">
-		<text>I found a very strange artefact. Can you suggest a buyer?</text>
+		<text>I found a very strange artifact. Can you suggest a buyer?</text>
 	</string>
 	<string id="about_quests_dialog_stalkers_81">
 		<text>Don't think so. People around here go for the familiar. Ask around Zaton, it's closer to the edge of the Zone and all that.</text>
@@ -931,13 +886,13 @@
 		<text>Wow, you gotta tell Beard at Skadovsk about that... 'cause either we deal with them or they'll tear us a new one.</text>
 	</string>
 	<string id="about_quests_dialog_stalkers_98">
-		<text>Okay, forget about it.</text>
+		<text>OK, forget about it.</text>
 	</string>
 	<string id="about_skadovsk_dialog_bandit_0">
 		<text>Where's the nearest stalker camp around here?</text>
 	</string>
 	<string id="about_skadovsk_dialog_bandit_1">
-		<text>What are you, stupid? I don't know about stalker camps, but the nearest camp around here is Skadovsk. I'll give you the coordinates and I'll even do it for free. Nice, ain't I?</text>
+		<text>What are you, stupid?... I don't know about stalker camps, but the nearest camp around here is Skadovsk. I'll give you the coordinates and I'll even do it for free. Nice, ain't I?</text>
 	</string>
 	<string id="about_skadovsk_dialog_stalkers_0">
 		<text>Where's the nearest stalker camp around here?</text>
@@ -945,20 +900,23 @@
 	<string id="about_skadovsk_dialog_stalkers_1">
 		<text>I'll upload the coordinates to your PDA... Skadovsk is the only major camp around here.</text>
 	</string>
+	<string id="actor_break_dialog_2">
+		<text>See you next time.</text>
+	</string>
 	<string id="about_quests_dialog_stalkers_27">
-		<text>I heard about a few crashing... I don't know the details - gossip ain't my thing. Sorry if that doesn't help you much.</text>
+		<text>I heard about a few crashing... I don’t know the details - gossip ain’t my thing. Sorry if that doesn’t help you much.</text>
 	</string>
 	<string id="about_quests_dialog_stalkers_28">
-		<text>Man, I've got other shit to worry about without your choppers... I mean, I bet crashing a heli hurts like hell, but other than that I don't know what to say.</text>
+		<text>Man, I’ve got other shit to worry about without your choppers... I mean, I bet crashing a heli hurts like hell, but other than that I don’t know what to say.</text>
 	</string>
 	<string id="about_quests_dialog_bandit_27">
-		<text>What are you talking about, punk? You have to smoke some real hardcore shit to see a chopper around here, cause real ones don't got nothin to do in this place.</text>
+		<text>What are you talking about, punk? You have to smoke some real hardcore shit to see a chopper around here, ‘cause real ones don’t got nothin’ to do in this place.</text>
 	</string>
 	<string id="about_quests_dialog_freedom_27">
-		<text>Huh? Nah, man, I don't concern myself with shit like that. It don't help with my mission of disseminating knowledge one bit, you know what I mean?</text>
+		<text>Huh? Nah, man, I don’t concern myself with shit like that. It don’t help with my mission of disseminating knowledge one bit, you know what I mean?</text>
 	</string>
 	<string id="about_quests_dialog_dolg_27">
-		<text>Our patrol watched the helicopters descending, but the details of this were reported to the Lieutenant Colonel personally. It's on a need-to-know basis, and I really don't need to know this stuff.</text>
+		<text>Our patrol watched the helicopters descending, but the details of this were reported to the Lieutenant Colonel personally. It’s on a need-to-know basis, and I really don’t need to know this stuff.</text>
 	</string>
 	<string id="about_quests_dialog_bandit_50">
 		<text>Where can I find a suit with a closed-cycle respiratory module?</text>
@@ -970,7 +928,7 @@
 		<text>Hell should I know? I ain't been here long myself...  You'd best ask at Zaton, our brothas there do their own networking.</text>
 	</string>
 	<string id="about_quests_dialog_bandit_503">
-		<text>Not a clue. Why, you planning on sticking your nose into an anomaly? Look, if you come into any artefacts, give us a holler. We'll be right there in a jiffy... To congratulate you on a job well done! </text>
+		<text>Not a clue. Why, you planning on sticking your nose into an anomaly? Look, if you come into any artifacts, give us a holler. We'll be right there in a jiffy... To congratulate you on a job well done! </text>
 	</string>
 	<string id="about_quests_dialog_dolg_50">
 		<text>Where can I find a suit with a closed-cycle respiratory module?</text>
@@ -994,7 +952,7 @@
 		<text>A good question, man... We don't ever wear those here in Freedom... I'd ask stalkers at Zaton if I were you. There might be someone there who runs that sort of business.</text>
 	</string>
 	<string id="about_quests_dialog_freedom_503">
-		<text>Heh, whatcha need that crap for? It ain't no good in action. Then again... I guess it can be of some use. Makes breathing easier, and the sun doesn't get in your eyes as much... I might go for one of those myself. Hey, do you know where I could get one?</text>
+		<text>Heh, whatcha need that crap for? It ain't no good in action. Then again... I guess it can be of some use. Makes breathing easier, and the sun doesn't get in your eyes as much... I might go for one of those myself. Hey, do you know where I could get one?...</text>
 	</string>
 	<string id="about_quests_dialog_stalkers_50">
 		<text>Where can I find a suit with a closed-cycle respiratory module?</text>
@@ -1008,206 +966,13 @@
 	<string id="about_quests_dialog_stalkers_503">
 		<text>Dude, you talk about it like it's office supplies or something... No one knows for sure. Pieces like that are few and far between... Consider yourself lucky if you snatch one.</text>
 	</string>
-
-
-<!-- Alundaio -->
-	<string id="axr_phrase_npc_start_wounded">
-		<text>Help...me.</text>
+	<string id="actor_break_dialog_3">
+		<text>Bye.</text>
 	</string>
-	<string id="axr_phrase_actor_has_medkit">
-		<text>I'll help you out.</text>
+	<string id="actor_break_dialog_1">
+		<text>See ya.</text>
 	</string>
-	<string id="axr_phrase_actor_dont_has_medkit">
-		<text>Sorry, I can't help you.</text>
+	<string id="actor_break_dialog_0">
+		<text>Laters.</text>
 	</string>
-	<string id="axr_phrase_actor_give_command_trade">
-		<text>I would like to exchange equipment.</text>
-	</string>
-	<string id="dm_dialog_become_companion_greeting">
-		<text>You look like you have a purpose here.</text>
-	</string>
-	<string id="dm_dialog_companion_I_have_a_question">
-		<text>Yeah? Maybe... I have a question.</text>
-	</string>
-	<string id="dm_dialog_companion_question_answer_1">
-		<text>What is it?</text>
-	</string>
-	<string id="dm_dialog_companion_question_answer_2">
-		<text>Ask some other lonely guy.</text>
-	</string>
-	<string id="dm_dialog_actor_answer_1">
-		<text>Interesting...</text>
-	</string>
-	<string id="dm_dialog_actor_answer_2">
-		<text>Uh...sorry to cut it short but I gotta go.</text>
-	</string>
-	<string id="dm_dialog_companion_can_i_come_with_1">
-		<text>Let's travel together. What do you say?</text>
-	</string>
-	<string id="dm_dialog_companion_can_we_come_with_2">
-		<text>My friends and I need a little help getting through the zone. Would you mind if we join you?</text>
-	</string>
-	<string id="dm_dialog_companion_can_i_come_with_2">
-		<text>Let's continue together as a team. What do you say?</text>
-	</string>
-	<string id="dm_dialog_companion_actor_reply_to_join_1">
-		<text>Just focus on where you aim with those guns then.</text>
-	</string>
-	<string id="dm_dialog_companion_actor_reply_to_join_2">
-		<text>Fine. But If you die, I'm taking your shit.</text>
-	</string>
-	<string id="dm_dialog_companion_actor_reply_to_join_3">
-		<text>No. Not interested.</text>
-	</string>
-	<string id="dm_dialog_companion_actor_reply_to_join_4">
-		<text>Get lost!</text>
-	</string>
-	<string id="dm_dialog_companion_final_words_good_alone_1">
-		<text>Thanks, buddy. I promise I won't get in the way.</text>
-	</string>
-	<string id="dm_dialog_companion_final_words_good_alone_2">
-		<text>Great, I really need someone's help.</text>
-	</string>
-	<string id="dm_dialog_companion_final_words_good_alone_3">
-		<text>Bad ass man. Thanks.</text>
-	</string>
-	<string id="dm_dialog_companion_final_words_bad_alone_1">
-		<text>Okay. Thanks anyway...</text>
-	</string>
-	<string id="dm_dialog_companion_final_words_bad_alone_2">
-		<text>Woah, man! What the hell is your problem...</text>
-	</string>
-	<string id="dm_dialog_companion_final_words_good_1">
-		<text>That's great to hear! Come on guys!</text>
-	</string>
-	<string id="dm_dialog_companion_final_words_good_2">
-		<text>Alright. Hey guys, this stalker will get us there. Follow him.</text>
-	</string>
-	<string id="dm_dialog_companion_final_words_good_3">
-		<text>Let's get a move on. We have some traveling ahead of us.</text>
-	</string>
-	<string id="dm_dialog_companion_final_words_bad_1">
-		<text>Whatever.</text>
-	</string>
-	<string id="dm_dialog_companion_final_words_bad_2">
-		<text>Kill this asshole!</text>
-	</string>
-	<string id="axr_phrase_companion_ask_for_command">
-		<text>What do you need?</text>
-	</string>
-	<string id="axr_phrase_actor_give_command">
-		<text>[Issue Command]</text>
-	</string>
-	<string id="axr_phrase_actor_give_command_combat">
-		<text>Let's talk about tactics...</text>
-	</string>
-	<string id="axr_phrase_actor_give_command_combat_type_camper">
-		<text>I want you to be more cautious in combat.</text>
-	</string>
-	<string id="axr_phrase_actor_give_command_combat_type_default">
-		<text>Do what you usually do in combat.</text>
-	</string>
-	<string id="axr_phrase_actor_give_command_combat_type_monolith">
-		<text>Give enemies all you got!</text>
-	</string>
-	<string id="axr_phrase_actor_give_command_stay_close">
-		<text>Stay close to me and watch my back.</text>
-	</string>
-	<string id="axr_phrase_actor_give_command_keep_distance">
-		<text>I want you to keep your distance.</text>
-	</string>
-	<string id="axr_phrase_actor_give_command_stealth">
-		<text>Shhh...get down and keep quiet.</text>
-	</string>
-	<string id="axr_phrase_actor_give_command_stop_stealth">
-		<text>Alright, let's continue as normal.</text>
-	</string>
-	<string id="axr_phrase_actor_give_command_relax">
-		<text>Relax a bit. I'll tell you when it's time to go.</text>
-	</string>
-	<string id="axr_phrase_actor_give_command_relax_over">
-		<text>Alright it's time to go.</text>
-	</string>
-	<string id="axr_phrase_actor_give_command_leave">
-		<text>I need to travel on my own from here.</text>
-	</string>
-	<string id="axr_phrase_companion_are_you_sure">
-		<text>Are you sure?</text>
-	</string>
-	<string id="axr_phrase_actor_acknowledge_1">
-		<text>Yes.</text>
-	</string>
-	<string id="axr_phrase_actor_give_command_wait">
-		<text>Wait here and guard this position.</text>
-	</string>
-	<string id="axr_phrase_actor_give_command_follow">
-		<text>I need you to follow me.</text>
-	</string>
-	<string id="axr_phrase_actor_give_command_ignore_combat">
-		<text>Avoid shooting at anyone for now.</text>
-	</string>
-	<string id="axr_phrase_actor_give_command_dont_ignore_combat">
-		<text>Attack enemies only on sight.</text>
-	</string>
-	<string id="axr_phrase_actor_give_command_ignore_combat_but_help_actor">
-		<text>Don't attack anyone unless I'm attacked.</text>
-	</string>
-	<string id="axr_phrase_companion_acknowledge_1">
-		<text>You got it.</text>
-	</string>
-	<string id="axr_phrase_companion_acknowledge_2">
-		<text>Alright, man.</text>
-	</string>
-	<string id="axr_phrase_companion_acknowledge_3">
-		<text>Sure, what do you want me to do?</text>
-	</string>
-	<string id="axr_phrase_companion_goodbye_1">
-		<text>Thanks for the company. See you around.</text>
-	</string>
-	<string id="axr_phrase_actor_give_command_nevermind">
-		<text>Nevermind.</text>
-	</string>
-	<string id="axr_phrase_actor_give_command_hide_in_cover">
-		<text>Quick, find some cover!</text>
-	</string>
-	<string id="axr_phrase_actor_give_command_patrol_menu">
-		<text>I want you to patrol an area.</text>
-	</string>
-	<string id="axr_phrase_actor_give_command_start_patrol">
-		<text>Start patrolling.</text>
-	</string>
-	<string id="axr_phrase_actor_give_command_stop_patrol">
-		<text>Stop patrolling.</text>
-	</string>
-	<string id="axr_phrase_actor_give_command_patrol_remove_waypoints">
-		<text>Forget all your waypoints.</text>
-	</string>
-	<string id="axr_phrase_actor_give_command_patrol_add_waypoints">
-		<text>Add this spot to your current patrol.</text>
-	</string>
-	<string id="axr_phrase_actor_give_command_gather_items">
-		<text>Pick up any equipment you come across, it may be useful.</text>
-	</string>
-	<string id="axr_phrase_actor_give_command_loot_corpses">
-		<text>Scavenge bodies for anything useful.</text>
-	</string>
-	<string id="axr_phrase_actor_give_command_gather_items_stop">
-		<text>Ignore any equipment you see laying around.</text>
-	</string>
-	<string id="axr_phrase_actor_give_command_loot_corpses_stop">
-		<text>Ignore the dead.</text>
-	</string>
-	<string id="axr_phrase_friend_companion_ask_join">
-		<text>Hey, let's explore as a team. We could help each other through the zone.</text>
-	</string>
-	<string id="axr_phrase_friend_companion_answer_join">
-		<text>Sure, sounds like a great idea! Lead the way.</text>
-	</string>
-	<string id="axr_phrase_friend_companion_ask_join_hostage">
-		<text>Will you come with me to save your comrade?</text>
-	</string>
-	<string id="axr_phrase_friend_companion_answer_join_hostage">
-		<text>Yes, he needs our help! Lead the way.</text>
-	</string>
-
 </string_table>

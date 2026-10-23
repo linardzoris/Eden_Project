@@ -18,12 +18,6 @@
 	<string id="st_binocular_name">
 		<text>Binoculars</text>
 	</string>
-	<string id="st_knife_descr">
-		<text>Standard combat knife with a serrated blade. Useful for breaking open boxes and silently taking down enemies.</text>
-	</string>
-	<string id="st_knife">
-		<text>Knife</text>
-	</string>
 	<string id="st_bread">
 		<text>Bread</text>
 	</string>
@@ -31,7 +25,7 @@
 		<text>No bakers have ever been identified in the Zone, but this bread is neither contaminated nor radioactive, being fresh and quite edible. At least no complaints have been reported thus far.</text>
 	</string>
 	<string id="st_conserva">
-		<text>"Tourist's Breakfast"</text>
+		<text>"Tourist's Breakfast" can</text>
 	</string>
 	<string id="st_conserva_descr">
 		<text>Presumably, these canned goods were looted by stalkers from an army ration depot. Without any kind of label on the can, it's hard to say for sure. Should still be good to eat, if you believe the best before date.</text>
@@ -40,22 +34,22 @@
 		<text>Echo detector</text>
 	</string>
 	<string id="st_detector1_descr">
-		<text>This dated anomalous activity detector produces an alarm signal when anomalous particles enter a special chamber as you approach an anomaly. It can also register the presence of artefacts and measure the distance to the nearest one. The distance is indicated by the frequency of the sound the detector emits. To switch to artefact search mode, open the device's front cover. Due to its simple design, Echo can only be used to locate the most common artefacts.</text>
+		<text>This dated anomalous activity detector produces an alarm signal when anomalous particles enter a special chamber as you approach an anomaly. It can also register the presence of artifacts and measure the distance to the nearest one. The distance is indicated by the frequency of the sound the detector emits. To switch to artifact search mode, open the device's front cover. Due to its simple design, Echo can only be used to locate the most common artifacts.</text>
 	</string>
 	<string id="st_detector2">
-		<text>Bear detector</text>
+		<text>Detector "Bear"</text>
 	</string>
 	<string id="st_detector3">
 		<text>Veles detector</text>
 	</string>
 	<string id="st_detector3_descr">
-		<text>A next generation scientific detection scanner. Thanks to three modernized detection chambers, the position of artefacts is shown on a special display screen. When closed, the device registers only radiation and anomalies. To switch to artefact search mode, open the front LED display. When in search mode, the detector is capable of locating all artefacts known to science.</text>
+		<text>A next generation scientific detection scanner. Thanks to three modernized detection chambers, the position of artifacts is shown on a special display screen. When closed, the device registers only radiation and anomalies. To switch to artifact search mode, open the front LED display. When in search mode, the detector is capable of locating all artifacts known to science.</text>
 	</string>
 	<string id="st_detector4">
-		<text>Svarog detector</text>
+		<text>Svarog detector prototype</text>
 	</string>
 	<string id="st_detector4_descr">
-		<text>A prototype of an expanded functionality anomalous frequency scanner. This device comes with a program used to identify static areas of anomalous activity stored in its database, while retaining the ability to locate artefacts. The position of anomalous areas and artefacts is displayed on a special screen. The artefact search mode, which can be activated by opening the front LED display, has been modified to detect anomalous formations currently unknown to science.</text>
+		<text>A prototype of an expanded functionality anomalous frequency scanner. This device comes with a program used to identify static areas of anomalous activity stored in its database, while retaining the ability to locate artifacts. The position of anomalous areas and artifacts is displayed on a special screen. The artifact search mode, which can be activated by opening the front LED display, has been modified to detect anomalous formations currently unknown to science.</text>
 	</string>
 	<string id="st_device_torch_descr">
 		<text>A standard head-mounted flashlight. Useful for stalkers who find themselves out and about after dark, but may attract trouble if used unwisely.</text>
@@ -82,16 +76,16 @@
 		<text>Ukrainian Vikasolum - an artificial equivalent of vitamin K. The main purpose of this drug is to increase blood coagulation speed. In great demand among stalkers who want slow-healing wounds and lacerations inflicted by mutants to close up faster. The effects of the drug are long-lasting.</text>
 	</string>
 	<string id="st_drug_psy_blockade">
-		<text>Psi-block</text>
+		<text>Psy-block</text>
 	</string>
 	<string id="st_drug_psy_blockade_descr">
-		<text>A drug that blocks avalanche-like nerve impulses. Consumption induces short-term loss of all emotion. Used exclusively in the Zone to counteract the effects of anomalous psi-fields. The effects of the drug are long-lasting.</text>
+		<text>A drug that blocks avalanche-like nerve impulses. Consumption induces short-term loss of all emotion. Used exclusively in the Zone to counteract the effects of anomalous psy-fields. The effects of the drug are long-lasting.</text>
 	</string>
 	<string id="st_drug_radioprotector">
 		<text>Radioprotectant</text>
 	</string>
 	<string id="st_energy_drink">
-		<text>Energy drink</text>
+		<text>Stalker energy drink</text>
 	</string>
 	<string id="st_energy_drink_descr">
 		<text>Often used by stalkers on long trips when no breaks can be afforded. The drink contains easily digestible carbohydrates, as well as drugs that stimulate the release of adrenaline into the bloodstream.</text>
@@ -127,7 +121,7 @@
 		<text>A medical kit designed specifically for use in the Zone. The kit contains products for handling wounds, as well as preventing the development of radiation poisoning and reducing accumulated radiation in the body. Contains Vikasolum, Batilolum and Naphazoline, unlike other medkits.</text>
 	</string>
 	<string id="st_pda_descr">
-		<text>Might have useful information on it.</text>
+		<text>No data stored.</text>
 	</string>
 	<string id="st_pda_name">
 		<text>PDA</text>
@@ -139,7 +133,7 @@
 		<text>Made by GSC. Goes down easy and considerably lowers the effects of radiation. Should be enjoyed in moderation.</text>
 	</string>
 	<string id="st_detector2_descr">
-		<text>This last generation anomalous activity detector can be used to locate anomalous formations and has a colour diode panel, which not only indicates the direction of artefacts, but also measures the distance to them. To switch to artefact search mode, open the device's front cover. Unfortunately, the device is programmed with a somewhat outdated list of detectable artefacts.</text>
+		<text>This last generation anomalous activity detector can be used to locate anomalous formations and has a color diode panel, which not only indicates the direction of artifacts, but also measures the distance to them. To switch to artifact search mode, open the device's front cover. Unfortunately, the device is programmed with a somewhat outdated list of detectable artifacts.</text>
 	</string>
 	<string id="st_drug_anabiotic_descr">
 		<text>An experimental drug developed by Professor Ozersky for scientific research teams working in the Zone. At its core, the drug contains tetrodotoxin, known colloquially as "zombie powder," which causes a complete shutdown of the body's central nervous system that may allow people to survive emissions outside cover. The drug has not undergone clinical or field testing, which puts its effectiveness in doubt and raises the issue of possible side effects.</text>
@@ -158,16 +152,5 @@
 	</string>
 	<string id="st_harmonica_descr">
 		<text>For blues and prison romance lovers.</text>
-	</string>
-	
-	<string id="st_itm_deployable_mgun_name">
-		<text>Deployable RP-74</text>
-	</string>
-	<string id="st_itm_deployable_mgun_desc">
-		<text>This belt-fed machine gun is a portable modification with a complex two-stage feeding system. Despite its weight and low precision, this LMG has found admirers in the Zone. Used primarily to fight off outnumbering enemy forces during faction conflicts and clear out mutant lairs.</text>
-	</string>
-	
-	<string id="st_memory_stick_name">
-		<text>Memory stick</text>
 	</string>
 </string_table>

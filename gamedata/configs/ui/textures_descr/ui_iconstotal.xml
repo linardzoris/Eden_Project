@@ -137,7 +137,6 @@
 	<texture id="ui_iconsNpc_stalker_prizrak"          x="415" y="705" width="83" height="47"/>
 	<texture id="ui_iconsNpc_green_stalker_7"          x="415" y="752" width="83" height="47"/>
 	<texture id="ui_iconsNpc_stalker_sv_rukzak_1"      x="415" y="799" width="83" height="47"/>
-	<texture id="ui_iconsNpc_stalker_osoznanie"        x="415" y="893" width="83" height="47"/>
 
 	<texture id="ui_iconsNpc_ecolog"                   x="498" y="0"   width="83" height="47"/>
 

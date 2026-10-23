@@ -9,9 +9,9 @@ cover_name = jup_a6_animpoint_guider_start
 avail_animations = wait_na
 use_camp = false
 reach_distance = 1
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 meet = no_meet
 out_restr = jup_a6_sr_noweap
 gather_items_enabled = false
@@ -27,9 +27,9 @@ reach_distance = 0.3
 on_info2 = {+jup_b217_pp_end_in_scene -jup_b217_guide_welcome_end !black_screen} %=play_sound(jup_b217_stalker_guide_welcome) +jup_b217_guide_welcome_end%
 on_signal = sound_end | {-jup_b217_welcome_guide_talked} %+jup_b217_welcome_guide_talked%
 on_info3 = {+jup_b217_welcome_guide_talked} animpoint@rest
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 meet = no_meet
 out_restr = jup_a6_sr_noweap
 gather_items_enabled = false
@@ -42,10 +42,10 @@ use_camp = false
 reach_movement = walk_noweap
 reach_distance = 1
 on_game_timer = 27 | {-jup_b217_tech_begin_to_talk} %+jup_b217_tech_begin_to_talk%
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
 meet = meet
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = jup_a6_sr_noweap
 gather_items_enabled = false
 help_wounded_enabled = false

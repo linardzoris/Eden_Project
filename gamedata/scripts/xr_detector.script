@@ -66,8 +66,8 @@ function actor_detector:load(packet)
   set_save_marker(packet, "load", false, "actor_detector")
 	local flag = packet:r_u8()
 	if flag == 1 then
-    	self.init_time = utils.r_CTime(packet) or game.get_game_time()
-    	self.last_update_time = utils.r_CTime(packet) or game.get_game_time()
+    	self.init_time = utils.r_CTime(packet)
+    	self.last_update_time = utils.r_CTime(packet)
 	else
     	self.init_time = -1
 	end

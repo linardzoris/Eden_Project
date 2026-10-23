@@ -48,12 +48,12 @@ function set_scheme (npc, ini, scheme, section, gulag_name)
 	local st    = xr_logic.assign_storage_and_bind(npc, ini, scheme, section)
 	st.logic    = xr_logic.cfg_get_switch_conditions(ini, section, npc)
 	
-	st.force    = ini:r_float_ex(section,"force") or 0
-	st.time     = ini:r_float_ex(section,"time") or 0
-	st.delay    = ini:r_float_ex(section,"delay") or 0
+	st.force    = utils.cfg_get_number (ini, section, "force", npc, true, 0)
+	st.time     = utils.cfg_get_number (ini, section, "time", npc, true, 0)
+	st.delay    = utils.cfg_get_number (ini, section, "delay", npc, false, 0)
 	
-	local path_name = ini:r_string_ex(section,"point")
-	local index    = ini:r_float_ex(section,"point_index") or 0
+	local path_name    = utils.cfg_get_string(ini, section, "point",	npc, true, "")
+	local index    = utils.cfg_get_number (ini, section, "point_index", npc, false, 0)
 	
 	if st.force == nil or st.force <= 0 then
 	   abort ("PH_FORCE : invalid force !")

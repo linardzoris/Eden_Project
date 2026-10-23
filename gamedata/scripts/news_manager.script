@@ -22,23 +22,29 @@ tips_icons = {
 }
 ]]
 
+-- ToDo - Need Pioneer icon here!
 tips_icons = {
-	-- Achievements
-	completionist			= "ui_inGame2_PD_Drug_Stalkerov",
-	down_to_earth			= "ui_inGame2_PD_DownToEarth",
-	duga_free				= "ui_inGame2_PD_Pervootkrivatel",
-	geologist				= "ui_inGame2_PD_Opitniy_stalker",
-	heavy_pockets			= "ui_inGame2_PD_Sostoyatelniy_klient",
-	infopreneur				= "ui_inGame2_PD_Torgovets_informatsiey",
-	mechanized_warfare		= "ui_inGame2_PD_master_boevih_sistem",
-	patriarch				= "ui_inGame2_PD_Lider",
-	radiotherapy			= "ui_inGame2_PD_Otmecheniy_zonoy",
-	rag_and_bone			= "ui_inGame2_PD_RagAndBone",
-	scholar					= "ui_inGame2_PD_Hranitel_tayn",
-	silver_or_lead			= "ui_inGame2_PD_Avtoritet",
-	tourist					= "ui_inGame2_PD_Tourist",
-	well_dressed			= "ui_inGame2_PD_Ohotnik_na_mutantov",
-	wishful_thinking		= "ui_inGame2_PD_WishfulThinking",
+	pioneer 				= "ui_inGame2_PD_Pervootkrivatel",
+	mutant_hunter			= "ui_inGame2_PD_Ohotnik_na_mutantov",
+	detective   			= "ui_inGame2_PD_Sisshik",
+	one_of_the_lads			= "ui_inGame2_PD_Svoy_paren",
+	kingpin					= "ui_inGame2_PD_Avtoritet",
+	herald_of_justice 		= "ui_inGame2_PD_Gonets_pravosudiya",
+	seeker					= "ui_inGame2_PD_Iskatel",
+	battle_systems_master	= "ui_inGame2_PD_master_boevih_sistem",
+	high_tech_master		= "ui_inGame2_PD_Master_visokih_technologiy",
+	skilled_stalker			= "ui_inGame2_PD_Opitniy_stalker",
+	leader					= "ui_inGame2_PD_Lider",
+	diplomat				= "ui_inGame2_PD_Diplomat",
+	research_man			= "ui_inGame2_PD_Nauchniy_sotrudnik",
+	friend_of_duty			= "ui_inGame2_PD_Drug_Dolga",
+	friend_of_freedom		= "ui_inGame2_PD_Drug_Swobodi",
+	balance_advocate		= "ui_inGame2_PD_storonnik_ravnovesiya",
+	wealthy					= "ui_inGame2_PD_Sostoyatelniy_klient",
+	keeper_of_secrets		= "ui_inGame2_PD_Hranitel_tayn",
+	marked_by_zone			= "ui_inGame2_PD_Otmecheniy_zonoy",
+	information_dealer		= "ui_inGame2_PD_Torgovets_informatsiey",
+	friend_of_stalkers		= "ui_inGame2_PD_Drug_Stalkerov",
 
 	got_artefact			= "ui_inGame2_D_gonets_pravosudiya",
 	got_ammo				= "ui_inGame2_D_Ohotnik_na_mutantov",
@@ -49,30 +55,18 @@ tips_icons = {
 	got_freedom_heavy_armor	= "ui_inGame2_D_Vipolnil_4_zadaniya_dlya_Swobodi",
 
 	can_resupply			= "ui_inGame2_Pered_zadaniyami_voennih",
-	guide_unlock			= "ui_inGame2_Poslednie_razrabotki",
-	rank_change				= "ui_inGame2_V_poiskah_Soroki",
-	rep_change				= "ui_inGame2_PD_storonnik_ravnovesiya",
 	recent_surge			= "ui_inGame2_V_zone_nedavno_proshel_vibros",
-	
-	-- Story
-	saharov  				= "ui_iconsNpc_ucheniy_2",
-	ecolog					= "ui_iconsNpc_ecolog",
-	trader					= "ui_iconsNpc_trader",
-	army					= "ui_iconsNpc_stalker_neytral_balon_6",
-	barman					= "ui_iconsNpc_barman",
-	wolf					= "ui_iconsNpc_stalker_neytral_balon_1",
 }
 
 
 function send_tip(actor, news_id, timeout, sender, showtime, sender_id)
 	if news_id == nil then return false end
 
-	--printf("try to send tips for [%s]", tostring(sender_id))
+--	printf("try to send tips for [%s]", tostring(sender_id))
 	if sender_id ~= nil then
 		local sim = alife()
 		if sim ~= nil then
-			local id = get_story_object_id(sender_id)
-			local npc = id and sim:object(id)
+			local npc = sim:object(get_story_object_id(sender_id))
 			if npc ~= nil then
 				if npc.online then
 					--в онлайне проверяем на раненность
@@ -82,7 +76,7 @@ function send_tip(actor, news_id, timeout, sender, showtime, sender_id)
 					end
 				end
 				-- в других случаях только на смерть
-				if not npc:alive() then
+				if npc:alive() == 1 then
 					printf("[PDA]Cannot send tips [%s], sender is dead", tostring(news_id))
 					return false
 				end
@@ -94,8 +88,7 @@ function send_tip(actor, news_id, timeout, sender, showtime, sender_id)
 	if showtime == nil then showtime = 5000 end
 
 	--' Играем дефолтный звук
-	xr_sound.set_sound_play(db.actor:id(), "pda_tips")
-	--sound_object(sound_theme.theme["pda_tips"].path):play_at_pos(actor, vector():set(0,0,0), timeout, sound_object.s2d)
+	xr_sound.set_sound_play(actor:id(), "pda_tips")
 
 
 	local texture = "ui_iconsTotal_grouping"
@@ -196,7 +189,7 @@ local action_descr_by_type = {
 								updated = "general_update_task"
 							 }
 
-function send_task(actor, type, tsk)
+function send_task(actor, type, task)
 	if db.actor == nil then
 		return false
 	end
@@ -206,8 +199,8 @@ function send_task(actor, type, tsk)
 	end
 	xr_sound.set_sound_play(db.actor:id(), "pda_task")
 	local news_caption = game.translate_string(action_descr_by_type[type])
-	local news_text = game.translate_string(tsk:get_title() or "")
-	local icon = tsk:get_icon_name()
+	local news_text = game.translate_string(task:get_title())
+	local icon = task:get_icon_name()
 	if(icon==nil) then
 		icon = "ui_iconsTotal_storyline"
 	end
@@ -226,6 +219,7 @@ function send_treasure(param)
 		news_caption = game.translate_string("st_found_new_treasure")
 	elseif(param==1) then
 		news_caption = game.translate_string("st_got_treasure")
+		xr_sound.set_sound_play(db.actor:id(), "pda_tips")
 	elseif(param==2) then
 		news_caption = game.translate_string("st_found_old_treasure")
 	end
@@ -235,20 +229,14 @@ function send_treasure(param)
 	else
 		db.actor:give_game_news(news_caption, "", "ui_inGame2_Polucheni_koordinaty_taynika", 0, 3000)
 	end
-	
-	xr_sound.set_sound_play(db.actor:id(), "pda_tips")
 end
 
 function get_inv_name(section)
-	return system_ini():r_string_ex(section,"inv_name")
+	return system_ini():r_string(section,"inv_name")
 end
 
 function relocate_item(actor, type, item, amount)
 	if db.actor == nil then return false end
-	if not (item and system_ini():section_exist(item)) then 
-		printf("ERROR: relocate_item - section %s does not exist",item)
-		return false
-	end
 	--' Играем дефолтный звук
 	if not amount then
 		amount = 1

@@ -76,7 +76,7 @@ end
 function action_remark_activity:time_callback()
 --printf("TIME CALLBACK CALLED")
 	self.state = state_sound
-	--self:update() --wtf?
+	self:update()
 end
 function action_remark_activity:update()
 	--' 1. Мы должны повернуться на объект.
@@ -86,14 +86,14 @@ function action_remark_activity:update()
 		local cb = { obj = self, func = self.time_callback }
 		local target = self:get_target()
 		if target == nil then
-			local anm = xr_logic.pick_section_from_condlist(db.actor, self.object, self.st.anm)
-			state_mgr.set_state(self.object, anm, cb, 0)
+			local anim = xr_logic.pick_section_from_condlist(db.actor, self.object, self.st.anim)
+			state_mgr.set_state(self.object, anim, cb, 0)
 			self.state = state_animation
 			return
 		end
 
-		local anm = xr_logic.pick_section_from_condlist(db.actor, self.object, self.st.anm)
-		state_mgr.set_state(self.object, anm, cb, 0, target)
+		local anim = xr_logic.pick_section_from_condlist(db.actor, self.object, self.st.anim)
+		state_mgr.set_state(self.object, anim, cb, 0, target)
 		self.state = state_animation
 
 	--' Ожидание колбека от стейтменеджера
@@ -176,7 +176,7 @@ function add_to_binder(npc, ini, scheme, section, storage)
 	new_action:add_precondition(world_property(stalker_ids.property_enemy, false))
 	new_action:add_precondition(world_property(stalker_ids.property_anomaly,false))
 	new_action:add_precondition(world_property(properties["need_remark"], true))
-	modules.add_common_precondition(scheme,new_action)
+	xr_motivator.addCommonPrecondition(new_action)
 	new_action:add_effect(world_property(properties["need_remark"], false))
 	new_action:add_effect (world_property(properties["state_mgr_logic_active"], false))
 	manager:add_action(operators["action_remark"], new_action)
@@ -196,15 +196,15 @@ function set_scheme(npc, ini, scheme, section, gulag_name)
 
 	st.logic     = xr_logic.cfg_get_switch_conditions(ini, section, npc)
 
-	st.snd_anim_sync = ini:r_bool_ex(section,"snd_anim_sync") or false
+	st.snd_anim_sync = utils.cfg_get_bool(ini, section, "snd_anim_sync", npc, false)
 
-	st.snd			= ini:r_string_ex(section,"snd")
-	st.anm			= xr_logic.parse_condlist(npc, "anim", "anim", ini:r_string_ex(section,"anim") or "wait")
-	st.tips_id		= ini:r_string_ex(section,"tips")
+	st.snd			= utils.cfg_get_string(ini, section, "snd", npc, false, "", nil)
+	st.anim			= xr_logic.parse_condlist(npc, "anim", "anim", utils.cfg_get_string(ini, section, "anim", npc, false, "", "wait"))
+	st.tips_id		= utils.cfg_get_string(ini, section, "tips", npc, false, "")
 	if st.tips_id then
-		st.sender	= ini:r_string_ex(section,"tips_sender")
+		st.sender	= utils.cfg_get_string(ini, section, "tips_sender", npc, false, "")
 	end
-	st.target = ini:r_string_ex(section,"target") or "nil"
+	st.target = utils.cfg_get_string          (ini, section,   "target",          npc, false, "", "nil")
 	st.target_id = nil
 	st.target_position = nil
 end

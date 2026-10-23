@@ -10,8 +10,8 @@ end
 function se_squad:on_unregister()
 	--' Отрегистрация в таскменеджере
 	unregister_story_object_by_id(self.id)
-	simulation_objects.get_sim_obj_registry():unregister(self)
 	cse_alife_online_offline_group.on_unregister( self )
+	simulation_objects.get_sim_obj_registry():unregister(self)
 end
 function se_squad:can_switch_offline()
 	return cse_alife_online_offline_group.can_switch_offline(self)

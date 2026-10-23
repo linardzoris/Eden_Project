@@ -59,9 +59,9 @@ out_restr = zat_a2_sr_noweap
 path_walk = b29_rival_leader_walk
 path_look = b29_rival_leader_look
 on_signal = path_end | walker@wait_for_actor
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = zat_a2_sr_noweap
 def_state_moving = walk_noweap
 gather_items_enabled = false
@@ -73,9 +73,9 @@ use_camp = false
 path_walk = b29_rival_leader_walk
 path_look = b29_rival_leader_look
 on_info = {=dist_to_actor_le(20)} remark@transfer_af
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = zat_a2_sr_noweap
 gather_items_enabled = false
 help_wounded_enabled = false
@@ -91,9 +91,9 @@ on_info3 = {-zat_b29_rival_sound_played =check_npc_name(zat_b29_stalker_rival_de
 on_info4 = {-zat_b29_rival_sound_played =check_npc_name(zat_b29_stalker_rival_default_2)} %=play_sound(zat_b29_stalker_rival_2_order_ready)%
 on_signal = sound_end | %+zat_b29_rival_sound_played%
 meet = no_meet
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = zat_a2_sr_noweap
 gather_items_enabled = false
 help_wounded_enabled = false

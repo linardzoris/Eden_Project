@@ -46,16 +46,13 @@ function action_timer:update(delta)
 	end
 end
 function action_timer:deactivate(delta)
-	local hud = get_hud()
-	if (hud) then
-		hud:RemoveCustomStatic(self.st.timer_id)
-		if self.st.string ~= nil then
-			hud:RemoveCustomStatic("hud_timer_text")
-		end
+	self.st.ui:RemoveCustomStatic(self.st.timer_id)
+	if self.st.string ~= nil then
+		self.st.ui:RemoveCustomStatic("hud_timer_text")
 	end
 end
 --function action_timer:save()
---	utils.save_var( self.object, "timer_value", self.state )
+--	xr_logic.pstor_store( self.object, "timer_value", self.state )
 --end
 
 function time2str(n)
@@ -73,25 +70,28 @@ end
 function set_scheme(obj, ini, scheme, section, gulag_name)
 	local st = xr_logic.assign_storage_and_bind(obj, ini, scheme, section)
 	st.logic = xr_logic.cfg_get_switch_conditions(ini, section, obj)
-	st.type = ini:r_string_ex(section,"type") or "inc"
+	st.type = utils.cfg_get_string( ini, section, "type", obj, false, "", "inc")
 	if st.type ~= "inc" and st.type ~= "dec" then
 		abort("ERROR: wrong sr_timer type. Section [%s], Restrictor [%s]", section, obj:name())
 	end
 
-	st.start_value = ini:r_float_ex(section,"start_value") or 0
-	
+	if st.type == "dec" then
+		st.start_value = utils.cfg_get_number(ini, section, "start_value", obj, true)
+	else
+		st.start_value = utils.cfg_get_number(ini, section, "start_value", obj, false, 0)
+	end
 	-- Вычитываем значения перехода.
-	st.on_value = parse_data(obj, ini:r_string_ex(section,"on_value"))
-	st.timer_id = ini:r_string_ex(section,"timer_id") or "hud_timer"
-	st.string	= ini:r_string_ex(section,"string")
+	st.on_value = parse_data(obj, utils.cfg_get_string(ini, section, "on_value", obj, false, ""))
+	st.timer_id = utils.cfg_get_string( ini, section, "timer_id", obj, false, "", "hud_timer")
+	st.string	= utils.cfg_get_string( ini, section, "string", obj, false, "")
 
-	local hud = get_hud()
-	hud:AddCustomStatic(st.timer_id, true)
-	st.timer = hud:GetCustomStatic(st.timer_id):wnd()
+	st.ui = get_hud()
+	st.ui:AddCustomStatic(st.timer_id, true)
+	st.timer = st.ui:GetCustomStatic(st.timer_id):wnd()
 
 	if st.string ~= nil then
-		hud:AddCustomStatic("hud_timer_text", true)
-		local timer_text = hud:GetCustomStatic("hud_timer_text"):wnd()
+		st.ui:AddCustomStatic("hud_timer_text", true)
+		local timer_text = st.ui:GetCustomStatic("hud_timer_text"):wnd()
 		timer_text:TextControl():SetTextST(st.string)
 	end
 end
@@ -100,7 +100,7 @@ function parse_data(npc,s)
 	local t = {}
 
 		if s then
-		for name in string.gmatch( s, "(%|*%d+%|[^%|]+)%p*" ) do
+		for name in string.gfind( s, "(%|*%d+%|[^%|]+)%p*" ) do
 			local dat = {	dist = nil,
 							state = nil}
 

@@ -58,108 +58,6 @@ function heli_fire:update_enemy_state()
     self:set_enemy()
 end
 
-function heli_fire:set_enemy()
-
-    local heli = self.obj:get_helicopter()
-    if self.flag_by_enemy then
-        heli:ClearEnemy()
-        --'printf("ClearEnemy()")
-        self.enemy_die = false
-        if self.enemy then
-		    if heli:isVisible( self.enemy ) then
-			    heli:SetEnemy( self.enemy)
-                self.flag_by_enemy = false
-		    end
-        else
-            if self.enemy_ then
-		        if self.enemy_ == "actor" then
-    		        if db.actor then
-                        self.enemy = db.actor
-                    end
-                else
-                    if self.enemy_ == "all" then
-                        self:update_enemy_arr()
-                    else
-                        if self.enemy_ ~= "nil" then
-							self.enemy = get_story_object(self.enemy)
-                            self.enemy_id = self.enemy and self.enemy:id()
-                        end
-                    end
-                end
-            end
-            if self.enemy then
-                heli:SetEnemy( self.enemy)
-                --'printf("set_enemy(self.enemy, actor or SID)")
-            else
-                self.enemy_die = true
-            end
-            self.flag_by_enemy = false
-        end
-    end
-    if not self.enemy_die and self.enemy:death_time() > 0 then
-        --'printf("ClearEnemy()")
-        heli:ClearEnemy()
-        self.enemy_die = true
-    end
-    if self.enemy_die and self.fire_point then
-        heli:SetEnemy(self.fire_point)
-    end
-end
-
-function heli_fire:update_enemy_arr()
-    --'printf("update_enemy_arr()")
-    local heli = self.obj:get_helicopter()
-    local index = 0
-    local min_dist2D = 65000
-   --' printf("heli_enemy_count=%d", db.heli_enemy_count)
-   local size = #db.heli_enemies
-   local id,enemy
-    while index < size do
-		id = db.heli_enemies[index]
-		enemy = id and db.storage[id] and db.storage[id].object
-        if enemy then
-            if heli:isVisible(enemy) then
-                if distance_2d( self.obj:position(), enemy:position() ) < min_dist2D then
-                    self.enemy = enemy
-                    min_dist2D = distance_2d( self.obj:position(), enemy:position() )
-                    self.flag_by_enemy  = true
-                end
-            end
-        end
-        index = index + 1
-    end
-    if heli:isVisible( db.actor ) and random_choice( false, true) or size==0 then
-        if distance_2d( self.obj:position(), db.actor:position() ) <= min_dist2D*2 then 
-            self.enemy = db.actor
-            min_dist2D = distance_2d( self.obj:position(), db.actor:position() )
-        end
-    end
-end
-
-function distance_2d( a, b )
-	return math.sqrt( (b.x-a.x)^2 + (b.z-a.z)^2 )
-end
-
---[[ Disabled in favor of ui_enemy_health. If you want to allow heli to have health bar simply set db.storage[heli:id()].show_health = true
-
-function heli_fire:update_hit()
-    if self.show_health then
-        self:set_cs_heli_progress_health()
-    else
-        self:cs_remove()
-    end
-    if self.enemy:id() == self.fire_id then
-        if self.enemy_ ~= "nil" then
-            self.hit_count = self.hit_count + 1
-	else 
-		self.hit_count = 0
-        end
-    else
-        self.fire_id = self.enemy:id()
-        self.hit_count = 1
-    end
-end
-
 function heli_fire:cs_heli() 		
     local hud = get_hud()
 	local custom_static = hud:GetCustomStatic("cs_heli_health")
@@ -203,4 +101,99 @@ function heli_fire:cs_remove()
         hud:RemoveCustomStatic("cs_heli_health")
     end
 end
---]]
+
+function heli_fire:set_enemy()
+
+    local heli = self.obj:get_helicopter()
+    if self.flag_by_enemy then
+        heli:ClearEnemy()
+        --'printf("ClearEnemy()")
+        self.enemy_die = false
+        if self.enemy then
+		    if heli:isVisible( self.enemy ) then
+			    heli:SetEnemy( self.enemy)
+                self.flag_by_enemy = false
+		    end
+        else
+            if self.enemy_ then
+		        if self.enemy_ == "actor" then
+    		        if db.actor then
+                        self.enemy = db.actor
+                    end
+                else
+                    if self.enemy_ == "all" then
+                        self:update_enemy_arr()
+                    else
+                        if self.enemy_ ~= "nil" then
+                            self.enemy_id = id_by_sid( tonumber( self.enemy_ ) )
+                            self.enemy = level.object_by_id( self.enemy_id )
+                        end
+                    end
+                end
+            end
+            if self.enemy then
+                heli:SetEnemy( self.enemy)
+                --'printf("set_enemy(self.enemy, actor or SID)")
+            else
+                self.enemy_die = true
+            end
+            self.flag_by_enemy = false
+        end
+    end
+    if not self.enemy_die and self.enemy:death_time() > 0 then
+        --'printf("ClearEnemy()")
+        heli:ClearEnemy()
+        self.enemy_die = true
+    end
+    if self.enemy_die and self.fire_point then
+        heli:SetEnemy(self.fire_point)
+    end
+end
+
+function heli_fire:update_hit()
+    if self.show_health then
+        self:set_cs_heli_progress_health()
+    else
+        self:cs_remove()
+    end
+    if self.enemy:id() == self.fire_id then
+        if self.enemy_ ~= "nil" then
+            self.hit_count = self.hit_count + 1
+	else 
+		self.hit_count = 0
+        end
+    else
+        self.fire_id = self.enemy:id()
+        self.hit_count = 1
+    end
+end
+
+function heli_fire:update_enemy_arr()
+    --'printf("update_enemy_arr()")
+    local heli = self.obj:get_helicopter()
+    local index = 0
+    local min_dist2D = 65000
+   --' printf("heli_enemy_count=%d", db.heli_enemy_count)
+    while index < db.heli_enemy_count do
+        if db.heli_enemies[index] then
+            if heli:isVisible( db.heli_enemies[index] ) then
+                if distance_2d( self.obj:position(), db.heli_enemies[index]:position() ) < min_dist2D then
+                    self.enemy = db.heli_enemies[index]
+                    min_dist2D = distance_2d( self.obj:position(), db.heli_enemies[index]:position() )
+                    self.flag_by_enemy  = true
+                end
+            end
+        end
+        index = index + 1
+    end
+    if heli:isVisible( db.actor ) and random_choice( false, true) or db.heli_enemy_count==0 then
+        if distance_2d( self.obj:position(), db.actor:position() ) <= min_dist2D*2 then 
+            self.enemy = db.actor
+            min_dist2D = distance_2d( self.obj:position(), db.actor:position() )
+        end
+    end
+end
+
+function distance_2d( a, b )
+	return math.sqrt( (b.x-a.x)^2 + (b.z-a.z)^2 )
+end

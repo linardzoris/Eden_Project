@@ -3,16 +3,16 @@ active = animpoint@start
 suitable = {=check_npc_name(jup_b19_freedom_yar)}
 prior = 200
 post_combat_time = 5,5
-level_spot = quest_npc
+on_death = death
 
 [animpoint@start]
 cover_name = jup_a6_animpoint_yar
 use_camp = false
 on_info = {+jup_b19_yar_switch_smart_terrain} animpoint@back              
 meet = meet
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = jup_a6_sr_noweap
 gather_items_enabled = false
 help_wounded_enabled = false
@@ -35,9 +35,9 @@ wounded = wounded
 cover_name = jup_a6_animpoint_yar
 use_camp = false
 meet = meet
-combat_ignore_cond = {=actor_enemy =check_enemy_name(actor)} false, true
+combat_ignore_cond = true
 combat_ignore_keep_when_attacked = true
-invulnerable = {!actor_enemy} true, false
+invulnerable = true
 out_restr = jup_a6_sr_noweap
 gather_items_enabled = false
 help_wounded_enabled = false
@@ -62,3 +62,10 @@ use = {=actor_enemy} false, true
 allow_break = false
 trade_enable = false
 meet_on_talking = false
+
+[danger]
+ignore_distance = 0
+
+
+[death]
+on_info = %+jup_b19_yar_enemy_or_dead%

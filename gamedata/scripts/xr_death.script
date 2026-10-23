@@ -33,29 +33,31 @@ end
 ----------------------------------------------------------------------------------------------------------------------
 -- binder
 ----------------------------------------------------------------------------------------------------------------------
-function setup_generic_scheme(npc,ini,scheme,section,stype,temp)
-	local death_section = ini:r_string_ex(section,"on_death")
-	if (death_section) then
-		local st = xr_logic.assign_storage_and_bind(npc,ini,"death",death_section,temp)
-	end
+function add_to_binder(npc, ini, scheme, section, storage) 	
+	local action = this.action_process_death(npc, storage)
+	xr_logic.subscribe_action_for_events(npc, storage, action)
 end
 
-function add_to_binder(npc,ini,scheme,section,st,temp) 	
-	st.action = action_process_death(npc,st)
-	xr_logic.subscribe_action_for_events(npc,st,st.action)
+
+function set_death(npc, ini, scheme, section)
+	local st = xr_logic.assign_storage_and_bind(npc, ini, scheme, section)	
 end
 
-function reset_generic_scheme(npc,scheme,section,stype,st)
-	local death_section = st.ini:r_string_ex(st.section_logic,"on_death")
+function reset_death(npc, scheme, st, section)
+	local death_section = utils.cfg_get_string(st.ini, st.section_logic, "on_death", npc, false, "")
+--	printf("reset death for [%s]", npc:name())
 	if death_section then
 		if not st.ini:section_exist(death_section) then
 			abort("There is no section [%s] for npc [%s]", death_section, npc:name())
 		end
-		local tmp = st.ini:r_string_ex(death_section,"on_info")
+--		printf("reset death, section present")
+		local tmp = utils.cfg_get_string(st.ini, death_section, "on_info", npc, false, "")
+--		printf("tmp [%s]", tostring(tmp))
 		if tmp then
 			st.death.info = xr_logic.parse_condlist(npc, death_section, "death", tmp)
 		end
-		tmp = st.ini:r_string_ex(death_section,"on_info2")
+--		printf("tmp [%s]", tostring(tmp))		
+		tmp = utils.cfg_get_string(st.ini, death_section, "on_info2", npc, false, "")
 		if tmp then
 			st.death.info2 = xr_logic.parse_condlist(npc, death_section, "death", tmp)
 		end

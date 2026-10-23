@@ -7,19 +7,49 @@
 		<text>No</text>
 	</string>
 	<string id="Btn_OK">
-		<text>Okay</text>
+		<text>OK</text>
 	</string>
 	<string id="Btn_Yes">
 		<text>Yes</text>
 	</string>
+	<string id="bad">
+		<text>Bad</text>
+	</string>
+	<string id="enemy">
+		<text>Enemy</text>
+	</string>
+	<string id="excellent">
+		<text>Excellent</text>
+	</string>
+	<string id="experienced">
+		<text>Experienced</text>
+	</string>
+	<string id="friendly">
+		<text>Friend</text>
+	</string>
 	<string id="global_map">
 		<text>Map of the Zone</text>
+	</string>
+	<string id="good">
+		<text>Good</text>
+	</string>
+	<string id="indifferent">
+		<text>Indifferent</text>
+	</string>
+	<string id="master">
+		<text>Master</text>
 	</string>
 	<string id="mm_mp_pda_hunt">
 		<text>PDA bonus</text>
 	</string>
 	<string id="mp_only_one_voting">
 		<text>Only one active vote permitted.</text>
+	</string>
+	<string id="neutral">
+		<text>Neutral</text>
+	</string>
+	<string id="novice">
+		<text>Rookie</text>
 	</string>
 	<string id="st_game">
 		<text>Game</text>
@@ -34,7 +64,7 @@
 		<text>Loading AI objects</text>
 	</string>
 	<string id="st_loading_alife_simulator">
-		<text>Server: Loading A-Life simulator</text>
+		<text>Server: Loading alife simulator</text>
 	</string>
 	<string id="st_loading_cform">
 		<text>Loading CFORM</text>
@@ -49,7 +79,7 @@
 		<text>Loading saved game</text>
 	</string>
 	<string id="st_loading_sectors_portals">
-		<text>Loading sectors and portals</text>
+		<text>Loading sectors & portals</text>
 	</string>
 	<string id="st_loading_shaders">
 		<text>Loading shaders</text>
@@ -93,11 +123,17 @@
 	<string id="st_video">
 		<text>Video</text>
 	</string>
+	<string id="terrible">
+		<text>Terrible</text>
+	</string>
 	<string id="ui_inv_repair">
-		<text>repair</text>
+		<text>Repair</text>
 	</string>
 	<string id="ui_st_cant_run_r2">
 		<text>You can't run Render 2 on your PC</text>
+	</string>
+	<string id="ui_st_community">
+		<text>Faction</text>
 	</string>
 	<string id="ui_st_conn_cdkey_disabled">
 		<text>Connection error: Your CD-Key is disabled. Contact customer service.</text>
@@ -183,11 +219,17 @@
 	<string id="ui_st_price">
 		<text>Price</text>
 	</string>
-	<string id="ui_st_secs">
-		<text>seconds</text>
+	<string id="ui_st_rank">
+		<text>Rank</text>
 	</string>
-	<string id="mp_si_sec">
-		<text>seconds</text>
+	<string id="ui_st_relation">
+		<text>Attitude</text>
+	</string>
+	<string id="ui_st_reputation">
+		<text>Reputation</text>
+	</string>
+	<string id="ui_st_secs">
+		<text>sec</text>
 	</string>
 	<string id="ui_st_select_one_map">
 		<text>Please select at least one map</text>
@@ -207,6 +249,15 @@
 	<string id="ui_total_price">
 		<text>Total</text>
 	</string>
+	<string id="very_bad">
+		<text>very bad</text>
+	</string>
+	<string id="very_good">
+		<text>very good</text>
+	</string>
+	<string id="veteran">
+		<text>Veteran</text>
+	</string>
 	<string id="ui_st_inv_repair">
 		<text>Repair</text>
 	</string>
@@ -218,15 +269,6 @@
 	</string>
 	<string id="st_save_uni_travel_generic">
 		<text>moving within an area</text>
-	</string>
-	<string id="st_travel_lost">
-		<text>I don't know the way yet.</text>
-	</string>
-	<string id="st_level_changer_descr">
-		<text>Move to the next level?</text>
-	</string>
-	<string id="st_future_maps_descr">
-		<text>You can't go there.</text>
 	</string>
 	<string id="st_save_uni_travel_zat_to_jup">
 		<text>moving from Zaton to Yanov</text>
@@ -247,10 +289,10 @@
 		<text>moving from Pripyat to Yanov</text>
 	</string>
 	<string id="st_save_uni_pri_to_labx8">
-		<text>moving from Pripyat to Lab X-8</text>
+		<text>moving from Pripyat to X8</text>
 	</string>
 	<string id="st_save_uni_labx8_to_pri">
-		<text>moving from Lab X-8 to Pripyat</text>
+		<text>moving from X8 to Pripyat</text>
 	</string>
 	<string id="st_save_uni_surge_start">
 		<text>emission</text>
@@ -289,7 +331,7 @@
 		<text>Zulu joins the squad</text>
 	</string>
 	<string id="st_save_jup_a10_gonna_return_debt">
-		<text>Vano's debt repaid</text>
+		<text>Vano’s debt repaid</text>
 	</string>
 	<string id="st_save_jup_b218_vano_in_squad">
 		<text>Vano joins the squad</text>
@@ -325,7 +367,7 @@
 		<text>reinforcements arrived</text>
 	</string>
 	<string id="st_save_pri_a18_searched_antenna">
-		<text>"antenna" examined</text>
+		<text>“antenna” examined</text>
 	</string>
 	<string id="st_save_pri_a21_approached_mad_sentry">
 		<text>missing sentry found</text>
@@ -400,7 +442,7 @@
 		<text>Operation One Shot initiated</text>
 	</string>
 	<string id="st_save_jup_b1_entered_railroad_tunnel">
-		<text>search for the psi-emission source</text>
+		<text>search for the psy-emission source</text>
 	</string>
 	<string id="st_save_jup_b47_got_admin_docs">
 		<text>administrative documents</text>
@@ -424,7 +466,7 @@
 		<text>dangerous cave</text>
 	</string>
 	<string id="ui_st_upgrade">
-		<text>Repair/Modify</text>
+		<text>Repair/modifications</text>
 	</string>
 	<string id="ui_st_buy">
 		<text>Buy</text>
@@ -455,117 +497,5 @@
 	</string>
 	<string id="st_save_pri_a28_evacuation_heli">
 		<text>evacuation helicopter take-off</text>
-	</string>
-	
-	<string id="st_set_companion_to_attack_state">
-		<text>Aggressive mode</text>
-	</string>
-	<string id="st_set_companion_to_ignore_combat_state">
-		<text>Passive mode</text>
-	</string>
-	<string id="st_set_companion_to_attack_only_actor_combat_enemy_state">
-		<text>Defensive mode</text>
-	</string>
-	<string id="st_set_companion_to_wait_state">
-		<text>Wait mode</text>
-	</string>
-	<string id="st_set_companion_to_follow_state">
-		<text>Follow mode</text>
-	</string>
-	<string id="st_set_companion_to_patrol_state">
-		<text>Patrol mode</text>
-	</string>	
-	<string id="st_move_to_point">
-		<text>Move to point</text>
-	</string>
-	<string id="st_hold_then_release">
-		<text>Hold then release</text>
-	</string>
-	<string id="st_enable_looting">
-		<text>Looting enabled</text>
-	</string>
-	<string id="st_disable_looting">
-		<text>Looting disabled</text>
-	</string>	
-	<string id="st_set_companion_to_loot_corpse_state">
-		<text>Can loot corpses</text>
-	</string>
-	<string id="st_set_companion_to_loot_items_state">
-		<text>Can pickup items</text>
-	</string>
-	<string id="st_companion_state_stealth_enabled">
-		<text>Companion stealth mode disabled</text>
-	</string>
-	<string id="st_companion_state_stealth_disabled">
-		<text>Companion stealth mode enabled</text>
-	</string>
-	<string id="st_set_companion_to_stealth_state">
-		<text>Stealth mode</text>
-	</string>
-	<!-- Sleep deprivation -->
-	<string id="st_sleep_awake">
-		<text>You do not need to rest</text>
-	</string>
-	<string id="st_sleep_awake_wired">
-		<text>You are high on caffeine and unable to rest</text>
-	</string>
-	<string id="st_sleep_bleeding">
-		<text>You are bleeding; seek medical attention</text>
-	</string>
-	<string id="st_sleep_bleeding_irradiated">
-		<text>You are bleeding and irradiated; seek medical attention</text>
-	</string>
-	<string id="st_sleep_deprived">
-		<text>You were killed whilst unconscious</text>
-	</string>
-	<string id="st_sleep_event">
-		<text>You aren't crazy enough to rest during this</text>
-	</string>
-	<string id="st_sleep_exhausted">
-		<text>You are exhausted and need to rest</text>
-	</string>
-	<string id="st_sleep_exhausted_final">
-        <text>You are extremely exhausted - rest immediately!</text>
-    </string>
-	<string id="st_sleep_irradiated">
-		<text>You are irradiated; seek medical attention</text>
-	</string>
-	
-	<!-- Stash placement -->
-	<string id="st_stash_created">
-		<text>Stash created</text>
-	</string>
-	<string id="st_stash_placed">
-		<text>You have already placed a stash somewhere</text>
-	</string>
-	<string id="st_stash_unsafe">
-		<text>Stash cannot be placed here</text>
-	</string>
-	
-	<!-- Miscellaneous -->
-	<string id="st_body_decayed">
-		<text>Body is badly decayed</text>
-	</string>
-	<string id="st_invalid_position">
-		<text>Position not on AI Map</text>
-	</string>
-	<string id="st_lamp_disconnected">
-		<text>Head lamp disconnected from UPD</text>
-	</string>
-	<string id="st_lamp_equipped">
-		<text>Head lamp equipped</text>
-	</string>
-	
-	<string id="st_travel_event">
-		<text>It would be unsafe to travel with enemies nearby</text>
-	</string>
-	<string id="st_travel_overloaded">
-		<text>You are carrying too much weight</text>
-	</string>
-	<string id="st_travel_already_here">
-		<text>You are already at your destination</text>
-	</string>
-	<string id="st_wish_granted">
-		<text>WISH GRANTED!</text>
 	</string>
 </string_table>
