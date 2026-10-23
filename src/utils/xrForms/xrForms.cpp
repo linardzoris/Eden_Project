@@ -263,6 +263,7 @@ int APIENTRY WinMain
 	Serializer.Read("Embree", gCompilerMode.Embree);
 	Serializer.Read("EmbreeBVHCompact", gCompilerMode.EmbreeBVHCompact);
 	Serializer.Read("EmbreeBVHRobust", gCompilerMode.EmbreeBVHRobust);
+	Serializer.Read("GPUBaking", gCompilerMode.GPUBaking);
 	Serializer.Read("ClearTemp", gCompilerMode.ClearTemp);
 	Serializer.Read("SkipTHM", gCompilerMode.SkipTHM);
 	Serializer.Read("LC_BackingDisabled", gCompilerMode.LC_BackingDisabled);
@@ -305,6 +306,7 @@ int APIENTRY WinMain
 	Serializer.Write("Embree", gCompilerMode.Embree);
 	Serializer.Write("EmbreeBVHCompact", gCompilerMode.EmbreeBVHCompact);
 	Serializer.Write("EmbreeBVHRobust", gCompilerMode.EmbreeBVHRobust);
+	Serializer.Write("GPUBaking", gCompilerMode.GPUBaking);
 	Serializer.Write("ClearTemp", gCompilerMode.ClearTemp);
 	Serializer.Write("SkipTHM", gCompilerMode.SkipTHM);
 	Serializer.Write("LC_BackingDisabled", gCompilerMode.LC_BackingDisabled);

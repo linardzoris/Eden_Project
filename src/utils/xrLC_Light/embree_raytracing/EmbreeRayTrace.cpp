@@ -13,6 +13,7 @@
 extern CompilersMode gCompilerMode;
 
 #include "../gpu_baker/GpuBaker.h"
+#include "../gpu_baker/OptiXBakerHost.h"
 
 // Важные параметры
 // INTIALIZE GEOMETRY, SCENE QUALITY TYPE
@@ -383,6 +384,14 @@ void EmbreeData::IntelEmbereLOAD()
  	InitializeGeometry(Static_size, MU_size);
 	AttachGeometrys(true);
 
+	// GPU baker: OptiX context/pipeline once, then rebuild the global traceable
+	// scene from the fresh face capture
+	if (gCompilerMode.GPUBaking)
+	{
+		if (gpu_optix_init())
+			gpu_optix_rebuild_global_scene();
+	}
+
 	//size_t BVH = AttachGeometrys(true);
  	//AditionalData("ST: %umb | MU: %umb | BVH: %u mb", geom_memory / 1024 / 1024, refs_memory / 1024 / 1024, BVH / 1024 / 1024);
 }
@@ -390,6 +399,7 @@ void EmbreeData::IntelEmbereLOAD()
 void EmbreeData::IntelEmbereUNLOAD()
 {
  	Msg("* Intel Embree Releasing Start| Memory: %u mb", u32(GetMemory() / 1024 / 1024));
- 	RemoveGeometry(true);
+	RemoveGeometry(true);
+	gpu_optix_shutdown();
   	Msg("* Intel Embree Releasing End| Memory: %u mb", u32(GetMemory() / 1024 / 1024));
 }

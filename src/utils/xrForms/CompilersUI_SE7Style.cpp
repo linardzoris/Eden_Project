@@ -480,6 +480,7 @@ void DrawCompilerConfig()
 
 		ImGui::TextColored(ImVec4(RGBAColor(0, 255, 0, 255)), "(This Only For Build BVH)");
 		ImGui::Checkbox("Embree Compacted", &gCompilerMode.EmbreeBVHCompact);
+		ImGui::Checkbox("GPU Baking (OptiX)", &gCompilerMode.GPUBaking);
 		HoverHelp("Adds RTC_SCENE_FLAG_COMPACT to the Embre scene - compact BVH node layout.\n"
 			"Less memory, slightly slower traversal.");
 		ImGui::Checkbox("Embree Robust", &gCompilerMode.EmbreeBVHRobust);

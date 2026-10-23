@@ -12,6 +12,9 @@
 #include "xrFace.h"
 #include "xrLC_GlobalData.h"
 
+#include "../xrForms/CompilersUI.h"
+#include "gpu_baker/OptiXBakerHost.h"
+
 void LightPoint(CDB::COLLIDER* DB, CDB::MODEL* MDL, base_color_c &C, Fvector &P, Fvector &N, base_lighting& lights, u32 flags, Face* skip);
   
 union var
@@ -79,7 +82,146 @@ void xrMU_Model::calc_lighting	(xr_vector<base_color>& dest, const Fmatrix& xfor
 		SafeVertices[Iter] = *m_vertices[Iter];
 	}
 
+	// GPU fast path: batch-trace every vertex sample through OptiX. The model
+	// phase (MDL set) traces against the model's own cform, the reference phase
+	// (MDL null) against the whole level - same scene choice as the CPU path.
+	bool		gpu_active		= false;
+	GpuBakeScene* gpu_scene		= nullptr;
+	xr_vector<GpuBakePoint>	gpu_points;
+	xr_vector<GpuBakeColor>	gpu_colors;
+	if (gCompilerMode.GPUBaking && gpu_optix_ready())
+	{
+		gpu_scene = MDL ? gpu_optix_scene_from_cdb(MDL) : gpu_optix_global_scene();
+		gpu_active = (gpu_scene != nullptr);
+		if (gpu_active)
+			clMsg("[GpuBaker] model '%s': GPU lighting %u vertices", *m_name, (u32)m_vertices.size());
+	}
+
+	if (gpu_active)
+	{
+		// pass 1: assemble per-sample points (keeps the original jitter math)
+		u32 SampleMAX = 6;
+		if (lc_global_data()->GetOverrideSettings())
+			SampleMAX = lc_global_data()->GetJitterMU();
+		const int n_samples = (g_params().m_quality == ebqDraft) ? 1 : SampleMAX;
+
+		gpu_points.reserve(SafeVertices.size() * (size_t)n_samples);
+		for (I = 0; I < SafeVertices.size(); I++)
+		{
+			_vertex& V = SafeVertices[I];
+			Fvector vP, vN;
+			xform.transform_tiny(vP, V.P);
+			Rxform.transform_dir(vN, V.N);
+			exact_normalize(vN);
+
+			for (u32 sample = 0; sample < (u32)n_samples; sample++)
+			{
+				const float a = 0.2f * float(sample) / float(n_samples);
+				Fvector P, N;
+				N.random_dir(vN, deg2rad(30.f));
+				P.mad(vP, N, a);
+				GpuBakePoint bp;
+				bp.P[0] = P.x;	bp.P[1] = P.y;	bp.P[2] = P.z;
+				bp.N[0] = N.x;	bp.N[1] = N.y;	bp.N[2] = N.z;
+				bp.skipFace = -1;
+				gpu_points.push_back(bp);
+			}
+		}
+
+		// bake in large chunks
+		gpu_colors.resize(gpu_points.size());
+		const size_t CHUNK = 1 << 19;
+		for (size_t off = 0; off < gpu_points.size() && gpu_active; off += CHUNK)
+		{
+			const size_t n = (gpu_points.size() - off) < CHUNK ? (gpu_points.size() - off) : CHUNK;
+			if (!gpu_optix_bake_points(gpu_scene, &gpu_points[off], (int)n, &gpu_colors[off], flags))
+			{
+				clMsg("[GpuBaker] bake failed, falling back to CPU for '%s'", *m_name);
+				gpu_active = false;
+			}
+		}
+
+		// pass 2: fold sample results back into vertices + trans-map registration
+		if (gpu_active)
+		{
+			size_t pt = 0;
+			for (I = 0; I < SafeVertices.size(); I++)
+			{
+				_vertex& V = SafeVertices[I];
+
+				float v_amb = 0.f;
+				float v_trans = 0.f;
+				for (u32 f = 0; f < V.m_adjacents.size(); f++)
+				{
+					_face* F = V.m_adjacents[f];
+					v_amb += F->Shader().vert_ambient;
+					v_trans += F->Shader().vert_translucency;
+				}
+				v_amb /= float(V.m_adjacents.size());
+				v_trans /= float(V.m_adjacents.size());
+
+				base_color_c vC;
+				for (u32 sample = 0; sample < (u32)n_samples; sample++)
+				{
+					const GpuBakeColor& c = gpu_colors[pt++];
+					vC.rgb.x += c.rgb[0];
+					vC.rgb.y += c.rgb[1];
+					vC.rgb.z += c.rgb[2];
+					vC.sun += c.sun;
+					vC.hemi += c.hemi;
+				}
+
+				if (n_samples > 0)
+				{
+					vC.scale(n_samples);
+					vC._tmp_ = v_trans;
+					if (!(flags & LP_dont_hemi))
+						vC.hemi += v_amb;
+				}
+				else
+				{
+					vC.hemi = 0.75f;
+				}
+
+				V.C._set(vC);
+
+				// Search (trans-map registration, same as the CPU path)
+				const float key = V.P.x;
+				mapVertIt it = g_trans.lower_bound(key);
+				mapVertIt it2 = it;
+				while (it != g_trans.begin() && ((it->first + eps2) > key)) it--;
+				while (it2 != g_trans.end() && ((it2->first - eps2) < key)) it2++;
+				if (it2 != g_trans.end()) it2++;
+				BOOL found = FALSE;
+				for (; it != it2; it++)
+				{
+					v_vertices& VL = it->second;
+					_vertex* Front = VL.front();
+					R_ASSERT(Front);
+					if (Front->P.similar(V.P, eps))
+					{
+						found = TRUE;
+						VL.push_back(&V);
+					}
+				}
+				if (!found)
+				{
+					mapVertIt ins = g_trans.insert(std::make_pair(key, v_vertices()));
+					ins->second.reserve(32);
+					ins->second.push_back(&V);
+				}
+			}
+
+			if (MDL)
+				gpu_optix_scene_destroy(gpu_scene);
+			clMsg("[GpuBaker] model '%s': GPU lighting done (%u points)", *m_name, (u32)gpu_points.size());
+		}
+		if (gpu_scene && !gpu_active && MDL)
+			gpu_optix_scene_destroy(gpu_scene);
+	}
+
 	// Perform lighting
+	if (!gpu_active)
 	for (I = 0; I< SafeVertices.size(); I++)
 	{
 		_vertex&	V			= SafeVertices[I];

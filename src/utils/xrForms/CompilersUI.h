@@ -16,6 +16,7 @@ struct CompilersMode
 	bool Embree_SplitBVH = false;
 	bool EmbreeBVHCompact = false;
 	bool EmbreeBVHRobust = false;
+	bool GPUBaking = true;
  	bool ClearTemp = false;
 	bool SkipTHM = false;
 

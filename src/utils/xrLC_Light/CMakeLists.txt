@@ -93,17 +93,25 @@ file(GLOB_RECURSE XLC_SOURCE_EMBREE_FILES
 file(GLOB CUDA_TOOLKIT_DIRS LIST_DIRECTORIES true "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v*")
 list(SORT CUDA_TOOLKIT_DIRS COMPARE NATURAL ORDER DESCENDING)
 set(GPU_BAKER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/gpu_baker")
-file(GLOB GPU_BAKER_SOURCES "${GPU_BAKER_DIR}/*.cu")
+file(GLOB GPU_BAKER_LIB_SOURCES "${GPU_BAKER_DIR}/GpuBaker.cu")
+file(GLOB GPU_BAKER_DEVICE_SOURCES "${GPU_BAKER_DIR}/OptiXBakerDevice.cu")
 set(GPU_BAKER_ENABLED OFF)
-if (CUDA_TOOLKIT_DIRS AND GPU_BAKER_SOURCES)
+set(OPTIX_SDK_DIR "D:/Eden_Project/.OptiX" CACHE PATH "OptiX SDK root (contains include/)")
+if (CUDA_TOOLKIT_DIRS AND GPU_BAKER_LIB_SOURCES)
 	list(GET CUDA_TOOLKIT_DIRS 0 CUDA_TOOLKIT_ROOT)
 	if (EXISTS "${CUDA_TOOLKIT_ROOT}/bin/nvcc.exe" AND EXISTS "${CUDA_TOOLKIT_ROOT}/lib/x64/cudart_static.lib")
 		set(CUDA_NVCC_EXECUTABLE "${CUDA_TOOLKIT_ROOT}/bin/nvcc.exe")
 		set(CUDA_CUDART_LIBRARY "${CUDA_TOOLKIT_ROOT}/lib/x64/cudart_static.lib")
 		set(GPU_BAKER_LIB "${CMAKE_CURRENT_BINARY_DIR}/gpu_baker.lib")
 		set(GPU_BAKER_ENABLED ON)
-		source_group("light_files\\gpu_baker" FILES ${GPU_BAKER_SOURCES})
+		source_group("light_files\\gpu_baker" FILES ${GPU_BAKER_LIB_SOURCES} ${GPU_BAKER_DEVICE_SOURCES})
 	endif()
+endif()
+set(GPU_OPTIX_ENABLED OFF)
+if (GPU_BAKER_ENABLED AND EXISTS "${OPTIX_SDK_DIR}/include/optix.h")
+	set(GPU_OPTIX_ENABLED ON)
+	set(GPU_BAKER_PTX "${CMAKE_CURRENT_BINARY_DIR}/OptiXBaker.ptx")
+	set(GPU_BAKER_PTX_HEADER "${CMAKE_CURRENT_BINARY_DIR}/OptiXBakerPTX.h")
 endif()
 
 # Source groups
@@ -206,10 +214,33 @@ if (GPU_BAKER_ENABLED)
 			${CUDA_NVCC_EXECUTABLE} -lib --use-local-env -allow-unsupported-compiler -arch sm_89
 			-Xcompiler=/utf-8,/MD
 			-o "${GPU_BAKER_LIB}"
-			${GPU_BAKER_SOURCES}
-		DEPENDS ${GPU_BAKER_SOURCES}
+			${GPU_BAKER_LIB_SOURCES}
+		DEPENDS ${GPU_BAKER_LIB_SOURCES}
 		COMMENT "nvcc: building gpu_baker.lib (sm_89)"
 		VERBATIM
 	)
 	target_link_libraries(xrLC_Light PUBLIC "${GPU_BAKER_LIB}" ${CUDA_CUDART_LIBRARY})
+endif()
+
+if (GPU_OPTIX_ENABLED)
+	file(GLOB GPU_BAKER_HOST_SOURCES "${GPU_BAKER_DIR}/OptiXBakerHost.cpp")
+	add_custom_command(OUTPUT "${GPU_BAKER_PTX_HEADER}"
+		COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/nvcc_tmp"
+		${GPU_VCVARS_COMMAND}
+		COMMAND ${CMAKE_COMMAND} -E env
+			"TEMP=${CMAKE_CURRENT_BINARY_DIR}/nvcc_tmp"
+			"TMP=${CMAKE_CURRENT_BINARY_DIR}/nvcc_tmp"
+			${CUDA_NVCC_EXECUTABLE} -ptx --use-local-env -allow-unsupported-compiler -arch compute_89
+			"-I${OPTIX_SDK_DIR}/include"
+			-o "${GPU_BAKER_PTX}"
+			${GPU_BAKER_DEVICE_SOURCES}
+		COMMAND powershell -NoProfile -ExecutionPolicy Bypass
+			-File "${GPU_BAKER_DIR}/embed_file.ps1" -In "${GPU_BAKER_PTX}" -Out "${GPU_BAKER_PTX_HEADER}" -Name OptiXBakerPTX
+		DEPENDS ${GPU_BAKER_DEVICE_SOURCES} "${GPU_BAKER_DIR}/embed_file.ps1"
+		COMMENT "nvcc: building OptiXBaker device PTX (compute_89) + embedding"
+		VERBATIM
+	)
+	target_sources(xrLC_Light PRIVATE ${GPU_BAKER_HOST_SOURCES} "${GPU_BAKER_PTX_HEADER}")
+	target_include_directories(xrLC_Light PRIVATE "${CMAKE_CURRENT_BINARY_DIR}" "${OPTIX_SDK_DIR}/include" "${CUDA_TOOLKIT_ROOT}/include")
+	target_compile_definitions(xrLC_Light PRIVATE XR_GPU_BAKER_HAS_OPTIX=1)
 endif()
