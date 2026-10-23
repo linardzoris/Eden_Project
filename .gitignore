@@ -86,14 +86,14 @@ gamedata/sounds/
 gamedata/ai
 _delete_later/
 _profiles/
+_designer/
+_import/
+_doc
+rawdata/
+util/
 bins/
-
-Eden Launcher.exe
-AXRToolSet.lnk
-launcher.exe.lnk
-_doc/render_bottlenecks.md
-_doc/_code_temp/01_gtao_noise_animate.md
-_doc/_code_temp/02_occq_next_frame_readback.md
-_doc/_code_temp/03_vslr_face_rotation.md
-_doc/_code_temp/04_sun_cascade_grass_gate.md
-_doc/render_bottlenecks.md
+Editors/
+*.lnk
+*.fbx
+*.json
+*.ini
