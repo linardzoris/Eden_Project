@@ -182,8 +182,11 @@ uint main(PSInput I) : SV_Target
 		return asuint(f32tof16(1000.0)) | (asuint(f32tof16(1.0)) << 16);
 
 	//Sample blue noise texture
-	//You can replace 0 with m_taa_jitter.w % 32 to animate it (texture contains 32 frames)
-	float3 jitter_tex = s_blue_noise[uint3(uint2(I.hpos.xy) % 128, 0)].xyz;
+	//Animate the noise slice per frame (32 frames) so a temporal integrator can
+	//average it out. Gate on the jitter phase (z >= 0 only when TAA/FSR is active):
+	//with no temporal AA the animation would just shimmer, so keep the static slice.
+	uint noise_slice = (m_taa_jitter.z >= 0.0f) ? (uint(m_taa_jitter.w) % 32u) : 0u;
+	float3 jitter_tex = s_blue_noise[uint3(uint2(I.hpos.xy) % 128, noise_slice)].xyz;
 
 	//Unpack G-Buffer data...
 	float3 Normal, Point;

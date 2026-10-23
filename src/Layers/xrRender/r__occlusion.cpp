@@ -16,6 +16,7 @@ void	R_occlusion::occq_create	(u32	limit	)
 	pool.reserve	(limit);
 	used.reserve	(limit);
 	fids.reserve	(limit);
+	outstanding		= 0;
 	for (u32 it=0; it<limit; it++)
 	{
 		_Q	q;	q.order	= it;
@@ -36,6 +37,7 @@ void	R_occlusion::occq_destroy	(				)
 	used.clear	();
 	pool.clear	();
 	fids.clear	();
+	outstanding	= 0;
 }
 
 void	R_occlusion::occq_refresh()
@@ -52,6 +54,7 @@ void	R_occlusion::occq_refresh()
 	}
 	if (!fids.empty())
 		fids.clear	();
+	outstanding	= 0;
 }
 
 void	R_occlusion::occq_stats()
@@ -99,6 +102,7 @@ u32		R_occlusion::occq_begin		(u32&	ID		)
 	pool.pop_back			();
 	//CHK_DX					(used[ID].Q->Issue	(D3DISSUE_BEGIN));
 	CHK_DX					(BeginQuery(used[ID].Q));
+	outstanding				++;
 	
 	// Msg				("begin: [%2d] - %d", used[ID].order, ID);
 
@@ -127,14 +131,21 @@ R_occlusion::occq_result R_occlusion::occq_get		(u32&	ID		)
 	HRESULT hr;
 	// CHK_DX		(used[ID].Q->GetData(&fragments,sizeof(fragments),D3DGETDATA_FLUSH));
 	// Msg			("get  : [%2d] - %d => %d", used[ID].order, ID, fragments);
+	// Soft-fail on stale handles: after device reset / occq_refresh the slot
+	// may be gone or reused -- reading it would be wrong, report "visible".
+	// (Checked before the wait-statistic block to keep Begin/End paired.)
+	if (ID >= used.size() || !used[ID].Q)
+	{
+		ID	= 0;
+		return	0xffffffff;
+	}
 	CTimer	T;
 	T.Start	();
 	Device.Statistic->RenderDUMP_Wait.Begin	();
 	{
 		PROF_EVENT("GPU::GetData");
 		//while	((hr=used[ID].Q->GetData(&fragments,sizeof(fragments),D3DGETDATA_FLUSH))==S_FALSE) {
-		VERIFY2( ID<used.size(),make_string<const char*>("_Pos = %d, size() = %d ", ID, used.size()));
-		while	((hr=GetData(used[ID].Q, &fragments,sizeof(fragments)))==S_FALSE) 
+		while	((hr=GetData(used[ID].Q, &fragments,sizeof(fragments)))==S_FALSE)
 		{
 			if (T.GetElapsed_ms_f() >= 0.1f)
 			{
@@ -161,5 +172,35 @@ R_occlusion::occq_result R_occlusion::occq_get		(u32&	ID		)
 	used[ID].Q			= 0;
 	fids.push_back		(ID);
 	ID					= 0;
+	VERIFY				(outstanding > 0);
+	outstanding			--;
 	return	fragments;
+}
+
+void	R_occlusion::occq_discard	(u32&	ID		)
+{
+	if (!enabled)					return;
+	if (ID == iInvalidHandle)		return;
+	// The owner (light) died with a query still pending -- return the slot to
+	// the pool without reading. Soft-fail if occq_refresh/occq_destroy already
+	// reclaimed it. Mirrors the pool-return logic of occq_get, minus GetData.
+	if (ID >= used.size() || !used[ID].Q)
+	{
+		ID	= 0;
+		return;
+	}
+
+	_Q&		Q			= used[ID];
+	if (pool.empty())	pool.push_back(Q);
+	else	{
+		int		it		= int(pool.size())-1;
+		while	((it>=0) && (pool[it].order < Q.order))	it--;
+		pool.insert		(pool.begin()+it+1,Q);
+	}
+
+	used[ID].Q			= 0;
+	fids.push_back		(ID);
+	ID					= 0;
+	VERIFY				(outstanding > 0);
+	outstanding			--;
 }

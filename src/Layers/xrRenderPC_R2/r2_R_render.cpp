@@ -428,7 +428,10 @@ void CRender::Render()
 	}
 
 	//******* Occlusion testing of volume-limited light-sources
-	if (Lights.package.v_point.empty() && Lights.package.v_spot.empty() && Lights.package.v_shadowed.empty())
+	// Only reclaim query slots when nothing is outstanding: cross-frame pending
+	// queries (light vis / smapvis) live in used[] between frames, releasing
+	// them here would leave dangling query IDs behind.
+	if (Lights.package.v_point.empty() && Lights.package.v_spot.empty() && Lights.package.v_shadowed.empty() && HWOCC.in_flight()==0)
 	{
 		HWOCC.occq_refresh();
 	}

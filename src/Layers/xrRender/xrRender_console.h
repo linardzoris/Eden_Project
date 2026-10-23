@@ -114,6 +114,9 @@ extern ECORE_API int			ps_r4_vslr_quality;			// 0=low, 1=medium, 2=high
 // actually reflect (far plane capped at 20 m). Distant heavy geometry (forests)
 // is frustum-culled from the 6-face render; the weapon keeps true reflections.
 extern ECORE_API int			ps_r4_vslr_hud_only;
+// VSLR face rotation: cubemap faces re-rendered per frame (round-robin), the rest
+// keep previous content. 6 = legacy full update.
+extern ECORE_API int			ps_r4_vslr_faces_per_frame;
 extern ECORE_API float			ps_r4_sslr_intensity;		// 1.0 = neutral
 extern ECORE_API float			ps_r4_vslr_intensity;		// 1.0 = neutral
 extern ECORE_API int			ps_r2_wait_sleep;
@@ -152,6 +155,9 @@ extern ECORE_API int			ps_r4_gtao_dirs;
 extern ECORE_API int			ps_r4_gtao_steps;
 extern ECORE_API float			ps_r4_gtao_radius;
 extern ECORE_API float			ps_r4_gtao_max_dist;
+// Sun cascade grass gating: last cascade index that receives grass shadows
+// (0 = 15 m only, 1 = 15/40 m default, 2 = all cascades -- legacy behavior).
+extern ECORE_API int			ps_r4_sun_details_max_cascade;
 
 // SSLR: fine trace settings, hot-tunable. Steps = full march budget (the
 // mid/far/low tiers derive from it), thickness = linear-depth relative

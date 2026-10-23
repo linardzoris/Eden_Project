@@ -307,7 +307,9 @@ void CRender::render_sun_cascade(u32 cascade_ind)
 			RCache.set_xform_project(fuckingsun->X.D.combine);
 			r_dsgraph_render_graph(0);
 
-			if (Details && Details->dtFS && ps_r2_ls_flags.test(R2FLAG_SUN_DETAILS))
+			// Grass shadows are sub-texel noise on far cascades (160 m / 2048 px
+			// ~ 12.8 texel per meter); keep them to the near cascades only.
+			if (Details && Details->dtFS && ps_r2_ls_flags.test(R2FLAG_SUN_DETAILS) && cascade_ind <= ps_r4_sun_details_max_cascade)
 				Details->hw_Render();
 
 			fuckingsun->X.D.transluent = FALSE;

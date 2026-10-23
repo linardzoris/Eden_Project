@@ -264,20 +264,69 @@ Calculate(dsgraph 构建)
 
 ---
 
-## 8. 实施顺序（轮 5 复核：顺序无变更，序位 0-4 已有暂存草稿/设计修订）
+## 7.5 第五轮实施后复核 + 新瓶颈深挖（2026-10-23 轮 6）
 
-> 轮 4 核验后顺序不变；轮 5 逐行复核全部行号引用与参数默认值（见 §11），序位 0/1/2/3 的修改位已确认并暂存草稿代码，序位 4 设计面重大简化（§5.2）。
+### 7.5.1 序位 0-3 实施代码复核修正（已修，重新构建部署）
 
-| 序 | 项 | 改动面 | 收益 | 草稿 |
+1. **in_flight() 语义 bug（真 bug，已修）**：初版实现返回 `used.size()`——但 `used[]` 条目收割后**不删除**（occq_get/discard 只置 `used[ID].Q=0` 留槽位），`used.size()` 是高水位（~1536）而非在途数 → 空包守卫 `in_flight()==0` 热身后永远为假 → **occq_refresh 变死代码**。已改为真实计数器 `outstanding`（occq_begin++ / occq_get·discard 有效路径-- / refresh·create·destroy 归零，带 VERIFY 对账）。
+2. **GTAO 噪声动画在无时域积分器时是纯闪烁（已修）**：GTAO 无自带 temporal pass（序位 5 才加），唯一积分器是 TAA/FSR；而 `m_taa_jitter.z >= 0` 恰好只在 aa_type==3（phase_taa）或 ps_r_scale_mode>1（FSR2/DLSS）时成立（r4_R_render.cpp#L512/521，否则 z=-1）。已门控：`uint noise_slice = (m_taa_jitter.z >= 0.0f) ? (uint(m_taa_jitter.w) % 32u) : 0u;`——TAA 关闭回退静态第 0 帧（旧行为），TAA 开启才动画。
+3. **VSLR RT 重建后未渲染面为未定义内容（已修）**：面轮转下首帧只有 1 面被渲染，其余 5 面 GPU 未定义内容 + GenerateMips 全图集重算 → 前几帧可能采到垃圾。已加暖启：以 `rt_Reflection->pTexture->get_SRView()` 指针为 token，指针变化（关卡加载/vid_restart）时该帧强制 6 面全渲染并重置游标。
+4. **粒子等待为渲染线程自旋（已修，见 7.5.2）**。
+
+### 7.5.2 新发现瓶颈：粒子 CPU 更新与渲染帧的耦合（已修等待方式）
+
+**结构**（device.cpp#L239-240 + EngineThreading.cpp#L10-37 + ParticlesAsyncManager.cpp）：
+- 每帧开头 `secondary_tasks.run(PreRenderThread)`（PPL task_group，**非阻塞调度**）：Discord 同步 → seqParallelRender（HOM MT_RENDER + Details MT_CALC）→ 雨 UpdateItems → **粒子 CPU 更新**（CParticlesAsync::Start）
+- 渲染帧与 PreRenderThread、GameThread **三者并行**；forward pass 绘制粒子前 `CParticlesAsync::Wait()`（r4_R_render.cpp#L846）
+- **两个问题**：①Wait 是 `sleep_for(0)` yield 自旋——渲染线程与粒子 worker 抢核（SMT 干扰反而拖慢粒子更新）；②**Discord RPC（IPC）排在 PreRenderThread 最前**，粒子更新启动被 Discord 同步推迟 → Wait 窗口拉大
+
+**已修**：Wait 改 `std::condition_variable` 阻塞（busy 标志在 worker 任何工作前置位，避免 setup 窗口竞态）；Discord 同步挪到 PreRenderThread 末尾（无渲染依赖）。
+**遗留**：若粒子更新本身超出重叠窗口，渲染线程仍要等（阻塞性等待，不烧 CPU）。后续可选：粒子按需并行化（ps_active 遍历 xr_parallel_for）或 1 帧迟渲染粒子（需解决 Start() 与渲染读写的竞态，改动大）。
+
+### 7.5.3 新发现瓶颈：逐阴影光 subspace 遍历 + 无阴影缓存（13+N 的 N 主体，未实施）
+
+**结构**（lights_render.cpp#L86-176 实读）：
+- 每个阴影 spot/point 光 = **一次完整 subspace 遍历**（L140 `r_dsgraph_render_subspace(..., TRUE, ...)`，动态+静态全套）+ smap 图集渲染；N 个阴影光 = N 次遍历（13+N 扇出里最肥的线性项，室内场景尤甚）
+- smap 已是**图集系统**：`optimize_smap_size` 自适应尺寸 → `LP_smap_pool` 矩形打包（L47-70，按 smap_ID 分页，每页 `phase_smap_spot_clear` 全清后同页灯一起画）
+- smapvis 增量剔除已存在（invisible 列表跳过已知不可见 caster），但只省 render graph 内部，**遍历照跑**
+
+**改进方向（阴影缓存，长期项）**：图集结构是现成基础——静态光（位姿/颜色不变）的图集矩形内容可跨帧保留，每帧只补动态物薄 pass；动态光或场景变动时整体重画。需要：图集"按矩形失效"替代整页 clear（phase_smap_spot_clear 语义改造）+ 灯位姿/场景脏标记 + 光进出视野的矩形回收。工作量与级联静态缓存（§6.1 改进 2）同族，可共用框架。
+**廉价替代**：静态光 smap 降帧率（每 K 帧重画，K=2~4）——动态物阴影会 K 帧滞后（ghosting），视觉风险高，不推荐默认。
+
+### 7.5.4 其他确认（非瓶颈，结案）
+
+- **光源累积 pass**：accum_point/accum_spot = 每灯 3 次 scissored 体积绘制（2 遍 stencil mask + 1 遍累积，r2_rendertarget_accum_point.cpp#L44-55）+ `enable_scissor`/`enable_dbt_bounds` 裁剪——非全屏，灯数中等时廉价；accum_volumetric 同为 scissored 单 pass。**非瓶颈**（除非百灯级场景，暂无此场景证据）。
+- **HOM**：MT_RENDER 挂 seqParallelRender 在 worker 线程（hom.cpp#L149-155），渲染线程只读结果——维持"非瓶颈"结论。
+- **ZBUFFER_COPY**：RDepth→rt_Position 单次全屏 CopyResource（r4_R_render.cpp#L714-722），~25MB/帧带宽，1080p 亚毫秒——**非瓶颈**。
+- **render_lights 开头的 vis_update→剔除链（L13-36）**：阴影光可见性判定现在吃 vis 1 周期延迟（隐匿光多画一个复测周期）——按设计接受。
+
+---
+
+## 8. 实施顺序（轮 5 复核：顺序无变更；序位 0-3 已实施，2026-10-23）
+
+> 轮 4 核验后顺序不变；轮 5 逐行复核全部行号引用与参数默认值（见 §11）。**序位 0/1/2/3 已于 2026-10-23 实施并构建部署**（MixedAVX，产物已复制到 bins\DXLegacy\MixedAVX），待游戏内验证；序位 4 设计面重大简化（§5.2）。
+
+| 序 | 项 | 改动面 | 收益 | 状态 |
 |---|---|---|---|---|
-| 0 | GTAO 蓝噪声动画化（一行） | 极小 | 静态伪影→可积分噪声，配合 TAA | _code_temp\01 |
-| 1 | occq 下一帧回读 | ~60 行，有先例 | 消除逐灯 CPU 自旋（收益重述见 §3.1） | _code_temp\02 |
-| 2 | VSLR 面轮转 | 小 | 开 VSLR 时遍历/提交砍 ~80% | _code_temp\03 |
-| 3 | 草只进近级联 | 小 | 太阳阴影砍草×3 | _code_temp\04 |
+| 0 | GTAO 蓝噪声动画化（一行） | 极小 | 静态伪影→可积分噪声，配合 TAA | ✅ 已实施 |
+| 1 | occq 下一帧回读 | ~60 行，有先例 | 消除逐灯 CPU 自旋（收益重述见 §3.1） | ✅ 已实施（R2 守卫同步） |
+| 2 | VSLR 面轮转 | 小 | 开 VSLR 时遍历/提交砍 ~80% | ✅ 已实施 |
+| 3 | 草只进近级联 | 小 | 太阳阴影砍草×3 | ✅ 已实施 |
 | 4 | 纹理异步 promote 队列（§5.2 骨架，轮 5 简化） | 中→中小 | 消除首用 hitch | 设计修订未暂存代码 |
 | 5 | GTAO 时域累积 + 默认半分辨率 | 中 | AO 成本砍半以上 | — |
 | 6 | SSLR stencil 预分类 | 中 | trace GPU 砍 30-60%（视场景） | — |
 | 7 | zfill/G-buffer 双桶、级联静态缓存、静态 instancing | 大 | 长期项 | — |
+| 8 | 阴影光 smap 缓存（§7.5.3，与级联静态缓存同族） | 大 | 砍 13+N 的 N 主体 | 长期项 |
+| 附 | 粒子等待改 CV + Discord 挪尾（§7.5.2） | 极小 | 消除渲染线程自旋抢核 | ✅ 已实施（轮 6） |
+
+### 序位 0-3 实施记录（2026-10-23）
+
+- **序位 0**：gtao_render.ps.hlsl#L186 噪声 Z 切片改 `uint(m_taa_jitter.w) % 32`（运行时 D3DCompile 直读，无需部署）。**轮 6 复核补门控**：仅 `m_taa_jitter.z >= 0`（TAA/FSR 激活）时动画，否则回退静态第 0 帧——GTAO 自身无 temporal pass，无积分器时动画即闪烁。
+- **序位 1**：r__occlusion.h/.cpp（occq_discard + in_flight + occq_get 软失败替代 VERIFY2，软失败检查置于等待统计块之前保持 Begin/End 配对）+ light_vis.cpp（vis_prepare 开头收割遗留查询；vis_update 置空）+ light.cpp 析构（pending 时 discard）+ r4_R_render.cpp / r2_R_render.cpp 的 occq_refresh 守卫（`in_flight()==0`）。**实施补充**：r2.h/r4.h 原本缺 `occq_discard` 的 CRender 包装器（首轮构建报 C2039），已在两个头各加一行；R1 编译已确认排除 light_vis.cpp/lights_render.cpp（xrRenderPC_R1\CMakeLists.txt#L57-58），R1 构建无恙。
+- **序位 2**：r4_R_render.cpp VSLR 循环改 round-robin（默认每帧 1 面，`r4_vslr_faces_per_frame` 1..6，6=旧行为，无需 vid_restart），游标 `s_vslr_face_cursor` 在循环后推进。**轮 6 复核补暖启**：RT token（SRV 指针）变化时强制 6 面全渲染一帧，消除重建后未定义面内容。
+- **序位 3**：R_sun.cpp#L312 级联门控 `cascade_ind <= ps_r4_sun_details_max_cascade`（`r4_sun_details_max_cascade` 0..2，默认 1=15/40m 保留草、160m 跳过）。
+- **构建**：xrEngine（MixedAVX）通过；部署 xrEngine.exe + xrRender_R1/R2/R4.dll(+pdb) 到 bins\DXLegacy\MixedAVX。**轮 6 修正后重建再部署**（in_flight 计数器、粒子 CV、EngineThreading 挪序、VSLR 暖启）。
+- **待验证**：①rs_statistic 里 RenderDUMP_Wait 应趋零、o_queries/o_culled 总量不异常；②vid_restart/alt-tab 无查询崩溃；③VSLR 开启时反射无可见跳变（观察旋转推进感）；④160m 级联无草影属预期（`r4_sun_details_max_cascade 2` 可回旧行为）。
 
 ## 9. 待深挖问题（剩余，迭代中）
 

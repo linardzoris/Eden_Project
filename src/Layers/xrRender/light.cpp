@@ -61,6 +61,13 @@ light::~light	()
 	for (u32 it=0; it<RImplementation.Lights_LastFrame.size(); it++)
 		if (this==RImplementation.Lights_LastFrame[it])	RImplementation.Lights_LastFrame[it]=0;
 	m_sectors.clear();
+	// return the occlusion query slot if a vis test is still pending
+	// (with next-frame readback a query can outlive the frame that issued it)
+	if (vis.pending)
+	{
+		RImplementation.occq_discard	(vis.query_id);
+		vis.pending			= false;
+	}
 #endif // (RENDER==R_R2) || (RENDER==R_R4)
 	ignore_object	= nullptr;
 	for (int f=0; f<6; f++)decor_object[f] = nullptr;

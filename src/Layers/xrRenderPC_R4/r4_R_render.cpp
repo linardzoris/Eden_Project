@@ -460,7 +460,28 @@ void CRender::Render()
 
 		RContext->CopyResource(Target->rt_Reflection_temp->pSurface, Target->rt_Reflection->pSurface);
 
-		for(u32 i = 0; i < 6; ++i) {
+		// OFFSCREEN REFLECTIONS: face rotation. Render N faces per frame
+		// round-robin, remaining faces keep their previous content. The dominant
+		// cost is CPU traversal + draw submission (x6 before), pixel fill is
+		// negligible at cube-face sizes; consumers sample coarse mips and
+		// tolerate a few frames of staleness. 6 = legacy full update.
+		static u32 s_vslr_face_cursor = 0;
+		static void* s_vslr_rt_token = nullptr;
+		void* rt_token = Target->rt_Reflection->pTexture->get_SRView();
+		u32 faces_per_frame = (ps_r4_vslr_faces_per_frame >= 1 && ps_r4_vslr_faces_per_frame <= 6)
+			? u32(ps_r4_vslr_faces_per_frame) : 6;
+		if (rt_token != s_vslr_rt_token)
+		{
+			// Cubemap (re)created (level load / vid_restart): undefined face content
+			// would be sampled for up to 5 frames -- render every face once first.
+			s_vslr_rt_token		= rt_token;
+			s_vslr_face_cursor	= 0;
+			faces_per_frame		= 6;
+		}
+		u32 faces_rendered = 0;
+		for(u32 n = 0; n < 6 && faces_rendered < faces_per_frame; ++n) {
+			const u32 i = (s_vslr_face_cursor + n) % 6;
+			++faces_rendered;
 			GPU_EVENT(FORWARD_REFLECTION_SIDE);
 
 			cView.build_camera_dir(PointPos, cmDir[i], cmNorm[i]);
@@ -484,6 +505,7 @@ void CRender::Render()
 
 			r_dsgraph_render_graph(0);
 		}
+		s_vslr_face_cursor = (s_vslr_face_cursor + faces_per_frame) % 6;
 
 		{
 			GPU_EVENT(FORWARD_REFLECTION_MIPS_GEN);
@@ -609,7 +631,10 @@ void CRender::Render()
 
 	{
 		GPU_EVENT(DEFER_TEST_LIGHT_VIS);
-		if(Lights.package.v_point.empty()&&Lights.package.v_spot.empty()&&Lights.package.v_shadowed.empty())
+		// Only reclaim query slots when nothing is outstanding: cross-frame pending
+		// queries (light vis / smapvis) live in used[] between frames, releasing
+		// them here would leave dangling query IDs behind.
+		if(Lights.package.v_point.empty()&&Lights.package.v_spot.empty()&&Lights.package.v_shadowed.empty()&&HWOCC.in_flight()==0)
 			HWOCC.occq_refresh();
 		else
 		{

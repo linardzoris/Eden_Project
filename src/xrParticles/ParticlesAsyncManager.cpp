@@ -6,7 +6,17 @@
 #include "../Include/xrRender/RenderVisual.h"
 #include "../xrEngine/IGame_Persistent.h"
 
+#include <condition_variable>
+#include <mutex>
+
 static CParticlesAsync Instance;
+
+// Signaled when the per-frame particle CPU update completes. The render thread
+// blocks on this (instead of the old yield-spin) so it stops competing for
+// cores with the particle worker while waiting.
+static std::mutex			s_particle_mutex;
+static std::condition_variable	s_particle_cv;
+static bool					s_particle_busy = false;
 
 void CParticlesAsync::Play()
 {
@@ -18,6 +28,12 @@ void CParticlesAsync::Play()
 
 void CParticlesAsync::Start()
 {
+	// Mark busy BEFORE any work (and before IsStarted): a Wait() landing in the
+	// setup window must not slip past an update that is about to run.
+	{
+		std::lock_guard<std::mutex> lock(s_particle_mutex);
+		s_particle_busy = true;
+	}
 	Instance.IsStarted = true;
 
 	{
@@ -37,6 +53,12 @@ void CParticlesAsync::Start()
 		particle->Update(Device.dwTimeDelta);
 	}
 
+	{
+		std::lock_guard<std::mutex> lock(s_particle_mutex);
+		s_particle_busy = false;
+	}
+	s_particle_cv.notify_all();
+
 	Instance.IsStarted = false;
 }
 
@@ -45,10 +67,8 @@ void CParticlesAsync::Wait()
 	if (psDeviceFlags.test(mtParticles))
 	{
 		PROF_EVENT("Particles Wait");
-		while (Instance.IsStarted)
-		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(0));
-		}
+		std::unique_lock<std::mutex> lock(s_particle_mutex);
+		s_particle_cv.wait(lock, [] { return !s_particle_busy; });
 	}
 }
 

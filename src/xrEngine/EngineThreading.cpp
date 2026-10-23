@@ -11,10 +11,8 @@ void XRay::Engine::PreRenderThread()
 {
 	Platform::SetThreadName("X-Ray Pre-Render");
 	PROF_THREAD("X-Ray Pre-Render");
-	{
-		PROF_EVENT("Discord Sync");
-		g_Discord.Update();
-	}
+	// NOTE: no Discord/IPC work at the head of this thread -- it delayed the
+	// particle CPU update, and the render frame busy-waits on that update.
 
 	{
 		PROF_EVENT("seqParallelRender");
@@ -31,6 +29,11 @@ void XRay::Engine::PreRenderThread()
 	{
 		PROF_EVENT("Process Particles");
 		Device.ParticleWorkerCallback();
+	}
+
+	{
+		PROF_EVENT("Discord Sync");
+		g_Discord.Update();
 	}
 
 	Platform::SetThreadName("X-Ray Empty Task");

@@ -15,6 +15,21 @@ void	light::vis_prepare			()
 	//		. perform testing				= ???,		pending
 
 	u32	frame	= Device.dwFrame;
+
+	// Next-frame readback (smapvis pattern): a query issued on an earlier frame
+	// is resolved on the GPU by now, so GetData returns without stalling. The
+	// result lands one retest cycle late, which is imperceptible for volume culling.
+	if (vis.pending)
+	{
+		R_occlusion::occq_result fragments = RImplementation.occq_get(vis.query_id);
+		vis.visible		= (fragments > cullfragments);
+		vis.pending		= false;
+		if (vis.visible)
+			vis.frame2test	=	frame	+ ::Random.randI(delay_large_min,delay_large_max);
+		else
+			vis.frame2test	=	frame	+ 1;
+	}
+
 	if (frame	<	vis.frame2test)		return;
 
 	float	safe_area					= Device.fViewportNear;
@@ -71,23 +86,9 @@ void	light::vis_update			()
 	//	. test-result:	invisible:
 	//		. shedule for 'next-frame' interval
 
+	// Next-frame readback mode: the query issued this frame is harvested by the
+	// next vis_prepare() call (at least one frame old -- no busy wait). This
+	// frame accumulation runs on the last known visibility (vis.visible).
+	// Kept as a no-op so all render_lights() call sites stay untouched.
 	if (!vis.pending)	return;
-
-	u32	frame			= Device.dwFrame;
-
-	R_occlusion::occq_result fragments = RImplementation.occq_get(vis.query_id);
-
-	//Log					("",fragments);
-	vis.visible			= (fragments > cullfragments);
-	vis.pending			= false;
-	if (vis.visible)	
-	{
-		vis.frame2test	=	frame	+ ::Random.randI(delay_large_min,delay_large_max);
-		//	TODO: DX10: Remove this pessimisation
-		//vis.frame2test	=	frame	+ 1;
-	} 
-	else 
-	{
-		vis.frame2test	=	frame	+ 1; 
-	}
 }

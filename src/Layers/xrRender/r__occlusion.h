@@ -22,10 +22,11 @@ private:
 
 	static const u32		iInvalidHandle = 0xFFFFFFFF;
 
-	BOOL					enabled;	// 
+	BOOL					enabled;	//
 	xr_vector<_Q>			pool;		// sorted (max ... min), insertions are usually at the end
 	xr_vector<_Q>			used;		// id's are generated from this and it is cleared from back only
 	xr_vector<u32>			fids;		// free id's
+	u32						outstanding;	// queries issued but not yet read/discarded (used[] entries persist with Q==0 after harvest, so used.size() is NOT the in-flight count)
 public:
 #ifdef USE_DX11
 	typedef	u64		occq_result;
@@ -41,6 +42,8 @@ public:
 	u32				occq_begin		(u32&	ID		);	// returns 'order'
 	void			occq_end		(u32&	ID		);
 	occq_result		occq_get		(u32&	ID		);
+	void			occq_discard	(u32&	ID		);	// return slot to pool without reading the result
+	u32				in_flight		()					{ return outstanding; }
 	void			occq_refresh		();
 	void			occq_stats		();
 };

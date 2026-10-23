@@ -187,6 +187,7 @@ float		ps_r2_slight_fade			= 0.6f;				// 1.f
 float		ps_r4_vslr_distance			= 0.7f;				// 1.f
 int			ps_r4_vslr_quality			= 1;				// 0=128px, 1=256px, 2=512px cube face
 int			ps_r4_vslr_hud_only			= 0;				// cap the cubemap render at 20 m (HUD-model reflections)
+int			ps_r4_vslr_faces_per_frame	= 1;				// cubemap faces updated per frame (1..6, 6 = legacy full update)
 float		ps_r4_sslr_intensity		= 1.0f;				// 1.0 = neutral
 float		ps_r4_vslr_intensity		= 1.0f;				// 1.0 = neutral
 
@@ -213,6 +214,8 @@ int			ps_r4_gtao_dirs = 3;			// horizon search slices ("lines")
 int			ps_r4_gtao_steps = 4;			// march steps per slice
 float		ps_r4_gtao_radius = 0.85f;		// world-space AO radius
 float		ps_r4_gtao_max_dist = 60.0f;	// AO cut-off distance, 0 = unlimited
+
+int			ps_r4_sun_details_max_cascade = 1;	// last sun cascade index receiving grass shadows (0=15m only, 1=15/40m, 2=all -- legacy)
 
 int			ps_r4_sslr_steps = 30;			// full march budget (mid/far/low derive from it)
 float		ps_r4_sslr_thickness = 0.25f;	// linear-depth relative silhouette gate
@@ -770,6 +773,9 @@ void		xrRender_initconsole	()
 	// VSLR quality tier: cubemap face resolution 0 = 128px, 1 = 256px, 2 = 512px.
 	// All tiers capture all 6 faces every frame. Needs vid_restart (RT reallocation).
 	CMD4(CCC_Integer, "r4_vslr_quality", &ps_r4_vslr_quality, 0, 2);
+	// Face rotation: how many cubemap faces are re-rendered per frame (round-robin),
+	// the rest keep their previous content. 6 = legacy full update, no vid_restart needed.
+	CMD4(CCC_Integer, "r4_vslr_faces_per_frame", &ps_r4_vslr_faces_per_frame, 1, 6);
 
 	// IX-Ray
 	CMD3(CCC_Mask, "r__fast_details_update",&ps_r2_ls_flags, R2FLAG_FAST_DETAILS_UPDATE);
@@ -808,6 +814,7 @@ void		xrRender_initconsole	()
 	CMD4(CCC_Integer, "r4_gtao_steps", &ps_r4_gtao_steps, 1, 16);	// steps per slice
 	CMD4(CCC_Float, "r4_gtao_radius", &ps_r4_gtao_radius, 0.1f, 4.0f);	// world AO radius
 	CMD4(CCC_Float, "r4_gtao_max_dist", &ps_r4_gtao_max_dist, 0.0f, 500.0f);	// 0 = unlimited
+	CMD4(CCC_Integer, "r4_sun_details_max_cascade", &ps_r4_sun_details_max_cascade, 0, 2);	// last cascade with grass shadows
 	CMD4(CCC_Integer, "r4_sslr_steps", &ps_r4_sslr_steps, 8, 64);	// full march budget
 	CMD4(CCC_Float, "r4_sslr_thickness", &ps_r4_sslr_thickness, 0.01f, 1.0f);	// silhouette gate
 	CMD4(CCC_Float, "r4_sslr_trace_scale", &ps_r4_sslr_trace_scale, 1.01f, 2.0f);	// step growth
