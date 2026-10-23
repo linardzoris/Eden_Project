@@ -85,6 +85,27 @@ file(GLOB_RECURSE XLC_SOURCE_EMBREE_FILES
     "Embree*"
 )
 
+# NVIDIA CUDA baker (optional): gpu_baker/*.cu is compiled by nvcc into a static
+# lib through a custom command and linked in when a CUDA toolkit is installed.
+# Deliberately not using enable_language(): the CUDA Visual Studio integration is
+# unavailable for the VS 18 generator, and nvcc runs fine inside the MSBuild
+# environment that custom commands inherit.
+file(GLOB CUDA_TOOLKIT_DIRS LIST_DIRECTORIES true "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v*")
+list(SORT CUDA_TOOLKIT_DIRS COMPARE NATURAL ORDER DESCENDING)
+set(GPU_BAKER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/gpu_baker")
+file(GLOB GPU_BAKER_SOURCES "${GPU_BAKER_DIR}/*.cu")
+set(GPU_BAKER_ENABLED OFF)
+if (CUDA_TOOLKIT_DIRS AND GPU_BAKER_SOURCES)
+	list(GET CUDA_TOOLKIT_DIRS 0 CUDA_TOOLKIT_ROOT)
+	if (EXISTS "${CUDA_TOOLKIT_ROOT}/bin/nvcc.exe" AND EXISTS "${CUDA_TOOLKIT_ROOT}/lib/x64/cudart_static.lib")
+		set(CUDA_NVCC_EXECUTABLE "${CUDA_TOOLKIT_ROOT}/bin/nvcc.exe")
+		set(CUDA_CUDART_LIBRARY "${CUDA_TOOLKIT_ROOT}/lib/x64/cudart_static.lib")
+		set(GPU_BAKER_LIB "${CMAKE_CURRENT_BINARY_DIR}/gpu_baker.lib")
+		set(GPU_BAKER_ENABLED ON)
+		source_group("light_files\\gpu_baker" FILES ${GPU_BAKER_SOURCES})
+	endif()
+endif()
+
 # Source groups
 source_group("kernel" FILES ${LCL_SOURCE_ALL_FILES})
 source_group("mu-models" FILES ${LCL_SOURCE_MUMODELS_FILES})
@@ -157,3 +178,19 @@ target_link_libraries(xrLC_Light PUBLIC ${CMAKE_BINARY_DIR}/packages/ImeSense.Pa
 # Intel Embree
 target_include_directories(xrLC_Light PUBLIC "${CMAKE_BINARY_DIR}/packages/ImeSense.Packages.Embree.Runtimes.win-x64.4.3.3/build/native/include/")
 target_link_libraries(xrLC_Light PUBLIC ${CMAKE_BINARY_DIR}/packages/ImeSense.Packages.Embree.Runtimes.win-x64.4.3.3/runtimes/win-x64/native/Release/embree4.lib)
+
+# GPU baker build + link (when the CUDA toolkit was found above)
+if (GPU_BAKER_ENABLED)
+	add_custom_command(OUTPUT "${GPU_BAKER_LIB}"
+		COMMAND ${CUDA_NVCC_EXECUTABLE} -lib -allow-unsupported-compiler -arch sm_89
+			-Xcompiler=/utf-8,/MD
+			-o "${GPU_BAKER_LIB}"
+			${GPU_BAKER_SOURCES}
+		DEPENDS ${GPU_BAKER_SOURCES}
+		COMMENT "nvcc: building gpu_baker.lib (sm_89)"
+		VERBATIM
+	)
+	target_sources(xrLC_Light PRIVATE "${GPU_BAKER_LIB}")
+	target_include_directories(xrLC_Light PUBLIC "${GPU_BAKER_DIR}")
+	target_link_libraries(xrLC_Light PUBLIC ${CUDA_CUDART_LIBRARY})
+endif()

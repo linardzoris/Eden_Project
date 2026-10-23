@@ -12,6 +12,8 @@
 #include <../xrForms/CompilersUI.h>
 extern CompilersMode gCompilerMode;
 
+#include "../gpu_baker/GpuBaker.h"
+
 // Важные параметры
 // INTIALIZE GEOMETRY, SCENE QUALITY TYPE
 // Инициализация Основных Фишек Embree
@@ -347,6 +349,16 @@ void EmbreeData::IntializeDevice()
 	GetEmbreeDeviceProperty("RTC_DEVICE_PROPERTY_IGNORE_INVALID_RAYS_ENABLED", device, RTC_DEVICE_PROPERTY_IGNORE_INVALID_RAYS_ENABLED);
 
 	GetEmbreeDeviceProperty("RTC_DEVICE_PROPERTY_TASKING_SYSTEM", device, RTC_DEVICE_PROPERTY_TASKING_SYSTEM);
+
+	// GPU baker probe: log the CUDA device (validates the GPU toolchain end-to-end)
+	{
+		char gpu_name[128] = { 0 };
+		int sms = 0;
+		if (gpu_baker_probe(gpu_name, sizeof(gpu_name), &sms))
+			Status("- GPU baker probe: %s (%d SMs)", gpu_name, sms);
+		else
+			Status("- GPU baker probe: no CUDA device available");
+	}
 }
 
 void EmbreeData::IntelEmbereLOAD()
