@@ -18,7 +18,9 @@ extern CompilersMode gCompilerMode;
 
 // INTEL DATA STRUCTURE
 RTCSceneFlags scene_flags = RTC_SCENE_FLAG_NONE;
-RTCBuildQuality scene_quality = RTC_BUILD_QUALITY_LOW;
+// Build quality HIGH: scene commits in ~20ms while the compiler issues hundreds
+// of millions of shadow rays against it, so traversal speed wins over build speed.
+RTCBuildQuality scene_quality = RTC_BUILD_QUALITY_HIGH;
 
 RTCDevice device	= 0;
 RTCScene IntelScene = 0;

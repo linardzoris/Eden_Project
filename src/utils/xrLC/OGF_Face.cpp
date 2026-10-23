@@ -51,8 +51,27 @@ u16 OGF::x_BuildVertex	(x_vertex&& V1)
 	fast_path_data.vertices.push_back	(V1);
 	return (unsigned short) fast_path_data.vertices.size()-1;
 }
-u16 OGF::_BuildVertex	(OGF_Vertex& V1)
+u16 OGF::_BuildVertex	(OGF_Vertex& V1, bool* added)
 {
+	if (added)	*added = false;
+
+	if (bHashDedup && V1.UV.size() <= OGF_VertexKey::kMaxUV)
+	{
+		// O(1) bit-exact dedup: MU face vertices are bit-copied from the model's
+		// vertex pool, so identical source vertices always produce identical keys.
+		OGF_VertexKey			K		(V1);
+		auto					it		= m_vhash.find(K);
+		if (it != m_vhash.end())
+			return it->second;
+
+		data.vertices.push_back	(V1);
+		u16			idx			= u16(data.vertices.size() - 1);
+		m_vhash.emplace			(K, idx);
+		if (added)	*added = true;
+		return idx;
+	}
+
+	// legacy epsilon-based scan (kept for the static Flex2OGF path)
 	try {
 		for (itOGF_V it=data.vertices.begin(); it!=data.vertices.end(); it++)
 		{
@@ -61,6 +80,7 @@ u16 OGF::_BuildVertex	(OGF_Vertex& V1)
 	} catch (...) { clMsg("* ERROR: OGF::_BuildVertex");	}
 
 	data.vertices.push_back	(V1);
+	if (added)	*added = true;
 	return (unsigned short) data.vertices.size()-1;
 }
 void OGF::x_BuildFace	(OGF_Vertex& V1, OGF_Vertex& V2, OGF_Vertex& V3, bool _tc_)
@@ -82,16 +102,34 @@ void OGF::_BuildFace	(OGF_Vertex& V1, OGF_Vertex& V2, OGF_Vertex& V3, bool _tc_)
 {
 	OGF_Face			F;
 	u32		VertCount	= (u32)data.vertices.size();
-	F.v[0]	= _BuildVertex(V1);
-	F.v[1]	= _BuildVertex(V2);
-	F.v[2]	= _BuildVertex(V3);
+	bool	added[3];
+	F.v[0]	= _BuildVertex(V1,&added[0]);
+	F.v[1]	= _BuildVertex(V2,&added[1]);
+	F.v[2]	= _BuildVertex(V3,&added[2]);
 	if (!F.Degenerate()) {
-		for (itOGF_F I=data.faces.begin(); I!=data.faces.end(); I++)		if (I->Equal(F)) return;
+		// permutation-exact duplicate check: canonical sorted-index key covers all
+		// 6 winding variations tested by OGF_Face::Equal
+		u32			a	= F.v[0], b = F.v[1], c = F.v[2];
+		if (a > b)	std::swap(a, b);
+		if (b > c)	std::swap(b, c);
+		if (a > b)	std::swap(a, b);
+		if (!m_fhash.insert((u64(a) << 32) | (u64(b) << 16) | u64(c)).second)
+			return;
 		data.faces.push_back	(F);
 		x_BuildFace		(V1,V2,V3,_tc_);
 	} else {
-		if (data.vertices.size()>VertCount) 
-				data.vertices.erase(data.vertices.begin()+VertCount,data.vertices.end());
+		if (data.vertices.size()>VertCount)
+		{
+			// roll back the vertex-hash entries created by the discarded corners
+			if (bHashDedup)
+			{
+				OGF_Vertex*	src[3]	= { &V1, &V2, &V3 };
+				for (u32 k = 0; k < 3; k++)
+					if (added[k] && src[k]->UV.size() <= OGF_VertexKey::kMaxUV)
+						m_vhash.erase(OGF_VertexKey(*src[k]));
+			}
+			data.vertices.erase(data.vertices.begin()+VertCount,data.vertices.end());
+		}
 	}
 }
 BOOL OGF::dbg_SphereContainsVertex(Fvector& c, float R)
@@ -287,6 +325,9 @@ void OGF::MakeProgressive	(float metric_limit)
 
 	//////////////////////////////////////////////////////////////////////////
 	// NORMAL
+	// dedup maps reference pre-simplification indices - invalidate them
+	m_vhash.clear	();
+	m_fhash.clear	();
 	vecOGF_V	_saved_vertices		=	data.vertices	;
 	vecOGF_F	_saved_faces		=	data.faces		;
 

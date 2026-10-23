@@ -299,23 +299,25 @@ void CBuild::RunAfterLight(IWriter* fs)
 	Phase("Converting MU-models to OGFs...");
 	mem_Compact();
 	{
-		u32 m;
 		Status("MU : Models...");
-		for (m = 0; m < mu_models().size(); m++) {
-			calc_ogf(*mu_models()[m]);
+		// models are independent: heavy OGF building (dedup, TB, VIPM) runs in
+		// parallel; MakeProgressive uses a thread_local processor and CalculateTB
+		// uses thread_local mender buffers
+		xr_parallel_for(size_t(0), size_t(mu_models().size()), [&](size_t mId)
+		{
+			calc_ogf(*mu_models()[mId]);
+		});
+
+		// VB/IB/SWI containers are global - register serially
+		for (u32 m = 0; m < mu_models().size(); m++)
 			export_geometry(*mu_models()[m]);
-		}
 
 		Status("MU : References...");
-		for (m = 0; m < mu_refs().size(); m++)
+		for (u32 m = 0; m < mu_refs().size(); m++)
+		{
+			Progress(float(m) / float(mu_refs().size()));
 			export_ogf(*mu_refs()[m]);
-	}
-
-	Status("MU : References...");
-	for (auto mRID = 0; mRID < (mu_refs().size()); mRID++)
-	{
-		Progress(mRID / mu_refs().size());
-		export_ogf(*mu_refs()[mRID]);
+		}
 	}
 
 	//****************************************** Build sectors

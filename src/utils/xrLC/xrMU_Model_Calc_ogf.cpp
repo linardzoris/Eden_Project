@@ -6,12 +6,18 @@
 
 #define	TRY(a) try { a; } catch (...) { clMsg("* E: %s", #a); }
 
-void MModel_face2OGF_Vertices( const _face &FF, OGF_Vertex	V[3], const xrMU_Model &model )
+// O(1) vertex pointer -> model index lookup; replaces per-face std::find over the
+// whole model vertex array which was O(F*V)
+typedef xr_hash_map<const _vertex*, u32>	MUVertexIdMap;
+
+void MModel_face2OGF_Vertices( const _face &FF, OGF_Vertex	V[3], const xrMU_Model &model, const MUVertexIdMap& vertex_ids )
 {
 	for (u32 k=0; k<3; k++)
 	{
 		_vertex*	_V		= FF.v[k];	
-		u32 id			= (u32)(std::find(model.m_vertices.begin(),model.m_vertices.end(),_V)-model.m_vertices.begin());
+		auto		it		= vertex_ids.find(_V);
+		R_ASSERT2	(it != vertex_ids.end(), "MU model face references vertex outside of the model");
+		u32			id		= it->second;
 		V[k].P			= _V->P;
 		V[k].N			= _V->N; 
 		V[k].Color		= model.color[id];
@@ -21,11 +27,11 @@ void MModel_face2OGF_Vertices( const _face &FF, OGF_Vertex	V[3], const xrMU_Mode
 	}
 }
 
-void OGF_AddFace( OGF &ogf, const _face &FF, const xrMU_Model& model )
+void OGF_AddFace( OGF &ogf, const _face &FF, const xrMU_Model& model, const MUVertexIdMap& vertex_ids )
 {
 	OGF_Vertex		V[3];
 
-	MModel_face2OGF_Vertices( FF, V, model );
+	MModel_face2OGF_Vertices( FF, V, model, vertex_ids );
 	// build face
 	TRY				( ogf._BuildFace( V[0], V[1], V[2] ) );
 	V[0].UV.clear();	V[1].UV.clear();	V[2].UV.clear();
@@ -33,12 +39,22 @@ void OGF_AddFace( OGF &ogf, const _face &FF, const xrMU_Model& model )
 
 void calc_ogf( xrMU_Model &	mu_model )
 {
+	// Build vertex id map once per model
+	MUVertexIdMap	vertex_ids;
+	vertex_ids.reserve	(mu_model.m_vertices.size());
+	for (u32 vid = 0; vid < mu_model.m_vertices.size(); vid++)
+		vertex_ids.emplace	(mu_model.m_vertices[vid], vid);
+
 	// Build OGFs
 	for (xrMU_Model::v_subdivs_it it=mu_model.m_subdivs.begin(); it!=mu_model.m_subdivs.end(); it++)
 	{
 		OGF*		pOGF	= new OGF ();
 		b_material*	M		= &(pBuild->materials()[it->material]);	// and it's material
 		R_ASSERT	(M);
+
+		// MU face vertices are bit-copied from the model's vertex pool - enable
+		// bit-exact O(1) dedup (the legacy path was O(V) per face)
+		pOGF->bHashDedup	= true;
 
 		try {
 			// Common data
@@ -59,7 +75,7 @@ void calc_ogf( xrMU_Model &	mu_model )
 				{
 					_face*	FF		= *Fit;
 					R_ASSERT			(FF);
-					OGF_AddFace( *pOGF, *FF, mu_model ); 
+					OGF_AddFace( *pOGF, *FF, mu_model, vertex_ids ); 
 				}
 			} catch (...) {  clMsg("* ERROR: MU2OGF, model %s, *faces*",*(mu_model.m_name)); }
 		} catch (...)

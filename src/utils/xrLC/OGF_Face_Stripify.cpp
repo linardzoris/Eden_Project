@@ -22,6 +22,12 @@ int xrSimulate (xr_vector<u16> &indices, int iCacheSize )
 
 void xrStripify		(xr_vector<u16> &indices, xr_vector<u16> &perturb, int iCacheSize, int iMinStripLength)
 {
+	// NvTriStrip keeps its settings in global statics (SetCacheSize etc.) - guard
+	// them when stripifying runs concurrently from parallel OGF conversion.
+	// RAII guard: xrStripify may throw and the caller catches by design.
+	static xrCriticalSection		cs_stripify;
+	xrCriticalSectionGuard			guard	(cs_stripify);
+
 	SetCacheSize	(iCacheSize);
 	SetMinStripSize	(iMinStripLength);
 	SetListsOnly	(true);

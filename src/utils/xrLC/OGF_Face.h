@@ -110,6 +110,65 @@ struct OGF_Base
 };
 extern xr_vector<OGF_Base *>		g_tree;
 
+// Bit-exact vertex key for O(1) dedup during OGF building. Stores raw float bits
+// of P/N, packed base_basis bytes and UV channels, so two keys compare equal only
+// when the source vertices are bit-identical. Used for MU model conversion where
+// face vertices are bit-copied from the model's own vertex pool.
+struct OGF_VertexKey
+{
+	static constexpr u32 kMaxUV = 4;
+
+	u32 P[3];
+	u32 N[3];
+	u32 T[3];		// base_basis raw bytes packed (u8 x,y,z)
+	u32 B[3];
+	u32 uv_count;
+	u32 UV[kMaxUV][2];
+
+	OGF_VertexKey() { ZeroMemory(this, sizeof(*this)); }
+	explicit OGF_VertexKey(const OGF_Vertex& V)
+	{
+		auto bits = [](float f) { u32 u; memcpy(&u, &f, sizeof(u)); return u; };
+		P[0] = bits(V.P.x);	P[1] = bits(V.P.y);	P[2] = bits(V.P.z);
+		N[0] = bits(V.N.x);	N[1] = bits(V.N.y);	N[2] = bits(V.N.z);
+		T[0] = u32(V.T.x) | (u32(V.T.y) << 8) | (u32(V.T.z) << 16);	T[1] = 0; T[2] = 0;
+		B[0] = u32(V.B.x) | (u32(V.B.y) << 8) | (u32(V.B.z) << 16);	B[1] = 0; B[2] = 0;
+		uv_count = (u32)V.UV.size();
+		for (u32 i = 0; i < kMaxUV; i++)
+		{
+			if (i < uv_count)
+			{
+				UV[i][0] = bits(V.UV[i].x);
+				UV[i][1] = bits(V.UV[i].y);
+			}
+			else
+			{
+				UV[i][0] = 0;
+				UV[i][1] = 0;
+			}
+		}
+	}
+	bool operator==(const OGF_VertexKey& O) const
+	{
+		return memcmp(this, &O, sizeof(*this)) == 0;
+	}
+};
+struct OGF_VertexKeyHasher
+{
+	size_t operator()(const OGF_VertexKey& K) const
+	{
+		// FNV-1a over the packed u32 fields (struct is all-u32, no padding)
+		u32 h = 2166136261u;
+		const u32* w = reinterpret_cast<const u32*>(&K);
+		for (size_t i = 0; i < sizeof(K) / sizeof(u32); i++)
+		{
+			h ^= w[i];
+			h *= 16777619u;
+		}
+		return h;
+	}
+};
+
 struct OGF : public OGF_Base
 {	
 	template <typename t_vertices>
@@ -137,6 +196,12 @@ struct OGF : public OGF_Base
 	ogf_container	<vecOGF_V>	data;
 	ogf_container	<vec_XV>	fast_path_data;
 
+	// O(1) dedup state: vertex map active only with bHashDedup (MU conversion);
+	// face set is permutation-exact and equivalent to the legacy linear Equal() scan
+	bool														bHashDedup;
+	std::unordered_map<OGF_VertexKey, u16, OGF_VertexKeyHasher>	m_vhash;
+	std::unordered_set<u64>										m_fhash;
+
 	OGF() : OGF_Base(0) 
 	{
 		data.m_SWI.count			= 0;
@@ -147,6 +212,7 @@ struct OGF : public OGF_Base
 		data.m_SWI.reserved[3]	= 0;
 		dwRelevantUV		= 0;
 		dwRelevantUVMASK	= 0;
+		bHashDedup			= false;
 	};
 	~OGF()
 	{
@@ -157,7 +223,7 @@ struct OGF : public OGF_Base
 
 	u16					x_BuildVertex		(x_vertex&&	V);
 	void				x_BuildFace			(OGF_Vertex& V1, OGF_Vertex& V2, OGF_Vertex& V3, bool _tc_);
-	u16					_BuildVertex		(OGF_Vertex& V1);
+	u16					_BuildVertex		(OGF_Vertex& V1, bool* added = nullptr);
 	void				_BuildFace			(OGF_Vertex& V1, OGF_Vertex& V2, OGF_Vertex& V3, bool _tc_ = true);
 
 	void				adjacent_select		(xr_vector<u32>& dest, xr_vector<bool>& vmark, xr_vector<bool>& fmark);

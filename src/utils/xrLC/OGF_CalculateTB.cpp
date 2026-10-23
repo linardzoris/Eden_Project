@@ -3,9 +3,10 @@
 #include	"MeshMenderLayerOGF.h"
 
 
-static		xr_vector< MeshMender::Vertex > mender_in_out_verts;
-static		xr_vector< unsigned int >		mender_in_out_indices;
-static		xr_vector< unsigned int >		mender_mapping_out_to_in_vert;
+// thread_local: CalculateTB runs concurrently from parallel MU model conversion
+static thread_local	xr_vector< MeshMender::Vertex > mender_in_out_verts;
+static thread_local	xr_vector< unsigned int >		mender_in_out_indices;
+static thread_local	xr_vector< unsigned int >		mender_mapping_out_to_in_vert;
 void		remove_isolated_verts( vecOGF_V &vertices, vecOGF_F &faces );
 // Calculate T&B
 void OGF::CalculateTB()
