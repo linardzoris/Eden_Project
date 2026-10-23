@@ -68,6 +68,7 @@ up_throw_factor			= 1.2
 explode_particles		 = explosions\explosion_01
 
 
+
 light_color		         = 1.9,1.4,0.5
 light_range		         = 25.0
 light_time 		         = 0.85
@@ -91,7 +92,12 @@ third_person_throw_point_offset = -0.198,1.8,-0.833 ;-0.05,0.848,0.706
 
 wm_size                  = 0.1
 
-wallmark_section		 =explosion_marks
+wallmark_section		 = explosion_marks
+
+detonation_threshold_hit = 0.3
+explosion_on_hit = true
+explosion_hit_types = 6, 8 
+explosive_while_not_activated = true
 
 [grenade_f1_hud]:hud_base
 fire_point			= 0,0,0

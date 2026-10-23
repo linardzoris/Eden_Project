@@ -563,8 +563,6 @@ descriptions = {
 	animpoint_sit_normal 	= smart_covers_animpoint_sit_normal.get_smart_cover(),
 	animpoint_sit_low 		= smart_covers_animpoint_sit_low.get_smart_cover(),
 
-	animpoint_pri_a15 		= smart_covers_animpoint_pri_a15.get_smart_cover(),
-	anim_pri_a22 			= smart_covers_anim_pri_a22.get_smart_cover()
 
 
 	--cover_loophole_1 = smart_covers_cover_loophole_1.get_smart_cover_cover_loophole_1(),

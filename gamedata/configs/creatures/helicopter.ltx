@@ -11,7 +11,6 @@ visual                  = dynamics\vehicles\mi24\veh_mi24_u_01.ogf
 ;wallmarks
 wallmark_section		= explosion_marks
 
-//параметры построения пути
 path_linear_acc_fw				=  6	;8; 3;5; 3.0 ;m/s  ; линейное ускорение при разгоне
 path_linear_acc_bk				=  4	;2;4; 0.5; 3;  3.5;3 ;8.0 ;m/s	; линейное ускорение торможения
 flag_by_new_acc					= 1	;если не задавать, или 0 - ускорение не будет рассчитываться автоматически при смене схемы
@@ -23,7 +22,6 @@ path_angular_sp_heading_0		= 1;0.9		    ; угловая скорость пути при скорости "0"
 
 magic_angle						= 0.3
 
-//пфраметры наклона модели 
 model_angular_sp_bank			= 0.5 ;0.4 ; скорость поворота модели по оси Z (как быстро модель повернется по курсу движения с учетом угловой скорости)
 model_angular_sp_pitch			= 0.1 ;     ; скорость поворота модели по оси X в зависимости от текущей линейной скорости
 model_pitch_koef				= 0.016;0.012;0.018 ;   ; коэф наклона модели по оси X в зависимости от текущей линейной скорости
@@ -117,6 +115,8 @@ wallmark_section		= explosion_marks
 ;------------------------------коэффициенты иммунитета 
 immunities_sect			= sect_heli_immunities
 
+ssa_dyn_factor = 0.001
+ssa_d_cam = 300.0
 
 [sect_heli_immunities]
 burn_immunity			= 0.01	

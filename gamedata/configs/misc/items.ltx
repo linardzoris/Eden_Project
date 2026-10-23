@@ -73,7 +73,6 @@ attach_position_offset	= 0.096910, -0.013594, 0.107925
 attach_bone_name		= bip01_r_hand
 auto_attach				= false
 
-// should be deleted after update
 bone_name				= bip01_r_hand
 position_offset			 = 0.0,0.0,0.0
 angle_offset			 = 1.570790,1.570790,3.92699
@@ -83,6 +82,7 @@ boost_health_restore	= 0.002
 eat_satiety				= 0.6
 
 use_sound			= interface\inv_food
+use_text 			= st_eat
 
 [kolbasa]:booster
 $spawn 				= "food and drugs\kolbasa"
@@ -104,7 +104,7 @@ attach_position_offset	= 0.104196, -0.010821, 0.076969
 attach_bone_name		= bip01_r_hand
 auto_attach				= false
 
-// should be deleted after update
+ 
 bone_name				= bip01_r_hand
 position_offset			 = 0.0,0.0,0.0
 angle_offset			 = 1.570790,1.570790,3.92699
@@ -114,6 +114,7 @@ boost_health_restore	= 0.002
 eat_satiety				= 1
 
 use_sound			= interface\inv_food
+use_text 			= st_eat
 
 [conserva]:booster
 $spawn 				= "food and drugs\conserva"
@@ -140,12 +141,13 @@ attach_position_offset	= 0.104196, -0.010821, 0.076969
 attach_bone_name		= bip01_r_hand
 auto_attach				= false
 
-// should be deleted after update
+ 
 bone_name				= bip01_r_hand
 position_offset			 = 0.0,0.0,0.0
 angle_offset			 = 1.570790,1.570790,3.92699
 
 use_sound			= interface\inv_food
+use_text 			= st_eat
 
 [vodka]:booster
 $spawn 				= "food and drugs\vodka"
@@ -181,6 +183,7 @@ eat_alcohol				= 0.1
 eat_satiety				= -0.2
 
 use_sound			= interface\inv_vodka
+use_text 			= st_drink
 
 [vodka_script]:vodka ; не использовать
 $spawn 				= "food and drugs\vodka_script"
@@ -709,6 +712,8 @@ night_vision				= on
 night_vision_texture		= wpn\wpn_night
 night_vision_effector		= postprocess_night
 
+sound_activate          	= device\torch_click
+sound_deactivate        	= device\torch_click_off
 snd_night_vision_on			= weapons\nv_start
 snd_night_vision_off		= weapons\nv_off
 snd_night_vision_idle		= weapons\nv_loop

@@ -748,4 +748,3 @@ animations = {
 
 utils.copy_table(animations, state_mgr_animation_list_animpoint.add_animation_list())
 utils.copy_table(animations, state_mgr_scenario.add_animation_list())
-utils.copy_table(animations, state_mgr_pri_a15.add_animation_list())
