@@ -181,8 +181,29 @@ target_link_libraries(xrLC_Light PUBLIC ${CMAKE_BINARY_DIR}/packages/ImeSense.Pa
 
 # GPU baker build + link (when the CUDA toolkit was found above)
 if (GPU_BAKER_ENABLED)
+	# nvcc runs vcvars64.bat internally with a forward-slash path that breaks
+	# batch %~dp0 handling on VS 18; derive the bat ourselves and pre-activate
+	# the MSVC environment, then let nvcc use it as-is (--use-local-env)
+	get_filename_component(GPU_VC_ROOT "${CMAKE_CXX_COMPILER}" DIRECTORY)
+	string(FIND "${GPU_VC_ROOT}" "/VC/Tools/MSVC/" GPU_VC_POS REVERSE)
+	if (GPU_VC_POS GREATER -1)
+		string(SUBSTRING "${GPU_VC_ROOT}" 0 ${GPU_VC_POS} GPU_VC_ROOT)
+		set(GPU_VCVARS_BAT "${GPU_VC_ROOT}/VC/Auxiliary/Build/vcvars64.bat")
+	endif()
+	if (EXISTS "${GPU_VCVARS_BAT}")
+		set(GPU_VCVARS_COMMAND COMMAND "${GPU_VCVARS_BAT}")
+	else()
+		set(GPU_VCVARS_COMMAND "")
+	endif()
 	add_custom_command(OUTPUT "${GPU_BAKER_LIB}"
-		COMMAND ${CUDA_NVCC_EXECUTABLE} -lib -allow-unsupported-compiler -arch sm_89
+		COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/nvcc_tmp"
+		${GPU_VCVARS_COMMAND}
+		# nvcc cannot handle the non-ASCII user profile path for its temp files:
+		# redirect TEMP/TMP into the (ASCII) build tree
+		COMMAND ${CMAKE_COMMAND} -E env
+			"TEMP=${CMAKE_CURRENT_BINARY_DIR}/nvcc_tmp"
+			"TMP=${CMAKE_CURRENT_BINARY_DIR}/nvcc_tmp"
+			${CUDA_NVCC_EXECUTABLE} -lib --use-local-env -allow-unsupported-compiler -arch sm_89
 			-Xcompiler=/utf-8,/MD
 			-o "${GPU_BAKER_LIB}"
 			${GPU_BAKER_SOURCES}
@@ -190,7 +211,5 @@ if (GPU_BAKER_ENABLED)
 		COMMENT "nvcc: building gpu_baker.lib (sm_89)"
 		VERBATIM
 	)
-	target_sources(xrLC_Light PRIVATE "${GPU_BAKER_LIB}")
-	target_include_directories(xrLC_Light PUBLIC "${GPU_BAKER_DIR}")
-	target_link_libraries(xrLC_Light PUBLIC ${CUDA_CUDART_LIBRARY})
+	target_link_libraries(xrLC_Light PUBLIC "${GPU_BAKER_LIB}" ${CUDA_CUDART_LIBRARY})
 endif()
