@@ -288,7 +288,7 @@ void DrawLCConfig()
 	//if (ImGui::BeginChild("LC", { 200, 415 }, ImGuiChildFlags_Border, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings))
 	{
 		ImGui::PushID("xrLC");
-		ImGui::Checkbox("Lighting Compiler", &gCompilerMode.LC);
+		ImGui::Checkbox("Levels Compiler", &gCompilerMode.LC);
 		HoverHelp("Master switch for the Levels Compiler (xrLC).\n"
 			"Runs the full build pipeline for every selected level: geometry conversion, UV mapping,\n"
 			"subdivide, lightmap packing, lightmap/vertex/MU light baking and lightmap save.");
@@ -307,8 +307,8 @@ void DrawLCConfig()
 			"MU objects keep their own baked vertex hemi.");
 		ImGui::Checkbox("No Smooth Group", &gCompilerMode.LC_NoSMG);
 		HoverHelp("Ignore the smoothing groups stored in level faces when generating smooth vertex\n"
-			"normals - every edge stays sharp (face normals only).\n"
-			"Changes lmap texel normals and baked vertex lighting on curved geometry.");
+			"Use when the geometry has sharp edges for smoothing.\n"
+			"This should be the default methods since no one uses maya/3dsmax plugins anymore.");
 		ImGui::Checkbox("Skip Progressive", &gCompilerMode.LC_Noise);
 		HoverHelp("Do not build progressive meshes (VIPM) for x-meshes.\n"
 			"Skips mesh simplification and the vertex-cache-ordered LOD records.\n"
@@ -317,16 +317,16 @@ void DrawLCConfig()
 		ImGui::Checkbox("Tesselation", &gCompilerMode.LC_Tess);
 		HoverHelp("Allow the Adaptive HT phase to tessellate (split) faces whose vertex hemi\n"
 			"lighting differs strongly, giving smoother baked hemi/vertex lighting.\n"
-			"Disable for faster builds on mostly flat geometry.");
+			"Disable for faster builds on geometries with large tris, mostly terrain & buildings.");
 		ImGui::Checkbox("Skip invalid faces", &gCompilerMode.LC_SkipInvalidFaces);
 		HoverHelp("Do not hard-crash when degenerate or invalid faces are found during conversion.\n"
-			"The bad faces are logged and skipped instead of aborting the whole build.");
+			"The bad faces are logged and skipped silently instead of aborting the whole build.");
 		ImGui::Checkbox("Texture RGBA", &gCompilerMode.LC_tex_rgba);
 		HoverHelp("Store lightmap textures as uncompressed 32-bit RGBA instead of DXT-compressed DDS.\n"
-			"Shadows and gradients stay clean (no compression artifacts), but files are ~4x larger.");
+			"Static shadows (DX8) and gradients stay clean (no compression artifacts), but files are ~4x larger.");
 		ImGui::Checkbox("Skip Subdivide", &gCompilerMode.LC_NoSubdivide);
 		HoverHelp("Skip the subdivide phase that splits oversized faces into smaller ones before\n"
-			"lightmap packing. Faster, but very large faces pack worse into atlases.");
+			"lightmap packing. Faster, but lightmaps are more coarse on very large faces.");
 		ImGui::Checkbox("Skip Welding", &gCompilerMode.LC_skipWeld);
 		HoverHelp("Skip the geometry welding phase - vertices and edges closer than 'Dist Weld'\n"
 			"are no longer merged. Use when welding corrupts imported or very dense geometry.");
@@ -350,7 +350,7 @@ void DrawLCConfig()
 		ImGui::Separator();
 		ImGui::Checkbox("Overload Prebuild", &gCompilerMode.IsOverloadedSettings);
 		HoverHelp("Ignore the quality settings stored in build.prj and use the\n"
-			"JitterMU / Jitter / Pixels / Dist Weld values below for this run instead.");
+			"customized values below for this run instead.");
 
 		ImGui::BeginDisabled(!gCompilerMode.IsOverloadedSettings);
 
@@ -364,7 +364,7 @@ void DrawLCConfig()
 				"4 / 9 = stratified grid samples averaged per texel.\n"
 				"Smoother shadows at a proportional speed cost.");
  			ImGui::SetNextItemWidth(100);
-			ImGui::InputFloat("Pixels", &gCompilerMode.LC_Pixels);
+			ImGui::InputFloat("Lightmap Density", &gCompilerMode.LC_Pixels);
 			HoverHelp("Lightmap texels per world meter.\n"
 				"Higher = sharper lightmaps, proportionally longer bake times and more memory.");
  			ImGui::SetNextItemWidth(100);
@@ -471,7 +471,7 @@ void DrawCompilerConfig()
 		ImGui::Checkbox("Use Intel Embree", &gCompilerMode.Embree);
 		HoverHelp("Trace occlusion rays with the Intel Embre kernel instead of the engine CDB collider.\n"
 			"A BVH is built once per phase and traced with SIMD rays - several times faster\n"
-			"on large levels. NOTE: MU (multi-use) objects are excluded from the Embre model.");
+			"on large levels.");
 		ImGui::Separator();
 
 		ImGui::TextColored(ImVec4(RGBAColor(204, 102, 102, 255)), "(Warning Disable MU in raycast)");
