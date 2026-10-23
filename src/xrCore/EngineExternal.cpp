@@ -59,6 +59,11 @@ const char* CEngineExternal::GetPreferredFallbackLanguage() const
 	return READ_IF_EXISTS(pOptions, r_string_wb, "localization", "PreferedFallbackLanguage", "eng").c_str();
 }
 
+xr_string CEngineExternal::GetEditorsLanguage() const
+{
+	return READ_IF_EXISTS(pOptions, r_string_wb, "localization", "EditorsLanguage", "").c_str();
+}
+
 const xr_vector<shared_str> CEngineExternal::StepWallmarksMaterials() const
 {
 	xr_vector<shared_str> TempVector;

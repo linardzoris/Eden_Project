@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+	Editor UI localization (IX-Ray editors).
+	The id attribute is the original hardcoded English label used in the
+	source code; Loc() looks labels up in this table at runtime.
+-->
+<string_table>
+	<!-- Main menu -->
+	<string id="File">文件</string>
+	<string id="Scene">场景</string>
+	<string id="Compile">编译</string>
+	<string id="Objects">对象</string>
+	<string id="Images">图像</string>
+	<string id="Sounds">声音</string>
+	<string id="Options">选项</string>
+	<string id="Windows">窗口</string>
+	<string id="Help">帮助</string>
+	<string id="Plugins">插件</string>
+
+	<!-- File -->
+	<string id="Clear">清空</string>
+	<string id="Open">打开</string>
+	<string id="Save">保存</string>
+	<string id="Save As ...">另存为 ...</string>
+	<string id="Open Selection">打开选集</string>
+	<string id="Save Selection">保存选集</string>
+	<string id="Open Recent">最近打开</string>
+	<string id="Clear List">清空列表</string>
+	<string id="Quit">退出</string>
+
+	<!-- Scene -->
+	<string id="World Properties">世界属性</string>
+	<string id="Export as archive">导出为归档</string>
+	<string id="Validate##list">校验##list</string>
+	<string id="Validate">校验</string>
+	<string id="Validate at make">编译时校验</string>
+	<string id="Validate LODs">校验 LOD</string>
+	<string id="Validate Dublicate Names">校验重名</string>
+	<string id="Summary Info">摘要信息</string>
+	<string id="Highlight Texture">高亮纹理</string>
+	<string id="Clear Debug Draw">清除调试绘制</string>
+	<string id="Export entire Scene as Obj">导出整个场景为 Obj</string>
+	<string id="Export selection as Obj">导出选中对象为 Obj</string>
+
+	<!-- Compile -->
+	<string id="Make">生成</string>
+	<string id="Make All">生成全部</string>
+	<string id="Make Game">生成游戏数据</string>
+	<string id="Make Puddles">生成水洼</string>
+	<string id="Make Details">生成细节</string>
+	<string id="Make Hom">生成 HOM</string>
+	<string id="Make SOM">生成 SOM</string>
+	<string id="Make AI-Map (25 bit)">生成 AI 地图 (25 位)</string>
+	<string id="Make AI-Map (Legacy)">生成 AI 地图 (兼容模式)</string>
+	<string id="Geometry &amp; Light">几何与光照</string>
+	<string id="Detail Object Light">细节对象光照</string>
+	<string id="AI-Map">AI 地图</string>
+	<string id="High">高</string>
+	<string id="Low">低</string>
+	<string id="Verify">验证</string>
+	<string id="Spawn">出生点</string>
+	<string id="Only current level">仅当前关卡</string>
+	<string id="All levels">所有关卡</string>
+	<string id="Import Error List">导入错误列表</string>
+	<string id="Import xrAI Error List">导入 xrAI 错误列表</string>
+	<string id="Export Error List">导出错误列表</string>
+	<string id="Clear Error List">清除错误列表</string>
+
+	<!-- Objects -->
+	<string id="Library Editor">库编辑器</string>
+	<string id="Clip Editor">剪辑编辑器</string>
+	<string id="Multi Rename">批量重命名</string>
+	<string id="Multi Replace">批量替换</string>
+	<string id="Reload">重新加载</string>
+
+	<!-- Images -->
+	<string id="Image Editor">图像编辑器</string>
+	<string id="Reload Textures">重新加载纹理</string>
+	<string id="Synchronize Textures">同步纹理</string>
+	<string id="Check New Textures">检查新纹理</string>
+	<string id="Edit minimap">编辑小地图</string>
+	<string id="Sync THM">同步 THM</string>
+
+	<!-- Sounds -->
+	<string id="Sound Editor">声音编辑器</string>
+	<string id="Synchronize Sounds (Soft)">同步声音 (软)</string>
+	<string id="Synchronize Sounds (Hard)">同步声音 (硬)</string>
+	<string id="Refresh Environment Library">刷新环境库</string>
+	<string id="Refresh Environment Geometry">刷新环境几何</string>
+
+	<!-- Options -->
+	<string id="Render">渲染</string>
+	<string id="Quality">质量</string>
+	<string id="Fill Mode">填充模式</string>
+	<string id="Point">点</string>
+	<string id="Wireframe">线框</string>
+	<string id="Solid">实体</string>
+	<string id="Shader Mode">着色模式</string>
+	<string id="Flat">平面</string>
+	<string id="Gouraud">高洛德</string>
+	<string id="Edged Faces">显示棱边</string>
+	<string id="RenderHW">硬件渲染</string>
+	<string id="Filter Linear">线性过滤</string>
+	<string id="Textures">纹理</string>
+	<string id="Draw Grid">显示网格</string>
+	<string id="Coordinate Axes">坐标轴</string>
+	<string id="None">无</string>
+	<string id="Axis">轴</string>
+	<string id="Cube">立方体</string>
+	<string id="Fog">雾</string>
+	<string id="Environment">环境</string>
+	<string id="Weather properties">天气属性</string>
+	<string id="Mute Sounds">静音</string>
+	<string id="Real Time">实时</string>
+	<string id="Stats">统计</string>
+
+	<!-- Windows -->
+	<string id="Light Anim Editor">光动画编辑器</string>
+	<string id="Macro Editor">宏编辑器</string>
+	<string id="Snap List">吸附列表</string>
+	<string id="Objects Tools">对象工具</string>
+	<string id="Properties">属性</string>
+	<string id="Log">日志</string>
+	<string id="Theme">主题</string>
+
+	<!-- Help / Plugins / misc -->
+	<string id="Wiki">维基</string>
+	<string id="About...">关于...</string>
+	<string id="Reinit">重新初始化</string>
+	<string id="Object List">对象列表</string>
+</string_table>
