@@ -428,67 +428,107 @@ float rayTrace	(CDB::COLLIDER* DB, CDB::MODEL* MDL, R_Light& L, Fvector& P, Fvec
 
 void LightPoint(CDB::COLLIDER* DB, CDB::MODEL* MDL, base_color_c& C, Fvector& P, Fvector& N, base_lighting& lights, u32 flags, Face* skip)
 {
-	auto processLight = [&]<typename T>(R_Light& L, T& accumulator, bool isSunOrHemi)
+	Fvector Pnew = P;
+	Pnew.mad(N, 0.01f);
+
+	// All light loops share one point, so consecutive lights are traced as 8-wide
+	// occlusion packets; per-light acceptance and attenuation stay scalar.
+	auto processLights = [&]<typename T>(xr_vector<R_Light>& light_list, T& accumulator, bool isSunOrHemi)
 	{
-		Fvector Ldir;
-		Fvector Pnew = P;
-		Pnew.mad(N, 0.01f);
-		float att = 0.0f;
+		constexpr u32	PACKET	= 8;
+		R_Light*		pendL	[PACKET];
+		Fvector			pendDir	[PACKET];
+		float			pendCos	[PACKET];
+		float			pendR	[PACKET];
+		float			pendR2	[PACKET];
+		float			pendTrace	[PACKET];
+		u32				pending	= 0;
 
-		switch (L.type)
+		auto accumulate = [&](R_Light& L, float cos_angle, float R, float R2, float trace)
 		{
-			case LT_DIRECT:
+			float att = 0.f;
+			switch (L.type)
 			{
-				Ldir.invert(L.direction);
-				float D = Ldir.dotproduct(N);
-				if (D <= 0)
-					return;
-
-				float trace = rayTrace(DB, MDL, L, Pnew, Ldir, 1000.f, skip);
-				att = isSunOrHemi ? L.energy * trace : D * L.energy * trace;
-				break;
-			}
-			case LT_POINT:
-			{
-				float sqD = P.distance_to_sqr(L.position);
-				if (sqD > L.range2)
-					return;
-
-				Ldir.sub(L.position, P).normalize_safe();
-				float D = Ldir.dotproduct(N);
-				if (D <= 0)
-					return;
-
-				float R = _sqrt(sqD);
-				float trace = rayTrace(DB, MDL, L, Pnew, Ldir, R, skip);
-				float scale = D * L.energy * trace;
-
-				if (isSunOrHemi)
+				case LT_DIRECT:
+					att = isSunOrHemi ? L.energy * trace : cos_angle * L.energy * trace;
+					break;
+				case LT_POINT:
 				{
-					att = scale / (L.attenuation0 + L.attenuation1 * R + L.attenuation2 * sqD);
+					float scale = cos_angle * L.energy * trace;
+					if (isSunOrHemi)
+					{
+						att = scale / (L.attenuation0 + L.attenuation1 * R + L.attenuation2 * R2);
+					}
+					else
+					{
+						att = (inlc_global_data()->gl_linear())
+							? scale * (1 - R / L.range)
+							: scale * (1 / (L.attenuation0 + L.attenuation1 * R + L.attenuation2 * R2) - R * L.falloff);
+					}
+					break;
+				}
+			}
+
+			if (isSunOrHemi)
+			{
+				if constexpr (std::is_arithmetic_v<T>)
+				{
+					accumulator += att;
 				}
 				else
 				{
-					att = (inlc_global_data()->gl_linear())
-						? scale * (1 - R / L.range)
-						: scale * (1 / (L.attenuation0 + L.attenuation1 * R + L.attenuation2 * sqD) - R * L.falloff);
+					accumulator.add(att);
 				}
-				break;
 			}
-			case LT_SECONDARY:
+			else
 			{
+				C.rgb.x += att * L.diffuse.x;
+				C.rgb.y += att * L.diffuse.y;
+				C.rgb.z += att * L.diffuse.z;
+			}
+		};
+
+		auto flush = [&]()
+		{
+			if (!pending)
+				return;
+
+			if (MDL)	// legacy OPCODE model - scalar per-light trace
+			{
+				for (u32 i = 0; i < pending; i++)
+					pendTrace[i] = rayTrace(DB, MDL, *pendL[i], Pnew, pendDir[i], pendR[i], skip);
+			}
+			else		// Embree: one 8-wide packet per flush
+			{
+				EmbreeMain.RaytraceEmbreeProcess8(Pnew, pendDir, pendR, pending, skip, pendTrace);
+			}
+
+			for (u32 i = 0; i < pending; i++)
+				accumulate(*pendL[i], pendCos[i], pendR[i], pendR2[i], pendTrace[i]);
+
+			pending = 0;
+		};
+
+		for (R_Light& L : light_list)
+		{
+			if (L.type == LT_SECONDARY)
+			{
+				// mutates L.position temporarily - keep scalar
+				flush();
+
 				float sqD = P.distance_to_sqr(L.position);
 				if (sqD > L.range2)
-					return;
+					continue;
 
+				Fvector Ldir;
 				Ldir.sub(L.position, P).normalize_safe();
 				float D = Ldir.dotproduct(N);
 				if (D <= 0)
-					return;
+					continue;
 
 				D *= -Ldir.dotproduct(L.direction);
 				if (D <= 0)
-					return;
+					continue;
 
 				Fvector Psave = L.position;
 				L.position.mad(Fvector().random_dir(L.direction, PI_DIV_4), 0.05f);
@@ -496,59 +536,78 @@ void LightPoint(CDB::COLLIDER* DB, CDB::MODEL* MDL, base_color_c& C, Fvector& P,
 				float trace = rayTrace(DB, MDL, L, Pnew, Ldir, R, skip);
 				L.position = Psave;
 
-				att = powf(D, 0.125f) * L.energy * trace * (1 - R / L.range);
-				break;
+				float att = powf(D, 0.125f) * L.energy * trace * (1 - R / L.range);
+				if (isSunOrHemi)
+				{
+					if constexpr (std::is_arithmetic_v<T>)
+					{
+						accumulator += att;
+					}
+					else
+					{
+						accumulator.add(att);
+					}
+				}
+				else
+				{
+					C.rgb.x += att * L.diffuse.x;
+					C.rgb.y += att * L.diffuse.y;
+					C.rgb.z += att * L.diffuse.z;
+				}
+				continue;
 			}
-		}
 
-		if (isSunOrHemi)
-		{
-			if constexpr (std::is_arithmetic_v<T>)
+			if (L.type == LT_DIRECT)
 			{
-				accumulator += att;
+				Fvector Ldir;
+				Ldir.invert(L.direction);
+				float D = Ldir.dotproduct(N);
+				if (D <= 0)
+					continue;
+
+				pendL[pending] = &L;
+				pendDir[pending] = Ldir;
+				pendCos[pending] = D;
+				pendR[pending] = 1000.f;
+				pendR2[pending] = 0.f;
 			}
-			else
+			else // LT_POINT
 			{
-				accumulator.add(att);
+				float sqD = P.distance_to_sqr(L.position);
+				if (sqD > L.range2)
+					continue;
+
+				Fvector Ldir;
+				Ldir.sub(L.position, P).normalize_safe();
+				float D = Ldir.dotproduct(N);
+				if (D <= 0)
+					continue;
+
+				pendL[pending] = &L;
+				pendDir[pending] = Ldir;
+				pendCos[pending] = D;
+				pendR[pending] = _sqrt(sqD);
+				pendR2[pending] = sqD;
 			}
+
+			pending++;
+			if (pending == PACKET)
+				flush();
 		}
-		else
-		{
-			C.rgb.x += att * L.diffuse.x;
-			C.rgb.y += att * L.diffuse.y;
-			C.rgb.z += att * L.diffuse.z;
-		}
+		flush();
 	};
 
 	// RGB Lights
 	if (!(flags & LP_dont_rgb))
-	{
-		DB->ray_options(0);
-		for (R_Light& L : lights.rgb)
-		{
-			processLight(L, C.rgb, false);
-		}
-	}
+		processLights(lights.rgb, C.rgb, false);
 
 	// Sun Lights
 	if (!(flags & LP_dont_sun))
-	{
-		DB->ray_options(0);
-		for (R_Light& L : lights.sun)
-		{
-			processLight(L, C.sun, true);
-		}
-	}
+		processLights(lights.sun, C.sun, true);
 
 	// Hemi Lights
 	if (!(flags & LP_dont_hemi))
-	{
-		DB->ray_options(0);
-		for (R_Light& L : lights.hemi)
-		{
-			processLight(L, C.hemi, true);
-		}
-	}
+		processLights(lights.hemi, C.hemi, true);
 }
 
 IC u32	rms_diff	(u32 a, u32 b)

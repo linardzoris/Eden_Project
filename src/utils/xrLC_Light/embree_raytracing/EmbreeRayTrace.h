@@ -52,6 +52,8 @@ struct TriEmbree
 // ВАЖНЫЙ ПАРАМЕТР TNEAR Для пересечения с водой
 void SetRay1(RTCRay& rayhit, Fvector& pos, Fvector& dir, float near_, float range);
 void SetRay1(RTCRayHit& rayhit, Fvector& pos, Fvector& dir, float near_, float range);
+// fills a single lane of an SoA RTCRay8 packet
+void SetRay1(RTCRay8& ray, u32 lane, Fvector& pos, Fvector& dir, float near_, float range);
 
 struct TriangleContainer
 {
@@ -111,6 +113,9 @@ public:
 	bool isInitialized = false;
 	void RemoveGeometry(bool isDealloc);
 	float RaytraceEmbreeProcess(R_Light& L, Fvector& P, Fvector& N, float range, void* skip);
+	// Occlusion packet of up to 8 rays sharing one origin: dirs/ranges are per-lane,
+	// lanes beyond 'count' are disabled. out_energy receives transmission per lane.
+	void RaytraceEmbreeProcess8(Fvector& P, Fvector* dirs, float* ranges, u32 count, void* skip, float* out_energy);
 	void InitializeGeometry(size_t& geom_static, size_t& geom_murefs);
 
 	bool isAttached = false;

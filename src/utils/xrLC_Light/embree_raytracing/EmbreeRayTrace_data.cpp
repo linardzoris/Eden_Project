@@ -65,6 +65,22 @@ void SetRay1(RTCRay& rayhit, Fvector& pos, Fvector& dir, float near_, float rang
 	rayhit.flags = 0;
 }
 
+void SetRay1(RTCRay8& ray, u32 lane, Fvector& pos, Fvector& dir, float near_, float range)
+{
+	ray.dir_x[lane] = dir.x;
+	ray.dir_y[lane] = dir.y;
+	ray.dir_z[lane] = dir.z;
+	ray.org_x[lane] = pos.x;
+	ray.org_y[lane] = pos.y;
+	ray.org_z[lane] = pos.z;
+	ray.tnear[lane] = near_;
+	ray.tfar[lane] = range;
+	ray.time[lane] = 0.0f;
+	ray.mask[lane] = (unsigned int)(-1);
+	ray.id[lane] = 0;
+	ray.flags[lane] = 0;
+}
+
 void SetRay1(RTCRayHit& rayhit, Fvector& pos, Fvector& dir, float near_, float range)
 {
 	rayhit.ray.dir_x = dir.x;

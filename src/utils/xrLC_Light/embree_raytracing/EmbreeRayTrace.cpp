@@ -40,31 +40,46 @@ float EmbreeEnergyMAX = 0.01f;
 
 struct RayQueryContext
 {
-	RTCRayQueryContext context;
-	Fvector B;
+	RTCRayQueryContext context;		// must stay first (filters cast the pointer back)
 
- 	Face* skip = 0;
-	R_Light* Light = 0;
-	float energy = 1.0f;
-	u32 Hits = 0;
+	Face* skip = 0;
+	// Per-lane running transmission energy: index 0 for scalar (N==1) queries,
+	// one slot per lane for packet queries. skip is uniform for the whole query.
+	float energy[16] = { 0 };
 };
- 
-// Сделать потом переключалку
-bool CalculateEnergy(Face* F, Fvector& B, float& energy, float u, float v)
+
+// Fetch a single lane's hit data; scalar (N==1) queries are AoS RTCHit, packets are SoA RTCHit8
+static __forceinline void GetLaneHit(const RTCFilterFunctionNArguments* args, u32 lane, unsigned& geomID, unsigned& primID, float& u, float& v)
+{
+	if (args->N == 1)
+	{
+		RTCHit* h = (RTCHit*)args->hit;
+		geomID = h->geomID;
+		primID = h->primID;
+		u = h->u;
+		v = h->v;
+	}
+	else
+	{
+		RTCHit8* h = (RTCHit8*)args->hit;
+		geomID = h->geomID[lane];
+		primID = h->primID[lane];
+		u = h->u[lane];
+		v = h->v[lane];
+	}
+}
+
+bool CalculateEnergy(Face* F, float& energy, float u, float v)
 {
 	// Перемещаем начало луча немного дальше пересечения
 	b_material& M = inlc_global_data()->materials()[F->dwMaterial];
 	b_texture& T = inlc_global_data()->textures()[M.surfidx];
-	 
-	// barycentric coords
-	// note: W,U,V order
-	B.set(1.0f - u - v, u, v);
 
-	//// calc UV
+	// calc UV
 	Fvector2* cuv = F->getTC0();
 	Fvector2	uv;
-	uv.x = cuv[0].x * B.x + cuv[1].x * B.y + cuv[2].x * B.z;
-	uv.y = cuv[0].y * B.x + cuv[1].y * B.y + cuv[2].y * B.z;
+	uv.x = cuv[0].x * (1.0f - u - v) + cuv[1].x * u + cuv[2].x * v;
+	uv.y = cuv[0].y * (1.0f - u - v) + cuv[1].y * u + cuv[2].y * v;
 	int U = iFloor(uv.x * float(T.dwWidth) + .5f);
 	int V = iFloor(uv.y * float(T.dwHeight) + .5f);
 	U %= T.dwWidth;		if (U < 0) U += T.dwWidth;
@@ -87,48 +102,62 @@ bool CalculateEnergy(Face* F, Fvector& B, float& energy, float u, float v)
 void FilterRayTraceOpaque(const struct RTCFilterFunctionNArguments* args)
 {
 	RayQueryContext* ctxt = (RayQueryContext*)args->context;
-	RTCHit* hit = (RTCHit*)args->hit;
 
-	Face* F = hit->geomID == 0 ? EmbreeMain.static_geom.dummy[hit->primID] : hit->geomID == 1 ? EmbreeMain.murefs_geom.dummy[hit->primID] : nullptr;
-	if (F == ctxt->skip)
+	for (u32 lane = 0; lane < args->N; lane++)
 	{
-		args->valid[0] = 0; return;
+		if (args->valid[lane] == 0)
+			continue;
+
+		unsigned geomID, primID; float u, v;
+		GetLaneHit(args, lane, geomID, primID, u, v);
+
+		Face* F = geomID == 0 ? EmbreeMain.static_geom.dummy[primID] : geomID == 1 ? EmbreeMain.murefs_geom.dummy[primID] : nullptr;
+		if (F == ctxt->skip)
+		{
+			args->valid[lane] = 0; continue;
+		}
+		ctxt->energy[lane] = 0;
+		args->valid[lane] = -1; // Приехали
 	}
-	ctxt->energy = 0;
-	args->valid[0] = -1; // Приехали
 }
- 
+
 void FilterRaytraceTransparent(const struct RTCFilterFunctionNArguments* args)
 {
 	RayQueryContext* ctxt = (RayQueryContext*)args->context;
-	RTCHit* hit = (RTCHit*)args->hit;
 
-	// Собрать все
-	Face* F = nullptr; 
-
-	if (hit->geomID == 2)
-		F = EmbreeMain.static_geom_transp.dummy[hit->primID]; 
-	else 
-		F = EmbreeMain.murefs_geom_transp.dummy[hit->primID];
-	 
- 	if (F != ctxt->skip && !CalculateEnergy(F, ctxt->B, ctxt->energy, hit->u, hit->v))
+	for (u32 lane = 0; lane < args->N; lane++)
 	{
- 		ctxt->energy = 0;
- 		return;
-	}
+		if (args->valid[lane] == 0)
+			continue;
 
- 	args->valid[0] = 0;
+		unsigned geomID, primID; float u, v;
+		GetLaneHit(args, lane, geomID, primID, u, v);
+
+		// Собрать все
+		Face* F = nullptr;
+
+		if (geomID == 2)
+			F = EmbreeMain.static_geom_transp.dummy[primID];
+		else
+			F = EmbreeMain.murefs_geom_transp.dummy[primID];
+
+		if (F != ctxt->skip && !CalculateEnergy(F, ctxt->energy[lane], u, v))
+		{
+			ctxt->energy[lane] = 0;
+			continue;	// energy dead - lane stays accepted (occluded)
+		}
+
+		args->valid[lane] = 0;	// continue traversal
+	}
 }
 
 float EmbreeData::RaytraceEmbreeProcess(R_Light& L, Fvector& P, Fvector& N, float range, void* skip)
 {
 	// Структура для RayTracing
 	RayQueryContext data_hits;
-	data_hits.Light = &L;
 	data_hits.skip = (Face*)skip;
-	data_hits.energy = 1.0f;
-	data_hits.Hits = 0;
- 
+	data_hits.energy[0] = 1.0f;
+
 	RTCRay ray;
 	SetRay1(ray, P, N, 0.1f, range);
 
@@ -137,13 +166,54 @@ float EmbreeData::RaytraceEmbreeProcess(R_Light& L, Fvector& P, Fvector& N, floa
 
 	RTCRayQueryContext context;
 	rtcInitRayQueryContext(&context);
-	 
+
 	// SET CONTEXT
 	data_hits.context = context;
-	args.context = &data_hits.context; 			 
+	args.context = &data_hits.context;
 	rtcOccluded1(IntelScene, &ray, &args);
- 
-	return data_hits.energy;
+
+	return data_hits.energy[0];
+}
+
+void EmbreeData::RaytraceEmbreeProcess8(Fvector& P, Fvector* dirs, float* ranges, u32 count, void* skip, float* out_energy)
+{
+	RayQueryContext data_hits;
+	data_hits.skip = (Face*)skip;
+
+	// Embree loads the packet valid mask and ray data with aligned AVX moves:
+	// both must be 32-byte aligned or rtcOccluded8 throws "mask not aligned"
+	alignas(32) RTCRay8 ray8;
+	alignas(32) int valid[8];
+
+	for (u32 i = 0; i < 8; i++)
+	{
+		if (i < count)
+		{
+			valid[i] = -1;
+			data_hits.energy[i] = 1.0f;
+			SetRay1(ray8, i, P, dirs[i], 0.1f, ranges[i]);
+		}
+		else
+		{
+			valid[i] = 0;
+			data_hits.energy[i] = 0.0f;
+			SetRay1(ray8, i, P, dirs[0], 0.0f, -1.0f);	// parked lane, never traversed
+		}
+	}
+
+	RTCOccludedArguments args;
+	rtcInitOccludedArguments(&args);
+
+	RTCRayQueryContext context;
+	rtcInitRayQueryContext(&context);
+
+	// SET CONTEXT
+	data_hits.context = context;
+	args.context = &data_hits.context;
+	rtcOccluded8(valid, IntelScene, &ray8, &args);
+
+	for (u32 i = 0; i < count; i++)
+		out_energy[i] = data_hits.energy[i];
 }
  
 // LOADING GEOMETRY
