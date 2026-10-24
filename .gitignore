@@ -83,17 +83,18 @@ gamedata/textures/
 gamedata/sounds/
 
 # These are not required to be updated
-gamedata/ai
-gamedata_COC
-_delete_later/
-_profiles/
-_designer/
-_import/
-_doc
-rawdata/
-util/
-bins/
-Editors/
+/gamedata/ai
+/gamedata_COC
+/_delete_later/
+/_profiles/
+/_designer/
+/_import/
+/_doc
+/rawdata/
+/util/
+/bins/
+/Editors/
+
 *.lnk
 *.fbx
 *.json
