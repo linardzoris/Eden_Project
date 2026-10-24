@@ -62,6 +62,11 @@ IXRay 当前的天空是典型的"SkyCube"路线：一个 12 顶点的半盒体�
 
 R4 层已内置完整的 CS 框架：`ComputeShader` 类支持常量缓冲、SRV、Sampler、UAV 绑定与 `Dispatch(dimx, dimy, dimz)`[ComputeShader.h](file:///workspace/src/Layers/xrRenderPC_R4/ComputeShader.h#L10-L36)、[ComputeShader.cpp](file:///workspace/src/Layers/xrRenderPC_R4/ComputeShader.cpp#L43-L97)；`CSCompiler` 提供 `begin/defTexture/defOutput/defSampler/end` 的声明式编译 API[CSCompiler.h](file:///workspace/src/Layers/xrRenderPC_R4/CSCompiler.h#L12-L37)。底层 `CRT` 在 `USE_UAV_FLAG` 下创建 `D3D11_BIND_UNORDERED_ACCESS` 资源与 UAV 视图[dx11SH_RT.cpp](file:///workspace/src/Layers/xrRenderDX10/dx11SH_RT.cpp#L103-L161)。**大气 LUT 烘焙不需要新造任何抽象**，Eden 的每个 CS 都走 `CSCompiler` 声明输入输出即可。
 
+**V5 复核补充（重要工程事实）**：全仓库检索确认 `ComputeShader/CSCompiler` **当前没有任何使用者**（GTAO/SSLR 等均为 PS 实现，FSR2/DLSS/XeSS 走各自库内部资源）——该框架属"建成未接线"状态，Eden 将是其首个真实使用者。两点工程含义：
+
+1. M0 必须先做端到端冒烟验证（编译 → UAV 绑定 → Dispatch → UAV 回读校验），排除预留代码与当前 DX11 层的兼容性问题；
+2. `ComputeShader` 的资源绑定在 `Construct` 时一次性固定（SRV/UAV/Sampler 列表静态）[ComputeShader.cpp](file:///workspace/src/Layers/xrRenderPC_R4/ComputeShader.cpp#L22-L28)。LUT 烘焙的输入输出基本固定，可直接适配；云 temporal 的 ping-pong 交替历史图则需创建 A→B/B→A 两个实例规避，或小幅扩展编译器支持重绑。
+
 ### 3.2 渲染目标体系：HDR、UAV、速度、历史缓冲全部就位
 
 - 主 RT 全部为 `R16G16B16A16_FLOAT` HDR（`rt_Accumulator`、`rt_Generic_0/2`、back buffer、SSLR 族、`rt_Reflection`）；UAV 标志仅在 FL11.0+ 启用，且当前只有 `rt_Generic` 带 `USE_UAV_FLAG` 创建[r4_rendertarget.cpp](file:///workspace/src/Layers/xrRenderPC_R4/r4_rendertarget.cpp#L539-L567)——Eden 的 LUT 资源自建 CRT（带 UAV）即可，不依赖改造现有 RT。
@@ -81,7 +86,7 @@ R4 一帧的主序为 `主流程：绑定 MRT(rt_Generic_0, rt_Velocity) → Ren
 - **LevelEditor 的渲染根基是 DX9 + xrECore 自定义管线**，与游戏引擎 R4 渲染层完全独立：
   - 链接构成：LevelEditor 仅链接 `xrCore/xrEUI/xrEProps/xrECore/xrSound/xrAbstractions/xrScripts`，**不含** `xrRenderPC_R4` [LevelEditor/CMakeLists.txt](file:///workspace/src/Editors/LevelEditor/CMakeLists.txt#L53-L60)；
   - 设备层：`CEditorRenderDevice` 的渲染上下文/设备/交换链/深度宏全部为 `IDirect3DDevice9*`[device.h](file:///workspace/src/Editors/xrECore/Editor/device.h#L24-L29)；
-  - 渲染层：xrECore 编译共享层 `Layers/xrRender/dxEnvironmentRender.*` 等 + `xrRenderDX9/dx9r_constants_cache.*`[xrECore/CMakeLists.txt](file:///workspace/src/Editors/xrECore/CMakeLists.txt#L36-L57)，配编辑器自己的 `CRender : IRender_interface`（内部为 `IDirect3DVertexBuffer9*` 等裸 DX9 资源）[render.h](file:///workspace/src/Editors/xrECore/Editor/render.h#L102-L135)。
+  - 渲染层：xrECore 编译共享层 `Layers/xrRender/dxEnvironmentRender.*` 等 + `xrRenderDX9/dx9r_constants_cache.*`[xrECore/CMakeLists.txt](file:///workspace/src/Editors/xrECore/CMakeLists.txt#L36-L57)，配编辑器自己的 `CRender : IRender_interface`（内部为 `IDirect3DVertexBuffer9*` 等裸 DX9 资源）[render.h](file:///workspace/src/Editors/xrECore/Editor/render.h#L102-L135)；编辑器另有独立 shader 库 `gamedata/shaders/editor/`（与游戏 `d3d11/` 库并行），其自带 `sky.ps.hlsl` 为双 `samplerCUBE` 交叉淡化[editor/sky.ps.hlsl](file:///workspace/gamedata/shaders/editor/sky.ps.hlsl#L10-L21)。
   - **勘误**：本报告初版称"LevelEditor 视口走引擎 R4"系误判——Viewports 中的 `((CRender*)::Render)` 是 xrECore 的编辑器 `CRender`，与 R4 的 `CRender` 是**同名不同类**；Eden 的 R4 实现不会自动出现在编辑器视口。
 - **但环境数据层是共享的**：编辑器经 `XrGamePersistentEditors` 创建引擎 `CEnvironment`[XrGamePersistentEditors.cpp](file:///workspace/src/Editors/xrECore/Engine/XrGamePersistentEditors.cpp#L15-L18)；`rsEnvironment` 设备标志开启或 Play-In-Editor 时调用 `Environment().RenderSky()/RenderClouds()`[UI_LevelTools.cpp](file:///workspace/src/Editors/LevelEditor/Editor/UI_LevelTools.cpp#L483-L496)，实际执行的是 `dxEnvironmentRender` 的 **DX9 编译分支**（该文件为 DX9/DX11 双后端共享，DX9 分支用 `D3DRS_FOGCOLOR/D3DRS_FOGSTART/FOGEND` 固定管线雾状态[dxEnvironmentRender.cpp](file:///workspace/src/Layers/xrRender/dxEnvironmentRender.cpp#L188-L202)）。
 - 游戏内天气编辑器 `UIEditorWeather`（ImGui）位于 **xrPlay（R4 游戏进程）**，直接编辑 `CEnvDescriptor` 全部字段并写回天气 .ltx[UIEditorWeather.cpp](file:///workspace/src/xrPlay/UIEditorWeather.cpp#L72-L100)，是新增大气/云参数面板与**高保真预览**的理想宿主。
@@ -119,7 +124,7 @@ Eden 不另起炉灶，而是把 `CEnvDescriptor` 映射为大气参数，沿用
 | `sun_color` | 退役为"太阳标称强度"锚点；实际颜色 = 标称强度 × Transmittance(sun_zenith)（物理化） |
 | `sky_color` | 退役为 legacy 回退；Sky-View LUT 输出替代 |
 | `fog_color/fog_density/fog_distance` | 映射为空气透视的 Mie 散射系数与"视觉距离"标定（保持旧天气配置下的能见度手感） |
-| `hemi_color/ambient` | 由 Sky-View 辐照度积分（小 Irradiance LUT）驱动，保留 `r2_sun_lumscale_hemi/amb` 缩放链[xrRender_console.cpp](file:///workspace/src/Layers/xrRender/xrRender_console.cpp#L171-L174) |
+| `hemi_color/ambient` | 由 Sky-View 辐照度积分（小 Irradiance LUT）驱动；因 `cl_hemi_color` 是 CPU 端 binder（§5.5），落点为 CPU 生成 `hemi_color/ambient` 数值，保留 `r2_sun_lumscale_hemi/amb` 缩放链[xrRender_console.cpp](file:///workspace/src/Layers/xrRender/xrRender_console.cpp#L171-L174) |
 | `sky_rotation` | 物理天空不需要；保留仅用于 legacy 模式 |
 | 新增 | `turbidity`（Mie 浓度）、`ozone`、`ground_albedo`、`cloud_*` 体积云参数 |
 
@@ -196,7 +201,7 @@ Color = Color * ap.rgb + ap.a;      // 透射 + 内散射
 | 积分点 | 现状 | Eden 改造 |
 |---|---|---|
 | 太阳直射 | `Lights.sun_adapted` 每帧由 `CLight_DB` 从 `E.sun_color/sun_dir` 重建[Light_DB.cpp](file:///workspace/src/Layers/xrRender/Light_DB.cpp#L236-L262) | **唯一修改点在 `CLight_DB`**：`set_color` 输入由 `E.sun_color` 换为"标称辐照度 × TransmittanceLUT(太阳天顶角)"，黄昏自然变红；CSM 级联、`phase_accumulator` 直射累积、combine 的 `Ldynamic_color`、体积光柱全部读取 `sun_adapted`，自动全链路继承 |
-| 环境光/半球 | `L_ambient`/`env_color` 来自 `ambient/hemi_color` 常量 | 来自 Irradiance LUT（天空辐照度积分），仍过 `r2_sun_lumscale_amb/hemi` 缩放，老游戏平衡可调回 |
+| 环境光/半球 | `L_ambient`/`env_color` 来自 `ambient/hemi_color` 常量；`L_hemi_color` 经 `cl_hemi_color` binder 绑定为 `hemi_color × ps_r2_sun_lumscale_hemi × 4.0`（w=weight），属 **CPU 端常量**（hemi 顶点球机制[Blender_Recorder_StandartBinding.cpp](file:///workspace/src/Layers/xrRender/Blender_Recorder_StandartBinding.cpp#L380-L401)） | 落点在 **CPU 端**：Irradiance LUT 数值回读（32×32，脏标记时一次，开销可忽略）或同步解析近似，生成新的 `hemi_color/ambient` 值；GPU 端 hemi 顶点球与缩放链完全不动，老游戏平衡可调回 |
 | 体积光柱 | `accum_volumetric_sun` 以常量太阳色 march | 太阳色已被物理化，自动一致；可选把云层密度并入光柱 march |
 | 反射环境 | 天气 `sky_texture_env` | Eden 生成的小环境立方体（§5.3） |
 | 云影 | 无 | 云影图 R8 在 `phase_accumulator` 太阳累积时乘到 `Ldynamic_color`（§6.4） |
@@ -271,7 +276,7 @@ LevelEditor 是 **DX9 + xrECore 自定义管线**（§3.5）：无 ComputeShader
 | 阶段 | 方案 | 说明 |
 |---|---|---|
 | 基线（随 M1 交付） | LevelEditor 视口**维持 DX9 legacy 天空**，Eden 开关只影响游戏；时间轴 scrub 预览能力**已存在**（`UIWeatherPropForm` 拖动时间即 `env.lerp()` 刷新 legacy 天空[UIWeatherPropForm.cpp](file:///workspace/src/Editors/xrECore/Editor/UIWeatherPropForm.cpp#L97-L105)），Eden 的参数脏标记机制天然接入该链路（`Invalidate` → 重烘 CPU/CS LUT）；高保真预览走 xrPlay 的 `UIEditorWeather`（R4 进程） | 零风险、零额外渲染开发；一致性由同一份天气 .ltx 保证 |
-| 增强（M4+，可选） | **CPU 烘焙小型 Sky-View LUT**（建议 96×64 RGBA8，仅参数脏标记时重建，CPU 端每次数十毫秒级可接受），写入一张 2D 纹理；编辑器 DX9 天空 blender 改为采样该 LUT（加 shader option 切换），实现低保真物理大气预览；太阳盘/太阳色同步给出 | DX9 SM3.0 采样 2D LUT 无压力；精度足够编辑器取景使用 |
+| 增强（M4+，可选） | **CPU 烘焙小型 Sky-View LUT**（建议 96×64 RGBA8，仅参数脏标记时重建，CPU 端每次数十毫秒级可接受），写入一张 2D 纹理；编辑器 DX9 天空 shader（`gamedata/shaders/editor/sky.ps.hlsl`，现状为双 `samplerCUBE` 交叉淡化[editor/sky.ps.hlsl](file:///workspace/gamedata/shaders/editor/sky.ps.hlsl#L10-L21)）加 shader option 切换为采样该 2D LUT，实现低保真物理大气预览；太阳盘/太阳色同步给出 | DX9 SM3.0 采样 2D LUT 无压力；精度足够编辑器取景使用 |
 | 云的编辑器预览 | 不做真体积 raymarch；可选把云影图（128² R8，CPU 同样可烘）作为视口内的 2D 光照乘子叠加，传达"云影在动"的最小信息 | 避免在 DX9 上重建体积管线 |
 | 不推荐 | 为 LevelEditor 移植 R4 管线或在编辑器中嵌 R4 离屏预览窗口 | 与 xrECore 现状冲突、工程量大；若未来需要高保真编辑器预览，更现实的路径是等 `xrRenderDS_R0` 新渲染接口层成熟后统一接入 Eden |
 
@@ -342,8 +347,8 @@ LevelEditor 是 **DX9 + xrECore 自定义管线**（§3.5）：无 ComputeShader
 
 | 阶段 | 内容 | 涉及文件（新增为主） |
 |---|---|---|
-| M0 | CS 烘焙骨架 + Transmittance/MultiScatter LUT | `EdenAtmosphere.h/.cpp`、`eden_transmittance.ps.hlsl`（CS） |
-| M1 | Sky-View 天空替换（主流程背景层挂载）+ 太阳/ambient 耦合 + 控制台开关 + 编辑器数据层（天气 UI 新字段） | `eden_sky.ps.hlsl`、`r4_R_render.cpp` RenderSky 分支、`r4_rendertarget_phase_combine.cpp` 常量改造、`UIEditorWeather.cpp` |
+| M0 | CS 框架端到端冒烟验证（Eden 为其首个使用者，§3.1）+ 烘焙骨架 + Transmittance/MultiScatter LUT | `EdenAtmosphere.h/.cpp`、`eden_transmittance.ps.hlsl`（CS） |
+| M1 | Sky-View 天空替换（主流程背景层挂载）+ 太阳/ambient 物理化（`Light_DB` 落点）+ 控制台开关 + 编辑器数据层（天气 UI 新字段） | `eden_sky.ps.hlsl`、`r4_R_render.cpp` RenderSky 分支、`Light_DB.cpp` set_color 改造、`r4_rendertarget_phase_combine.cpp` 常量改造、`UIEditorWeather.cpp` |
 | M2 | Aerial Perspective 替换线性雾 + 能见度标定 | `combine_1.ps.hlsl` option、`eden_ap.ps.hlsl` |
 | M3 | 体积云（噪声烘焙入库、raymarch、temporal） | `eden_clouds.ps.hlsl`、`rt_Cloud_*`、temporal 复用 |
 | M4 | 云影 + 雷暴联动 + 编辑器低保真预览（可选 CPU-LUT）+ 烘焙菜单 | `UIEditorWeather.cpp`、`UIWeatherPropForm.cpp`、LevelEditor 菜单 |
