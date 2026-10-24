@@ -37,7 +37,7 @@ IXRay 当前的天空是典型的"SkyCube"路线：一个 12 顶点的半盒体�
 ### 2.4 雾与光照积分
 
 - **雾**：combine 阶段用最简单的线性模型 `Fog = saturate(ViewDist * fog_params.w + fog_params.x)`，把场景颜色 `lerp` 到 `fog_color`[combine_1.ps.hlsl](file:///workspace/gamedata/shaders/d3d11/combine_1.ps.hlsl#L46-L55)；材质内另有 `calc_fogging()` 同模型[common_functions.hlsli](file:///workspace/gamedata/shaders/d3d11/common_functions.hlsli#L219-L221)。雾色与天空色之间无物理联系。
-- **太阳**：3 级 CSM 级联阴影从 `Lights.sun_adapted` 取方向与颜色[R_sun.cpp](file:///workspace/src/Layers/xrRender/R_sun.cpp#L44-L122)、[r_sun_cascades.h](file:///workspace/src/Layers/xrRender/r_sun_cascades.h#L15-L24)；combine 阶段把 `Ldynamic_color/Ldynamic_dir`、`L_ambient`、`env_color`（hemi）、`fog_color` 等常量送入着色[r4_rendertarget_phase_combine.cpp](file:///workspace/src/Layers/xrRenderPC_R4/r4_rendertarget_phase_combine.cpp#L115-L151)。太阳颜色/方向完全由天气配置表驱动，与天空像素无一致性约束。
+- **太阳**：3 级 CSM 级联（覆盖半径 15/40/160 m，共享 bias 系数）从 `Lights.sun_adapted` 取方向与颜色[R_sun.cpp](file:///workspace/src/Layers/xrRender/R_sun.cpp#L44-L60)、[r_sun_cascades.h](file:///workspace/src/Layers/xrRender/r_sun_cascades.h#L15-L24)；`sun_adapted` 由 `CLight_DB` **每帧**从 `CurrentEnv` 重建：方向 = `(0,-0.75,0) + E.sun_dir` 归一化（带 `E.sun_dir.y < 0` 的地平线校验），颜色 = `E.sun_color × ps_r2_sun_lumscale`[Light_DB.cpp](file:///workspace/src/Layers/xrRender/Light_DB.cpp#L236-L262)。太阳颜色/方向完全由天气配置表驱动，与天空像素无一致性约束。combine 阶段把 `Ldynamic_color/Ldynamic_dir`、`L_ambient`、`env_color`（hemi）、`fog_color` 等常量送入着色[r4_rendertarget_phase_combine.cpp](file:///workspace/src/Layers/xrRenderPC_R4/r4_rendertarget_phase_combine.cpp#L115-L151)。
 - **环境反射**：天气描述符的 `sky_texture_env` 作为小环境贴图绑定到 combine 的 `env_s0/env_s1` 供高光环境项使用[blender_combine.cpp](file:///workspace/src/Layers/xrRenderPC_R4/blender_combine.cpp#L26-L33)。
 
 ### 2.5 SkyCube 的性能画像与局限
@@ -48,7 +48,7 @@ IXRay 当前的天空是典型的"SkyCube"路线：一个 12 顶点的半盒体�
 
 | 维度 | 现状表现 |
 |---|---|
-| 视觉 | 天空外观锁死在 12 组左右预烘焙贴图上，昼夜过渡靠两组贴图 alpha 混合，色彩不连续 |
+| 视觉 | 天空外观锁死在预烘焙 cube 贴图（每个天气时点一张）上，昼夜过渡靠两组贴图 alpha 混合，色彩不连续 |
 | 物理 | 太阳颜色/天空亮度/雾色三者互相独立，黄昏时太阳是红的而天空不会跟着变 |
 | 雾 | 线性距离雾与天空割裂，远山"贴"在一层均匀色纸上 |
 | 云 | 平面贴图云，无体积、无太阳散射、无云影 |
@@ -195,7 +195,7 @@ Color = Color * ap.rgb + ap.a;      // 透射 + 内散射
 
 | 积分点 | 现状 | Eden 改造 |
 |---|---|---|
-| 太阳直射 | `Lights.sun_adapted` 颜色来自天气表[r4_rendertarget_phase_combine.cpp](file:///workspace/src/Layers/xrRenderPC_R4/r4_rendertarget_phase_combine.cpp#L140-L151) | `sun_adapted` 颜色 = 标称辐照度 × TransmittanceLUT(太阳天顶角)，黄昏自然变红；CSM 级联自动继承 |
+| 太阳直射 | `Lights.sun_adapted` 每帧由 `CLight_DB` 从 `E.sun_color/sun_dir` 重建[Light_DB.cpp](file:///workspace/src/Layers/xrRender/Light_DB.cpp#L236-L262) | **唯一修改点在 `CLight_DB`**：`set_color` 输入由 `E.sun_color` 换为"标称辐照度 × TransmittanceLUT(太阳天顶角)"，黄昏自然变红；CSM 级联、`phase_accumulator` 直射累积、combine 的 `Ldynamic_color`、体积光柱全部读取 `sun_adapted`，自动全链路继承 |
 | 环境光/半球 | `L_ambient`/`env_color` 来自 `ambient/hemi_color` 常量 | 来自 Irradiance LUT（天空辐照度积分），仍过 `r2_sun_lumscale_amb/hemi` 缩放，老游戏平衡可调回 |
 | 体积光柱 | `accum_volumetric_sun` 以常量太阳色 march | 太阳色已被物理化，自动一致；可选把云层密度并入光柱 march |
 | 反射环境 | 天气 `sky_texture_env` | Eden 生成的小环境立方体（§5.3） |
@@ -261,16 +261,16 @@ LevelEditor 是 **DX9 + xrECore 自定义管线**（§3.5）：无 ComputeShader
 
 ### 7.2 数据层：天气编辑 UI 扩展（零障碍）
 
-- **LevelEditor 现状（复核勘误）**：不存在专门的天气参数编辑面板——`UIWorldPropertiesFrom` 实为场景对象属性面板（内容来自 `Scene->FillProp`）[UIWorldPropertiesFrom.cpp](file:///workspace/src/Editors/LevelEditor/UI/UIWorldPropertiesFrom.cpp#L11-L20)、[UI_LevelTools.cpp](file:///workspace/src/Editors/LevelEditor/Editor/UI_LevelTools.cpp#L325-L329)；天气入口仅有主菜单的天气周期切换（`rsEnvironment` 开关 + `SetWeather(cycle)`[UIMainForm.cpp](file:///workspace/src/Editors/LevelEditor/UI/UIMainForm.cpp#L425-L440)）与按 `fTimeFactor` 自动推进的游戏时间[UI_LevelTools.cpp](file:///workspace/src/Editors/LevelEditor/Editor/UI_LevelTools.cpp#L423-L425)。
-- 因此 Eden 参数编辑的首选宿主仍是 **xrPlay 游戏内天气编辑器 `UIEditorWeather`**（R4 进程，ImGui 全字段编辑 + `saveWeather` 写回 .ltx[UIEditorWeather.cpp](file:///workspace/src/xrPlay/UIEditorWeather.cpp#L72-L100)）；LevelEditor 侧新增一个独立 ImGui 窗口 "Eden Atmosphere"（基于 xrEUI 既有基建）：大气参数（浊度/臭氧/地面反照率/云覆盖率/云类型/云高/云密度）+ 天气周期/时间控制，直接读写共享的 `CEnvDescriptor` 并复用 `saveWeather` 落盘；
+- **LevelEditor 现状（V4 复核更新）**：编辑器**已有** "Weather Properties" 表单——经共享编辑器命令系统注册（`REGISTER_CMD_SE(COMMAND_WEATHER_PROPERTIES, ...)`[UI_MainCommand.cpp](file:///workspace/src/Editors/xrECore/Editor/UI_MainCommand.cpp#L730)），由 xrECore 的 `UIWeatherPropForm` 实现：0–24h 时间滑条（拖动即 `SetGameTime` + `env.lerp()`，视口即时刷新[UIWeatherPropForm.cpp](file:///workspace/src/Editors/xrECore/Editor/UIWeatherPropForm.cpp#L89-L111)）、时间倍率、天气周期选择（`WeatherCycles` 枚举 + `SetWeather`[UIWeatherPropForm.cpp](file:///workspace/src/Editors/xrECore/Editor/UIWeatherPropForm.cpp#L126-L162)）、太阳显示/太阳方向/半球选项。缺的是**逐字段天气参数编辑**（字段级编辑目前只在 xrPlay 的 `UIEditorWeather`）；另 `UIWorldPropertiesFrom` 是场景对象属性面板（`Scene->FillProp`），与天气无关[UIWorldPropertiesFrom.cpp](file:///workspace/src/Editors/LevelEditor/UI/UIWorldPropertiesFrom.cpp#L11-L20)。
+- Eden 参数编辑的双宿主：**xrPlay 的 `UIEditorWeather`**（R4 进程，全字段编辑 + `saveWeather` 写回 .ltx[UIEditorWeather.cpp](file:///workspace/src/xrPlay/UIEditorWeather.cpp#L72-L100)）为主；LevelEditor 侧**扩展既有 `UIWeatherPropForm`**，新增 "Eden Atmosphere" 参数组（浊度/臭氧/地面反照率/云覆盖率/云类型/云高/云密度），直接读写共享 `CEnvDescriptor` 并复用 `saveWeather` 落盘；
 - 旧字段（`sky_color/fog_*`）在 Eden 模式下灰显为只读映射预览（按 §4.3 的映射表反显示）；
-- 两处 UI 编辑的是同一份 `CEnvDescriptor` 数据结构与同一批 .ltx 文件，游戏与编辑器天然一致。
+- 两处 UI 编辑同一份 `CEnvDescriptor` 数据结构与同一批 .ltx 文件，游戏与编辑器天然一致。
 
 ### 7.3 预览层：分阶段策略
 
 | 阶段 | 方案 | 说明 |
 |---|---|---|
-| 基线（随 M1 交付） | LevelEditor 视口**维持 DX9 legacy 天空**，Eden 开关只影响游戏；高保真预览走 xrPlay 的 `UIEditorWeather`（R4 进程，含时间轴 scrub——Eden 的参数脏标记机制使拖动时间轴即可逐帧重烘 Sky-View，实现所见即所得的黄昏预览） | 零风险、零额外渲染开发；一致性由同一份天气 .ltx 保证 |
+| 基线（随 M1 交付） | LevelEditor 视口**维持 DX9 legacy 天空**，Eden 开关只影响游戏；时间轴 scrub 预览能力**已存在**（`UIWeatherPropForm` 拖动时间即 `env.lerp()` 刷新 legacy 天空[UIWeatherPropForm.cpp](file:///workspace/src/Editors/xrECore/Editor/UIWeatherPropForm.cpp#L97-L105)），Eden 的参数脏标记机制天然接入该链路（`Invalidate` → 重烘 CPU/CS LUT）；高保真预览走 xrPlay 的 `UIEditorWeather`（R4 进程） | 零风险、零额外渲染开发；一致性由同一份天气 .ltx 保证 |
 | 增强（M4+，可选） | **CPU 烘焙小型 Sky-View LUT**（建议 96×64 RGBA8，仅参数脏标记时重建，CPU 端每次数十毫秒级可接受），写入一张 2D 纹理；编辑器 DX9 天空 blender 改为采样该 LUT（加 shader option 切换），实现低保真物理大气预览；太阳盘/太阳色同步给出 | DX9 SM3.0 采样 2D LUT 无压力；精度足够编辑器取景使用 |
 | 云的编辑器预览 | 不做真体积 raymarch；可选把云影图（128² R8，CPU 同样可烘）作为视口内的 2D 光照乘子叠加，传达"云影在动"的最小信息 | 避免在 DX9 上重建体积管线 |
 | 不推荐 | 为 LevelEditor 移植 R4 管线或在编辑器中嵌 R4 离屏预览窗口 | 与 xrECore 现状冲突、工程量大；若未来需要高保真编辑器预览，更现实的路径是等 `xrRenderDS_R0` 新渲染接口层成熟后统一接入 Eden |
@@ -332,7 +332,7 @@ LevelEditor 是 **DX9 + xrECore 自定义管线**（§3.5）：无 ComputeShader
 
 ### 8.5 结论
 
-以约 **+1.2–2.3 ms GPU（默认档）[估算]、显存近似持平** 的代价，换取：物理自洽的全时段天空与太阳、随距离正确演化的空气透视、有体积有光照有云影的云层、可参数化的大气组成，以及游戏内天气编辑器（xrPlay/R4）"拖时间轴即时预览"的工作流（LevelEditor 侧为数据编辑 + 低保真 CPU-LUT 预览，见 §7）。对照 HZD/UE5/Frostbite 的生产实践[cite:8][cite:9][cite:6]，该开销在本世代 PC 上属于可接受区间；且系统可整体降级回 SkyCube 路径，风险有兜底。
+以约 **+1.2–2.3 ms GPU（默认档）[估算]、显存近似持平** 的代价，换取：物理自洽的全时段天空与太阳、随距离正确演化的空气透视、有体积有光照有云影的云层、可参数化的大气组成，以及"拖时间轴即时预览"的工作流（xrPlay/R4 天气编辑器与 LevelEditor 的 Weather Properties 表单均具备时间 scrub，后者叠加低保真 CPU-LUT 预览，见 §7）。对照 HZD/UE5/Frostbite 的生产实践[cite:8][cite:9][cite:6]，该开销在本世代 PC 上属于可接受区间；且系统可整体降级回 SkyCube 路径，风险有兜底。
 
 ---
 
@@ -346,7 +346,7 @@ LevelEditor 是 **DX9 + xrECore 自定义管线**（§3.5）：无 ComputeShader
 | M1 | Sky-View 天空替换（主流程背景层挂载）+ 太阳/ambient 耦合 + 控制台开关 + 编辑器数据层（天气 UI 新字段） | `eden_sky.ps.hlsl`、`r4_R_render.cpp` RenderSky 分支、`r4_rendertarget_phase_combine.cpp` 常量改造、`UIEditorWeather.cpp` |
 | M2 | Aerial Perspective 替换线性雾 + 能见度标定 | `combine_1.ps.hlsl` option、`eden_ap.ps.hlsl` |
 | M3 | 体积云（噪声烘焙入库、raymarch、temporal） | `eden_clouds.ps.hlsl`、`rt_Cloud_*`、temporal 复用 |
-| M4 | 云影 + 雷暴联动 + 编辑器低保真预览（可选 CPU-LUT）+ 烘焙菜单 | `UIEditorWeather.cpp`/LevelEditor UI、LevelEditor 菜单 |
+| M4 | 云影 + 雷暴联动 + 编辑器低保真预览（可选 CPU-LUT）+ 烘焙菜单 | `UIEditorWeather.cpp`、`UIWeatherPropForm.cpp`、LevelEditor 菜单 |
 | M5 | 档位/压缩/性能验证（PIX、`benchmark.script`、GPU_EVENT 剖面） | 既有工具链 |
 
 ### 9.2 风险与缓解
