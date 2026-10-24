@@ -9,6 +9,7 @@
 #include "imgui_internal.h"
 #include "font/fa.h"
 #include "IconsFontAwesome6.h"
+#include "EditorLocalization.h"
 
 XREUI_API XrUIManager* GUIManager = nullptr;
 
@@ -29,19 +30,65 @@ void LoadImGuiFont(const char* Font)
 	LazyFonts.push_back(Font);
 }
 
+// Merges a CJK-capable font into the font added last, so the editor UI can
+// display Chinese labels without replacing the base Latin font.
+// The project font gamedata\fonts\editors\cjk.ttf (or cjk.otf) is preferred,
+// otherwise a Windows system font is used.
+static void LoadEditorCjkFallbackFont(float FontSize)
+{
+	string_path FullPath = {};
+
+	const char* BundledFonts[] = { "editors\\cjk.ttf", "editors\\cjk.otf" };
+	for (const char* Name : BundledFonts)
+	{
+		FS.update_path(FullPath, _game_fonts_, Name);
+		if (FS.TryLoad(FullPath))
+		{
+			ImFontConfig MergeConfig = {};
+			MergeConfig.MergeMode = true;
+			ImGui::GetIO().Fonts->AddFontFromFileTTF(Platform::ANSI_TO_UTF8(FullPath).c_str(), FontSize, &MergeConfig);
+			return;
+		}
+	}
+
+	char WinDir[MAX_PATH] = {};
+	if (GetWindowsDirectoryA(WinDir, MAX_PATH) == 0)
+		return;
+
+	static const char* SystemFonts[] = { "msyh.ttc", "msyh.ttf", "simhei.ttf", "Deng.ttf", "simsun.ttc" };
+	char SysPath[MAX_PATH] = {};
+	for (const char* Name : SystemFonts)
+	{
+		xr_sprintf(SysPath, "%s\\Fonts\\%s", WinDir, Name);
+		if (GetFileAttributesA(SysPath) == INVALID_FILE_ATTRIBUTES)
+			continue;
+
+		ImFontConfig MergeConfig = {};
+		MergeConfig.MergeMode = true;
+		ImGui::GetIO().Fonts->AddFontFromFileTTF(Platform::ANSI_TO_UTF8(SysPath).c_str(), FontSize, &MergeConfig);
+		return;
+	}
+}
+
 void LoadImGuiFontBase(const char* Font, float scale)
 {
 	string_path FullPath;
 	xr_string FixFontName = "editors\\" + xr_string(Font);
 	FS.update_path(FullPath, _game_fonts_, FixFontName.data());
-	ImFontConfig FontConfig = {};
-	FontConfig.OversampleH = 3;
 
 	if (FS.TryLoad(FullPath))
 	{
 		if (!FontsStorage.contains(Font))
 		{
-			FontsStorage[Font] = ImGui::GetIO().Fonts->AddFontFromFileTTF(Platform::ANSI_TO_UTF8(FullPath).c_str(), scale * 14.0f, &FontConfig, ImGui::GetIO().Fonts->GetGlyphRangesCyrillic());
+			ImFontConfig FontConfig = {};
+			FontConfig.OversampleH = 3;
+
+			// Glyph ranges are obsolete in ImGui 1.92+ (dynamic atlas):
+			// any glyph present in the font file is loaded on demand,
+			// so Cyrillic and CJK text work without pre-built ranges
+			FontsStorage[Font] = ImGui::GetIO().Fonts->AddFontFromFileTTF(Platform::ANSI_TO_UTF8(FullPath).c_str(), scale * 14.0f, &FontConfig);
+
+			LoadEditorCjkFallbackFont(scale * 14.0f);
 		}
 
 		ImCurrentFont = Font;
@@ -52,6 +99,10 @@ void LoadImGuiFontBase(const char* Font, float scale)
 void XrUIManager::Initialize(HWND hWnd, IDirect3DDevice9* device, const char* ini_path)
 {
 	IMGUI_CHECKVERSION();
+
+	// Show the IME composition window when typing Chinese in input fields
+	SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");
+
 	ImGui::CreateContext();
 
 	ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
@@ -104,6 +155,7 @@ void XrUIManager::Destroy()
 	ImGui_ImplDX9_Shutdown();
 	ImGui_ImplSDL3_Shutdown();
 	ImGui::DestroyContext();
+	ShutdownEditorLocalization();
 }
 
 bool XrUIManager::ProcessEvent(void* Event)
