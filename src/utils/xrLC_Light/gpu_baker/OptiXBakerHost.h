@@ -28,9 +28,11 @@ void gpu_optix_shutdown();
 bool gpu_optix_ready();
 
 // Builds a traceable scene from raw triangle soup; faces[] must be parallel to
-// the index triplets. Returns null on failure (caller falls back to CPU).
+// the index triplets. tmin/energyMax define the occlusion semantics per scene
+// (see GpuLaunchParams). Returns null on failure (caller falls back to CPU).
 GpuBakeScene* gpu_optix_scene_create(const float* verts, size_t vertCountF,
-	const unsigned int* indices, const GpuFaceData* faces, size_t faceCount);
+	const unsigned int* indices, const GpuFaceData* faces, size_t faceCount,
+	float tmin, float energyMax);
 
 // Convenience wrapper: builds a scene from a CDB::MODEL (per-model cform),
 // resolving per-tri face data through the convert_nax face registry.

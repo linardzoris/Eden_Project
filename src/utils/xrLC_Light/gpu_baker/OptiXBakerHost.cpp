@@ -32,6 +32,8 @@ namespace
 		void* faces = nullptr;			size_t faceBytes = 0;
 		void* gasOutput = nullptr;		size_t gasOutBytes = 0;
 		OptixTraversableHandle handle = 0;
+		float tmin = 0.1f;
+		float energyMax = 0.01f;
 	};
 
 	bool g_ready = false;
@@ -54,7 +56,6 @@ namespace
 	void* g_dLightsRgb = nullptr;	int g_lightsRgbCount = 0;
 	void* g_dLightsSun = nullptr;	int g_lightsSunCount = 0;
 	void* g_dLightsHemi = nullptr;	int g_lightsHemiCount = 0;
-	float g_energyMax = 0.01f;
 	int g_glLinear = 0;
 
 	GpuBakeScene* g_globalScene = nullptr;
@@ -269,7 +270,6 @@ bool gpu_optix_init()
 		return false;
 	if (!upload_lights())
 		return false;
-	g_energyMax = EmbreeEnergyMAX;
 	g_glLinear = inlc_global_data()->gl_linear() ? 1 : 0;
 
 	g_ready = true;
@@ -278,12 +278,15 @@ bool gpu_optix_init()
 }
 
 GpuBakeScene* gpu_optix_scene_create(const float* verts, size_t vertCountF,
-	const unsigned int* indices, const GpuFaceData* faces, size_t faceCount)
+	const unsigned int* indices, const GpuFaceData* faces, size_t faceCount,
+	float tmin, float energyMax)
 {
 	if (!g_ready || !verts || !indices || !faces || !faceCount || vertCountF < 3)
 		return nullptr;
 
 	SceneImpl* s = new SceneImpl();
+	s->tmin = tmin;
+	s->energyMax = energyMax;
 	do
 	{
 		s->vertBytes = vertCountF * sizeof(float);
@@ -367,7 +370,9 @@ GpuBakeScene* gpu_optix_scene_from_cdb(CDB::MODEL* mdl)
 		indices[(size_t)i * 3 + 2] = T.verts[2];
 		fill_face_data(convert_nax(T.dummy), fd[i]);
 	}
-	return gpu_optix_scene_create(verts.data(), verts.size(), indices.data(), fd.data(), (size_t)ts);
+	// model-self scenes must match the CPU OPCODE path: rays start at the origin
+	// (no tnear) and the transmission product runs without a practical cutoff
+	return gpu_optix_scene_create(verts.data(), verts.size(), indices.data(), fd.data(), (size_t)ts, 0.0f, 1e-4f);
 }
 
 void gpu_optix_scene_destroy(GpuBakeScene* scene)
@@ -396,7 +401,10 @@ void gpu_optix_rebuild_global_scene()
 	std::vector<float> verts;
 	std::vector<unsigned int> indices;
 	std::vector<GpuFaceData> fd;
-	auto capture = [&verts, &indices, &fd](TriangleContainer& c)
+	// faces from the opaque containers must block rays outright: the Embree capture
+	// already routed !bOpaque faces with no-alpha textures there, so re-deriving
+	// transparency from the face alone would turn those fences see-through
+	auto capture = [&verts, &indices, &fd](TriangleContainer& c, bool allowTransparent)
 	{
 		const unsigned int base = (unsigned int)(verts.size() / 3);
 		for (const VertexEmbree& v : c.vertex())
@@ -415,13 +423,18 @@ void gpu_optix_rebuild_global_scene()
 		{
 			GpuFaceData d;
 			fill_face_data(F, d);
+			if (!allowTransparent)
+			{
+				d.opaque = 1;
+				d.texIdx = -1;
+			}
 			fd.push_back(d);
 		}
 	};
-	capture(EmbreeMain.static_geom);
-	capture(EmbreeMain.static_geom_transp);
-	capture(EmbreeMain.murefs_geom);
-	capture(EmbreeMain.murefs_geom_transp);
+	capture(EmbreeMain.static_geom, false);
+	capture(EmbreeMain.static_geom_transp, true);
+	capture(EmbreeMain.murefs_geom, false);
+	capture(EmbreeMain.murefs_geom_transp, true);
 
 	// face id lookup for skip resolution (same order as the face data array)
 	{
@@ -437,7 +450,8 @@ void gpu_optix_rebuild_global_scene()
 		map_ids(EmbreeMain.murefs_geom_transp);
 	}
 
-	g_globalScene = gpu_optix_scene_create(verts.data(), verts.size(), indices.data(), fd.data(), fd.size());
+	// Embree parity for the global scene: tnear 0.1 and the Embree energy cutoff
+	g_globalScene = gpu_optix_scene_create(verts.data(), verts.size(), indices.data(), fd.data(), fd.size(), 0.1f, EmbreeEnergyMAX);
 	if (!g_globalScene)
 		clMsg("[GpuBaker] global scene build failed");
 	else
@@ -508,7 +522,8 @@ bool gpu_optix_bake_points(GpuBakeScene* scene, const GpuBakePoint* points, int 
 	p.lightsHemi = (const GpuLight*)g_dLightsHemi;		p.lightsHemiCount = g_lightsHemiCount;
 	p.textures = (const GpuTextureDesc*)g_dTextures;	p.textureCount = g_textureCount;
 	p.faces = (const GpuFaceData*)s->faces;
-	p.energyMax = g_energyMax;
+	p.energyMax = s->energyMax;
+	p.tmin = s->tmin;
 	p.glLinear = g_glLinear;
 	p.flags = flags;
 	if (!cuda_check(cudaMemcpyAsync(tls_params, &p, sizeof(p), cudaMemcpyHostToDevice, tls_stream), "params upload"))

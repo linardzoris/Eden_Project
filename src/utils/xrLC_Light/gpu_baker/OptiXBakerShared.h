@@ -69,7 +69,10 @@ struct GpuLaunchParams
 	const GpuLight* lightsHemi;		int lightsHemiCount;
 	const GpuTextureDesc* textures;	int textureCount;
 	const GpuFaceData* faces;
-	float energyMax;
+	float energyMax;				// transmission cutoff (per scene: Embree parity 0.01 for the
+									// global scene, ~0 for model-self scenes to match OPCODE)
+	float tmin;						// ray start offset: 0.1 for the global scene (Embree tnear),
+									// 0.0 for model-self scenes (CPU OPCODE traced from the origin)
 	int glLinear;
 	unsigned int flags;
 };

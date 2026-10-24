@@ -25,7 +25,7 @@ static __forceinline__ __device__ float trace_occlusion(const float3& origin, co
 	unsigned int p1 = (unsigned int)skipFace;
 	optixTrace(reinterpret_cast<OptixTraversableHandle>(params.handle),
 		origin, dir,
-		0.1f,						// tmin, matches the Embree path
+		params.tmin,				// per-scene: 0.1 for the global scene (Embree), 0.0 for model-self scenes
 		range, 0.0f,
 		OptixVisibilityMask(0xFF),
 		OPTIX_RAY_FLAG_NONE,

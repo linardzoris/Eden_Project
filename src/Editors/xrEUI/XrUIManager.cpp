@@ -101,7 +101,8 @@ void XrUIManager::Initialize(HWND hWnd, IDirect3DDevice9* device, const char* in
 	IMGUI_CHECKVERSION();
 
 	// Show the IME composition window when typing Chinese in input fields
-	SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");
+	// (SDL 3.2 renamed the hint: SDL_HINT_IME_SHOW_UI -> SDL_HINT_IME_IMPLEMENTED_UI)
+	SDL_SetHint(SDL_HINT_IME_IMPLEMENTED_UI, "1");
 
 	ImGui::CreateContext();
 
