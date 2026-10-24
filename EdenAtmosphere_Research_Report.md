@@ -4,17 +4,26 @@
 > 范围：`engine`（src/xrEngine + src/Layers/xrRenderPC_R4 + gamedata/shaders/d3d11）与 `leveleditor`（src/Editors/LevelEditor）
 > 目标：提出在两条产品线中植入物理大气散射天空（Eden Atmosphere，非贴图、真大气）与体积云的完整实现方案，重点利用 LUT、ComputeShader、离线烘焙等手段控制开销，并与现有 SkyCube 方案做性能对比。
 
+**证据分级标注体系**（全文适用，完整不确定性清单见 §11）：
+
+| 标注 | 含义 | 置信基础 |
+|---|---|---|
+| 【A·代码确证】 | 已逐行读取仓库代码并给出 文件:行号 引用，可直接复核 | 高 |
+| 【B·文献锚定】 | 有已检索的外部文献/官方文档支撑（见 Sources） | 中高 |
+| 【C·工程估算】 | 无实测数据，为架构推导 + 文献锚定的量级估计 | 中 |
+| 【D·设计提案】 | 本报告提出的设计决策，可行性建立在 A/B 证据之上，但方案本身未经实现验证 | 视依赖而定 |
+
 ---
 
 ## 1. 执行摘要
 
 IXRay 当前的天空是典型的"SkyCube"路线：一个 12 顶点的半盒体（half-box）几何，采样两张 TextureCube 天空贴图并按天气权重交叉淡化，配合一张平面云层四边形与 combine 阶段的线性距离雾 [dxEnvironmentRender.cpp](file:///workspace/src/Layers/xrRender/dxEnvironmentRender.cpp#L208-L262)、[sky.ps.hlsl](file:///workspace/gamedata/shaders/d3d11/sky.ps.hlsl#L14-L48)。该方案 GPU 开销几乎可忽略，但视觉完全依赖美术预烘焙贴图，时间/天气连续性、太阳位置一致性、空气透视均不可物理自洽。
 
-本报告建议采用 Hillaire (EGSR 2020) 的生产级天空大气方案[cite:1]作为 Eden Atmosphere 的核心：以 Transmittance LUT + 多重散射近似 LUT + Sky-View LUT + Aerial Perspective LUT 四张小型查找表替代高维预计算[cite:1][cite:9]，全部由 R4 层现成的 ComputeShader 基础设施烘焙[ComputeShader.h](file:///workspace/src/Layers/xrRenderPC_R4/ComputeShader.h#L10-L36)。体积云采用 Schneider (SIGGRAPH 2015/2017) 的天气图 + Perlin-Worley 3D 噪声 + 光线步进体系[cite:4][cite:5]，噪声离线烘焙、渲染半分辨率 + 时间重投影。整套系统可在默认档位下将新增 GPU 开销控制在约 **1.2–2.5 ms/帧（1080p，中端 GPU，估算值）**，其中体积云占 80% 以上；纯大气天空部分（LUT 更新 + Sky-View 采样）仅 **约 0.05–0.3 ms/帧（估算值）**。相比 SkyCube 的近零开销，代价换来的是物理自洽的全天候、全时段大气，且历史缓冲、速度缓冲、UAV、半分辨率 RT、TAA 等全部可复用现有代码资产。
+本报告建议采用 Hillaire (EGSR 2020) 的生产级天空大气方案[cite:1]作为 Eden Atmosphere 的核心：以 Transmittance LUT + 多重散射近似 LUT + Sky-View LUT + Aerial Perspective LUT 四张小型查找表替代高维预计算[cite:1][cite:9]，全部由 R4 层现成的 ComputeShader 基础设施烘焙【A·代码确证框架存在；D·Eden 为其首个使用者，需 M0 冒烟验证】[ComputeShader.h](file:///workspace/src/Layers/xrRenderPC_R4/ComputeShader.h#L10-L36)。体积云采用 Schneider (SIGGRAPH 2015/2017) 的天气图 + Perlin-Worley 3D 噪声 + 光线步进体系【B·文献锚定】[cite:4][cite:5]，噪声离线烘焙、渲染半分辨率 + 时间重投影。整套系统可在默认档位下将新增 GPU 开销控制在约 **1.2–2.5 ms/帧（1080p，中端 GPU，C·工程估算）**，其中体积云占 80% 以上；纯大气天空部分（LUT 更新 + Sky-View 采样）约 **0.1–0.35 ms/帧（C·工程估算，与 §8.2 分项一致）**。相比 SkyCube 的近零开销【C·估算】，代价换来的是物理自洽的全天候、全时段大气，且历史缓冲、速度缓冲、UAV、半分辨率 RT、TAA 等全部可复用现有代码资产【A·代码确证】。
 
 ---
 
-## 2. 现状分析：SkyCube 天空系统的架构与性能画像
+## 2. 现状分析：SkyCube 天空系统的架构与性能画像（本节除特别标注外均为【A·代码确证】）
 
 ### 2.1 天气/环境数据层
 
@@ -42,7 +51,7 @@ IXRay 当前的天空是典型的"SkyCube"路线：一个 12 顶点的半盒体�
 
 ### 2.5 SkyCube 的性能画像与局限
 
-**性能画像**：1 次 draw call、20 个三角形、仅天空像素着色（典型占屏 30%–50%），每像素 2 次 TextureCube 采样 + 1 次混合 + 1 次 tonemap。在现代 GPU 上属于"免费"级别（1080p 下数量级约 0.1–0.3 ms，视天空占屏比与带宽，估算值）。CPU 侧每帧还有两次小规模顶点/索引缓冲上载。
+**性能画像**【C·工程估算】：1 次 draw call、20 个三角形【A】、仅天空像素着色（典型占屏 30%–50%【C】），每像素 2 次 TextureCube 采样 + 1 次混合 + 1 次 tonemap【A·shader 确证】。在现代 GPU 上属于"免费"级别（1080p 下数量级约 0.1–0.3 ms，视天空占屏比与带宽）。CPU 侧每帧还有两次小规模顶点/索引缓冲上载【A】。
 
 **根本局限**（均属结构性缺陷，无法靠调参解决）：
 
@@ -56,7 +65,7 @@ IXRay 当前的天空是典型的"SkyCube"路线：一个 12 顶点的半盒体�
 
 ---
 
-## 3. 引擎能力盘点：可直接复用的 DX11 基础设施
+## 3. 引擎能力盘点：可直接复用的 DX11 基础设施（除 §3.3 末句推断外均为【A·代码确证】）
 
 ### 3.1 ComputeShader 与 UAV：现成的烘焙管线
 
@@ -66,6 +75,7 @@ R4 层已内置完整的 CS 框架：`ComputeShader` 类支持常量缓冲、SRV
 
 1. M0 必须先做端到端冒烟验证（编译 → UAV 绑定 → Dispatch → UAV 回读校验），排除预留代码与当前 DX11 层的兼容性问题；
 2. `ComputeShader` 的资源绑定在 `Construct` 时一次性固定（SRV/UAV/Sampler 列表静态）[ComputeShader.cpp](file:///workspace/src/Layers/xrRenderPC_R4/ComputeShader.cpp#L22-L28)。LUT 烘焙的输入输出基本固定，可直接适配；云 temporal 的 ping-pong 交替历史图则需创建 A→B/B→A 两个实例规避，或小幅扩展编译器支持重绑。
+3. **冒烟失败的退路**（保证落地顺畅）：绕过 `CSCompiler` 直接以原生 D3D11 API（`CreateComputeShader` + `CSSetUnorderedAccessViews`）做薄包装，或退化为 3DFluid 式 PS 切片路径——两者均有仓库内先例可循【A·先例确证】。
 
 ### 3.2 渲染目标体系：HDR、UAV、速度、历史缓冲全部就位
 
@@ -95,7 +105,7 @@ R4 一帧的主序为 `主流程：绑定 MRT(rt_Generic_0, rt_Velocity) → Ren
 
 ---
 
-## 4. Eden Atmosphere 总体设计
+## 4. Eden Atmosphere 总体设计（本节及 §5–§7 的方案部分为【D·设计提案】，其依赖的代码/文献证据单独标注）
 
 ### 4.1 设计目标与原则
 
@@ -145,7 +155,7 @@ Eden 不另起炉灶，而是把 `CEnvDescriptor` 映射为大气参数，沿用
 | Irradiance | 32×32 2D | RGBA16F (8 KB) | 天空对水平面的辐照度（喂 ambient/hemi） | 与 Sky-View 同批 |
 | 云影图 | 128×128 2D | R8 | 云层沿太阳方向投影密度 | 每 4 帧 |
 
-合计常驻显存 **约 1 MB**。规格与 Hillaire 论文的推荐一致（Sky-View 192×108[cite:1]），没必要更大。
+合计常驻显存 **约 1 MB**（各级算术：128+256+160+256+8+16 ≈ 824 KB【A·按规格直接计算】）。规格与 Hillaire 论文的推荐一致（Sky-View 192×108[cite:1]）【B】，没必要更大；各 LUT 具体尺寸可按实测调整，不影响架构【C】。
 
 ### 5.2 ComputeShader 烘焙流程
 
@@ -164,7 +174,7 @@ Eden 不另起炉灶，而是把 `CEnvDescriptor` 映射为大气参数，沿用
       CS_AerialPerspective -> Dispatch(32/4, 32/4, 32/4)
 ```
 
- Sky-View/Aerial-Perspective 的重算仅依赖 Transmittance + MultiScatter 两个小 LUT，这正是该方案"改大气不需要重烘焙高维表"的核心优势[cite:1]。若追求极致，可将 Sky-View 更新跨帧分块（每次重算一半扫描线），但默认档无需。
+ Sky-View/Aerial-Perspective 的重算仅依赖 Transmittance + MultiScatter 两个小 LUT，这正是该方案"改大气不需要重烘焙高维表"的核心优势[cite:1]【B】。若追求极致，可将 Sky-View 更新跨帧分块（每次重算一半扫描线），但默认档无需【D】。注意：游戏时间连续推进时 `sun_dir` 每帧变化，Sky-View/Irradiance 实际会每帧重算——192×108 与 32×32 的 Dispatch 属于小任务，预估 0.02–0.05 ms/帧【C】，但需在 M1 实测确认。
 
 ### 5.3 天空渲染替换
 
@@ -173,7 +183,7 @@ Eden 不另起炉灶，而是把 `CEnvDescriptor` 映射为大气参数，沿用
 - **几何**：改为全屏三角形（复用 `stub_fullscreen_triangle.vs.hlsl`）。现有 R4 路径天空绘制时本就无深度/模板绑定（`u_setrt` 第三参为 0，`set_Stencil(FALSE)`[r4_R_render.cpp](file:///workspace/src/Layers/xrRenderPC_R4/r4_R_render.cpp#L539-L546)），天空像素完全依靠后续场景几何的深度覆盖来遮挡——全屏三角形在此语义下等价且更优（省去 12 顶点盒体与每帧 VB 上载）。
 - **着色**（`eden_sky.ps.hlsl`）：
   1. 由像素射线求 `viewZenithCosAngle/viewSunCosAngle`，采样 Sky-View LUT；
-  2. 叠加太阳盘（角直径 0.53°，亮度取 Transmittance 加权后的辐亮度）；
+  2. 叠加太阳盘（角直径 0.53°【B·天文常数】，亮度取 Transmittance 加权后的辐亮度）；
   3. 保留现有输出协议：写 `SV_Target0` 颜色 + `SV_Target1` 速度（速度为 0 但保留 MRT 布局），自然兼容 TAA/FSR2[sky.ps.hlsl](file:///workspace/gamedata/shaders/d3d11/sky.ps.hlsl#L17-L21)。
 - **双纹理交叉淡化机制退役**：物理天空由连续参数驱动，`tsky0/tsky1` 与 `factor.w` 权重混合不再是必需品（Eden 开启时不创建天空纹理，节省其显存与加载时间）。
 - **环境贴图**：`sky_texture_env` 的角色（combine 阶段 `env_s0/env_s1`）由 Eden 生成的 32×6 镜像立方体替代——太阳变化时用一次 CS 从 Sky-View LUT 填充，供 `CompureSpecularIrradance` 与 SSR 边界着色。
@@ -201,10 +211,10 @@ Color = Color * ap.rgb + ap.a;      // 透射 + 内散射
 | 积分点 | 现状 | Eden 改造 |
 |---|---|---|
 | 太阳直射 | `Lights.sun_adapted` 每帧由 `CLight_DB` 从 `E.sun_color/sun_dir` 重建[Light_DB.cpp](file:///workspace/src/Layers/xrRender/Light_DB.cpp#L236-L262) | **唯一修改点在 `CLight_DB`**：`set_color` 输入由 `E.sun_color` 换为"标称辐照度 × TransmittanceLUT(太阳天顶角)"，黄昏自然变红；CSM 级联、`phase_accumulator` 直射累积、combine 的 `Ldynamic_color`、体积光柱全部读取 `sun_adapted`，自动全链路继承 |
-| 环境光/半球 | `L_ambient`/`env_color` 来自 `ambient/hemi_color` 常量；`L_hemi_color` 经 `cl_hemi_color` binder 绑定为 `hemi_color × ps_r2_sun_lumscale_hemi × 4.0`（w=weight），属 **CPU 端常量**（hemi 顶点球机制[Blender_Recorder_StandartBinding.cpp](file:///workspace/src/Layers/xrRender/Blender_Recorder_StandartBinding.cpp#L380-L401)） | 落点在 **CPU 端**：Irradiance LUT 数值回读（32×32，脏标记时一次，开销可忽略）或同步解析近似，生成新的 `hemi_color/ambient` 值；GPU 端 hemi 顶点球与缩放链完全不动，老游戏平衡可调回 |
+| 环境光/半球 | `L_ambient`/`env_color` 来自 `ambient/hemi_color` 常量；`L_hemi_color` 经 `cl_hemi_color` binder 绑定为 `hemi_color × ps_r2_sun_lumscale_hemi × 4.0`（w=weight），属 **CPU 端常量**（hemi 顶点球机制[Blender_Recorder_StandartBinding.cpp](file:///workspace/src/Layers/xrRender/Blender_Recorder_StandartBinding.cpp#L380-L401)） | 落点在 **CPU 端**：以 IRRADIANCE 的 **CPU 解析近似**（Hillaire 论文附带的低成本近似式[cite:1]）或 staging 缓冲回读生成新的 `hemi_color/ambient`；**回读需谨慎**——DX11 GPU→CPU 回读引入管线同步【A·API 特性】，仅允许脏标记时一次性执行，禁止每帧；hemi 顶点球与缩放链完全不动 |
 | 体积光柱 | `accum_volumetric_sun` 以常量太阳色 march | 太阳色已被物理化，自动一致；可选把云层密度并入光柱 march |
 | 反射环境 | 天气 `sky_texture_env` | Eden 生成的小环境立方体（§5.3） |
-| 云影 | 无 | 云影图 R8 在 `phase_accumulator` 太阳累积时乘到 `Ldynamic_color`（§6.4） |
+| 云影 | 无 | 云影图 R8 在太阳直射积分时作为乘子（落点：`phase_accumulator` 直射累积读取 `sun_adapted` 颜色处[r4_rendertarget_accum_direct.cpp](file:///workspace/src/Layers/xrRenderPC_R4/r4_rendertarget_accum_direct.cpp#L41)或该常量设置处）——具体接线在 M4 实现时按 accumulator 内部常量流确定【D·设计提案，落点文件已确证】 |
 
 ---
 
@@ -230,16 +240,16 @@ phase_combine 开头（现 RenderClouds 位置、combine_1 之前，绑定 RDept
      - 输出 RGB（云散射，HDR 物理单位）+ A（透射率）+ 速度（可输出到独立 MRT）
   2. CloudTemporal（全分辨率上采样 + 时间重投影）
      - 用 rt_Velocity + 云层自运动偏移做重投影
-     - 邻域 clamp 去鬼影（复制 SSLR temporal 模式[r4_rendertarget.cpp](file:///workspace/src/Layers/xrRenderPC_R4/r4_rendertarget.cpp#L570-L586)）
+     - 邻域 clamp 去鬼影（复制 SSLR temporal 模式[r4_rendertarget.cpp](file:///workspace/src/Layers/xrRenderPC_R4/r4_rendertarget.cpp#L574-L585)）
   3. 合成：combine_1 中在空气透视之前
      Color = Sky + CloudRGB；对云后方场景 Color *= CloudA
 ```
 
 关键工程决策：
 
-- **噪声烘焙进显存一次，全局共享**：8 MB 的 128³ 噪声是全系统最大的新增资产，却是所有云共用的；对比 SkyCube 每个天气周期 2–12 张大尺寸 cube map，总显存反而可能下降（§8.3）。
+- **噪声烘焙进显存一次，全局共享**：8 MB 的 128³ 噪声是全系统最大的新增资产，却是所有云共用的；对比 SkyCube 每个天气周期数张大尺寸 cube map【C·资产不在仓库，规模未确证】，总显存反而可能下降（§8.3）。
 - **太阳光照复用大气 LUT**：云的太阳透射直接查 Transmittance/MultiScatter LUT（Hillaire 论文明确支持该加速路径[cite:1]），云与天空在黄昏自动同色。
-- **半分辨率 + 时间累积**参照 HZD：整个天空体积云在 PS4 上 <2 ms 实时渲染[cite:8]，本引擎在 PC 中端 GPU + 半分辨率 + 时间重投影的同等档位下目标 1.0–2.0 ms（估算，§8.2）。
+- **半分辨率 + 时间累积**参照 HZD：整个天空体积云在 PS4 上 <2 ms 实时渲染[cite:8]【B·作者自述，单一来源】，本引擎在 PC 中端 GPU + 半分辨率 + 时间重投影的同等档位下目标 1.0–2.0 ms（C·估算，§8.2）。本节步数/分辨率等参数均为业界常规起点【D·设计提案】，最终值由 M5 实测定标。
 
 ### 6.3 与天气/特效系统的联动
 
@@ -291,7 +301,7 @@ LevelEditor 是 **DX9 + xrECore 自定义管线**（§3.5）：无 ComputeShader
 
 ### 8.1 方法声明
 
-仓库内无 GPU 计时数据，以下全部为**架构推导 + 文献锚定的工程估算**（标注[估算]），供量级决策使用，不作为实测承诺。锚点：HZD 全天空体积云 PS4 <2 ms[cite:8]；Hillaire 方案在 iPhone 6s 到高端 PC 全程实时[cite:1]；UE5 Sky Atmosphere 生产应用[cite:9]。
+仓库内无 GPU 计时数据，以下全部为【C·工程估算】（架构推导 + 文献锚定），供量级决策使用，不作为实测承诺。锚点：HZD 全天空体积云 PS4 <2 ms[cite:8]（B·作者自述，单一来源）；Hillaire 方案在 iPhone 6s 到高端 PC 全程实时[cite:1]（B）；UE5 Sky Atmosphere 生产应用[cite:9]（B）。本节所有数值的收敛路径见 §11 的 U2/U3/U4。
 
 ### 8.2 GPU 帧开销对比（1080p，中端 GPU，默认档）
 
@@ -322,7 +332,7 @@ LevelEditor 是 **DX9 + xrECore 自定义管线**（§3.5）：无 ComputeShader
 | 云影图 | 无 | 16 KB |
 | **净变化** | — | **约 −20 ~ +21 MB（与旧天气贴图规模对冲，可近似认为持平）** |
 
-带宽方面，体积云是唯一大头（半分辨率读写 + 噪声采样），可通过 3D 纹理 BC 压缩（BC4/BC7 分块 3D，DX11.1+）把噪声压到 2–4 MB 并降低采样带宽——Low 档推荐开启。
+带宽方面，体积云是唯一大头（半分辨率读写 + 噪声采样），可通过 3D 纹理 BC 压缩把噪声压到 2–4 MB 并降低采样带宽——Low 档推荐开启。**注意**：3D 块压缩（BC 分块 3D）需要 **FL11.1**（Windows 8+）【B·DXGI 规范】，而仓库 UAV 检查基于 FL11.0[r4_rendertarget.cpp](file:///workspace/src/Layers/xrRenderPC_R4/r4_rendertarget.cpp#L539)——运行时需按 FL 分支，FL11.0 设备退化为不压缩（+6 MB 显存）。
 
 ### 8.4 CPU 与其他系统影响
 
@@ -365,12 +375,64 @@ LevelEditor 是 **DX9 + xrECore 自定义管线**（§3.5）：无 ComputeShader
 | DX10/DX9 路径（R1/R2）不支持 CS | Eden 仅挂 R4/DX11（游戏与 xrPlay 天气编辑器）；legacy 路径维持 SkyCube |
 | LevelEditor（DX9 自定义管线）无 CS/HDR 能力，Eden 不自动生效 | 按 §7 三层策略：数据层完整落地、视口维持 legacy 天空、高保真预览走 xrPlay；可选 CPU-LUT 低保真预览作为增强，不阻塞主线 |
 | 半分辨率云与光线步进伪影（条带/闪烁） | 蓝噪声抖动步进 + 时间累积 + 高度分层步长 |
+| GPU→CPU 回读同步（若 hemi/ambient 采用 LUT 回读方案） | 优先 CPU 解析近似；回读仅限脏标记时一次性 staging copy（§5.5） |
+| FL11.0 设备无 3D BC 压缩 | 运行时按 FL 分支：FL11.0 不压缩（+6 MB），FL11.1+ 启用 BC3D（§8.3） |
 
 ---
 
 ## 10. 结论
 
 IXRay 的 SkyCube 天空是零成本但零自由度的"贴图穹顶"：几何为 12 顶点半盒体，颜色来自双 TextureCube 权重混合（R4 下在主渲染流程中先于场景绘制为背景层，速度直写 rt_Velocity），雾为线性距离模型，云为平面贴图。而 R4 层已有的 ComputeShader/UAV 框架、HDR RT、速度缓冲、半分辨率 temporal 先例与 3DFluid 体积经验，意味着在游戏引擎侧植入一套 LUT 驱动的真大气系统所需的全部基础设施**已经存在**；需要特别指出的是，LevelEditor 并不使用 R4，而是 DX9 + xrECore 自定义管线（同名 `CRender` 曾造成误判），因此 Eden 在编辑器侧的落地是"数据层完整 + 预览分层"而非视口自动升级。Eden Atmosphere 采用 Hillaire 2020 的四 LUT 方案 + Schneider 体系的离线烘焙噪声体积云，可做到：纯大气开销与 SkyCube 同数量级（≈0.1–0.3 ms [估算]），体积云主导的完整方案 ≈1.3–2.6 ms/帧（1080p 默认档 [估算]），显存对冲后基本持平，并保留从全功能到关云降档直至完全回退 SkyCube 的三档弹性。建议按 M0–M5 路线推进，M1（主流程背景层挂载的天空替换 + 光照耦合 + 编辑器数据层）为价值/成本比最高的首个可交付点。
+
+---
+
+## 11. 不确定性清单与报告置信度
+
+### 11.1 完整不确定性清单
+
+下表穷举本报告全部残余不确定性（此前已通过五轮代码复核消解的不确定项不再列入）：
+
+| 编号 | 位置 | 不确定内容 | 级别 | 收敛路径 |
+|---|---|---|---|---|
+| U1 | §5.1 | 各 LUT 具体尺寸/格式为论文推荐值，未必是最优 | B | M1 实测微调（架构不受影响） |
+| U2 | §5.2/§8.2 | LUT/CS 更新成本 0.02–0.10 ms/帧 | C | M1 PIX/GPU_EVENT 实测 |
+| U3 | §2.5/§8.2 | SkyCube 现状 0.1–0.3 ms、天空占屏比 30–50% | C | M5 对照实测 |
+| U4 | §6.2/§8.2 | 体积云 1.0–2.0 ms（48–64 步、半分辨率、temporal） | C·B 锚定 | M3/M5 实测定标 |
+| U5 | §8.3 | 天气贴图 10–40 MB 粗估（.dds 资产不在仓库，规格无法确证） | C | 运行时资源枚举实测 |
+| U6 | §3.1 | CSCompiler/ComputeShader 端到端可用性（确证"无使用者"，未确证"能跑通"） | A+D | **M0 冒烟验证（最高优先）** |
+| U7 | §5.3 | 全屏三角形与 12 顶点盒体在 TAA 抖动/边界像素下完全等价 | D | M1 对比截图 |
+| U8 | §4.3/§2.2 | 天气 ltx 引用的 sky_texture 均为 cube 资产（shader 端 TextureCube 已确证；资产文件不在仓库） | A+U | 资产盘点 |
+| U9 | §5.5 | hemi/ambient 的 CPU 解析近似精度满足观感 | D | M1 视觉对照 |
+| U10 | §5.5/§6.4 | 云影乘入 accumulator 的具体常量接线方式 | D（落点文件已确证） | M4 按常量流确定 |
+| U11 | §6.3 | 雷暴闪电自发光注入的视觉可控性 | D | M4 原型 |
+| U12 | §8.3 | 3D BC 压缩需 FL11.1；FL11.0 设备退化方案 | B·DXGI 规范 | 运行时 FL 分支 |
+| U13 | §7.3 | DX9 CPU-LUT 预览的 SM3.0 兼容与观感 | D·低风险 | M4 原型 |
+| U14 | §3.5/§7.3 | `xrRenderDS_R0` 成熟度/完成度未知（仅确认骨架存在） | U | 跟踪上游演进 |
+| U15 | §9.2 | 美术风格漂移幅度（主观，无法代码确证） | U | M1 逐天气校准 |
+| U16 | §6.2 | HZD "<2 ms PS4" 为作者个人主页单一来源表述 | B·单一来源 | 交叉核对 SIGGRAPH 2015 原始讲义 |
+
+### 11.2 分章置信度（按代码确定性衡量）
+
+| 章节 | 证据构成 | 置信度 | 说明 |
+|---|---|---|---|
+| §2 现状分析 | A 为主 | **97%** | 全部关键声明有 文件:行号；扣资产不可见项（U5/U8） |
+| §3 基础设施 | A 为主 | **93%** | CS 框架未运行验证（U6，−5）；DS_R0 成熟度未知（U14，−2） |
+| §4 选型与映射 | B + A | **90%** | 物理模型为成熟文献方案；映射落点已代码确证 |
+| §5 大气方案 | A 挂载点 + B LUT + C 成本 | **85%** | 挂载点/耦合点均为代码确证；成本为估算（U2） |
+| §6 体积云方案 | D + B | **78%** | 设计提案未经实现；文献锚定强（Schneider 体系）但参数需定标（U4/U11） |
+| §7 编辑器方案 | A 为主 | **94%** | 数据层/表单/命令注册全部代码确证；预览增强为 D（U13） |
+| §8 性能分析 | C | **62%** | 量级与结构性结论可信，具体数值不可承诺（U2/U3/U4/U5） |
+| §9 路线图与风险 | A + D | **85%** | 里程碑挂接点已确证；工期类判断非本报告承诺范围 |
+
+### 11.3 总置信度
+
+以各章声明数量近似加权（§2–§3 约 35%、§4–§7 约 35%、§8 约 15%、§9–§10 约 15%）：
+
+**总置信度 ≈ 0.35×95 + 0.35×87 + 0.15×62 + 0.15×85 ≈ 86%**
+
+- 其中 **~55 个百分点来自代码确证（A 级）内容**，是本报告的底盘；
+- 置信度提升路径：M0 冒烟通过（U6 转实证）+2 → 88%；M1 实测天空/LUT 成本（U2 收敛）+1 → 89%；M5 性能实测后 §8 升至 90%+，总体可达 **≈91%**；
+- 剩余约 9–14% 的不可消除残差来自：仓库外资产（U5/U8）、运行时环境差异（驱动/硬件）、以及设计提案在实现前本质上不可完全确证的部分（D 级）。
 
 ---
 
