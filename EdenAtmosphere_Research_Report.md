@@ -22,7 +22,7 @@ IXRay 当前的天空是典型的"SkyCube"路线：一个 12 顶点的半盒体�
 
 ### 2.2 天空渲染路径
 
-引擎侧入口 `CEnvironment::RenderSky()` 经 `FactoryPtr<IEnvironmentRender>` 转发到渲染层[Environment_render.cpp](file:///workspace/src/xrEngine/Environment_render.cpp#L21-L39)。R4 路径下的实现为：
+引擎侧入口 `CEnvironment::RenderSky()` 经 `FactoryPtr<IEnvironmentRender>` 转发到渲染层[Environment_render.cpp](file:///workspace/src/xrEngine/Environment_render.cpp#L21-L39)。游戏 R4 路径下的实现为（注意 `dxEnvironmentRender.cpp` 是 DX9/DX11 双后端共享文件，编辑器以 DX9 编译同一份代码，见 §3.5）：
 
 - **几何**：静态半盒体 `hbox_verts`（12 顶点 / 20 三角形），每帧上载顶点/索引，世界矩阵为 `rotateY(sky_rotation) + translate(相机位置)`[dxEnvironmentRender.cpp](file:///workspace/src/Layers/xrRender/dxEnvironmentRender.cpp#L208-L262)。
 - **纹理**：`sky_r_textures[2]` 存放两个相邻天气的天空贴图，`lerp()` 时填充[dxEnvironmentRender.cpp](file:///workspace/src/Layers/xrRender/dxEnvironmentRender.cpp#L128-L144)；每帧绑定到 `$user$sky0/sky1`。
@@ -77,10 +77,15 @@ R4 层已内置完整的 CS 框架：`ComputeShader` 类支持常量缓冲、SRV
 
 R4 一帧的主序为 `phase_scene_prepare → phase_smap_D（CSM）→ phase_scene（G-Buffer）→ phase_occq → phase_accumulator（光照累积）→ phase_combine（AO/SSLR/天空/云/环境光/雾/tonemap）→ TAA/FSR2 → bloom/PP`[r4_R_render.cpp](file:///workspace/src/Layers/xrRenderPC_R4/r4_R_render.cpp#L572-L843)。Eden 的挂载点明确：**LUT 烘焙 CS 在帧首（prepare 前）按需调度；天空绘制替换发生在 phase_combine 开头；空气透视在 combine_1 中替换雾；云影在 phase_smap_D 后、accumulator 前应用。**
 
-### 3.5 编辑器侧
+### 3.5 编辑器侧（复核结论：DX9 + xrECore 自定义管线，不走引擎 R4）
 
-- LevelEditor 视口直接调用引擎 `CRender` 渲染场景[ViewportParticle.cpp](file:///workspace/src/Editors/LevelEditor/Viewports/ViewportParticle.cpp#L22)，即编辑器视口与游戏共用同一 R4 管线——**R4 实现的 Eden Atmosphere 在编辑器视口中自动生效**。
-- 游戏内天气编辑器 `UIEditorWeather`（ImGui）直接编辑 `CEnvDescriptor` 全部字段并写回天气 .ltx[UIEditorWeather.cpp](file:///workspace/src/xrPlay/UIEditorWeather.cpp#L72-L100)，是新增大气/云参数面板的理想宿主。
+- **LevelEditor 的渲染根基是 DX9 + xrECore 自定义管线**，与游戏引擎 R4 渲染层完全独立：
+  - 链接构成：LevelEditor 仅链接 `xrCore/xrEUI/xrEProps/xrECore/xrSound/xrAbstractions/xrScripts`，**不含** `xrRenderPC_R4` [LevelEditor/CMakeLists.txt](file:///workspace/src/Editors/LevelEditor/CMakeLists.txt#L53-L60)；
+  - 设备层：`CEditorRenderDevice` 的渲染上下文/设备/交换链/深度宏全部为 `IDirect3DDevice9*`[device.h](file:///workspace/src/Editors/xrECore/Editor/device.h#L24-L29)；
+  - 渲染层：xrECore 编译共享层 `Layers/xrRender/dxEnvironmentRender.*` 等 + `xrRenderDX9/dx9r_constants_cache.*`[xrECore/CMakeLists.txt](file:///workspace/src/Editors/xrECore/CMakeLists.txt#L36-L57)，配编辑器自己的 `CRender : IRender_interface`（内部为 `IDirect3DVertexBuffer9*` 等裸 DX9 资源）[render.h](file:///workspace/src/Editors/xrECore/Editor/render.h#L102-L135)。
+  - **勘误**：本报告初版称"LevelEditor 视口走引擎 R4"系误判——Viewports 中的 `((CRender*)::Render)` 是 xrECore 的编辑器 `CRender`，与 R4 的 `CRender` 是**同名不同类**；Eden 的 R4 实现不会自动出现在编辑器视口。
+- **但环境数据层是共享的**：编辑器经 `XrGamePersistentEditors` 创建引擎 `CEnvironment`[XrGamePersistentEditors.cpp](file:///workspace/src/Editors/xrECore/Engine/XrGamePersistentEditors.cpp#L15-L18)；`rsEnvironment` 设备标志开启或 Play-In-Editor 时调用 `Environment().RenderSky()/RenderClouds()`[UI_LevelTools.cpp](file:///workspace/src/Editors/LevelEditor/Editor/UI_LevelTools.cpp#L483-L496)，实际执行的是 `dxEnvironmentRender` 的 **DX9 编译分支**（该文件为 DX9/DX11 双后端共享，DX9 分支用 `D3DRS_FOGCOLOR/D3DRS_FOGSTART/FOGEND` 固定管线雾状态[dxEnvironmentRender.cpp](file:///workspace/src/Layers/xrRender/dxEnvironmentRender.cpp#L188-L202)）。
+- 游戏内天气编辑器 `UIEditorWeather`（ImGui）位于 **xrPlay（R4 游戏进程）**，直接编辑 `CEnvDescriptor` 全部字段并写回天气 .ltx[UIEditorWeather.cpp](file:///workspace/src/xrPlay/UIEditorWeather.cpp#L72-L100)，是新增大气/云参数面板与**高保真预览**的理想宿主。
 - 需要澄清：LevelEditor 的 "Environment Generator"（`EEnvGenerator`）是植被散布工具（按 RGBA 热力图散布对象），与天气环境无关[EnvGenerator.h](file:///workspace/src/Editors/LevelEditor/Editor/Utils/EnvGenerator.h#L8-L12)，方案中不应把烘焙工具挂错位置。
 - 另存在新一代渲染接口层 `xrRenderDS_R0`（含独立的 `CDS0_EnvironmentRender::RenderSky` 骨架）[XRayEnvironmentRender.cpp](file:///workspace/src/Layers/xrRenderDS_R0/Interface/Environment/XRayEnvironmentRender.cpp#L90)，目前为 WIP；Eden 应先落在 R4，DS_R0 后续通过同一 `IEnvironmentRender` 接口接入。
 
@@ -91,7 +96,7 @@ R4 一帧的主序为 `phase_scene_prepare → phase_smap_D（CSM）→ phase_sc
 ### 4.1 设计目标与原则
 
 1. **真大气**：天空颜色、太阳辐照度、空气透视全部从大气物理模型（Rayleigh/Mie/臭氧散射吸收）实时推导，非贴图。
-2. **非侵入**：以 `IEnvironmentRender` 接口替换与 shader option 开关实现，保留 SkyCube 作为可回退路径（`r_atmosphere_mode 0/1/2`）。
+2. **非侵入**：以 `IEnvironmentRender` 接口替换与 shader option 开关实现，保留 SkyCube 作为可回退路径（`r_atmosphere_mode 0/1/2`）；Eden 仅落地 R4/DX11 游戏路径，DX9 编辑器路径（LevelEditor 等）维持 legacy 天空（§3.5、§7）。
 3. **开销可控**：一切昂贵计算进 LUT；LUT 更新按脏标记 + 帧间摊销；体积云半分辨率 + 时间重投影 + 离线烘焙噪声。
 4. **全链路一致**：同一模型同时驱动天空像素、太阳光颜色、环境光/半球光、雾（空气透视）、云光照与云影。
 
@@ -159,7 +164,7 @@ Eden 不另起炉灶，而是把 `CEnvDescriptor` 映射为大气参数，沿用
 
 ### 5.3 天空渲染替换
 
-`dxEnvironmentRender::RenderSky` 分支为 Eden 路径：
+`dxEnvironmentRender::RenderSky` 在 R4/DX11 编译分支下分为 Eden 路径（DX9 编辑器分支不动，见 §7）：
 
 - **几何**：改为全屏三角形（复用 `stub_fullscreen_triangle.vs.hlsl`），无深度写入、模板 `== 0`（保持"仅无几何像素"语义，与现行为一致[r4_rendertarget_phase_combine.cpp](file:///workspace/src/Layers/xrRenderPC_R4/r4_rendertarget_phase_combine.cpp#L104)）。
 - **着色**（`eden_sky.ps.hlsl`）：
@@ -244,11 +249,35 @@ phase_combine 开头（天空 LUT 之后、combine_1 之前）：
 
 ## 7. LevelEditor 植入方案
 
-1. **视口预览（零成本获得）**：LevelEditor 视口走引擎 `CRender`（R4）[ViewportParticle.cpp](file:///workspace/src/Editors/LevelEditor/Viewports/ViewportParticle.cpp#L22)，Eden 在 R4 落地后编辑器视口自动呈现新天空与体积云，仅需在编辑器配置中默认 `r_atmosphere_mode 2` 并校验 ImGui 交叠渲染不受影响（R4 的 `imgui_impl_dx11` 独立于本系统）。
-2. **天气编辑器扩展**：在 `UIEditorWeather`（ImGui，已具备全部 `CEnvDescriptor` 字段编辑与 .ltx 写回[UIEditorWeather.cpp](file:///workspace/src/xrPlay/UIEditorWeather.cpp#L72-L100)）中新增 "Eden Atmosphere" 折叠组：浊度/臭氧/地面反照率/云覆盖率/云类型/云高，保存为新天气字段；旧字段（fog/sky_color）在 Eden 模式下灰显为只读映射预览。
-3. **时间轴 scrub 预览**：天气编辑器已有时间拨动能力，配合 Eden 的"参数脏标记"机制，拖动时间轴时每帧重烘 Sky-View（192×108 CS，成本可忽略），实现所见即所得的黄昏预览——这是贴图方案做不到的交互。
-4. **离线烘焙工具**：噪声 3D DDS 与天气图模板的烘焙器建议实现为 LevelEditor 的独立菜单项（CLI 化输出到 gamedata），**不**挂在现有 "Environment Generator"（植被散布工具）下[EnvGenerator.h](file:///workspace/src/Editors/LevelEditor/Editor/Utils/EnvGenerator.h#L8-L12)。
-5. **DS_R0 对齐**：`CDS0_EnvironmentRender` 的 RenderSky 骨架按同一 `IEnvironmentRender` 契约指向 Eden 管理器，避免未来渲染层重构时二次实现。
+### 7.1 根基与边界（复核后的结论）
+
+LevelEditor 是 **DX9 + xrECore 自定义管线**（§3.5）：无 ComputeShader/UAV、无 HDR RT、无现有 temporal 基础设施。因此：
+
+- **Eden 的 R4/CS 实现不会自动出现在 LevelEditor 视口**，任何"自动生效"的预期都不成立；
+- 但 `CEnvironment` 数据层（天气 lerp、`CEnvDescriptor`）为引擎层代码、编辑器与游戏共享[XrGamePersistentEditors.cpp](file:///workspace/src/Editors/xrECore/Engine/XrGamePersistentEditors.cpp#L15-L18)，**大气参数的编辑与存储与渲染后端无关**，可以完整落地；
+- 编辑器视口的天空预览现走 `rsEnvironment` 开关下的 `dxEnvironmentRender` DX9 分支[UI_LevelTools.cpp](file:///workspace/src/Editors/LevelEditor/Editor/UI_LevelTools.cpp#L483-L496)。
+
+据此，LevelEditor 侧的植入拆为三层：数据层（完整实现）、预览层（分阶段）、工具层（烘焙菜单）。
+
+### 7.2 数据层：天气编辑 UI 扩展（零障碍）
+
+- 在 LevelEditor 的天气/世界属性 UI（`UIWorldPropertiesFrom` 等）与 **xrPlay 游戏内天气编辑器 `UIEditorWeather`**[UIEditorWeather.cpp](file:///workspace/src/xrPlay/UIEditorWeather.cpp#L72-L100) 中同步新增 "Eden Atmosphere" 字段组：浊度/臭氧/地面反照率/云覆盖率/云类型/云高/云密度，随现有 `saveWeather` 流程写回天气 .ltx；
+- 旧字段（`sky_color/fog_*`）在 Eden 模式下灰显为只读映射预览（按 §4.3 的映射表反显示）；
+- 两处 UI 编辑的是同一份 `CEnvDescriptor` 数据结构与同一批 .ltx 文件，游戏与编辑器天然一致。
+
+### 7.3 预览层：分阶段策略
+
+| 阶段 | 方案 | 说明 |
+|---|---|---|
+| 基线（随 M1 交付） | LevelEditor 视口**维持 DX9 legacy 天空**，Eden 开关只影响游戏；高保真预览走 xrPlay 的 `UIEditorWeather`（R4 进程，含时间轴 scrub——Eden 的参数脏标记机制使拖动时间轴即可逐帧重烘 Sky-View，实现所见即所得的黄昏预览） | 零风险、零额外渲染开发；一致性由同一份天气 .ltx 保证 |
+| 增强（M4+，可选） | **CPU 烘焙小型 Sky-View LUT**（建议 96×64 RGBA8，仅参数脏标记时重建，CPU 端每次数十毫秒级可接受），写入一张 2D 纹理；编辑器 DX9 天空 blender 改为采样该 LUT（加 shader option 切换），实现低保真物理大气预览；太阳盘/太阳色同步给出 | DX9 SM3.0 采样 2D LUT 无压力；精度足够编辑器取景使用 |
+| 云的编辑器预览 | 不做真体积 raymarch；可选把云影图（128² R8，CPU 同样可烘）作为视口内的 2D 光照乘子叠加，传达"云影在动"的最小信息 | 避免在 DX9 上重建体积管线 |
+| 不推荐 | 为 LevelEditor 移植 R4 管线或在编辑器中嵌 R4 离屏预览窗口 | 与 xrECore 现状冲突、工程量大；若未来需要高保真编辑器预览，更现实的路径是等 `xrRenderDS_R0` 新渲染接口层成熟后统一接入 Eden |
+
+### 7.4 工具层：离线烘焙入口
+
+- 噪声 3D DDS 与天气图模板的烘焙器实现为 LevelEditor 独立菜单项（纯 CPU/离线输出到 gamedata，不依赖渲染后端），**不**挂在现有 "Environment Generator"（植被散布工具）下[EnvGenerator.h](file:///workspace/src/Editors/LevelEditor/Editor/Utils/EnvGenerator.h#L8-L12)；
+- 烘焙产物（.dds + 天气图模板）同时服务游戏运行时与 §7.3 的编辑器 CPU 预览，一份资产两端复用。
 
 ---
 
@@ -296,12 +325,13 @@ phase_combine 开头（天空 LUT 之后、combine_1 之前）：
 | Draw call | SkyCube: 2（天空+云）→ Eden: 全屏 tri + 云 2 pass + 3–5 次 CS Dispatch；CPU 提交成本相当 |
 | 顶点上载 | 现有天空/云每帧 VB/IB 上载可全部移除（全屏 tri + 静态资源） |
 | 天气 lerp | 不变（CPU 原逻辑保留）；增加一个参数差阈值脏标记 |
+| 编辑器（DX9） | 数据层共享、参数编辑 UI 正常工作；视口预览维持 legacy 天空，无额外 GPU/CPU 开销（§7.3）；可选 CPU LUT 预览仅在参数变更时付出数十毫秒一次性成本 |
 | 加载时间 | 天气 cube 贴图退役可省加载；噪声 DDS 新增一次性读取 |
 | 既有效果兼容 | 太阳光柱/SSLR/GTAO/TAA 无需改动；天空速度输出协议保留 |
 
 ### 8.5 结论
 
-以约 **+1.2–2.3 ms GPU（默认档）[估算]、显存近似持平** 的代价，换取：物理自洽的全时段天空与太阳、随距离正确演化的空气透视、有体积有光照有云影的云层、可参数化的大气组成，以及编辑器里"拖时间轴即时预览"的工作流。对照 HZD/UE5/Frostbite 的生产实践[cite:8][cite:9][cite:6]，该开销在本世代 PC 上属于可接受区间；且系统可整体降级回 SkyCube 路径，风险有兜底。
+以约 **+1.2–2.3 ms GPU（默认档）[估算]、显存近似持平** 的代价，换取：物理自洽的全时段天空与太阳、随距离正确演化的空气透视、有体积有光照有云影的云层、可参数化的大气组成，以及游戏内天气编辑器（xrPlay/R4）"拖时间轴即时预览"的工作流（LevelEditor 侧为数据编辑 + 低保真 CPU-LUT 预览，见 §7）。对照 HZD/UE5/Frostbite 的生产实践[cite:8][cite:9][cite:6]，该开销在本世代 PC 上属于可接受区间；且系统可整体降级回 SkyCube 路径，风险有兜底。
 
 ---
 
@@ -312,10 +342,10 @@ phase_combine 开头（天空 LUT 之后、combine_1 之前）：
 | 阶段 | 内容 | 涉及文件（新增为主） |
 |---|---|---|
 | M0 | CS 烘焙骨架 + Transmittance/MultiScatter LUT | `EdenAtmosphere.h/.cpp`、`eden_transmittance.ps.hlsl`（CS） |
-| M1 | Sky-View 天空替换 + 太阳/ambient 耦合 + 控制台开关 | `eden_sky.ps.hlsl`、`dxEnvironmentRender.cpp` 分支、`r4_rendertarget_phase_combine.cpp` 常量改造 |
+| M1 | Sky-View 天空替换 + 太阳/ambient 耦合 + 控制台开关 + 编辑器数据层（天气 UI 新字段） | `eden_sky.ps.hlsl`、`dxEnvironmentRender.cpp` 分支、`r4_rendertarget_phase_combine.cpp` 常量改造、`UIEditorWeather.cpp` |
 | M2 | Aerial Perspective 替换线性雾 + 能见度标定 | `combine_1.ps.hlsl` option、`eden_ap.ps.hlsl` |
 | M3 | 体积云（噪声烘焙入库、raymarch、temporal） | `eden_clouds.ps.hlsl`、`rt_Cloud_*`、temporal 复用 |
-| M4 | 云影 + 雷暴联动 + 编辑器面板/烘焙菜单 | `UIEditorWeather.cpp`、LevelEditor 菜单 |
+| M4 | 云影 + 雷暴联动 + 编辑器低保真预览（可选 CPU-LUT）+ 烘焙菜单 | `UIEditorWeather.cpp`/LevelEditor UI、LevelEditor 菜单 |
 | M5 | 档位/压缩/性能验证（PIX、`benchmark.script`、GPU_EVENT 剖面） | 既有工具链 |
 
 ### 9.2 风险与缓解
@@ -326,14 +356,15 @@ phase_combine 开头（天空 LUT 之后、combine_1 之前）：
 | 旧关卡观感依赖 fog_distance/far_plane 的"雾墙" | 能见度等效反解（§5.4）+ `r_atmosphere_mode` 一键回退 |
 | 模板/深度语义破坏（天空像素判定） | 保留 stencil==0 判定与深度状态，仅替换几何与着色 |
 | FSR2/DLSS 下云 temporal 鬼影 | 云输出速度参与重投影；邻域 clamp + 云层自运动补偿 |
-| DX10/DX9 路径（R1/R2）不支持 CS | Eden 仅挂 R4/DX11（含 LevelEditor 视口）；legacy 路径维持 SkyCube |
+| DX10/DX9 路径（R1/R2）不支持 CS | Eden 仅挂 R4/DX11（游戏与 xrPlay 天气编辑器）；legacy 路径维持 SkyCube |
+| LevelEditor（DX9 自定义管线）无 CS/HDR 能力，Eden 不自动生效 | 按 §7 三层策略：数据层完整落地、视口维持 legacy 天空、高保真预览走 xrPlay；可选 CPU-LUT 低保真预览作为增强，不阻塞主线 |
 | 半分辨率云与光线步进伪影（条带/闪烁） | 蓝噪声抖动步进 + 时间累积 + 高度分层步长 |
 
 ---
 
 ## 10. 结论
 
-IXRay 的 SkyCube 天空是零成本但零自由度的"贴图穹顶"：几何为 12 顶点半盒体，颜色来自双 TextureCube 权重混合，雾为线性距离模型，云为平面贴图。而 R4 层已有的 ComputeShader/UAV 框架、HDR RT、速度缓冲、半分辨率 temporal 先例与 3DFluid 体积经验，意味着植入一套 LUT 驱动的真大气系统所需的全部基础设施**已经存在**。Eden Atmosphere 采用 Hillaire 2020 的四 LUT 方案 + Schneider 体系的离线烘焙噪声体积云，可做到：纯大气开销与 SkyCube 同数量级（≈0.1–0.3 ms [估算]），体积云主导的完整方案 ≈1.3–2.6 ms/帧（1080p 默认档 [估算]），显存对冲后基本持平，并保留从全功能到关云降档直至完全回退 SkyCube 的三档弹性。建议按 M0–M5 路线推进，M1（天空替换 + 光照耦合）为价值/成本比最高的首个可交付点。
+IXRay 的 SkyCube 天空是零成本但零自由度的"贴图穹顶"：几何为 12 顶点半盒体，颜色来自双 TextureCube 权重混合，雾为线性距离模型，云为平面贴图。而 R4 层已有的 ComputeShader/UAV 框架、HDR RT、速度缓冲、半分辨率 temporal 先例与 3DFluid 体积经验，意味着在游戏引擎侧植入一套 LUT 驱动的真大气系统所需的全部基础设施**已经存在**；需要特别指出的是，LevelEditor 并不使用 R4，而是 DX9 + xrECore 自定义管线（同名 `CRender` 曾造成误判），因此 Eden 在编辑器侧的落地是"数据层完整 + 预览分层"而非视口自动升级。Eden Atmosphere 采用 Hillaire 2020 的四 LUT 方案 + Schneider 体系的离线烘焙噪声体积云，可做到：纯大气开销与 SkyCube 同数量级（≈0.1–0.3 ms [估算]），体积云主导的完整方案 ≈1.3–2.6 ms/帧（1080p 默认档 [估算]），显存对冲后基本持平，并保留从全功能到关云降档直至完全回退 SkyCube 的三档弹性。建议按 M0–M5 路线推进，M1（天空替换 + 光照耦合 + 编辑器数据层）为价值/成本比最高的首个可交付点。
 
 ---
 
