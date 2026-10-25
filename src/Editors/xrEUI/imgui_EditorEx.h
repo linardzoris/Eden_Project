@@ -8,7 +8,7 @@ bool IXBeginMainMenuBar()
 	ImGuiStyle& style = ImGui::GetStyle();
 	originalFramePadding = style.FramePadding;
 
-	style.FramePadding.y = 9.0f;
+	style.FramePadding.y = UIMainMenuFramePadY;
 	if (!ImGui::BeginMainMenuBar())
 	{
 		return false;

@@ -355,9 +355,9 @@ void XrUIManager::Draw()
 	{
 		// Reserve the full top strip (main menu bar + editor toolbar) so the
 		// toolbar does not cover the docked viewport title bars.
-		// Use the real main-menu-bar height (frame height) so no gap is left
-		// between the menu, the toolbar and the docked windows.
-		m_MenuBarHeight = ImGui::GetFrameHeight();
+		// The custom main menu bar uses FramePadding.y = UIMainMenuFramePadY,
+		// so its real height = font size + pad * 2 (NOT GetFrameHeight()).
+		m_MenuBarHeight = ImGui::GetFontSize() + UIMainMenuFramePadY * 2.0f;
 		ImGuiViewport* viewport = ImGui::GetMainViewport();
 		const float TopReserve = m_MenuBarHeight + UIToolBarSize;
 		ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x, viewport->Pos.y + TopReserve));

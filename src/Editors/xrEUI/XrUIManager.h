@@ -12,6 +12,9 @@ enum TShiftState_
 };
 using TShiftState = int;
 inline int UIToolBarSize = 24;
+// Vertical FramePadding used by the custom main menu bar (imgui_EditorEx.h);
+// its real height = font size + this * 2.
+inline float UIMainMenuFramePadY = 9.0f;
 
 // Non-blocking editor notification (replaces native modal boxes for
 // information/warning/error messages). Type matches TMsgDlgType values.
