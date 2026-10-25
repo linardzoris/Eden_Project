@@ -2,6 +2,7 @@
 
 #include "../../xrCore/xrCore.h"
 #include "CompilersUI.h"
+#include "../../Editors/xrEUI/EditorLocalization.h"
 #include "cl_log.h"
 #include <timeapi.h>
 
@@ -74,11 +75,11 @@ void RenderMainUI()
 		if (ImGui::BeginTable("##Levels", 5, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY, ListBoxSize))
 		{
 			// 
-			ImGui::TableSetupColumn("Levels");
-			ImGui::TableSetupColumn("Settings");
-			ImGui::TableSetupColumn("xrLC");
-			ImGui::TableSetupColumn("xrAI");
-			ImGui::TableSetupColumn("xrDO");
+			ImGui::TableSetupColumn(Loc("Levels"));
+			ImGui::TableSetupColumn(Loc("Settings"));
+			ImGui::TableSetupColumn(Loc("xrLC"));
+			ImGui::TableSetupColumn(Loc("xrAI"));
+			ImGui::TableSetupColumn(Loc("xrDO"));
 
 			ImGui::TableHeadersRow();
 
@@ -88,8 +89,8 @@ void RenderMainUI()
 			ImVec2 ListBoxSize2 = { 200, float(Size[1] - 155) };
 			if (  ImGui::BeginTable("##Levels", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY, ListBoxSize2)  )
 			{
-				ImGui::TableSetupColumn("Name");
-				ImGui::TableSetupColumn("Prop");
+				ImGui::TableSetupColumn(Loc("Name"));
+				ImGui::TableSetupColumn(Loc("Prop"));
 				ImGui::TableHeadersRow();
 
 				size_t Iter = 1;
@@ -136,7 +137,7 @@ void RenderMainUI()
 	 
 	auto BSize = ImGui::GetContentRegionAvail();
 
-	if (ImGui::Button("Run Compiler", { BSize.x, 50 }))
+	if (ImGui::Button(Loc("Run Compiler"), { BSize.x, 50 }))
 	{
 		GetIterationData().clear();
 
@@ -182,14 +183,14 @@ void RenderMainUI()
 	{
 		ImGui::Separator();
 
-		if (ImGui::Button(autoScroll ? "Disable Auto-Scroll" : "Enable Auto-Scroll"))
+		if (ImGui::Button(autoScroll ? Loc("Disable Auto-Scroll") : Loc("Enable Auto-Scroll")))
 		{
 			autoScroll = !autoScroll;
 		}
 
 		ImGui::SameLine();
 
-		if (ImGui::Button(!ResizeMaximal ? "Maximal resize" : "Minimal resize"))
+		if (ImGui::Button(!ResizeMaximal ? Loc("Maximal resize") : Loc("Minimal resize")))
 		{
 			ResizeMaximal = !ResizeMaximal;
 		}
@@ -200,7 +201,7 @@ void RenderMainUI()
 
 		ImGui::SameLine();
 
-		ImGui::Checkbox("ShowMain", &ShowMainUI);
+		ImGui::Checkbox(Loc("ShowMain"), &ShowMainUI);
 	}
  
 	ImGui::End();
@@ -240,29 +241,29 @@ void RenderMainUI()
 		ImVec2 ListBoxSize = { -1, -1 };
 		if (ImGui::BeginTable("##DemoContent", 1, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Borders| ImGuiTableFlags_ScrollY, ListBoxSize))
 		{
-			ImGui::TableSetupColumn("c1");
+			ImGui::TableSetupColumn(Loc("c1"));
 			
 			yRow();
 
-			ImGui::Text("Compiler");
+			ImGui::Text(Loc("Compiler"));
 			ImGui::Separator();
 			DrawCompilerConfig();
 
 			yRow();
 
-			ImGui::Text("xrLC");
+			ImGui::Text(Loc("xrLC"));
 			ImGui::Separator();
 			DrawLCConfig();
 
 			yRow();
 
-			ImGui::Text("xrAI");
+			ImGui::Text(Loc("xrAI"));
 			ImGui::Separator();
 			DrawAIConfig();
 
 			yRow();
 
-			ImGui::Text("xrDO");
+			ImGui::Text(Loc("xrDO"));
 			ImGui::Separator();
 			DrawDOConfig();
 
@@ -288,7 +289,7 @@ void DrawLCConfig()
 	//if (ImGui::BeginChild("LC", { 200, 415 }, ImGuiChildFlags_Border, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings))
 	{
 		ImGui::PushID("xrLC");
-		ImGui::Checkbox("Levels Compiler", &gCompilerMode.LC);
+		ImGui::Checkbox(Loc("Levels Compiler"), &gCompilerMode.LC);
 		HoverHelp("Master switch for the Levels Compiler (xrLC).\n"
 			"Runs the full build pipeline for every selected level: geometry conversion, UV mapping,\n"
 			"subdivide, lightmap packing, lightmap/vertex/MU light baking and lightmap save.");
@@ -296,50 +297,50 @@ void DrawLCConfig()
 
 		ImGui::BeginDisabled(!gCompilerMode.LC);
 
-		// ImGui::Checkbox("GI (Radiosity)", &gCompilerMode.LC_GI);
-		ImGui::Checkbox("No Sun", &gCompilerMode.LC_NoSun);
+		// ImGui::Checkbox(Loc("GI (Radiosity)"), &gCompilerMode.LC_GI);
+		ImGui::Checkbox(Loc("No Sun"), &gCompilerMode.LC_NoSun);
 		HoverHelp("Skip the directional sun light while baking lightmaps and vertex colors.\n"
 			"All sun channels stay black - use for levels lit only by interior or point lights.");
-		ImGui::Checkbox("No Hemi", &gCompilerMode.LC_NoHemi);
+		ImGui::Checkbox(Loc("No Hemi"), &gCompilerMode.LC_NoHemi);
 		HoverHelp("Skip the hemisphere ('$hemi') light group while baking lightmaps.\n"
 			"The lmap hemi channel stays black and the whole hemi raycast pass is skipped.\n"
 			"Static geometry vertex lighting is baked without hemi anyway;\n"
 			"MU objects keep their own baked vertex hemi.");
-		ImGui::Checkbox("No Smooth Group", &gCompilerMode.LC_NoSMG);
+		ImGui::Checkbox(Loc("No Smooth Group"), &gCompilerMode.LC_NoSMG);
 		HoverHelp("Ignore the smoothing groups stored in level faces when generating smooth vertex\n"
 			"Use when the geometry has sharp edges for smoothing.\n"
 			"This should be the default methods since no one uses maya/3dsmax plugins anymore.");
-		ImGui::Checkbox("Skip Progressive", &gCompilerMode.LC_Noise);
+		ImGui::Checkbox(Loc("Skip Progressive"), &gCompilerMode.LC_Noise);
 		HoverHelp("Do not build progressive meshes (VIPM) for x-meshes.\n"
 			"Skips mesh simplification and the vertex-cache-ordered LOD records.\n"
 			"Faster builds and no VIPM crashes on huge meshes,\n"
 			"but the engine keeps full-detail geometry with no vertex-LOD memory savings.");
-		ImGui::Checkbox("Tesselation", &gCompilerMode.LC_Tess);
+		ImGui::Checkbox(Loc("Tesselation"), &gCompilerMode.LC_Tess);
 		HoverHelp("Allow the Adaptive HT phase to tessellate (split) faces whose vertex hemi\n"
 			"lighting differs strongly, giving smoother baked hemi/vertex lighting.\n"
 			"Disable for faster builds on geometries with large tris, mostly terrain & buildings.");
-		ImGui::Checkbox("Skip invalid faces", &gCompilerMode.LC_SkipInvalidFaces);
+		ImGui::Checkbox(Loc("Skip invalid faces"), &gCompilerMode.LC_SkipInvalidFaces);
 		HoverHelp("Do not hard-crash when degenerate or invalid faces are found during conversion.\n"
 			"The bad faces are logged and skipped silently instead of aborting the whole build.");
-		ImGui::Checkbox("Texture RGBA", &gCompilerMode.LC_tex_rgba);
+		ImGui::Checkbox(Loc("Texture RGBA"), &gCompilerMode.LC_tex_rgba);
 		HoverHelp("Store lightmap textures as uncompressed 32-bit RGBA instead of DXT-compressed DDS.\n"
 			"Static shadows (DX8) and gradients stay clean (no compression artifacts), but files are ~4x larger.");
-		ImGui::Checkbox("Skip Subdivide", &gCompilerMode.LC_NoSubdivide);
+		ImGui::Checkbox(Loc("Skip Subdivide"), &gCompilerMode.LC_NoSubdivide);
 		HoverHelp("Skip the subdivide phase that splits oversized faces into smaller ones before\n"
 			"lightmap packing. Faster, but lightmaps are more coarse on very large faces.");
-		ImGui::Checkbox("Skip Welding", &gCompilerMode.LC_skipWeld);
+		ImGui::Checkbox(Loc("Skip Welding"), &gCompilerMode.LC_skipWeld);
 		HoverHelp("Skip the geometry welding phase - vertices and edges closer than 'Dist Weld'\n"
 			"are no longer merged. Use when welding corrupts imported or very dense geometry.");
 
 		ImGui::Separator();
 
 		ImGui::SetNextItemWidth(100);
-		if (ImGui::Combo("lmaps", &item_current_selected, items, 4))
+		if (ImGui::Combo(Loc("lmaps"), &item_current_selected, items, 4))
  			gCompilerMode.LC_sizeLmaps = atoi(items[item_current_selected]);
 		HoverHelp("Lightmap atlas resolution in pixels (per side).\n"
 			"Larger atlases = fewer lightmap files and denser packing,\n"
 			"but each texture costs more VRAM in the engine.");
-		ImGui::Checkbox("Simple LMAP pack", &gCompilerMode.LC_LmapsAlternative);
+		ImGui::Checkbox(Loc("Simple LMAP pack"), &gCompilerMode.LC_LmapsAlternative);
 		HoverHelp("Lightmap atlas placement strategy.\n"
 			"OFF (default): per-pixel placement - a pixel-occupancy grid built from each\n"
 			"deflector's marker channel packs deflectors tightly around lit texels\n"
@@ -348,27 +349,27 @@ void DrawLCConfig()
 			"simpler and faster, but leaves noticeably more empty atlas space.");
 
 		ImGui::Separator();
-		ImGui::Checkbox("Overload Prebuild", &gCompilerMode.IsOverloadedSettings);
+		ImGui::Checkbox(Loc("Overload Prebuild"), &gCompilerMode.IsOverloadedSettings);
 		HoverHelp("Ignore the quality settings stored in build.prj and use the\n"
 			"customized values below for this run instead.");
 
 		ImGui::BeginDisabled(!gCompilerMode.IsOverloadedSettings);
 
 			ImGui::SetNextItemWidth(100);
-			ImGui::Combo("JitterMU", &item_current_jitter_mu, itemsJitterMU, 7);
+			ImGui::Combo(Loc("JitterMU"), &item_current_jitter_mu, itemsJitterMU, 7);
 			HoverHelp("Raycast jitter sample count used while baking MU (multi-use) object vertex colors.\n"
 				"0 = single centered ray, higher = averaged multi-ray sampling (smoother, slower).");
 			ImGui::SetNextItemWidth(100);
-			ImGui::Combo("Jitter", &item_current_jitter, itemsJitter, 3);
+			ImGui::Combo(Loc("Jitter"), &item_current_jitter, itemsJitter, 3);
 			HoverHelp("Jitter samples per lightmap texel: 1 = one centered ray,\n"
 				"4 / 9 = stratified grid samples averaged per texel.\n"
 				"Smoother shadows at a proportional speed cost.");
  			ImGui::SetNextItemWidth(100);
-			ImGui::InputFloat("Lightmap Density", &gCompilerMode.LC_Pixels);
+			ImGui::InputFloat(Loc("Lightmap Density"), &gCompilerMode.LC_Pixels);
 			HoverHelp("Lightmap texels per world meter.\n"
 				"Higher = sharper lightmaps, proportionally longer bake times and more memory.");
  			ImGui::SetNextItemWidth(100);
-			ImGui::InputFloat("Dist Weld", &gCompilerMode.WeldDistance);
+			ImGui::InputFloat(Loc("Dist Weld"), &gCompilerMode.WeldDistance);
 			HoverHelp("World-space distance threshold for the welding phase:\n"
 				"vertices closer than this value are merged into one.");
 
@@ -388,13 +389,13 @@ void DrawLCConfig()
 void DrawDOConfig()
 {
 	ImGui::PushID("xrDO");
-	ImGui::Checkbox("Details Compiler", &gCompilerMode.DO);
+	ImGui::Checkbox(Loc("Details Compiler"), &gCompilerMode.DO);
 	HoverHelp("Run the Details Compiler (xrDO) for each selected level:\n"
 		"bakes detail objects (grass/rocks etc. from detail slots) into the level details file.");
 	ImGui::Separator();
 
 	ImGui::BeginDisabled(!gCompilerMode.DO);
-	ImGui::Checkbox("No Sun", &gCompilerMode.LC_NoSun);
+	ImGui::Checkbox(Loc("No Sun"), &gCompilerMode.LC_NoSun);
 	HoverHelp("Do not bake the sun light into detail object vertex colors.\n"
 		"Shares the same flag as the xrLC 'No Sun' option.");
 	ImGui::EndDisabled();
@@ -406,48 +407,48 @@ void DrawAIConfig()
 {
 	//if (ImGui::BeginChild("AI", { 200, 370 }, ImGuiChildFlags_Border, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings))
 	{
-			ImGui::Checkbox("AI Compiler", &gCompilerMode.AI);
+			ImGui::Checkbox(Loc("AI Compiler"), &gCompilerMode.AI);
 			HoverHelp("Master switch for the AI Compiler (xrAI).");
 
 			ImGui::BeginDisabled(!gCompilerMode.AI);
 
 			ImGui::Separator();
 
-			ImGui::Checkbox("AI Compiler ai.level", &gCompilerMode.AI_BuildLevel);
+			ImGui::Checkbox(Loc("AI Compiler ai.level"), &gCompilerMode.AI_BuildLevel);
 			HoverHelp("Build the level AI map (ai.level): navigation nodes, links and graph data\n"
 				"used by pathfinding, cover selection and NPC logic.");
 
 				ImGui::BeginDisabled(!gCompilerMode.AI_BuildLevel);
 
-				ImGui::Checkbox("Draft AI-Map", &gCompilerMode.AI_Draft);
+				ImGui::Checkbox(Loc("Draft AI-Map"), &gCompilerMode.AI_Draft);
 				HoverHelp("Draft mode: fewer refinement and merge passes, no final validation.\n"
 					"For quick iteration only - rebuild without this flag before release.");
-				ImGui::Checkbox("Pure Covers", &gCompilerMode.AI_PureCovers);
+				ImGui::Checkbox(Loc("Pure Covers"), &gCompilerMode.AI_PureCovers);
 				HoverHelp("Compute cover tables directly from raw level geometry,\n"
 					"without the cover optimization and merge post-pass.");
-				ImGui::Checkbox("Verify", &gCompilerMode.AI_Verify);
+				ImGui::Checkbox(Loc("Verify"), &gCompilerMode.AI_Verify);
 				HoverHelp("Run verify_level_graph on the built ai.level:\n"
 					"checks node connectivity and reports broken or invalid links.");
-				ImGui::Checkbox("Verbose", &gCompilerMode.AI_Verbose);
+				ImGui::Checkbox(Loc("Verbose"), &gCompilerMode.AI_Verbose);
 				HoverHelp("Print detailed per-node diagnostics while Verify runs.");
 
 				ImGui::EndDisabled();
 
 			ImGui::Separator();
 
-			ImGui::Checkbox("AI Compiler all.spawn", &gCompilerMode.AI_BuildSpawn);
+			ImGui::Checkbox(Loc("AI Compiler all.spawn"), &gCompilerMode.AI_BuildSpawn);
 			HoverHelp("Build the global spawn file (all.spawn): game objects, waypoints,\n"
 				"paths and level transitions for the whole game graph.");
 				ImGui::BeginDisabled(!gCompilerMode.AI_BuildSpawn);
 
-				ImGui::Checkbox("No Separator Check", &gCompilerMode.AI_NoSeparatorCheck);
+				ImGui::Checkbox(Loc("No Separator Check"), &gCompilerMode.AI_NoSeparatorCheck);
 				HoverHelp("Skip separator (level-transition link) validation while building all.spawn.\n"
 					"Allows building spawn with partially connected levels.");
 
-				ImGui::Text("Name all.spawn :");
+				ImGui::Text(Loc("Name all.spawn :"));
 				ImGui::InputText("#1", gCompilerMode.AI_spawn_name, sizeof(gCompilerMode.AI_spawn_name));
 				HoverHelp("Output file name of the built all.spawn.");
-				ImGui::Text("Name level start:");
+				ImGui::Text(Loc("Name level start:"));
 				ImGui::InputText("#2", gCompilerMode.AI_StartActor, sizeof(gCompilerMode.AI_StartActor));
 				HoverHelp("Name of the level that provides the actor start point\n"
 					"for spawn graph construction.");
@@ -465,10 +466,10 @@ void DrawCompilerConfig()
 {
 	//if (ImGui::BeginChild("Settings", { 170, 370 }, ImGuiChildFlags_Border, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings))
 	{
-		ImGui::Checkbox("Silent mode", &gCompilerMode.Silent);
+		ImGui::Checkbox(Loc("Silent mode"), &gCompilerMode.Silent);
 		HoverHelp("Run without dialog windows or message boxes - all output goes to the log only.\n"
 			"A failing build will not stop for user input.");
-		ImGui::Checkbox("Use Intel Embree", &gCompilerMode.Embree);
+		ImGui::Checkbox(Loc("Use Intel Embree"), &gCompilerMode.Embree);
 		HoverHelp("Trace occlusion rays with the Intel Embre kernel instead of the engine CDB collider.\n"
 			"A BVH is built once per phase and traced with SIMD rays - several times faster\n"
 			"on large levels.");
@@ -476,29 +477,29 @@ void DrawCompilerConfig()
 
 		ImGui::TextColored(ImVec4(RGBAColor(204, 102, 102, 255)), "(Warning Disable MU in raycast)");
 
-		ImGui::Checkbox("Embree Optimized", &gCompilerMode.Embree_SplitBVH);
+		ImGui::Checkbox(Loc("Embree Optimized"), &gCompilerMode.Embree_SplitBVH);
 
 		ImGui::TextColored(ImVec4(RGBAColor(0, 255, 0, 255)), "(This Only For Build BVH)");
-		ImGui::Checkbox("Embree Compacted", &gCompilerMode.EmbreeBVHCompact);
-		ImGui::Checkbox("GPU Baking (OptiX)", &gCompilerMode.GPUBaking);
+		ImGui::Checkbox(Loc("Embree Compacted"), &gCompilerMode.EmbreeBVHCompact);
+		ImGui::Checkbox(Loc("GPU Baking (OptiX)"), &gCompilerMode.GPUBaking);
 		HoverHelp("Adds RTC_SCENE_FLAG_COMPACT to the Embre scene - compact BVH node layout.\n"
 			"Less memory, slightly slower traversal.");
-		ImGui::Checkbox("Embree Robust", &gCompilerMode.EmbreeBVHRobust);
+		ImGui::Checkbox(Loc("Embree Robust"), &gCompilerMode.EmbreeBVHRobust);
 		HoverHelp("Adds RTC_SCENE_FLAG_ROBUST to the Embre scene - exact ray/triangle intersection\n"
 			"tests near shared edges. Fixes rare missed hits, slightly slower.");
 
 		ImGui::Separator();
 
-		ImGui::Checkbox("Clear temp files", &gCompilerMode.ClearTemp);
+		ImGui::Checkbox(Loc("Clear temp files"), &gCompilerMode.ClearTemp);
 		HoverHelp("Delete the level's temp folder (intermediate build data) after the compiler finishes.");
-		ImGui::Checkbox("Skip THM", &gCompilerMode.SkipTHM);
+		ImGui::Checkbox(Loc("Skip THM"), &gCompilerMode.SkipTHM);
 		HoverHelp("Do not write .thm (thumbnail/meta) files next to the exported textures.");
-		ImGui::Checkbox("Save cform to obj", &SaveCForm);
+		ImGui::Checkbox(Loc("Save cform to obj"), &SaveCForm);
 		HoverHelp("Keep CFORM simplifier temp files and dump the collision form as a\n"
 			"Wavefront .obj mesh for inspection in external 3D tools.");
 
 		ImGui::Separator();
-		ImGui::Text("Threads Max");
+		ImGui::Text(Loc("Threads Max"));
 
 		if (ImGui::InputInt("##Threads Max", &gCompilerMode.ThreadsPerWork))
 		{
@@ -517,25 +518,25 @@ void getStatusInfo(IterationStatus status, xr_string& text, ImVec4& textCol, cha
 	switch (status)
 	{
 	case Complete:
-		text = "Complete";
+		text = Loc("Complete");
 		textCol = { 0, 0.9, 0, 1 };
 
 		icon = 'C';
 		break;
 	case InProgress:
-		text = "In Progress";
+		text = Loc("In Progress");
 		textCol = { 0.9, 0.9, 0, 1 };
 
 		icon = 'B';
 		break;
 	case Pending:
-		text = "Pending";
+		text = Loc("Pending");
 		textCol = { 0.8, 0.8, 0.8, 0.8 };
 
 		icon = 'A';
 		break;
 	case Skip:
-		text = "Skip";
+		text = Loc("Skip");
 		textCol = { 0.9, 0.9, 0.9, 0.6 };
 
 		icon = 'D';
@@ -639,13 +640,13 @@ void RenderCompilerUI(int X, int Y)
  		if (ResizeMaximal)
 		{
 			ImGui::TableSetupColumn(" ", ImGuiTableColumnFlags_WidthFixed, 15.0f);
-			ImGui::TableSetupColumn("Task", ImGuiTableColumnFlags_WidthFixed, 15.f);
-			ImGui::TableSetupColumn("Phase", ImGuiTableColumnFlags_WidthFixed, 250.0f);
-			ImGui::TableSetupColumn("Phase %", ImGuiTableColumnFlags_WidthFixed, 40.f);
-			ImGui::TableSetupColumn("Elapsed Time", ImGuiTableColumnFlags_WidthFixed, 80.0f);
-			ImGui::TableSetupColumn("Remain Time", ImGuiTableColumnFlags_WidthFixed, 80.0f);
-			ImGui::TableSetupColumn("Warnings", ImGuiTableColumnFlags_WidthFixed, 25.0f);
-			ImGui::TableSetupColumn("Status", ImGuiTableColumnFlags_WidthFixed, 50.f);
+			ImGui::TableSetupColumn(Loc("Task"), ImGuiTableColumnFlags_WidthFixed, 15.f);
+			ImGui::TableSetupColumn(Loc("Phase"), ImGuiTableColumnFlags_WidthFixed, 250.0f);
+			ImGui::TableSetupColumn(Loc("Phase %"), ImGuiTableColumnFlags_WidthFixed, 40.f);
+			ImGui::TableSetupColumn(Loc("Elapsed Time"), ImGuiTableColumnFlags_WidthFixed, 80.0f);
+			ImGui::TableSetupColumn(Loc("Remain Time"), ImGuiTableColumnFlags_WidthFixed, 80.0f);
+			ImGui::TableSetupColumn(Loc("Warnings"), ImGuiTableColumnFlags_WidthFixed, 25.0f);
+			ImGui::TableSetupColumn(Loc("Status"), ImGuiTableColumnFlags_WidthFixed, 50.f);
 			ImGui::TableSetupColumn("Memory", ImGuiTableColumnFlags_WidthFixed, 50.f);
  
 			ImGui::TableSetupColumn("Status Description", ImGuiTableColumnFlags_WidthStretch);
@@ -653,13 +654,13 @@ void RenderCompilerUI(int X, int Y)
 		else
 		{
 			ImGui::TableSetupColumn(" ", ImGuiTableColumnFlags_WidthFixed, 15.0f);
-			ImGui::TableSetupColumn("Task", ImGuiTableColumnFlags_WidthFixed, 50.f);
-			ImGui::TableSetupColumn("Phase", ImGuiTableColumnFlags_WidthStretch);
-			ImGui::TableSetupColumn("Phase %", ImGuiTableColumnFlags_WidthFixed, 50.f);
-			ImGui::TableSetupColumn("Elapsed Time", ImGuiTableColumnFlags_WidthFixed, 80.0f);
-			ImGui::TableSetupColumn("Remain Time", ImGuiTableColumnFlags_WidthFixed, 80.0f);
-			ImGui::TableSetupColumn("Warnings", ImGuiTableColumnFlags_WidthFixed, 80.0f);
-			ImGui::TableSetupColumn("Status", ImGuiTableColumnFlags_WidthFixed, 100.f);
+			ImGui::TableSetupColumn(Loc("Task"), ImGuiTableColumnFlags_WidthFixed, 50.f);
+			ImGui::TableSetupColumn(Loc("Phase"), ImGuiTableColumnFlags_WidthStretch);
+			ImGui::TableSetupColumn(Loc("Phase %"), ImGuiTableColumnFlags_WidthFixed, 50.f);
+			ImGui::TableSetupColumn(Loc("Elapsed Time"), ImGuiTableColumnFlags_WidthFixed, 80.0f);
+			ImGui::TableSetupColumn(Loc("Remain Time"), ImGuiTableColumnFlags_WidthFixed, 80.0f);
+			ImGui::TableSetupColumn(Loc("Warnings"), ImGuiTableColumnFlags_WidthFixed, 80.0f);
+			ImGui::TableSetupColumn(Loc("Status"), ImGuiTableColumnFlags_WidthFixed, 100.f);
 			ImGui::TableSetupColumn("Memory", ImGuiTableColumnFlags_WidthFixed, 100.f);
 		}
 
@@ -777,7 +778,7 @@ void RenderCompilerUI(int X, int Y)
 	 
 
 	ImGui::Separator();
-	ImGui::Text("Log");
+	ImGui::Text(Loc("Log"));
 
 	ImGui::SameLine();
 
@@ -820,14 +821,14 @@ void RenderCompilerUI(int X, int Y)
 
 	ImGui::Separator();
 
-	if (ImGui::Button(autoScroll ? "Disable Auto-Scroll" : "Enable Auto-Scroll"))
+	if (ImGui::Button(autoScroll ? Loc("Disable Auto-Scroll") : Loc("Enable Auto-Scroll")))
 	{
 		autoScroll = !autoScroll;
 	}
 
 	ImGui::SameLine();
 
-	if (ImGui::Button(!ResizeMaximal ? "Maximal resize" : "Minimal resize"))
+	if (ImGui::Button(!ResizeMaximal ? Loc("Maximal resize") : Loc("Minimal resize")))
 	{
 		ResizeMaximal = !ResizeMaximal;
 	}
@@ -837,7 +838,7 @@ void RenderCompilerUI(int X, int Y)
 	ImGui::TextColored( ImVec4{ 0, 0.9, 0, 1 }, "Memory usage: %u mb", GetHeapMemory() / 1024 / 1024);
 
 	ImGui::SameLine();
-	ImGui::Checkbox("Show Main", &ShowMainUI);
+	ImGui::Checkbox(Loc("Show Main"), &ShowMainUI);
 
 	ImGui::End();
 }
