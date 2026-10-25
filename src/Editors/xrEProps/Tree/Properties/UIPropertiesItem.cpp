@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "WaveForm.h"
+#include "../xrEUI/EditorLocalization.h"
 
 UIPropertiesItem::UIPropertiesItem(shared_str Name, UIPropertiesForm* propertiesFrom):
 	UITreeItem(Name),
@@ -42,7 +43,8 @@ void UIPropertiesItem::Draw()
 			ImGui::PushStyleColor(ImGuiCol_Text, TextColor);
 		}
 
-		bool open = ImGui::TreeNodeEx(Name.c_str(), FloderFlags);
+		// Localize the row caption for display only; the stored key/path stays original
+		bool open = ImGui::TreeNodeEx(Loc(Name.c_str()), FloderFlags);
 
 		if (IsSelect)
 		{
@@ -78,7 +80,7 @@ void UIPropertiesItem::Draw()
 		}
 		else
 		{
-			ImGui::TreeNodeEx(*Name, Flags);
+			ImGui::TreeNodeEx(Loc(*Name), Flags);
 		}
 
 		ImGui::TableNextColumn();

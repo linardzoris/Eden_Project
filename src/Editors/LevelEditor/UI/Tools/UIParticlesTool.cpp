@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../../../xrEUI/EditorLocalization.h"
 
 UIParticlesTool::UIParticlesTool()
 {
@@ -26,12 +27,12 @@ UIParticlesTool::~UIParticlesTool()
 void UIParticlesTool::Draw()
 {
     ImGui::SetNextItemOpen(true, ImGuiCond_FirstUseEver);
-    if (ImGui::TreeNode("Commands"))
+    if (ImGui::TreeNode(Loc("Commands")))
     {
         ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
         {
-            ImGui::Text("Ref's Select:   "); ImGui::SameLine(); if (ImGui::Button("+", ImVec2(ImGui::GetFrameHeight(), ImGui::GetFrameHeight()))) { SelByRef(true); }; ImGui::SameLine(); if (ImGui::Button("-", ImVec2(ImGui::GetFrameHeight(), ImGui::GetFrameHeight()))) { SelByRef(false); };
-            ImGui::Text("Selected:       "); ImGui::SameLine();
+            ImGui::Text(Loc("Ref's Select:   ")); ImGui::SameLine(); if (ImGui::Button("+", ImVec2(ImGui::GetFrameHeight(), ImGui::GetFrameHeight()))) { SelByRef(true); }; ImGui::SameLine(); if (ImGui::Button("-", ImVec2(ImGui::GetFrameHeight(), ImGui::GetFrameHeight()))) { SelByRef(false); };
+            ImGui::Text(Loc("Selected:       ")); ImGui::SameLine();
             if (ImGui::ArrowButton("play", ImGuiDir_Right))
             {
                 ObjectIt _F = Scene->FirstObj(OBJCLASS_PS);
@@ -60,7 +61,7 @@ void UIParticlesTool::Draw()
 
 void UIParticlesTool::DrawObjectsList()
 {
-    if (ImGui::Begin("Edit group items"))
+    if (ImGui::Begin(Loc("Edit group items")))
     {
         m_ParticlesList->Draw();
     }

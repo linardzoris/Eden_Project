@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../../../xrEUI/EditorLocalization.h"
 
 UIShapeTool::UIShapeTool()
 {
@@ -13,15 +14,15 @@ UIShapeTool::~UIShapeTool()
 void UIShapeTool::Draw()
 {
     ImGui::SetNextItemOpen(true, ImGuiCond_FirstUseEver);
-    if (ImGui::TreeNode("Commands"))
+    if (ImGui::TreeNode(Loc("Commands")))
     {
         ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
         {
-            if (ImGui::RadioButton("Sphere", m_SphereMode))
+            if (ImGui::RadioButton(Loc("Sphere"), m_SphereMode))
             {
                 m_SphereMode = true;
             }ImGui::SameLine();
-            if (ImGui::RadioButton("Box", m_SphereMode==false))
+            if (ImGui::RadioButton(Loc("Box"), m_SphereMode==false))
             {
                 m_SphereMode = false;
             }
@@ -31,17 +32,17 @@ void UIShapeTool::Draw()
         ImGui::TreePop();
     }
     ImGui::SetNextItemOpen(true, ImGuiCond_FirstUseEver);
-    if (ImGui::TreeNode("Edit"))
+    if (ImGui::TreeNode(Loc("Edit")))
     {
         ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
         {
-            if (ImGui::Checkbox("Attach Shape...", &m_AttachShape))
+            if (ImGui::Checkbox(Loc("Attach Shape..."), &m_AttachShape))
             {
                 if(m_AttachShape)
                 ExecCommand(COMMAND_CHANGE_ACTION, etaAdd);
             }
             ImGui::SameLine(0, 10);
-            if (ImGui::Button("Detach All", ImVec2(-1, 0)))
+            if (ImGui::Button(Loc("Detach All"), ImVec2(-1, 0)))
             {
                 ObjectList lst;
                 if (Scene->GetQueryObjects(lst, OBJCLASS_SHAPE, 1, 1, 0)) {
@@ -56,17 +57,17 @@ void UIShapeTool::Draw()
         ImGui::TreePop();
     }
     ImGui::SetNextItemOpen(true, ImGuiCond_FirstUseEver);
-    if (ImGui::TreeNode("Level Bound"))
+    if (ImGui::TreeNode(Loc("Level Bound")))
     {
         ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
         {
-            if (ImGui::Checkbox("Edit Level Bound", &EditLevelBound))
+            if (ImGui::Checkbox(Loc("Edit Level Bound"), &EditLevelBound))
             {
                 if (EditLevelBound)
                     Tool->OnEditLevelBounds(false);
             }
             if(EditLevelBound)
-            if (ImGui::Button("Recalc", ImVec2(-1, 0)))
+            if (ImGui::Button(Loc("Recalc"), ImVec2(-1, 0)))
             {
                 Tool->OnEditLevelBounds(true);
             }

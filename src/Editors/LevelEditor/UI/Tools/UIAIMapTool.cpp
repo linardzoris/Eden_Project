@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../../../xrEUI/EditorLocalization.h"
 
 UIAIMapTool::UIAIMapTool()
 {
@@ -16,22 +17,22 @@ UIAIMapTool::~UIAIMapTool()
 void UIAIMapTool::Draw()
 {
 	ImGui::SetNextItemOpen(true, ImGuiCond_FirstUseEver);
-	if (ImGui::TreeNode("Commands"))
+	if (ImGui::TreeNode(Loc("Commands")))
 	{
 		ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
 		ImGui::SetNextItemWidth(-1);
 		float size = float(ImGui::CalcItemWidth());
 		{
-			if (ImGui::Button("Generate Full", ImVec2(size / 2, 0)))
+			if (ImGui::Button(Loc("Generate Full"), ImVec2(size / 2, 0)))
 			{
 				tool->GenerateMap(false);
 			}
 			ImGui::SameLine(0, 2);
-			if (ImGui::Button("Generate Selected", ImVec2(size / 2, 0)))
+			if (ImGui::Button(Loc("Generate Selected"), ImVec2(size / 2, 0)))
 			{
 				tool->GenerateMap(true);
 			}
-			if (ImGui::Button("Clear AI Map", ImVec2(size / 2, 0)))
+			if (ImGui::Button(Loc("Clear AI Map"), ImVec2(size / 2, 0)))
 			{
 				if (ELog.DlgMsg(mtConfirmation, mbYes | mbNo, "Are you sure to clear AI Map?") == mrYes) 
 				{
@@ -40,28 +41,28 @@ void UIAIMapTool::Draw()
 				}
 			}
 			ImGui::SameLine(0, 2);
-			if (ImGui::Button("Remove invalid nodes", ImVec2(size / 2, 0)))
+			if (ImGui::Button(Loc("Remove invalid nodes"), ImVec2(size / 2, 0)))
 			{
 				tool->CleanupInvalidNodes();
 			}
 		}
 		ImGui::Separator();
 		{
-			if(ImGui::Button("Smooth Selected", ImVec2(size / 2, 0)))	tool->SmoothNodes();
+			if(ImGui::Button(Loc("Smooth Selected"), ImVec2(size / 2, 0)))	tool->SmoothNodes();
 			ImGui::SameLine(0, 2);
-			if (ImGui::Button("Reset Selected", ImVec2(size / 2, 0)))tool->ResetNodes();
+			if (ImGui::Button(Loc("Reset Selected"), ImVec2(size / 2, 0)))tool->ResetNodes();
 		}
 		ImGui::Separator();
 		ImGui::Indent(ImGui::GetTreeNodeToLabelSpacing());
 		ImGui::TreePop();
 	}
 	ImGui::SetNextItemOpen(true, ImGuiCond_FirstUseEver);
-	if (ImGui::TreeNode("AI Map Nodes"))
+	if (ImGui::TreeNode(Loc("AI Map Nodes")))
 	{
 		ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
 		{
-			ImGui::Checkbox("Ignore Constraints",&m_IgnoreConstraints);
-			ImGui::Checkbox("Auto Link", &m_AutoLink);
+			ImGui::Checkbox(Loc("Ignore Constraints"),&m_IgnoreConstraints);
+			ImGui::Checkbox(Loc("Auto Link"), &m_AutoLink);
 		}
 		ImGui::Separator();
 		ImGui::Indent(ImGui::GetTreeNodeToLabelSpacing());
@@ -69,11 +70,11 @@ void UIAIMapTool::Draw()
 	}
 	ImGui::SetNextItemOpen(true, ImGuiCond_FirstUseEver);
 	ImGui::SetNextItemWidth(0);
-	if (ImGui::TreeNode("Ignore materials"))
+	if (ImGui::TreeNode(Loc("Ignore materials")))
 	{
 		ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
 		{
-			if (ImGui::Button("Add"))
+			if (ImGui::Button(Loc("Add")))
 			{
 				UIChooseForm::SelectItem(smGameMaterial, 1, 0, 0, 0, 0, 0, 0);
 				m_ChooseIgnoreMaterials = true;
@@ -93,7 +94,7 @@ void UIAIMapTool::Draw()
 		ImGui::TreePop();
 	}
 	ImGui::SetNextItemOpen(true, ImGuiCond_FirstUseEver);
-	if (ImGui::TreeNode("Link Commands"))
+	if (ImGui::TreeNode(Loc("Link Commands")))
 	{
 		ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
 		ImGui::PushItemWidth(-1);
@@ -103,24 +104,24 @@ void UIAIMapTool::Draw()
 			float my_tex_h = (float)ImGui::GetIO().Fonts->TexData->Height;
 			
 			{
-				if (ImGui::RadioButton("Add    ", m_Mode == mdAppend)) { m_Mode = mdAppend; } ImGui::SameLine(0, -1);
+				if (ImGui::RadioButton(Loc("Add    "), m_Mode == mdAppend)) { m_Mode = mdAppend; } ImGui::SameLine(0, -1);
 				ImGui::InvisibleButton("none1", ImVec2(ImGui::GetFrameHeight(), ImGui::GetFrameHeight())); ImGui::SameLine(0, -1);
 				if (ImGui::ArrowButton("Up", ImGuiDir_Up)) { SideClick(1); } ImGui::SameLine(0, -1);
 				ImGui::InvisibleButton("none2", ImVec2(ImGui::GetFrameHeight(), ImGui::GetFrameHeight())); ImGui::SameLine(0, -1);
 				ImGui::InvisibleButton("none3", ImVec2(ImGui::GetFrameHeight()*2, ImGui::GetFrameHeight())); ImGui::SameLine(0, -1);
-				if (ImGui::Button("Select 0-Link", ImVec2(-1, 0)))
+				if (ImGui::Button(Loc("Select 0-Link"), ImVec2(-1, 0)))
 				{
 					tool->SelectNodesByLink(0);
 					Scene->UndoSave();
 				}
 			}
 			{
-				if (ImGui::RadioButton("Delete ", m_Mode == mdRemove)) { m_Mode = mdRemove; }  ImGui::SameLine(0, -1);
+				if (ImGui::RadioButton(Loc("Delete "), m_Mode == mdRemove)) { m_Mode = mdRemove; }  ImGui::SameLine(0, -1);
 				if (ImGui::ArrowButton("Left", ImGuiDir_Left)) { SideClick(0); } ImGui::SameLine(0, -1);
 				if (ImGui::Button("X", ImVec2(ImGui::GetFrameHeight(), ImGui::GetFrameHeight()))) { SideClick(4); } ImGui::SameLine(0, -1);
 				if (ImGui::ArrowButton("Right", ImGuiDir_Right)) { SideClick(2); }	ImGui::SameLine(0, -1);
 				ImGui::InvisibleButton("none4", ImVec2(ImGui::GetFrameHeight() * 2, ImGui::GetFrameHeight())); ImGui::SameLine(0, -1);
-				if (ImGui::Button("Select 1-Link", ImVec2(-1, 0)))
+				if (ImGui::Button(Loc("Select 1-Link"), ImVec2(-1, 0)))
 				{
 					tool->SelectNodesByLink(1);
 					Scene->UndoSave();
@@ -128,12 +129,12 @@ void UIAIMapTool::Draw()
 
 			}
 			{
-				if (ImGui::RadioButton("Invert ", m_Mode == mdInvert)) { m_Mode = mdInvert; }  ImGui::SameLine(0, -1);
+				if (ImGui::RadioButton(Loc("Invert "), m_Mode == mdInvert)) { m_Mode = mdInvert; }  ImGui::SameLine(0, -1);
 				ImGui::InvisibleButton("none5", ImVec2(ImGui::GetFrameHeight(), ImGui::GetFrameHeight()));	ImGui::SameLine(0, -1);
 				if (ImGui::ArrowButton("Down", ImGuiDir_Down)) { SideClick(3); } ImGui::SameLine(0, -1);
 				ImGui::InvisibleButton("none6", ImVec2(ImGui::GetFrameHeight(), ImGui::GetFrameHeight())); ImGui::SameLine(0, -1);
 				ImGui::InvisibleButton("none7", ImVec2(ImGui::GetFrameHeight() * 2, ImGui::GetFrameHeight())); ImGui::SameLine(0, -1);
-				if (ImGui::Button("Select 2-Link", ImVec2(-1, 0)))
+				if (ImGui::Button(Loc("Select 2-Link"), ImVec2(-1, 0)))
 				{
 					tool->SelectNodesByLink(2);
 					Scene->UndoSave();

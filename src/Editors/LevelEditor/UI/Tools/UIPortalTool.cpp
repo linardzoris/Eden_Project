@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../../../xrEUI/EditorLocalization.h"
 UIPortalTool::UIPortalTool()
 {
 }
@@ -10,11 +11,11 @@ UIPortalTool::~UIPortalTool()
 void UIPortalTool::Draw()
 {
     ImGui::SetNextItemOpen(true, ImGuiCond_FirstUseEver);
-    if (ImGui::TreeNode("Command"))
+    if (ImGui::TreeNode(Loc("Command")))
     {
         ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
         {
-            if (ImGui::Button("Invert Orientation",ImVec2(-1,0)))
+            if (ImGui::Button(Loc("Invert Orientation"),ImVec2(-1,0)))
             {
                 ObjectList lst;
                 if (Scene->GetQueryObjects(lst, OBJCLASS_PORTAL, 1, 1, 0)) {
@@ -24,7 +25,7 @@ void UIPortalTool::Draw()
                     }
                 }
             }
-            if (ImGui::Button("Compute All Portals",ImVec2(-1,0)))
+            if (ImGui::Button(Loc("Compute All Portals"),ImVec2(-1,0)))
             {
                 if (mrYes == ELog.DlgMsg(mtConfirmation, mbYes |mbNo, "Are you sure want to destroy all existing portals and compute them again?"))
                 {
@@ -32,7 +33,7 @@ void UIPortalTool::Draw()
                     if (cnt) ELog.DlgMsg(mtInformation, "Calculated '%d' portal(s).", cnt);
                 }
             }
-            if (ImGui::Button("Compute Sel. Portals",ImVec2(-1,0)))
+            if (ImGui::Button(Loc("Compute Sel. Portals"),ImVec2(-1,0)))
             {
                 if (mrYes == ELog.DlgMsg(mtConfirmation, mbYes |mbNo, "Are you sure want to destroy all existing portals and compute them again?"))
                 {
@@ -40,7 +41,7 @@ void UIPortalTool::Draw()
                     if (cnt) ELog.DlgMsg(mtInformation, "Calculated '%d' portal(s).", cnt);
                 }
             }
-            if (ImGui::Button("Remove Similar",ImVec2(-1,0)))
+            if (ImGui::Button(Loc("Remove Similar"),ImVec2(-1,0)))
             {
                 tool->RemoveSimilar();
             }

@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../../../xrEUI/EditorLocalization.h"
 UISectorTool::UISectorTool()
 {
 	m_Edit = false;
@@ -14,18 +15,18 @@ UISectorTool::~UISectorTool()
 void UISectorTool::Draw()
 {
     ImGui::SetNextItemOpen(true, ImGuiCond_FirstUseEver);
-    if (ImGui::TreeNode("Command"))
+    if (ImGui::TreeNode(Loc("Command")))
     {
         ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
         ImGui::SetNextItemWidth(-1);
         float size = float(ImGui::CalcItemWidth());
         {
-            if (ImGui::Button("Validate Sectors", ImVec2(size / 2, 0)))
+            if (ImGui::Button(Loc("Validate Sectors"), ImVec2(size / 2, 0)))
             {
                 PortalUtils.Validate(true);
             }
             ImGui::SameLine(0, 2);
-            if (ImGui::Button("Capture Volume", ImVec2(size / 2, 0)))
+            if (ImGui::Button(Loc("Capture Volume"), ImVec2(size / 2, 0)))
             {
                 CSector* S = PortalUtils.GetSelectedSector();
                 if (S) {
@@ -35,7 +36,7 @@ void UISectorTool::Draw()
             }
 
             ImGui::Separator();
-            if (ImGui::Button("Recalculate Portals", ImVec2(size / 2, 0)))
+            if (ImGui::Button(Loc("Recalculate Portals"), ImVec2(size / 2, 0)))
             {
                 int Size = PortalUtils.CalculateAllPortals();
                 if (Size > 0)
@@ -48,7 +49,7 @@ void UISectorTool::Draw()
                 }
             }           
             ImGui::SameLine(0, 2);
-            if (ImGui::Button("Distribute Objects", ImVec2(size / 2, 0)))
+            if (ImGui::Button(Loc("Distribute Objects"), ImVec2(size / 2, 0)))
             {
                 CSector* S = PortalUtils.GetSelectedSector();
                 if (S) {
@@ -58,7 +59,7 @@ void UISectorTool::Draw()
             }
 
             ImGui::Separator();
-            if (ImGui::Button("Create Default", ImVec2(size / 2, 0)))
+            if (ImGui::Button(Loc("Create Default"), ImVec2(size / 2, 0)))
             {
                 CCustomObject* O = Scene->FindObjectByName(DEFAULT_SECTOR_NAME, OBJCLASS_SECTOR);
                 if (O) ELog.DlgMsg(mtInformation, "Default sector already present. Remove this and try again.");
@@ -67,7 +68,7 @@ void UISectorTool::Draw()
                 }
             }
             ImGui::SameLine(0, 2);
-            if (ImGui::Button("Remove Default", ImVec2(size / 2, 0)))
+            if (ImGui::Button(Loc("Remove Default"), ImVec2(size / 2, 0)))
             {
                 if (!PortalUtils.RemoveDefaultSector()) ELog.DlgMsg(mtInformation, "Default sector not found.");
             }
@@ -78,20 +79,20 @@ void UISectorTool::Draw()
         ImGui::TreePop();
     }
     if(m_Edit)ImGui::SetNextItemOpen(true, ImGuiCond_FirstUseEver);
-    if (m_Edit && ImGui::TreeNode("Edit"))
+    if (m_Edit && ImGui::TreeNode(Loc("Edit")))
     {
         ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
         {
-            if (ImGui::Checkbox("Create New Single (From Mesh)", &m_CreateNewSingle))
+            if (ImGui::Checkbox(Loc("Create New Single (From Mesh)"), &m_CreateNewSingle))
             {
                 m_CreateNewMultiple = false;
             }
-            if (ImGui::Checkbox("Create New Multiple (From Object)", &m_CreateNewMultiple))
+            if (ImGui::Checkbox(Loc("Create New Multiple (From Object)"), &m_CreateNewMultiple))
             {
                 m_CreateNewSingle = false;
             }
             ImGui::Separator();
-            ImGui::Text("Meshes");
+            ImGui::Text(Loc("Meshes"));
             ImGui::SameLine();
             if (ImGui::RadioButton("M+", m_MeshAdd))
             {
@@ -102,7 +103,7 @@ void UISectorTool::Draw()
             {
                 m_MeshAdd = false;
             }
-            if (ImGui::Checkbox("Box Pick", &m_BoxPick));
+            if (ImGui::Checkbox(Loc("Box Pick"), &m_BoxPick));
             if (m_CreateNewSingle || m_CreateNewMultiple)
             {
                 m_BoxPick = false;

@@ -1,6 +1,7 @@
 //---------------------------------------------------------------------------
 #include "stdafx.h"
 #include "UIEnvGeneratorForm.h"
+#include "../../../xrEUI/EditorLocalization.h"
 //---------------------------------------------------------------------------
 
 static constexpr float kRad2Deg = 57.29577951f;
@@ -65,7 +66,7 @@ void UIEnvGeneratorForm::Update()
 		return;		// keep instance alive so settings persist for the session
 
 	ImGui::SetNextWindowSize(ImVec2(470, 640), ImGuiCond_FirstUseEver);
-	if (ImGui::Begin("Environment Generator", &Form->bOpen))
+	if (ImGui::Begin(Loc("Environment Generator"), &Form->bOpen))
 		Form->Draw();
 	ImGui::End();
 }
@@ -116,7 +117,7 @@ void UIEnvGeneratorForm::Draw()
 	if (!PresetFile.empty())
 		ImGui::TextColored(ImVec4(1.f, 1.f, 0.7f, 1.f), PresetFile.c_str());
 
-	if (ImGui::Button("Load"))
+	if (ImGui::Button(Loc("Load")))
 	{
 		xr_string outfile;
 		if (EFS.GetOpenName("$server_data_root$", outfile, false, 0, -1, "*.env"))
@@ -131,7 +132,7 @@ void UIEnvGeneratorForm::Draw()
 	}
 	ImGui::SameLine();
 
-	if (ImGui::Button("Save"))
+	if (ImGui::Button(Loc("Save")))
 	{
 		xr_string outfile;
 		if (EFS.GetSaveName("$server_data_root$", outfile, 0, -1, "*.env"))
@@ -172,7 +173,7 @@ void UIEnvGeneratorForm::Draw()
 
 	ImGui::Separator();
 
-	if (ImGui::Button("Generate", ImVec2(ImGui::GetContentRegionAvail().x, 0)))
+	if (ImGui::Button(Loc("Generate"), ImVec2(ImGui::GetContentRegionAvail().x, 0)))
 		OnGenerateClick();
 }
 
@@ -191,13 +192,13 @@ void UIEnvGeneratorForm::DrawChannel(int idx, const char* label, const ImVec4& c
 	{
 		ImGui::Text("Objects: %s", C.Objects.empty() ? "(empty)" : *C.ObjectsStr);
 
-		if (ImGui::SmallButton("Edit.."))
+		if (ImGui::SmallButton(Loc("Edit..")))
 		{
 			UIChooseForm::SelectItem(smObject, 512, 0);
 			m_ChooseChannel = idx;
 		}
 		ImGui::SameLine();
-		if (ImGui::SmallButton("Clear"))
+		if (ImGui::SmallButton(Loc("Clear")))
 		{
 			C.Objects.clear();
 			C.ObjectsStr = "";
@@ -217,18 +218,18 @@ void UIEnvGeneratorForm::DrawChannel(int idx, const char* label, const ImVec4& c
 
 void UIEnvGeneratorForm::DrawHeatmapSection()
 {
-	if (!ImGui::CollapsingHeader("Heatmap", ImGuiTreeNodeFlags_DefaultOpen))
+	if (!ImGui::CollapsingHeader(Loc("Heatmap"), ImGuiTreeNodeFlags_DefaultOpen))
 		return;
 
 	if (!bTerrainTarget)
 	{
-		if (ImGui::Button("Load Heat.."))
+		if (ImGui::Button(Loc("Load Heat..")))
 			ELog.DlgMsg(mtInformation, mbOK, "Invalid, target is not Terrain!");
-		ImGui::TextDisabled("Requires a terrain selection.");
+		ImGui::TextDisabled(Loc("Requires a terrain selection."));
 		return;
 	}
 
-	if (ImGui::Button("Load Heat.."))
+	if (ImGui::Button(Loc("Load Heat..")))
 	{
 		xr_string outfile;
 		if (EFS.GetOpenName("$server_data_root$", outfile, false, NULL, 0, "*.tga; *.png; *.dds; *.jpg; *.jpeg; *.bmp"))
@@ -243,7 +244,7 @@ void UIEnvGeneratorForm::DrawHeatmapSection()
 	if (Gen->HeatmapReady())
 	{
 		ImGui::SameLine();
-		if (ImGui::Button("Clear"))
+		if (ImGui::Button(Loc("Clear")))
 		{
 			Gen->UnloadHeatmap();
 			RefreshPreview();
@@ -251,21 +252,21 @@ void UIEnvGeneratorForm::DrawHeatmapSection()
 
 		ImGui::TextWrapped("%s  (%dx%d)", Gen->HeatmapFile.c_str(), Gen->HeatmapW, Gen->HeatmapH);
 		ImGui::Image(m_HeatPreview, ImVec2(128, 128));
-		ImGui::TextDisabled("Channel value (0..255) scales local density.");
+		ImGui::TextDisabled(Loc("Channel value (0..255) scales local density."));
 	}
 	else
 	{
-		ImGui::TextWrapped("No heatmap loaded. Only the R channel is active.");
+		ImGui::TextWrapped(Loc("No heatmap loaded. Only the R channel is active."));
 	}
 }
 
 void UIEnvGeneratorForm::DrawTransformSection()
 {
-	if (!ImGui::CollapsingHeader("Random Transform", ImGuiTreeNodeFlags_DefaultOpen))
+	if (!ImGui::CollapsingHeader(Loc("Random Transform"), ImGuiTreeNodeFlags_DefaultOpen))
 		return;
 
 	bool rot = Gen->Flags.is(EEnvGenerator::flRandomRotation);
-	if (ImGui::Checkbox("Random Rotation", &rot))
+	if (ImGui::Checkbox(Loc("Random Rotation"), &rot))
 		Gen->Flags.set(EEnvGenerator::flRandomRotation, rot);
 
 	if (rot)
@@ -280,13 +281,13 @@ void UIEnvGeneratorForm::DrawTransformSection()
 	}
 
 	bool scl = Gen->Flags.is(EEnvGenerator::flRandomScale);
-	if (ImGui::Checkbox("Random Scale", &scl))
+	if (ImGui::Checkbox(Loc("Random Scale"), &scl))
 		Gen->Flags.set(EEnvGenerator::flRandomScale, scl);
 
 	if (scl)
 	{
 		bool prop = Gen->Flags.is(EEnvGenerator::flScaleProportional);
-		if (ImGui::Checkbox("Proportional", &prop))
+		if (ImGui::Checkbox(Loc("Proportional"), &prop))
 			Gen->Flags.set(EEnvGenerator::flScaleProportional, prop);
 
 		ImGui::DragFloat3("Min Scale", (float*)&Gen->MinScale, 0.005f, 0.001f, 1000.f, "%.3f");

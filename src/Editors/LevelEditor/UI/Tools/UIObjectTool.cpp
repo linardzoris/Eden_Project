@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../../../xrEUI/EditorLocalization.h"
 #include "UIEnvGeneratorForm.h"
 
 static xr_atomic_bool RefreshInProgress;
@@ -90,7 +91,7 @@ void UIObjectTool::HandleDragDrop()
 
 void UIObjectTool::Draw()
 {
-	ImGui::Checkbox("Show lists", &bDrawList);
+	ImGui::Checkbox(Loc("Show lists"), &bDrawList);
 
 	if (m_RemoveTexture)
 		IM_TEXTURE_RELEASE(m_RemoveTexture);
@@ -98,7 +99,7 @@ void UIObjectTool::Draw()
 	m_RemoveTexture = nullptr;
 
 	ImGui::SetNextItemOpen(true, ImGuiCond_FirstUseEver);
-	if (ImGui::TreeNode("Commands"))
+	if (ImGui::TreeNode(Loc("Commands")))
 	{
 		ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing()); DrawRandomAppend();
 
@@ -106,12 +107,12 @@ void UIObjectTool::Draw()
 		ImGui::TreePop();
 	}
 	ImGui::SetNextItemOpen(true, ImGuiCond_FirstUseEver);
-	if (ImGui::TreeNode("Reference Select"))
+	if (ImGui::TreeNode(Loc("Reference Select")))
 	{
 		ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
 		{
-			ImGui::Text("Select by Current: "); ImGui::SameLine(); if (ImGui::Button(" +")) { SelByRefObject(true); } ImGui::SameLine(); if (ImGui::Button(" -")) { SelByRefObject(false); }
-			ImGui::Text("Select by Selected:"); ImGui::SameLine(); if (ImGui::Button("=%")) { MultiSelByRefObject(true); } ImGui::SameLine(); if (ImGui::Button("+%")) { MultiSelByRefObject(false); } ImGui::SameLine(); ImGui::SetNextItemWidth(-ImGui::GetTextLineHeight() - 8); ImGui::DragFloat("%", &m_selPercent, 1, 0, 100, "%.1f");
+			ImGui::Text(Loc("Select by Current: ")); ImGui::SameLine(); if (ImGui::Button(" +")) { SelByRefObject(true); } ImGui::SameLine(); if (ImGui::Button(" -")) { SelByRefObject(false); }
+			ImGui::Text(Loc("Select by Selected:")); ImGui::SameLine(); if (ImGui::Button("=%")) { MultiSelByRefObject(true); } ImGui::SameLine(); if (ImGui::Button("+%")) { MultiSelByRefObject(false); } ImGui::SameLine(); ImGui::SetNextItemWidth(-ImGui::GetTextLineHeight() - 8); ImGui::DragFloat("%", &m_selPercent, 1, 0, 100, "%.1f");
 		}
 		ImGui::Separator();
 		ImGui::Indent(ImGui::GetTreeNodeToLabelSpacing());
@@ -122,17 +123,17 @@ void UIObjectTool::Draw()
 	float XSize = ImGui::GetWindowSize().x - 25;
 	XSize /= 2;
 
-	if (ImGui::TreeNode("Surface"))
+	if (ImGui::TreeNode(Loc("Surface")))
 	{
 		ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
 		{
-			if (ImGui::Button("Clear Select", ImVec2(XSize, 0)))
+			if (ImGui::Button(Loc("Clear Select"), ImVec2(XSize, 0)))
 			{
 				Scene->UndoSave();
 				ClearSurface(true);
 			}
 			ImGui::SameLine();
-			if (ImGui::Button("Clear Level", ImVec2(XSize, 0)))
+			if (ImGui::Button(Loc("Clear Level"), ImVec2(XSize, 0)))
 			{
 				if (ELog.DlgMsg(mtConfirmation, mbYes | mbNo, "Are you sure to reset surface in level?") == mrYes) 
 				{
@@ -147,18 +148,18 @@ void UIObjectTool::Draw()
 		ImGui::TreePop();
 	}
 	ImGui::SetNextItemOpen(true, ImGuiCond_FirstUseEver);
-	if (ImGui::TreeNode("Current Object"))
+	if (ImGui::TreeNode(Loc("Current Object")))
 	{
 
 		ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
 		{
-			if (ImGui::Button("Select", ImVec2(XSize, 0)))
+			if (ImGui::Button(Loc("Select"), ImVec2(XSize, 0)))
 			{
 				UIChooseForm::SelectItem(smObject,1, m_Current,0,0,0,0,0);
 				m_Selection = true;
 			}
 			ImGui::SameLine();
-			if (ImGui::Button("Refresh", ImVec2(XSize, 0)))
+			if (ImGui::Button(Loc("Refresh"), ImVec2(XSize, 0)))
 			{
 				RefreshList();
 			}
@@ -179,25 +180,25 @@ void UIObjectTool::DrawRandomAppend()
 			ImGui::TextColored(TextColor, RAIFile.data());
 		}
 		float ButtonSize = ImGui::GetWindowSize().x / 2 - 10;
-		if (ImGui::Button("Multiple Append", { ButtonSize , 0 }))
+		if (ImGui::Button(Loc("Multiple Append"), { ButtonSize , 0 }))
 		{
 			UIChooseForm::SelectItem(smObject, 512, 0);
 			m_MultiAppend = true;
 		}
 
 		ImGui::SameLine();
-		if (ImGui::Button("Environment Generator", { ButtonSize , 0 }))
+		if (ImGui::Button(Loc("Environment Generator"), { ButtonSize , 0 }))
 		{
 			UIEnvGeneratorForm::Show();
 		}
 
-		if (ImGui::Checkbox("Random Append", &m_RandomAppend))
+		if (ImGui::Checkbox(Loc("Random Append"), &m_RandomAppend))
 		{
 			ParentTools->ActivateAppendRandom(m_RandomAppend);
 		}
 		ImGui::SameLine();
 
-		if (ImGui::Button("Load"))
+		if (ImGui::Button(Loc("Load")))
 		{
 			xr_string Outfile;
 
@@ -209,7 +210,7 @@ void UIObjectTool::DrawRandomAppend()
 		ImGui::SameLine();
 
 		ImGui::BeginDisabled(ParentTools->m_AppendRandomObjects.empty());
-		if (ImGui::Button("Save"))
+		if (ImGui::Button(Loc("Save")))
 		{
 			xr_string Outfile;
 
@@ -247,7 +248,7 @@ void UIObjectTool::DrawRandomAppend()
 		ImGui::SameLine();
 		ImGui::EndDisabled();
 
-		if (ImGui::Button("Custom.."))
+		if (ImGui::Button(Loc("Custom..")))
 		{
 			m_PropRandom = true;
 			ParentTools->FillAppendRandomPropertiesBegin();
@@ -298,7 +299,7 @@ void UIObjectTool::DrawObjectsList()
 	if (!bDrawList)
 		return;
 
-	if (ImGui::Begin("Edit group items", &bDrawList))
+	if (ImGui::Begin(Loc("Edit group items"), &bDrawList))
 	{
 		if (!RefreshInProgress)
 		{
@@ -317,7 +318,7 @@ void UIObjectTool::DrawObjectsList()
 			ImGui::EndChild();
 		}
 		else
-			ImGui::Text("Loading...");
+			ImGui::Text(Loc("Loading..."));
 	}
 	ImGui::End();
 }

@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "IconsFontAwesome6.h"
+#include "../../xrEUI/EditorLocalization.h"
 
 UILeftBarForm::UILeftBarForm()
 {
@@ -65,7 +66,7 @@ void UILeftBarForm::Draw()
 	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
 	ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(0, 0));
 
-	if (ImGui::Begin("Edit Mode", 0, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
+	if (ImGui::Begin(Loc("Edit Mode"), 0, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
 	{
 		static ObjClassID Tools[OBJCLASS_COUNT + 1] = {
 			OBJCLASS_SCENEOBJECT,
@@ -147,7 +148,7 @@ void UILeftBarForm::Draw()
 	{
 		if (bUseObjectsTool)
 		{
-			if (ImGui::Begin("Object Tools", &bUseObjectsTool))
+			if (ImGui::Begin(Loc("Object Tools"), &bUseObjectsTool))
 			{
 				if (LTools->GetToolForm())
 					LTools->GetToolForm()->Draw();
@@ -172,35 +173,35 @@ void UILeftBarForm::Draw()
 	if (!bUseSnapList)
 		return;
 
-	if (ImGui::Begin("Snap List", &bUseSnapList))
+	if (ImGui::Begin(Loc("Snap List"), &bUseSnapList))
 	{
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 1));
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 4));
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 0));
 		
-		if (ImGui::Checkbox("Enable/Show Snap List", &bDrawSnapListObjects))
+		if (ImGui::Checkbox(Loc("Enable/Show Snap List"), &bDrawSnapListObjects))
 			static_cast<CLevelPreferences*>(EPrefs)->OpenSnapList = bDrawSnapListObjects;
 		
 		ImGui::Separator();
 		{
-			ImGui::BulletText("Commands", ImGuiDir_Left);
+			ImGui::BulletText(Loc("Commands"), ImGuiDir_Left);
 			if (ImGui::BeginPopupContextItem("Commands", 1))
 			{
-				if (ImGui::MenuItem("Make List From Selected"))
+				if (ImGui::MenuItem(Loc("Make List From Selected")))
 				{
 					ExecCommand(COMMAND_SET_SNAP_OBJECTS);
 				}
-				if (ImGui::MenuItem("Select Object From List"))
+				if (ImGui::MenuItem(Loc("Select Object From List")))
 				{
 					ExecCommand(COMMAND_SELECT_SNAP_OBJECTS);
 				}
 				ImGui::Separator();
-				if (ImGui::MenuItem("Add Selected To List"))
+				if (ImGui::MenuItem(Loc("Add Selected To List")))
 				{
 					ExecCommand(COMMAND_ADD_SEL_SNAP_OBJECTS);
 				}
-				if (ImGui::MenuItem("Remove Selected From List"))
+				if (ImGui::MenuItem(Loc("Remove Selected From List")))
 				{
 					ExecCommand(COMMAND_DEL_SEL_SNAP_OBJECTS);
 				}

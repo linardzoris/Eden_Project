@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../../../xrEUI/EditorLocalization.h"
 
 UIWayTool::UIWayTool()
 {
@@ -13,17 +14,17 @@ UIWayTool::~UIWayTool()
 void UIWayTool::Draw()
 {
     ImGui::SetNextItemOpen(true, ImGuiCond_FirstUseEver);
-    if (ImGui::TreeNode("Commands"))
+    if (ImGui::TreeNode(Loc("Commands")))
     {
         ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
         {
-            if (ImGui::RadioButton("Way Mode", m_WayMode))
+            if (ImGui::RadioButton(Loc("Way Mode"), m_WayMode))
             {
                 LTools->SetTarget(OBJCLASS_WAY, 0);
                 m_WayMode = true;
             }
             ImGui::SameLine();
-            if (ImGui::RadioButton("Way Point", m_WayMode == false))
+            if (ImGui::RadioButton(Loc("Way Point"), m_WayMode == false))
             {
                 LTools->SetTarget(OBJCLASS_WAY, 1);
                 m_WayMode = false;
@@ -34,18 +35,18 @@ void UIWayTool::Draw()
         ImGui::TreePop();
     }
     ImGui::SetNextItemOpen(true, ImGuiCond_FirstUseEver);
-    if (ImGui::TreeNode("Link Command"))
+    if (ImGui::TreeNode(Loc("Link Command")))
     {
         ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
         {
-            if (ImGui::Checkbox("Auto Link", &m_AutoLink))
+            if (ImGui::Checkbox(Loc("Auto Link"), &m_AutoLink))
             {
                
             }
             ImGui::PushItemWidth(-1);
             float size = float(ImGui::CalcItemWidth());
             {
-                if (ImGui::Button("Create 1-Link", ImVec2(size / 2, 0))) 
+                if (ImGui::Button(Loc("Create 1-Link"), ImVec2(size / 2, 0))) 
                 {
                     if (m_WayMode) {
                         ELog.DlgMsg(mtInformation, "Before editing enter Point Mode.");
@@ -63,7 +64,7 @@ void UIWayTool::Draw()
                     ExecCommand(COMMAND_UPDATE_PROPERTIES);
                 }
                 ImGui::SameLine(0, 2);
-                if (ImGui::Button("Convert to 1-Link", ImVec2(size / 2, 0))) 
+                if (ImGui::Button(Loc("Convert to 1-Link"), ImVec2(size / 2, 0))) 
                 {
                     ObjectList lst;
                     int cnt = Scene->GetQueryObjects(lst, OBJCLASS_WAY, 1, 1, 0);
@@ -73,7 +74,7 @@ void UIWayTool::Draw()
                     ExecCommand(COMMAND_UPDATE_PROPERTIES);
                 }
 
-                if (ImGui::Button("Create 2-Link", ImVec2(size / 2, 0))) 
+                if (ImGui::Button(Loc("Create 2-Link"), ImVec2(size / 2, 0))) 
                 {
                     if (m_WayMode) {
                         ELog.DlgMsg(mtInformation, "Before editing enter Point Mode.");
@@ -88,7 +89,7 @@ void UIWayTool::Draw()
                     ExecCommand(COMMAND_UPDATE_PROPERTIES);
                 }
                 ImGui::SameLine(0, 2);
-                if (ImGui::Button("Convert to 2-Link", ImVec2(size / 2, 0))) 
+                if (ImGui::Button(Loc("Convert to 2-Link"), ImVec2(size / 2, 0))) 
                 {
                     ObjectList lst;
                     int cnt = Scene->GetQueryObjects(lst, OBJCLASS_WAY, 1, 1, 0);
@@ -98,7 +99,7 @@ void UIWayTool::Draw()
                     ExecCommand(COMMAND_UPDATE_PROPERTIES);
                 }
 
-                if (ImGui::Button("Invert Link", ImVec2(size / 2, 0))) 
+                if (ImGui::Button(Loc("Invert Link"), ImVec2(size / 2, 0))) 
                 {
                     if (m_WayMode) {
                         ELog.DlgMsg(mtInformation, "Before editing enter Point Mode.");
@@ -112,7 +113,7 @@ void UIWayTool::Draw()
                     ExecCommand(COMMAND_UPDATE_PROPERTIES);
                 }
                 ImGui::SameLine(0, 2);
-                if (ImGui::Button("Remove Link", ImVec2(size / 2, 0)))
+                if (ImGui::Button(Loc("Remove Link"), ImVec2(size / 2, 0)))
                 {
                     if (m_WayMode) {
                         ELog.DlgMsg(mtInformation, "Before editing enter Point Mode.");

@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "UIGroupTool.h"
+#include "../../../xrEUI/EditorLocalization.h"
 
 #include <algorithm>
 
@@ -16,24 +17,24 @@ void UIGroupTool::Draw()
 {
 	ImGui::Separator();
 	{
-		ImGui::BulletText("Commands", ImGuiDir_Left);
+		ImGui::BulletText(Loc("Commands"), ImGuiDir_Left);
 		if (ImGui::BeginPopupContextItem("Commands", 1))
 		{
-			if (ImGui::MenuItem("Group"))
+			if (ImGui::MenuItem(Loc("Group")))
 			{
 				ParentTools->GroupObjects();
 			}
-			if (ImGui::MenuItem("Ungroup"))
+			if (ImGui::MenuItem(Loc("Ungroup")))
 			{
 				ParentTools->UngroupObjects();
 			}
 			ImGui::Separator();
-			if (ImGui::MenuItem("Make Thumbnail"))
+			if (ImGui::MenuItem(Loc("Make Thumbnail")))
 			{
 				ParentTools->MakeThumbnail();
 			}
 			ImGui::Separator();
-			if (ImGui::MenuItem("Save As ..."))
+			if (ImGui::MenuItem(Loc("Save As ...")))
 			{
 				ParentTools->SaveSelectedObject();
 			}
@@ -43,14 +44,14 @@ void UIGroupTool::Draw()
 	}
 	ImGui::Separator();
 	ImGui::SetNextItemOpen(true, ImGuiCond_FirstUseEver);
-	if (ImGui::TreeNode("Current Object"))
+	if (ImGui::TreeNode(Loc("Current Object")))
 	{
 		ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
 		{
 			ImGui::SetNextItemWidth(-1);
 			float size = float(ImGui::CalcItemWidth());
 			{
-				if (ImGui::Button("Select ...", ImVec2(size / 2, 0))) 
+				if (ImGui::Button(Loc("Select ..."), ImVec2(size / 2, 0))) 
 				{
 					string_path ObjectPath = {};
 
@@ -61,7 +62,7 @@ void UIGroupTool::Draw()
 					m_ChooseGroup = true;
 				}
 				ImGui::SameLine(0, 2);
-				if (ImGui::Button("Reload Refs", ImVec2(size / 2, 0))) 
+				if (ImGui::Button(Loc("Reload Refs"), ImVec2(size / 2, 0))) 
 				{
 					ParentTools->ReloadRefsSelectedObject();
 					//bForceInitListBox = TRUE;
@@ -75,24 +76,24 @@ void UIGroupTool::Draw()
 		ImGui::TreePop();
 	}
 	ImGui::SetNextItemOpen(true, ImGuiCond_FirstUseEver);
-	if (ImGui::TreeNode("Reference Select"))
+	if (ImGui::TreeNode(Loc("Reference Select")))
 	{
 		ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
 		{
-			ImGui::Text("Select by Current: "); ImGui::SameLine(); if (ImGui::Button(" +")) { SelByRefObject(true); } ImGui::SameLine(); if (ImGui::Button(" -")) { SelByRefObject(false); }
-			ImGui::Text("Select by Selected:"); ImGui::SameLine(); if (ImGui::Button("=%")) { MultiSelByRefObject(true); } ImGui::SameLine(); if (ImGui::Button("+%")) { MultiSelByRefObject(false); } ImGui::SameLine(); ImGui::SetNextItemWidth(-ImGui::GetTextLineHeight() - 8); ImGui::DragFloat("%", &m_selPercent, 1, 0, 100, "%.1f");
+			ImGui::Text(Loc("Select by Current: ")); ImGui::SameLine(); if (ImGui::Button(" +")) { SelByRefObject(true); } ImGui::SameLine(); if (ImGui::Button(" -")) { SelByRefObject(false); }
+			ImGui::Text(Loc("Select by Selected:")); ImGui::SameLine(); if (ImGui::Button("=%")) { MultiSelByRefObject(true); } ImGui::SameLine(); if (ImGui::Button("+%")) { MultiSelByRefObject(false); } ImGui::SameLine(); ImGui::SetNextItemWidth(-ImGui::GetTextLineHeight() - 8); ImGui::DragFloat("%", &m_selPercent, 1, 0, 100, "%.1f");
 		}
 		ImGui::Separator();
 		ImGui::Indent(ImGui::GetTreeNodeToLabelSpacing());
 		ImGui::TreePop();
 	}
 	ImGui::SetNextItemOpen(true, ImGuiCond_FirstUseEver);
-	if (ImGui::TreeNode("Pivot Alignment"))
+	if (ImGui::TreeNode(Loc("Pivot Alignment")))
 	{
 		ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
 		{
-			if(ImGui::Button("Center To Group", ImVec2(-1, 0))) { ParentTools->CenterToGroup(); }
-			if (ImGui::Button("Align To Object...", ImVec2(-1, 0))) { ParentTools->AlignToObject(); }
+			if(ImGui::Button(Loc("Center To Group"), ImVec2(-1, 0))) { ParentTools->CenterToGroup(); }
+			if (ImGui::Button(Loc("Align To Object..."), ImVec2(-1, 0))) { ParentTools->AlignToObject(); }
 		}
 		ImGui::Separator();
 		ImGui::Indent(ImGui::GetTreeNodeToLabelSpacing());
