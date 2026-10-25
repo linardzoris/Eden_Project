@@ -135,7 +135,7 @@ void UIObjectTool::Draw()
 			ImGui::SameLine();
 			if (ImGui::Button(Loc("Clear Level"), ImVec2(XSize, 0)))
 			{
-				if (ELog.DlgMsg(mtConfirmation, mbYes | mbNo, "Are you sure to reset surface in level?") == mrYes) 
+				if (ELog.DlgMsg(mtConfirmation, mbYes | mbNo, Loc("Are you sure to reset surface in level?")) == mrYes)
 				{
 					Scene->UndoSave();
 					ClearSurface(false);

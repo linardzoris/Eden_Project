@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../xrEUI/EditorLocalization.h"
 
 #include "../xrECore/Editor/EditorChooseEvents.h"
 #include "IconsFontAwesome6.h"
@@ -100,7 +101,7 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-				ImGui::SetTooltip("Select");
+				ImGui::SetTooltip(Loc("Select"));
 			}
 			if (bPushColor)
 			{
@@ -128,7 +129,7 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-				ImGui::SetTooltip("Move");
+				ImGui::SetTooltip(Loc("Move"));
 			}
 			if (bPushColor)
 			{
@@ -155,7 +156,7 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-				ImGui::SetTooltip("Scale");
+				ImGui::SetTooltip(Loc("Scale"));
 			}
 			if (bPushColor)
 			{
@@ -182,7 +183,7 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-				ImGui::SetTooltip("Rotate");
+				ImGui::SetTooltip(Loc("Rotate"));
 			}
 			if (bPushColor)
 			{
@@ -214,7 +215,7 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 		if (ImGui::IsItemHovered())
 		{
 			ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-			ImGui::SetTooltip("Select X Axis");
+			ImGui::SetTooltip(Loc("Select X Axis"));
 		}
 		if (bPushColor)
 		{
@@ -240,7 +241,7 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 		if (ImGui::IsItemHovered())
 		{
 			ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-			ImGui::SetTooltip("Select Y Axis");
+			ImGui::SetTooltip(Loc("Select Y Axis"));
 		}
 		if (bPushColor)
 		{
@@ -266,7 +267,7 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 		if (ImGui::IsItemHovered())
 		{
 			ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-			ImGui::SetTooltip("Select Z Axis");
+			ImGui::SetTooltip(Loc("Select Z Axis"));
 		}
 		if (bPushColor)
 		{
@@ -292,7 +293,7 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 		if (ImGui::IsItemHovered())
 		{
 			ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-			ImGui::SetTooltip("Select ZX Axis");
+			ImGui::SetTooltip(Loc("Select ZX Axis"));
 		}
 		if (bPushColor)
 		{

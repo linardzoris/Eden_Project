@@ -353,11 +353,15 @@ void XrUIManager::Draw()
 	ImGui::PushFont(FontsStorage[ImCurrentFont]);
 	//ImGui::DockSpaceOverViewport();
 	{
-		m_MenuBarHeight = 32;
-		int headerSize = 8;
+		// Reserve the full top strip (main menu bar + editor toolbar) so the
+		// toolbar does not cover the docked viewport title bars.
+		// Use the real main-menu-bar height (frame height) so no gap is left
+		// between the menu, the toolbar and the docked windows.
+		m_MenuBarHeight = ImGui::GetFrameHeight();
 		ImGuiViewport* viewport = ImGui::GetMainViewport();
-		ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x, viewport->Pos.y + m_MenuBarHeight - headerSize));
-		ImGui::SetNextWindowSize(ImVec2(viewport->Size.x, viewport->Size.y - headerSize));
+		const float TopReserve = m_MenuBarHeight + UIToolBarSize;
+		ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x, viewport->Pos.y + TopReserve));
+		ImGui::SetNextWindowSize(ImVec2(viewport->Size.x, viewport->Size.y - TopReserve));
 		ImGui::SetNextWindowViewport(viewport->ID);
 		ImGuiWindowFlags window_flags = 0
 			| ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking
@@ -366,7 +370,7 @@ void XrUIManager::Draw()
 			| ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus
 			| ImGuiWindowFlags_NoBackground;
 
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, UIToolBarSize / 2));
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(3, 2));
@@ -402,11 +406,117 @@ void XrUIManager::Draw()
 		ImGui::PopItemFlag();
 	}
 
+	DrawToasts();
+	DrawPopups();
+
 	ImGui::PopFont();
 	ImGui::PopFont();
 	//ImGui::EndFrame();
 
 	//EndFrame();
+}
+
+void XrUIManager::AddToast(int Type, const char* Text)
+{
+	constexpr float Life = 5.f;
+	m_Toasts.push_back({ Type, Text, Life, Life });
+	if (m_Toasts.size() > 8)
+		m_Toasts.erase(m_Toasts.begin());
+}
+
+void XrUIManager::DrawToasts()
+{
+	if (m_Toasts.empty())
+		return;
+
+	ImGuiViewport* vp = ImGui::GetMainViewport();
+	ImDrawList* dl = ImGui::GetForegroundDrawList();
+	const float Scale = ImGui::GetWindowDpiScale();
+	const float Width = 360.f * Scale;
+	const float Margin = 10.f * Scale;
+	const float PadY = 7.f * Scale;
+	const float PadX = 10.f * Scale;
+	const ImVec2 BasePos(vp->Pos.x + vp->Size.x - Width - Margin, vp->Pos.y + m_MenuBarHeight + UIToolBarSize + Margin);
+
+	float y = BasePos.y;
+	for (size_t i = 0; i < m_Toasts.size(); )
+	{
+		EditorToast& T = m_Toasts[i];
+		T.Life -= ImGui::GetIO().DeltaTime;
+		if (T.Life <= 0.f)
+		{
+			m_Toasts.erase(m_Toasts.begin() + i);
+			continue;
+		}
+
+		++i;
+		const float Alpha = T.Life < 1.f ? T.Life / 1.f : 1.f;
+		ImVec4 Accent;
+		switch (T.Type)
+		{
+		case 1:  Accent = ImVec4(0.85f, 0.25f, 0.25f, 1.f); break; // mtError
+		case 16: Accent = ImVec4(0.95f, 0.70f, 0.15f, 1.f); break; // mtWarning
+		default: Accent = ImVec4(0.25f, 0.75f, 0.85f, 1.f); break; // mtInformation/Custom
+		}
+
+		// Multi-line support: wrap at Width
+		const float WrapW = Width - PadX * 2;
+		ImVec2 TextSize = ImGui::CalcTextSize(T.Text.c_str(), nullptr, false, WrapW);
+		const float H = TextSize.y + PadY * 2;
+
+		ImVec2 Min(BasePos.x, y);
+		ImVec2 Max(BasePos.x + Width, y + H);
+		ImU32 bg = ImGui::GetColorU32(ImVec4(0.09f, 0.09f, 0.11f, 0.95f * Alpha));
+		ImU32 border = ImGui::GetColorU32(ImVec4(Accent.x, Accent.y, Accent.z, 0.9f * Alpha));
+		ImU32 textCol = ImGui::GetColorU32(ImVec4(0.95f, 0.95f, 0.95f, Alpha));
+		dl->AddRectFilled(Min, Max, bg, 4.f);
+		dl->AddRectFilled(Min, ImVec2(Min.x + 4.f * Scale, Max.y), border, 4.f);
+		dl->AddRect(Min, Max, ImGui::GetColorU32(ImVec4(1, 1, 1, 0.08f * Alpha)), 4.f);
+		dl->AddText(nullptr, 0.f, ImVec2(Min.x + PadX, y + PadY), textCol, T.Text.c_str(), nullptr, WrapW);
+		y += H + 6.f * Scale;
+	}
+}
+
+void XrUIManager::AddPopup(int Type, const char* Text)
+{
+	m_Popups.push_back({ Type, Text, 0.f, 0.f });
+}
+
+void XrUIManager::DrawPopups()
+{
+	if (m_Popups.empty())
+		return;
+
+	// One queued message box at a time; the next one appears after
+	// the user confirms the current one.
+	EditorToast& P = m_Popups.front();
+
+	const char* TitleKey;
+	switch (P.Type)
+	{
+	case 1:  TitleKey = "Error";       break; // mtError
+	case 16: TitleKey = "Warning";     break; // mtWarning
+	default: TitleKey = "Information"; break; // mtInformation/Custom
+	}
+	xr_string Title = xr_string(Loc(TitleKey)) + "##EditorMessage";
+
+	ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+	ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+	ImGui::OpenPopup(Title.c_str());
+
+	if (ImGui::BeginPopupModal(Title.c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		ImGui::TextUnformatted(P.Text.c_str());
+		ImGui::Spacing();
+		const float BtnW = ImGui::GetFrameHeight() * 3.f;
+		ImGui::SetCursorPosX((ImGui::GetWindowWidth() - BtnW) * 0.5f);
+		if (ImGui::Button(Loc("Ok"), ImVec2(BtnW, 0)))
+		{
+			m_Popups.erase(m_Popups.begin());
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::EndPopup();
+	}
 }
 
 static bool ImGui_ImplWin32_UpdateMouseCursor()

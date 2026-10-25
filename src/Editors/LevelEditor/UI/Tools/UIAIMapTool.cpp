@@ -34,7 +34,7 @@ void UIAIMapTool::Draw()
 			}
 			if (ImGui::Button(Loc("Clear AI Map"), ImVec2(size / 2, 0)))
 			{
-				if (ELog.DlgMsg(mtConfirmation, mbYes | mbNo, "Are you sure to clear AI Map?") == mrYes) 
+				if (ELog.DlgMsg(mtConfirmation, mbYes | mbNo, Loc("Are you sure to clear AI Map?")) == mrYes)
 				{
 					tool->Clear();
 					Scene->UndoSave();

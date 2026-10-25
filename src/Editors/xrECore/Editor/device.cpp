@@ -5,6 +5,7 @@
 #include <sal.h>
 #include "ImageManager.h"
 #include "ui_main.h"
+#include "../../xrEUI/EditorLocalization.h"
 #include "render.h"
 #include "../Engine/XrGameMaterialLibraryEditors.h"
 #include "../Layers/xrRender/ResourceManager.h"
@@ -131,7 +132,7 @@ void CEditorRenderDevice::Initialize()
     if (FS.exist(fn)){
     	ShaderXRLC.Load(fn);
     }else{
-    	ELog.DlgMsg(mtInformation,"Can't find file '%s'",fn);
+    	ELog.DlgMsg(mtInformation,Loc("Can't find file '%s'"),fn);
     }
 	CreateWindow();
 

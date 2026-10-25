@@ -31,7 +31,7 @@ void UIEnvGeneratorForm::Show()
 
 	if (Form->Targets.empty())
 	{
-		ELog.DlgMsg(mtInformation, mbOK, "An object or terrain must be selected!");
+		ELog.DlgMsg(mtInformation, mbOK, Loc("An object or terrain must be selected!"));
 		return;
 	}
 
@@ -109,8 +109,8 @@ void UIEnvGeneratorForm::Draw()
 	CollectTargets();
 	Gen->SummarizeTargets(Targets, Gen->HeatmapReady(), TotalArea, Estimate);
 
-	ImGui::Text("Targets: %d%s", (int)Targets.size(), bTerrainTarget ? " (terrain)" : "");
-	ImGui::Text("Area: %.1f m^2   Estimated: %d", TotalArea, Estimate);
+	ImGui::Text(Loc("Targets: %d%s"), (int)Targets.size(), bTerrainTarget ? Loc("(terrain)") : "");
+	ImGui::Text(Loc("Area: %.1f m^2   Estimated: %d"), TotalArea, Estimate);
 	ImGui::Separator();
 
 	// presets
@@ -151,8 +151,8 @@ void UIEnvGeneratorForm::Draw()
 	ImGui::Separator();
 
 	// global density cap
-	ImGui::DragFloat("Max Density", &Gen->MaxDensity, 0.001f, 0.0001f, 100.f, "%.4f");
-	ImGui::TextDisabled("obj/m^2, per-channel upper bound");
+	ImGui::DragFloat(Loc("Max Density"), &Gen->MaxDensity, 0.001f, 0.0001f, 100.f, "%.4f");
+	ImGui::TextDisabled(Loc("obj/m^2, per-channel upper bound"));
 	ImGui::Separator();
 
 	// RGBA channels
@@ -190,7 +190,7 @@ void UIEnvGeneratorForm::DrawChannel(int idx, const char* label, const ImVec4& c
 
 	if (open)
 	{
-		ImGui::Text("Objects: %s", C.Objects.empty() ? "(empty)" : *C.ObjectsStr);
+		ImGui::Text(Loc("Objects: %s"), C.Objects.empty() ? Loc("(empty)") : *C.ObjectsStr);
 
 		if (ImGui::SmallButton(Loc("Edit..")))
 		{
@@ -204,11 +204,11 @@ void UIEnvGeneratorForm::DrawChannel(int idx, const char* label, const ImVec4& c
 			C.ObjectsStr = "";
 		}
 
-		ImGui::DragFloat("Density", &C.Density, 0.001f, 0.f, Gen->MaxDensity, "%.4f");
-		ImGui::TextDisabled("%.1f objects estimated", TotalArea * Gen->ClampDensity(C));
+		ImGui::DragFloat(Loc("Density"), &C.Density, 0.001f, 0.f, Gen->MaxDensity, "%.4f");
+		ImGui::TextDisabled(Loc("%.1f objects estimated"), TotalArea * Gen->ClampDensity(C));
 
 		if (!active)
-			ImGui::TextDisabled("inactive (needs terrain + heatmap)");
+			ImGui::TextDisabled(Loc("inactive (needs terrain + heatmap)"));
 
 		ImGui::TreePop();
 	}
@@ -224,7 +224,7 @@ void UIEnvGeneratorForm::DrawHeatmapSection()
 	if (!bTerrainTarget)
 	{
 		if (ImGui::Button(Loc("Load Heat..")))
-			ELog.DlgMsg(mtInformation, mbOK, "Invalid, target is not Terrain!");
+			ELog.DlgMsg(mtInformation, mbOK, Loc("Invalid, target is not Terrain!"));
 		ImGui::TextDisabled(Loc("Requires a terrain selection."));
 		return;
 	}
@@ -341,7 +341,7 @@ void UIEnvGeneratorForm::OnGenerateClick()
 {
 	if (Targets.empty())
 	{
-		ELog.DlgMsg(mtInformation, mbOK, "An object or terrain must be selected!");
+		ELog.DlgMsg(mtInformation, mbOK, Loc("An object or terrain must be selected!"));
 		return;
 	}
 
@@ -353,11 +353,11 @@ void UIEnvGeneratorForm::OnGenerateClick()
 
 	if (estimate <= 0)
 	{
-		ELog.DlgMsg(mtInformation, mbOK, "Nothing to generate: check channel object lists and densities.");
+		ELog.DlgMsg(mtInformation, mbOK, Loc("Nothing to generate: check channel object lists and densities."));
 		return;
 	}
 
-	if (ELog.DlgMsg(mtConfirmation, mbYes | mbNo, "Target area size: %.1f; Estimated generation: %d, proceed?", area, estimate) != mrYes)
+	if (ELog.DlgMsg(mtConfirmation, mbYes | mbNo, Loc("Target area size: %.1f; Estimated generation: %d, proceed?"), area, estimate) != mrYes)
 		return;
 
 	int placed = Gen->Generate(Targets, heat_ready, estimate);

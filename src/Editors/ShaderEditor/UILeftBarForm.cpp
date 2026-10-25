@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../xrEUI/EditorLocalization.h"
 
 UILeftBarForm::UILeftBarForm()
 {
@@ -10,7 +11,7 @@ UILeftBarForm::~UILeftBarForm()
 
 void UILeftBarForm::Draw()
 {
-	if (ImGui::Begin("LeftBar", 0))
+	if (ImGui::Begin(Loc("LeftBar"), 0))
 	{
 		if (ImGui::BeginTabBar("##tabs", ImGuiTabBarFlags_TabListPopupButton | ImGuiTabBarFlags_FittingPolicyScroll))
 		{
@@ -26,14 +27,14 @@ void UILeftBarForm::Draw()
 					ImGui::BeginChild("main", ImVec2(0, 0), false, 0);
 
 
-					if (ImGui::Button("Create"))
+					if (ImGui::Button(Loc("Create")))
 					{
 						tool.second->OnCreateItem("new_item");
 						tool.second->Modified();
 					}
 					ImGui::SameLine();
 
-					if (ImGui::Button("Clone"))
+					if (ImGui::Button(Loc("Clone")))
 					{
 						if (tool.second->m_CurrentItem != nullptr)
 						{
@@ -45,7 +46,7 @@ void UILeftBarForm::Draw()
 					}
 					ImGui::SameLine();
 
-					if (ImGui::Button("Remove"))
+					if (ImGui::Button(Loc("Remove")))
 					{
 						tool.second->RemoveCurrent();
 					}
@@ -79,7 +80,7 @@ void UILeftBarForm::Draw()
 	}
 	ImGui::End();
 
-	if (ImGui::Begin("Item Properties"))
+	if (ImGui::Begin(Loc("Item Properties")))
 	{
 		STools->m_ItemProps->Draw();
 	}

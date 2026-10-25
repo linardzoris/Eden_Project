@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "UILodEditorForm.h"
 #include "imgui.h"
+#include "../xrEUI/EditorLocalization.h"
 
 UILodEditorForm* UILodEditorForm::Form = nullptr;
 
@@ -123,7 +124,7 @@ void UILodEditorForm::RunBatch(bool hq)
 
 	if (list.empty())
 	{
-		ELog.DlgMsg(mtInformation, "LOD Editor: no objects selected.");
+		ELog.DlgMsg(mtInformation, Loc("LOD Editor: no objects selected."));
 		return;
 	}
 
@@ -230,17 +231,17 @@ void UILodEditorForm::ClearBatch(bool hq)
 
 void UILodEditorForm::DrawObjectList()
 {
-	if (ImGui::Button("Rescan"))
+	if (ImGui::Button(Loc("Rescan")))
 	{
 		RescanFS();
 		ScanObjects();
 	}
 	ImGui::SameLine();
-	if (ImGui::Button("All"))
+	if (ImGui::Button(Loc("All")))
 		for (auto& it : items)
 			it.selected = true;
 	ImGui::SameLine();
-	if (ImGui::Button("None"))
+	if (ImGui::Button(Loc("None")))
 	{
 		for (auto& it : items)
 			it.selected = false;
@@ -349,95 +350,95 @@ void UILodEditorForm::DrawActions()
 				with_lod++;
 		}
 
-	ImGui::Text("Selected: %d", selected);
+	ImGui::Text(Loc("Selected: %d"), selected);
 
 	// Using LOD reflects the whole selection: checked only when every selected object uses LOD
 	bool using_lod = selected > 0 && with_lod == selected;
-	if (ImGui::Checkbox("Using LOD", &using_lod))
+	if (ImGui::Checkbox(Loc("Using LOD"), &using_lod))
 		ApplyUsingLOD(using_lod);
 
 	ImGui::Separator();
 
-	if (ImGui::Button("MakeHQ (BLOD)", ImVec2(-1, 0)))
+	if (ImGui::Button(Loc("MakeHQ (BLOD)"), ImVec2(-1, 0)))
 	{
 		if (selected == 0)
-			ELog.DlgMsg(mtInformation, "LOD Editor: no objects selected.");
+			ELog.DlgMsg(mtInformation, Loc("LOD Editor: no objects selected."));
 		else
 		{
 			m_MakeHQConfirm = true;
 			m_MakeLQConfirm = false;
-			ImGui::OpenPopup("Confirm generation");
+			ImGui::OpenPopup(Loc("Confirm generation"));
 		}
 	}
-	if (ImGui::Button("MakeLQ (FLOD)", ImVec2(-1, 0)))
+	if (ImGui::Button(Loc("MakeLQ (FLOD)"), ImVec2(-1, 0)))
 	{
 		if (selected == 0)
-			ELog.DlgMsg(mtInformation, "LOD Editor: no objects selected.");
+			ELog.DlgMsg(mtInformation, Loc("LOD Editor: no objects selected."));
 		else
 		{
 			m_MakeLQConfirm = true;
 			m_MakeHQConfirm = false;
-			ImGui::OpenPopup("Confirm generation");
+			ImGui::OpenPopup(Loc("Confirm generation"));
 		}
 	}
 
 	ImGui::Separator();
 
-	if (ImGui::Button("ClearHQ", ImVec2(-1, 0)))
+	if (ImGui::Button(Loc("ClearHQ"), ImVec2(-1, 0)))
 	{
 		if (selected == 0)
-			ELog.DlgMsg(mtInformation, "LOD Editor: no objects selected.");
+			ELog.DlgMsg(mtInformation, Loc("LOD Editor: no objects selected."));
 		else
 		{
 			m_ClearHQConfirm = true;
 			m_ClearLQConfirm = false;
-			ImGui::OpenPopup("Confirm clear");
+			ImGui::OpenPopup(Loc("Confirm clear"));
 		}
 	}
-	if (ImGui::Button("ClearLQ", ImVec2(-1, 0)))
+	if (ImGui::Button(Loc("ClearLQ"), ImVec2(-1, 0)))
 	{
 		if (selected == 0)
-			ELog.DlgMsg(mtInformation, "LOD Editor: no objects selected.");
+			ELog.DlgMsg(mtInformation, Loc("LOD Editor: no objects selected."));
 		else
 		{
 			m_ClearLQConfirm = true;
 			m_ClearHQConfirm = false;
-			ImGui::OpenPopup("Confirm clear");
+			ImGui::OpenPopup(Loc("Confirm clear"));
 		}
 	}
 
-	if (ImGui::BeginPopupModal("Confirm clear", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+	if (ImGui::BeginPopupModal(Loc("Confirm clear"), nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 	{
 		bool hq = m_ClearHQConfirm;
-		ImGui::Text("WARNING: Are you sure to clear %s for the %d selected object(s)?", hq ? "BLOD" : "FLOD", selected);
-		ImGui::Text("You can regenerate them later.");
+		ImGui::Text(Loc("WARNING: Are you sure to clear %s for the %d selected object(s)?"), hq ? "BLOD" : "FLOD", selected);
+		ImGui::Text(Loc("You can regenerate them later."));
 		ImGui::Separator();
-		if (ImGui::Button("Proceed", ImVec2(120, 0)))
+		if (ImGui::Button(Loc("Proceed"), ImVec2(120, 0)))
 		{
 			ImGui::CloseCurrentPopup();
 			ClearBatch(hq);
 		}
 		ImGui::SameLine();
-		if (ImGui::Button("Cancel", ImVec2(120, 0)))
+		if (ImGui::Button(Loc("Cancel"), ImVec2(120, 0)))
 			ImGui::CloseCurrentPopup();
 		ImGui::EndPopup();
 	}
 
-	if (ImGui::BeginPopupModal("Confirm generation", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+	if (ImGui::BeginPopupModal(Loc("Confirm generation"), nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 	{
 		bool hq = m_MakeHQConfirm;
 		int seconds = int(ceil(selected * (hq ? m_EstimateHQ : m_EstimateLQ)));
-		ImGui::Text("Total %d MU-Objects selected,", selected);
-		ImGui::Text("%d %s will be generated,", selected, hq ? "BLODs" : "FLODs");
-		ImGui::Text("estimated processing time: %d seconds.", seconds);
+		ImGui::Text(Loc("Total %d MU-Objects selected,"), selected);
+		ImGui::Text(Loc("%d %s will be generated,"), selected, hq ? "BLODs" : "FLODs");
+		ImGui::Text(Loc("estimated processing time: %d seconds."), seconds);
 		ImGui::Separator();
-		if (ImGui::Button("Proceed", ImVec2(120, 0)))
+		if (ImGui::Button(Loc("Proceed"), ImVec2(120, 0)))
 		{
 			ImGui::CloseCurrentPopup();
 			RunBatch(hq);
 		}
 		ImGui::SameLine();
-		if (ImGui::Button("Cancel", ImVec2(120, 0)))
+		if (ImGui::Button(Loc("Cancel"), ImVec2(120, 0)))
 			ImGui::CloseCurrentPopup();
 		ImGui::EndPopup();
 	}
@@ -478,7 +479,7 @@ void UILodEditorForm::Update()
 		{
 			ImGui::SetNextWindowSize(ImVec2(1250, 760), ImGuiCond_FirstUseEver);
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(1000, 600));
-			if (ImGui::Begin("LOD Editor", &Form->bOpen))
+			if (ImGui::Begin(Loc("LOD Editor"), &Form->bOpen))
 			{
 				Form->Draw();
 			}

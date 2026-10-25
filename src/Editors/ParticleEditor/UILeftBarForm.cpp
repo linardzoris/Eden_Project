@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../xrEUI/EditorLocalization.h"
 
 UILeftBarForm::UILeftBarForm()
 {
@@ -10,36 +11,36 @@ UILeftBarForm::~UILeftBarForm()
 
 void UILeftBarForm::Draw()
 {
-	if (ImGui::Begin("LeftBar", 0))
+	if (ImGui::Begin(Loc("LeftBar"), 0))
 	{
-		if (ImGui::Button("Add Group"))
+		if (ImGui::Button(Loc("Add Group")))
 		{
 			PTools->AppendPG(0, "pg");
 			PTools->Modified();
 		}
 		ImGui::SameLine();
 
-		if (ImGui::Button("Add Particle"))
+		if (ImGui::Button(Loc("Add Particle")))
 		{
 			PTools->AppendPE(0, "pe");
 			PTools->Modified();
 		}
 		ImGui::SameLine();
 
-		if (ImGui::Button("Clone"))
+		if (ImGui::Button(Loc("Clone")))
 		{
 			PTools->CloneCurrent();
 		}
 		ImGui::SameLine();
 
-		if (ImGui::Button("Remove"))
+		if (ImGui::Button(Loc("Remove")))
 		{
 			PTools->RemoveCurrent();
 		}
 
 		ImGui::Separator();
 
-		if (ImGui::Button("Import Effect"))
+		if (ImGui::Button(Loc("Import Effect")))
 		{
 			PTools->ImportPE();
 		}

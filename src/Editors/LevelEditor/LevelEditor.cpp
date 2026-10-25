@@ -1,6 +1,7 @@
 // LevelEditor.cpp : Определяет точку входа для приложения.
 //
 #include "stdafx.h"
+#include "../xrEUI/XrUIManager.h"
 
 #include "Engine/XrGameManager.h"
 #include "Engine/XRayEditor.h"
@@ -25,6 +26,11 @@ void DragDrop(const xr_string&, int);
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
 {
 	bIsLevelEditor = true;
+
+	// The LevelEditor toolbar (CellPadding 6 + hint buttons) is taller than
+	// the default 24px strip; enlarge it so nothing gets clipped and the
+	// dockspace reserve (m_MenuBarHeight + UIToolBarSize) matches.
+	UIToolBarSize = 36;
 
 	if (!SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_EVENTS))
 	{

@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "UITextureViewer.h"
 #include "../../xrEUI/IconsFontAwesome6.h"
+#include "../../xrEUI/EditorLocalization.h"
 
 CUITextureViewer::CUITextureViewer()
 {
@@ -20,7 +21,7 @@ void CUITextureViewer::Draw()
 	}
 
 	ImGui::SetNextWindowSizeConstraints(ImVec2(650, 512), ImVec2(FLT_MAX, FLT_MAX));
-	ImGui::Begin("Texture Viewer", &bOpen);
+	ImGui::Begin(Loc("Texture Viewer"), &bOpen);
 
 	static const ImVec2 buttonSize(22, 22);
 
@@ -51,7 +52,7 @@ void CUITextureViewer::Draw()
 	ImVec4 col = GrayMode ? ImVec4(0.7f, 0.7f, 0.7f, 1.0f) : ImVec4(0.3f, 0.3f, 0.3f, 1.0f);
 	ImGui::SameLine(0.0f, 10.0f);
 	ImGui::PushStyleColor(ImGuiCol_Button, col);
-	if (ImGui::Button("Gray", {35, 22}))
+	if (ImGui::Button(Loc("Gray"), {35, 22}))
 	{
 		GrayMode = !GrayMode;
 		UpdateTexture();

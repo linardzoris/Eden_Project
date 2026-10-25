@@ -2,6 +2,7 @@
 #include "UIRenderForm.h"
 #include "ui_main.h"
 #include "../xrEUI/ImGuizmo.h"
+#include "../../xrEUI/EditorLocalization.h"
 
 static int GlobalViewportIndex = 0;
 
@@ -20,7 +21,7 @@ UIRenderForm::UIRenderForm()
 	m_shiftstate_down = false;
 
 	ViewportID = GlobalViewportIndex++;
-	sprintf(ViewportName, "%s##%d", "Render", ViewportID);
+	sprintf(ViewportName, "%s##%d", Loc("Render"), ViewportID);
 
 	if (ViewportID != 0)
 	{

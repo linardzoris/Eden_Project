@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../../xrEUI/EditorLocalization.h"
 
 UIDOShuffle* UIDOShuffle::Form = nullptr;
 UIDOShuffle::UIDOShuffle()
@@ -122,7 +123,7 @@ void UIDOShuffle::Draw()
 				bModif = true;
 			}
 			ImGui::SameLine();
-			if (ImGui::Button("Load..", ImVec2(0, ImGui::GetFrameHeight())))
+			if (ImGui::Button(Loc("Load.."), ImVec2(0, ImGui::GetFrameHeight())))
 			{
 				xr_string fname;
 				if (EFS.GetOpenName(_detail_objects_, fname)) {
@@ -130,7 +131,7 @@ void UIDOShuffle::Draw()
 				}
 			}
 			ImGui::SameLine();
-			if (ImGui::Button("Save..", ImVec2(0, ImGui::GetFrameHeight())))
+			if (ImGui::Button(Loc("Save.."), ImVec2(0, ImGui::GetFrameHeight())))
 			{
 				xr_string fname;
 				if (EFS.GetSaveName(_detail_objects_, fname)) 
@@ -154,7 +155,7 @@ void UIDOShuffle::Draw()
 	{
 		if (ImGui::Button("X")) { ClearIndexForms(); }
 		ImGui::SameLine();
-		if (ImGui::Button("Append Color Index", ImVec2(-1,0))) 
+		if (ImGui::Button(Loc("Append Color Index"), ImVec2(-1,0))) 
 		{
 			m_color_indices.push_back(new UIDOOneColor());
 			m_color_indices.back()->DOShuffle = this;

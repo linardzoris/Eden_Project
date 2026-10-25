@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "UIPropertiesForm.h"
+#include "../xrEUI/EditorLocalization.h"
 
 UIPropertiesForm::UIPropertiesForm() :
 	m_Root("", this), SearchRoot("", this)
@@ -101,7 +102,7 @@ void UIPropertiesForm::Draw()
 		string32 FindStr = {};
 		xr_strcpy(FindStr, m_SearchText.c_str());
 
-		if (ImGui::InputTextWithHint("##search", "Search...", FindStr, sizeof(FindStr)))
+		if (ImGui::InputTextWithHint("##search", Loc("Search..."), FindStr, sizeof(FindStr)))
 		{
 			m_SearchText = FindStr;
 			SearchRoot.Items.clear();
@@ -121,7 +122,7 @@ void UIPropertiesForm::Draw()
 		IsSearchActive = !m_SearchText.empty();
 
 		ImGui::SameLine();
-		if (ImGui::Button("Clear"))
+		if (ImGui::Button(Loc("Clear")))
 		{
 			m_SearchText = "";
 			IsSearchActive = false;
@@ -142,8 +143,8 @@ void UIPropertiesForm::Draw()
 
 	if (ImGui::BeginTable("props", 2, Flags))
 	{
-		ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthFixed, 0.0f);
-		ImGui::TableSetupColumn("Prop", ImGuiTableColumnFlags_WidthStretch);
+		ImGui::TableSetupColumn(Loc("Name"), ImGuiTableColumnFlags_WidthFixed, 0.0f);
+		ImGui::TableSetupColumn(Loc("Prop"), ImGuiTableColumnFlags_WidthStretch);
 		ImGui::TableHeadersRow();
 
 		if (IsSearchActive)

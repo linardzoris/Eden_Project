@@ -45,7 +45,7 @@ void UIDOTool::Draw()
 
 	if (ImGui::Button(Loc("Clear Slots"), ImVec2(-1, 0)))
 	{
-		if (ELog.DlgMsg(mtConfirmation, mbYes | mbNo, "Are you sure to reset slots?") == mrYes) {
+		if (ELog.DlgMsg(mtConfirmation, mbYes | mbNo, Loc("Are you sure to reset slots?")) == mrYes) {
 			DM->ClearSlots();
 			Scene->UndoSave();
 		}
@@ -53,7 +53,7 @@ void UIDOTool::Draw()
 
 	if (ImGui::Button(Loc("Clear Details"), ImVec2(-1, 0)))
 	{
-		if (ELog.DlgMsg(mtConfirmation, mbYes | mbNo, "Are you sure to clear details?") == mrYes) {
+		if (ELog.DlgMsg(mtConfirmation, mbYes | mbNo, Loc("Are you sure to clear details?")) == mrYes) {
 			ExecCommand(COMMAND_UPDATE_PROPERTIES);
 			DM->Clear();
 			Scene->UndoSave();

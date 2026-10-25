@@ -2,6 +2,7 @@
 
 #include "ui_main.h"
 #include "UIWeatherPropForm.h"
+#include "../../xrEUI/EditorLocalization.h"
 #include "engine/xrGamePersistentEditors.h"
 #include "../xrEngine/IGame_Level.h"
 #include "../xrEngine/IGame_Persistent.h"
@@ -82,17 +83,17 @@ void UIWeatherPropForm::Draw()
 	if (ImGui::BeginChild("Center", ImVec2(455, 575), true))
 	{
 		// Установки времени погоды
-		pcstr titleTime = "Time settings";
+		pcstr titleTime = Loc("Time settings");
 		ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize(titleTime).x) / 2);
 		ImGui::TextColored(ImVec4(0, 1, 1, 0.7), titleTime);
 		// --------------------------------------------------------------------------------------------
-		if (ImGui::CollapsingHeader("Environment time", ImGuiTreeNodeFlags_DefaultOpen))
+		if (ImGui::CollapsingHeader(Loc("Environment time"), ImGuiTreeNodeFlags_DefaultOpen))
 		{
 			u32 hours, minutes, seconds;
 			env.SplitTime(time, hours, minutes, seconds);
 
 			string128 temp;
-			xr_sprintf(temp, "Current time: %02d:%02d:%02d###environment_time", hours, minutes, seconds);
+			xr_sprintf(temp, "%s %02d:%02d:%02d###environment_time", Loc("Current time:"), hours, minutes, seconds);
 
 			if (ImGui::SliderFloat(temp, &time, 0, DAY_LENGTH, ""))
 			{
@@ -103,7 +104,7 @@ void UIWeatherPropForm::Draw()
 				float current_weight;
 				env.lerp(current_weight);
 			}
-			if (ImGui::DragFloat("Time factor", &time_factor, 1.f, 1.f, 10000.f))
+			if (ImGui::DragFloat(Loc("Time factor"), &time_factor, 1.f, 1.f, 10000.f))
 			{
 				if (g_pGameLevel)
 					g_pGameLevel->SetEnvironmentGameTimeFactor(iFloor(static_cast<u64>(time) * 10000.f), time_factor);
@@ -114,7 +115,7 @@ void UIWeatherPropForm::Draw()
 			{
 				ImGui::BeginGroup();
 				ImGui::SameLine(0, 3);
-				ImGui::InputFloat("Speed", &m_speed_time, 1.f, 10000.f, 1.f, 1);
+				ImGui::InputFloat(Loc("Speed"), &m_speed_time, 1.f, 10000.f, 1.f, 1);
 				ImGui::EndGroup();
 			}
 		}
@@ -125,14 +126,14 @@ void UIWeatherPropForm::Draw()
 		// --------------------------------------------------------------------------------------------
 		// Выбор погодного цикла
 		{
-			pcstr titleWeatherCycle = "Weather cycle selection";
+			pcstr titleWeatherCycle = Loc("Weather cycle selection");
 			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize(titleWeatherCycle).x) / 2);
 			ImGui::TextColored(ImVec4(0, 1, 1, 0.7), titleWeatherCycle);
 			// --------------------------------------------------------------------------------------------
-			if (ImGui::BeginCombo("Weather cycle", selectedWeather ? env.CurrentCycleName.c_str() : "None"))
+			if (ImGui::BeginCombo(Loc("Weather cycle"), selectedWeather ? env.CurrentCycleName.c_str() : Loc("None")))
 			{
 				bool SelectedNone = !psDeviceFlags.test(rsEnvironment);
-				if (ImGui::MenuItem("None", "", &SelectedNone))
+				if (ImGui::MenuItem(Loc("None"), "", &SelectedNone))
 				{
 					psDeviceFlags.set(rsEnvironment, false);
 					UI->RedrawScene();
@@ -165,7 +166,7 @@ void UIWeatherPropForm::Draw()
 		// --------------------------------------------------------------------------------------------
 		// Освещение
 		{
-			pcstr titleLightingSettings = "Lighting settings in the Editor";
+			pcstr titleLightingSettings = Loc("Lighting settings in the Editor");
 			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize(titleLightingSettings).x) / 2);
 			ImGui::TextColored(ImVec4(0, 1, 1, 0.7), titleLightingSettings);
 			ImGui::Spacing();
@@ -173,7 +174,7 @@ void UIWeatherPropForm::Draw()
 			// --------------------------------------------------------------------------------------------
 			// Отображение солнца
 			{
-				if (ImGui::Checkbox("Sun Visible", &m_sun_visible))
+				if (ImGui::Checkbox(Loc("Sun Visible"), &m_sun_visible))
 				{
 					IsShowSunChanged();
 					UI->RedrawScene();
@@ -181,7 +182,7 @@ void UIWeatherPropForm::Draw()
 				if (ImGui::IsItemHovered())
 				{
 					ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-					ImGui::SetTooltip("Turn Off/on showing the sun.");
+					ImGui::SetTooltip(Loc("Turn Off/on showing the sun."));
 				}
 			}
 			// --------------------------------------------------------------------------------------------
@@ -190,7 +191,7 @@ void UIWeatherPropForm::Draw()
 			// --------------------------------------------------------------------------------------------
 			// Использовать погодное движение солнца
 			{
-				if (ImGui::Checkbox("Use Sun Dir", &m_use_sun_dir))
+				if (ImGui::Checkbox(Loc("Use Sun Dir"), &m_use_sun_dir))
 				{
 					IsUseSunDirChanged();
 					UI->RedrawScene();
@@ -226,7 +227,7 @@ void UIWeatherPropForm::Draw()
 		ImGui::Spacing();
 		// --------------------------------------------------------------------------------------------
 		// Прочие настройки
-		pcstr titleOther = "Other settings";
+		pcstr titleOther = Loc("Other settings");
 		ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize(titleOther).x) / 2);
 		ImGui::TextColored(ImVec4(0, 1, 1, 0.7), titleOther);
 		// --------------------------------------------------------------------------------------------
@@ -235,7 +236,7 @@ void UIWeatherPropForm::Draw()
 		// --------------------------------------------------------------------------------------------
 		// Коллизия дождя
 		{
-			if (ImGui::Checkbox("Collision of raindrops", &m_raindrop_collision))
+			if (ImGui::Checkbox(Loc("Collision of raindrops"), &m_raindrop_collision))
 			{
 				IsRaindropCollisionChanged();
 				UI->RedrawScene();
@@ -243,7 +244,7 @@ void UIWeatherPropForm::Draw()
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-				ImGui::SetTooltip("Turn On/Off Collision of raindrops.");
+				ImGui::SetTooltip(Loc("Turn On/Off Collision of raindrops."));
 			}
 		}
 		// --------------------------------------------------------------------------------------------
@@ -252,7 +253,7 @@ void UIWeatherPropForm::Draw()
 		// --------------------------------------------------------------------------------------------
 		// Звук дождя по крыше
 		{
-			if (ImGui::Checkbox("Sound of rain on roof", &m_snd_on_roof))
+			if (ImGui::Checkbox(Loc("Sound of rain on roof"), &m_snd_on_roof))
 			{
 				IsSndOnRoofChanged();
 				g_pGamePersistent->Environment().ED_Reload();
@@ -261,7 +262,7 @@ void UIWeatherPropForm::Draw()
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-				ImGui::SetTooltip("Turn On/Off sound of rain on roof.");
+				ImGui::SetTooltip(Loc("Turn On/Off sound of rain on roof."));
 			}
 		}
 		// --------------------------------------------------------------------------------------------
@@ -271,7 +272,7 @@ void UIWeatherPropForm::Draw()
 		// Туман
 		{
 			bool UseFog = psDeviceFlags.test(rsFog);
-			if (ImGui::Checkbox("Fog", &UseFog))
+			if (ImGui::Checkbox(Loc("Fog"), &UseFog))
 			{
 				psDeviceFlags.set(rsFog, UseFog);
 				UI->RedrawScene();
@@ -279,7 +280,7 @@ void UIWeatherPropForm::Draw()
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-				ImGui::SetTooltip("Turn On/Off fog in the scene.");
+				ImGui::SetTooltip(Loc("Turn On/Off fog in the scene."));
 			}
 		}
 		// --------------------------------------------------------------------------------------------
@@ -289,7 +290,7 @@ void UIWeatherPropForm::Draw()
 		// В реальном времени
 		{
 			bool RealTime = psDeviceFlags.test(rsRenderRealTime);
-			if (ImGui::Checkbox("Real Time", &RealTime))
+			if (ImGui::Checkbox(Loc("Real Time"), &RealTime))
 			{
 				psDeviceFlags.set(rsRenderRealTime, RealTime);
 			}
@@ -303,14 +304,14 @@ void UIWeatherPropForm::Draw()
 		// Отключить звуки
 		{
 			bool MuteSounds = psDeviceFlags.test(rsMuteSounds);
-			if (ImGui::Checkbox("Mute Sounds", &MuteSounds))
+			if (ImGui::Checkbox(Loc("Mute Sounds"), &MuteSounds))
 			{
 				psDeviceFlags.set(rsMuteSounds, MuteSounds);
 			}
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-				ImGui::SetTooltip("Disable all sounds in the editor.");
+				ImGui::SetTooltip(Loc("Disable all sounds in the editor."));
 			}
 		}
 		// --------------------------------------------------------------------------------------------
@@ -320,7 +321,7 @@ void UIWeatherPropForm::Draw()
 		// Статистика
 		{
 			bool sStats = psDeviceFlags.test(rsStatistic);
-			if (ImGui::Checkbox("Stats", &sStats))
+			if (ImGui::Checkbox(Loc("Stats"), &sStats))
 			{
 				psDeviceFlags.set(rsStatistic, sStats);
 				UI->RedrawScene();
@@ -328,7 +329,7 @@ void UIWeatherPropForm::Draw()
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-				ImGui::SetTooltip("Enable statistics display.");
+				ImGui::SetTooltip(Loc("Enable statistics display."));
 			}
 		}
 		// --------------------------------------------------------------------------------------------
@@ -338,7 +339,7 @@ void UIWeatherPropForm::Draw()
 		// Показать Сетку
 		{
 			bool DrawGrid = psDeviceFlags.test(rsDrawGrid);
-			if (ImGui::Checkbox("Draw Grid", &DrawGrid))
+			if (ImGui::Checkbox(Loc("Draw Grid"), &DrawGrid))
 			{
 				psDeviceFlags.set(rsDrawGrid, DrawGrid);
 				UI->RedrawScene();
@@ -355,7 +356,7 @@ void UIWeatherPropForm::Draw()
 	// Кнопка "Закрыть"
 	{
 		ImGui::SetCursorPosX((ImGui::GetWindowWidth() - sizeButton.x - (sizeButton.x + 3)) / 2);
-		if (ImGui::Button("Apply", sizeButton))
+		if (ImGui::Button(Loc("Apply"), sizeButton))
 		{
 			if (selectedWeather)
 				env.SetWeather(EPrefs->sWeather, true);
@@ -371,7 +372,7 @@ void UIWeatherPropForm::Draw()
 	// Кнопка "Закрыть"
 	{
 		ImGui::SetCursorPosX((ImGui::GetWindowWidth() - sizeButton.x + (sizeButton.x + 3)) / 2);
-		if (ImGui::Button("Close", sizeButton))
+		if (ImGui::Button(Loc("Close"), sizeButton))
 		{
 			UI->RedrawScene();
 			bOpen = false;
@@ -391,7 +392,7 @@ void UIWeatherPropForm::Update()
 	if (!Form->IsClosed())
 	{
 		ImGui::SetNextWindowPos(ImGui::GetWindowViewport()->GetCenter(), ImGuiCond_Appearing, { 0.5f, 0.5f });
-		if (ImGui::Begin("Weather Properties", nullptr, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoResize/* | ImGuiWindowFlags_NoBackground*/))
+		if (ImGui::Begin(Loc("Weather properties"), nullptr, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoResize/* | ImGuiWindowFlags_NoBackground*/))
 		{
 			Form->Draw();
 		}

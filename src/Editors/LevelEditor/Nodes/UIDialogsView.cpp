@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "UIDialogsView.h"
+#include "../../xrEUI/EditorLocalization.h"
 #include "../Editor/UI_LevelTools.h"
 #include "../../../xrEngine/string_table.h"
 
@@ -19,14 +20,14 @@ namespace detail
 			ImVec2 center = ImGui::GetMainViewport()->GetCenter();
 			ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 
-			if (ImGui::BeginPopupModal("InputBox", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+			if (ImGui::BeginPopupModal(Loc("InputBox"), NULL, ImGuiWindowFlags_AlwaysAutoResize))
 			{
 				// Input text field
-				ImGui::Text("Enter something:");
+				ImGui::Text(Loc("Enter something:"));
 				ImGui::InputText("##input", input_buffer, IM_ARRAYSIZE(input_buffer));
 
 				// Buttons
-				if (ImGui::Button("OK", ImVec2(120, 0)))
+				if (ImGui::Button(Loc("OK"), ImVec2(120, 0)))
 				{
 					// Clear the input and close the modal
 					show_modal_input_box = false;
@@ -37,7 +38,7 @@ namespace detail
 				ImGui::SetItemDefaultFocus();
 				ImGui::SameLine();
 
-				if (ImGui::Button("Cancel", ImVec2(120, 0)))
+				if (ImGui::Button(Loc("Cancel"), ImVec2(120, 0)))
 				{
 					input_buffer[0] = '\0';
 					show_modal_input_box = false;
@@ -69,9 +70,9 @@ void CUIDialogView::Draw()
 	if (!bOpen)
 		return;
 
-	if (ImGui::Begin("Dialogs Editor", &bOpen))
+	if (ImGui::Begin(Loc("Dialogs Editor"), &bOpen))
 	{
-		if (ImGui::BeginChild("Dialogs in file", { (IsOpenList ? 300.f : 20.f), 0 }))
+		if (ImGui::BeginChild(Loc("Dialogs in file"), { (IsOpenList ? 300.f : 20.f), 0 }))
 		{
 			if (IsOpenList)
 			{
@@ -92,7 +93,7 @@ void CUIDialogView::Draw()
 					ImGui::EndListBox();
 				}
 
-				if (ImGui::Button("Save"))
+				if (ImGui::Button(Loc("Save")))
 				{
 					SaveDialog();
 				}
@@ -104,7 +105,7 @@ void CUIDialogView::Draw()
 				}
 				ImGui::SameLine();
 
-				ImGui::Checkbox("Auto Hide", &IsAutoHide);
+				ImGui::Checkbox(Loc("Auto Hide"), &IsAutoHide);
 				ImGui::SameLine();
 
 				ImGui::SetCursorPosX(282);
@@ -131,7 +132,7 @@ void CUIDialogView::Draw()
 
 		if (ImGui::BeginPopup("##nodesdialogscontextmenumacro"))
 		{
-			if (ImGui::MenuItem("Create Node"))
+			if (ImGui::MenuItem(Loc("Create Node")))
 			{
 				InputBoxMode = DialogInputBoxMode::NodeName;
 				detail::show_modal_input_box = true;
@@ -144,7 +145,7 @@ void CUIDialogView::Draw()
 				}
 			}
 
-			if (HoveredNodeID != -1 && ImGui::MenuItem("Delete Node"))
+			if (HoveredNodeID != -1 && ImGui::MenuItem(Loc("Delete Node")))
 			{
 				auto SelectedNode = std::find_if(Nodes.begin(), Nodes.end(), [HoveredNodeID](INodeUnknown* TestingNode)
 				{
@@ -166,7 +167,7 @@ void CUIDialogView::Draw()
 
 		if (detail::show_modal_input_box)
 		{
-			ImGui::OpenPopup("InputBox");
+			ImGui::OpenPopup(Loc("InputBox"));
 			detail::ShowModalInputBox();
 		}
 		else if (detail::HasResult)

@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../xrEUI/EditorLocalization.h"
 
 UITextForm* UITextForm::Form = nullptr;
 UITextForm::UITextForm(const char* text) :m_Text(text)
@@ -18,9 +19,9 @@ void UITextForm::Draw()
     if (ImGui::Button("Cancel"))CLBCancel();
     ImGui::SameLine(150);
 
-    if (ImGui::Button("Load"))CLBLoad(); ImGui::SameLine(0);
-    if (ImGui::Button("Save"))CLBSave(); ImGui::SameLine(0);
-    if (ImGui::Button("Clear"))CLBClear(); 
+    if (ImGui::Button(Loc("Load")))CLBLoad(); ImGui::SameLine(0);
+    if (ImGui::Button(Loc("Save")))CLBSave(); ImGui::SameLine(0);
+    if (ImGui::Button(Loc("Clear")))CLBClear();
 
     ImGui::EndGroup();
     ImGui::InputTextMultiline("", m_EditText, sizeof(m_EditText), ImVec2(500, 200));

@@ -4,6 +4,7 @@
 #include "../xrECore/Editor/UIEditLightAnim.h"
 
 #include "../xrEUI/ImGuizmo.h"
+#include "../xrEUI/EditorLocalization.h"
 
 #include "Editor/Utils/Gizmo/IM_Manipulator.h"
 #include "Editor/Terrain/HeightmapUtils.h"
@@ -218,16 +219,16 @@ bool UIMainForm::Frame()
 
 void UIMainForm::DrawContextMenu()
 {
-	if (ImGui::BeginMenu("Create"))
+	if (ImGui::BeginMenu(Loc("Create")))
 	{
-		if (ImGui::BeginMenu("Shape"))
+		if (ImGui::BeginMenu(Loc("Shape")))
 		{
-			if (ImGui::MenuItem("Box"))
+			if (ImGui::MenuItem(Loc("Box")))
 			{
 				ExecCommand(COMMAND_CREATE_SHAPE_BOX);
 			}
 
-			if (ImGui::MenuItem("Sphere"))
+			if (ImGui::MenuItem(Loc("Sphere")))
 			{
 				ExecCommand(COMMAND_CREATE_SHAPE_SPHERE);
 			}
@@ -236,29 +237,29 @@ void UIMainForm::DrawContextMenu()
 		}
 		ImGui::EndMenu();
 	}
-	if (ImGui::BeginMenu("Visiblity"))
+	if (ImGui::BeginMenu(Loc("Visiblity")))
 	{
-		if (ImGui::MenuItem("Hide Selected"))
+		if (ImGui::MenuItem(Loc("Hide Selected")))
 		{
 			ExecCommand(COMMAND_HIDE_SEL, FALSE);
 		}
-		if (ImGui::MenuItem("Hide Unselected"))
+		if (ImGui::MenuItem(Loc("Hide Unselected")))
 		{
 			ExecCommand(COMMAND_HIDE_UNSEL);
 		}
-		if (ImGui::MenuItem("Hide All"))
+		if (ImGui::MenuItem(Loc("Hide All")))
 		{
 			ExecCommand(COMMAND_HIDE_ALL, FALSE);
 		}
 		ImGui::Separator();
-		if (ImGui::MenuItem("Unhide All"))
+		if (ImGui::MenuItem(Loc("Unhide All")))
 		{
 			ExecCommand(COMMAND_HIDE_ALL, TRUE);
 		}
 		ImGui::EndMenu();
 	}
 
-	if(ImGui::BeginMenu("Locking"))
+	if(ImGui::BeginMenu(Loc("Locking")))
 	{
 		ESceneToolBase* SceneTool = Scene->GetTool(LTools->CurrentClassID());
 		ESceneToolBase::ETestResult TestOut = SceneTool->TestSelectedObjectsFlag(CCustomObject::flRT_Locked);
@@ -266,15 +267,15 @@ void UIMainForm::DrawContextMenu()
 		bool CanUnlock = TestOut != ESceneToolBase::ETestResult::None;
 
 		ImGui::BeginDisabled(!CanLock);
-		if(ImGui::MenuItem("Lock selection"))
+		if(ImGui::MenuItem(Loc("Lock selection")))
 		{
 			ExecCommand(COMMAND_LOCK_SEL, TRUE);
 		}
-		if(ImGui::MenuItem("Lock unselected"))
+		if(ImGui::MenuItem(Loc("Lock unselected")))
 		{
 			ExecCommand(COMMAND_LOCK_UNSEL, TRUE);
 		}
-		if(ImGui::MenuItem("Lock all"))
+		if(ImGui::MenuItem(Loc("Lock all")))
 		{
 			ExecCommand(COMMAND_LOCK_ALL, TRUE);
 		}
@@ -283,15 +284,15 @@ void UIMainForm::DrawContextMenu()
 		ImGui::Separator();
 
 		ImGui::BeginDisabled(!CanUnlock);
-		if(ImGui::MenuItem("Unlock selection"))
+		if(ImGui::MenuItem(Loc("Unlock selection")))
 		{
 			ExecCommand(COMMAND_LOCK_SEL, FALSE);
 		}
-		if(ImGui::MenuItem("Unlock unselected"))
+		if(ImGui::MenuItem(Loc("Unlock unselected")))
 		{
 			ExecCommand(COMMAND_LOCK_UNSEL, FALSE);
 		}
-		if(ImGui::MenuItem("Unlock all"))
+		if(ImGui::MenuItem(Loc("Unlock all")))
 		{
 			ExecCommand(COMMAND_LOCK_ALL, FALSE);
 		}
@@ -299,39 +300,39 @@ void UIMainForm::DrawContextMenu()
 		ImGui::EndMenu();
 	}
 
-	if (ImGui::BeginMenu("Edit"))
+	if (ImGui::BeginMenu(Loc("Edit")))
 	{
-		if (ImGui::MenuItem("Copy"))
+		if (ImGui::MenuItem(Loc("Copy")))
 		{
 			ExecCommand(COMMAND_COPY);
 		}
-		if (ImGui::MenuItem("Paste"))
+		if (ImGui::MenuItem(Loc("Paste")))
 		{
 			ExecCommand(COMMAND_PASTE);
 		}
-		if (ImGui::MenuItem("Duplicate"))
+		if (ImGui::MenuItem(Loc("Duplicate")))
 		{
 			ExecCommand(COMMAND_DUPLICATE);
 		}
 		ImGui::Separator();
-		if (ImGui::MenuItem("Cut"))
+		if (ImGui::MenuItem(Loc("Cut")))
 		{
 			ExecCommand(COMMAND_CUT);
 		}
 		ImGui::Separator();
-		if (ImGui::MenuItem("Delete"))
+		if (ImGui::MenuItem(Loc("Delete")))
 		{
 			ExecCommand(COMMAND_DELETE_SELECTION);
 		}
 		ImGui::EndMenu();
 	}
 	ImGui::Separator();
-	if (ImGui::MenuItem("Properties"))
+	if (ImGui::MenuItem(Loc("Properties")))
 	{
 		ExecCommand(COMMAND_SHOW_PROPERTIES);
 	}
 
-	if (ImGui::MenuItem("Make Heightmap"))
+	if (ImGui::MenuItem(Loc("Make Heightmap")))
 	{
 		ESceneObjectTool* mt = (ESceneObjectTool*)Scene->GetTool(OBJCLASS_SCENEOBJECT);
 		if (CSceneObject* Obj = (CSceneObject*)mt->LastSelected())
@@ -357,7 +358,7 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 			{
 				{
 					bool selected = psDeviceFlags.test(rsDrawSafeRect);
-					if (ImGui::MenuItem("Draw Safe Rect", "", &selected))
+					if (ImGui::MenuItem(Loc("Draw Safe Rect"), "", &selected))
 					{
 						psDeviceFlags.set(rsDrawSafeRect, selected);
 						UI->RedrawScene();
@@ -365,18 +366,18 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 				}
 				{
 					bool selected = psDeviceFlags.test(rsDrawGrid);
-					if (ImGui::MenuItem("Draw Grid", "", &selected))
+					if (ImGui::MenuItem(Loc("Draw Grid"), "", &selected))
 					{
 						psDeviceFlags.set(rsDrawGrid, selected);
 						UI->RedrawScene();
 					}
 				}
 				{
-					if (ImGui::BeginMenu("Coordinate Axes"))
+					if (ImGui::BeginMenu(Loc("Coordinate Axes")))
 					{
 						bool disabled = psDeviceFlags.test(rsDisableAxisCube);
 
-						if (ImGui::MenuItem("None", "", &disabled))
+						if (ImGui::MenuItem(Loc("None"), "", &disabled))
 						{
 							psDeviceFlags.set(rsDisableAxisCube, disabled);
 						}
@@ -388,11 +389,11 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 
 						(!psDeviceFlags.test(rsDrawAxis) ? selected_c : selected_a) = true;
 
-						if (ImGui::MenuItem("Axis", "", &selected_a))
+						if (ImGui::MenuItem(Loc("Axis"), "", &selected_a))
 						{
 							psDeviceFlags.set(rsDrawAxis, true);
 						}
-						if (ImGui::MenuItem("Cube", "", &selected_c))
+						if (ImGui::MenuItem(Loc("Cube"), "", &selected_c))
 						{
 							psDeviceFlags.set(rsDrawAxis, false);
 						}
@@ -404,7 +405,7 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 				ImGui::Separator();
 				{
 					bool selected = psDeviceFlags.test(rsFog);
-					if (ImGui::MenuItem("Fog", "", &selected))
+					if (ImGui::MenuItem(Loc("Fog"), "", &selected))
 					{
 						psDeviceFlags.set(rsFog, selected);
 						UI->RedrawScene();
@@ -412,9 +413,9 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 				}
 				// Погода
 				{
-					if (ImGui::BeginMenu("Environment"))
+					if (ImGui::BeginMenu(Loc("Environment")))
 					{
-						if (ImGui::MenuItem("Properties"))
+						if (ImGui::MenuItem(Loc("Properties")))
 						{
 							ExecCommand(COMMAND_WEATHER_PROPERTIES);
 						}
@@ -423,7 +424,7 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 							ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
 						}
 						bool selected = !psDeviceFlags.test(rsEnvironment);
-						if (ImGui::MenuItem("None", "", &selected))
+						if (ImGui::MenuItem(Loc("None"), "", &selected))
 						{
 							psDeviceFlags.set(rsEnvironment, false);
 							UI->RedrawScene();
@@ -447,9 +448,9 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 					}
 				}
 				ImGui::Separator();
-				if (ImGui::BeginMenu("Render"))
+				if (ImGui::BeginMenu(Loc("Render")))
 				{
-					if (ImGui::BeginMenu("Quality"))
+					if (ImGui::BeginMenu(Loc("Quality")))
 					{
 						static bool selected[4] = 
 						{
@@ -485,20 +486,20 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 						}
 						ImGui::EndMenu();
 					}
-					if (ImGui::BeginMenu("Fill Mode"))
+					if (ImGui::BeginMenu(Loc("Fill Mode")))
 					{
 						bool selected[3] = { EDevice->dwFillMode == D3DFILL_POINT,EDevice->dwFillMode == D3DFILL_WIREFRAME,EDevice->dwFillMode == D3DFILL_SOLID };
-						if (ImGui::MenuItem("Point", "", &selected[0]))
+						if (ImGui::MenuItem(Loc("Point"), "", &selected[0]))
 						{
 							EDevice->dwFillMode = D3DFILL_POINT;
 							UI->RedrawScene();
 						}
-						if (ImGui::MenuItem("Wireframe", "", &selected[1]))
+						if (ImGui::MenuItem(Loc("Wireframe"), "", &selected[1]))
 						{
 							EDevice->dwFillMode = D3DFILL_WIREFRAME;
 							UI->RedrawScene();
 						}
-						if (ImGui::MenuItem("Solid", "", &selected[2]))
+						if (ImGui::MenuItem(Loc("Solid"), "", &selected[2]))
 						{
 							EDevice->dwFillMode = D3DFILL_SOLID;
 							UI->RedrawScene();
@@ -507,7 +508,7 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 					}
 					{
 						bool selected = psDeviceFlags.test(rsEdgedFaces);
-						if (ImGui::MenuItem("Edged Faces", "", &selected))
+						if (ImGui::MenuItem(Loc("Edged Faces"), "", &selected))
 						{
 							psDeviceFlags.set(rsEdgedFaces, selected);
 							UI->RedrawScene();
@@ -518,14 +519,14 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 				ImGui::Separator();
 				{
 					bool selected = psDeviceFlags.test(rsMuteSounds);
-					if (ImGui::MenuItem("Mute Sounds", "", &selected))
+					if (ImGui::MenuItem(Loc("Mute Sounds"), "", &selected))
 					{
 						psDeviceFlags.set(rsMuteSounds, selected);
 					}
 				}
 				{
 					bool selected = psDeviceFlags.test(rsRenderRealTime);
-					if (ImGui::MenuItem("Real Time", "", &selected))
+					if (ImGui::MenuItem(Loc("Real Time"), "", &selected))
 					{
 						psDeviceFlags.set(rsRenderRealTime, selected);
 					}
@@ -533,7 +534,7 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 				ImGui::Separator();
 				{
 					bool selected = psDeviceFlags.test(rsStatistic);
-					if (ImGui::MenuItem("Stats", "", &selected)) { psDeviceFlags.set(rsStatistic, selected);  UI->RedrawScene(); }
+					if (ImGui::MenuItem(Loc("Stats"), "", &selected)) { psDeviceFlags.set(rsStatistic, selected);  UI->RedrawScene(); }
 
 				}
 				ImGui::EndPopup();
@@ -546,7 +547,7 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-				ImGui::SetTooltip("Menu");
+				ImGui::SetTooltip(Loc("Menu"));
 			}
 		}
 		ImGui::EndGroup();
@@ -573,7 +574,7 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-				ImGui::SetTooltip("Select");
+				ImGui::SetTooltip(Loc("Select"));
 			}
 			if (bPushColor)
 			{
@@ -601,7 +602,7 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-				ImGui::SetTooltip("Add");
+				ImGui::SetTooltip(Loc("Add"));
 			}
 			if (bPushColor)
 			{
@@ -629,7 +630,7 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-				ImGui::SetTooltip("Move");
+				ImGui::SetTooltip(Loc("Move"));
 			}
 			if (bPushColor)
 			{
@@ -656,7 +657,7 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-				ImGui::SetTooltip("Scale");
+				ImGui::SetTooltip(Loc("Scale"));
 			}
 			if (bPushColor)
 			{
@@ -683,7 +684,7 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-				ImGui::SetTooltip("Rotate");
+				ImGui::SetTooltip(Loc("Rotate"));
 			}
 			if (bPushColor)
 			{
@@ -695,7 +696,7 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 
 		ImGui::BeginDisabled(Action == etaScale || Action == etaSelect || Action == etaAdd);
 		bool UseLocal = !!imManipulator.MatrixMode;
-		if (ImGui::Checkbox("Local/World", &UseLocal))
+		if (ImGui::Checkbox(Loc("Local/World"), &UseLocal))
 		{
 			imManipulator.MatrixMode = UseLocal;
 		}
@@ -724,7 +725,7 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-				ImGui::SetTooltip("Object Snap Toggle");
+				ImGui::SetTooltip(Loc("Object Snap Toggle"));
 			}
 			if (bPushColor)
 			{
@@ -750,7 +751,7 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-				ImGui::SetTooltip("Moving Snap To Object Toggle");
+				ImGui::SetTooltip(Loc("Moving Snap To Object Toggle"));
 			}
 			if (bPushColor)
 			{
@@ -776,7 +777,7 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-				ImGui::SetTooltip("Normal Alignment");
+				ImGui::SetTooltip(Loc("Normal Alignment"));
 			}
 			if (bPushColor)
 			{
@@ -802,7 +803,7 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-				ImGui::SetTooltip("Grid Snap Toggle");
+				ImGui::SetTooltip(Loc("Grid Snap Toggle"));
 			}
 			if (bPushColor)
 			{
@@ -828,7 +829,7 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-				ImGui::SetTooltip("Vertex Snap Toggle");
+				ImGui::SetTooltip(Loc("Vertex Snap Toggle"));
 			}
 			if (bPushColor)
 			{
@@ -853,7 +854,7 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-				ImGui::SetTooltip("Focus the whole scene");
+				ImGui::SetTooltip(Loc("Focus the whole scene"));
 			}
 		}
 		ImGui::SameLine();
@@ -867,7 +868,7 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-				ImGui::SetTooltip("Focus on the selected object");
+				ImGui::SetTooltip(Loc("Focus on the selected object"));
 			}
 		}
 		ImGui::EndGroup();
@@ -897,7 +898,7 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 				if (ImGui::IsItemHovered())
 				{
 					ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-					ImGui::SetTooltip("Fixed object movement");
+					ImGui::SetTooltip(Loc("Fixed object movement"));
 				}
 				if (bPushColor)
 				{
@@ -993,7 +994,7 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-				ImGui::SetTooltip("The choice of a fixed distance of movement of the object");
+				ImGui::SetTooltip(Loc("The choice of a fixed distance of movement of the object"));
 			}
 		}
 		ImGui::SameLine(0, ImGui::GetFontSize());
@@ -1016,7 +1017,7 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 				if (ImGui::IsItemHovered())
 				{
 					ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-					ImGui::SetTooltip("Fixed Object Scaling");
+					ImGui::SetTooltip(Loc("Fixed Object Scaling"));
 				}
 				if (bPushColor)
 				{
@@ -1106,7 +1107,7 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-				ImGui::SetTooltip("Setting a Fixed Object Scaling");
+				ImGui::SetTooltip(Loc("Setting a Fixed Object Scaling"));
 			}
 		}
 		ImGui::SameLine(0, ImGui::GetFontSize());
@@ -1129,7 +1130,7 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 				if (ImGui::IsItemHovered())
 				{
 					ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-					ImGui::SetTooltip("Fixed object rotation angle");
+					ImGui::SetTooltip(Loc("Fixed object rotation angle"));
 				}
 				if (bPushColor)
 				{
@@ -1189,7 +1190,7 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-				ImGui::SetTooltip("Set a fixed rotation angle of the object (in degrees)");
+				ImGui::SetTooltip(Loc("Set a fixed rotation angle of the object (in degrees)"));
 			}
 		}
 		ImGui::EndGroup();
@@ -1217,7 +1218,7 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-				ImGui::SetTooltip("Parent CS Toggle");
+				ImGui::SetTooltip(Loc("Parent CS Toggle"));
 			}
 			if (bPushColor)
 			{
@@ -1244,7 +1245,7 @@ void UIMainForm::DrawRenderToolBar(ImVec2 Pos, ImVec2 Size)
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-				ImGui::SetTooltip("Scaling by Axes only");
+				ImGui::SetTooltip(Loc("Scaling by Axes only"));
 			}
 			if (bPushColor)
 			{
@@ -1287,7 +1288,7 @@ void UIMainForm::RenderOldCameraButtons()
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-				ImGui::SetTooltip("Front View");
+				ImGui::SetTooltip(Loc("Front View"));
 			}
 		}
 		ImGui::Spacing();
@@ -1304,7 +1305,7 @@ void UIMainForm::RenderOldCameraButtons()
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-				ImGui::SetTooltip("Back View");
+				ImGui::SetTooltip(Loc("Back View"));
 			}
 		}
 		ImGui::Spacing();
@@ -1321,7 +1322,7 @@ void UIMainForm::RenderOldCameraButtons()
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-				ImGui::SetTooltip("Left View");
+				ImGui::SetTooltip(Loc("Left View"));
 			}
 		}
 		ImGui::Spacing();
@@ -1338,7 +1339,7 @@ void UIMainForm::RenderOldCameraButtons()
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-				ImGui::SetTooltip("Right View");
+				ImGui::SetTooltip(Loc("Right View"));
 			}
 		}
 		ImGui::Spacing();
@@ -1355,7 +1356,7 @@ void UIMainForm::RenderOldCameraButtons()
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-				ImGui::SetTooltip("Top View");
+				ImGui::SetTooltip(Loc("Top View"));
 			}
 		}
 		ImGui::Spacing();
@@ -1372,7 +1373,7 @@ void UIMainForm::RenderOldCameraButtons()
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-				ImGui::SetTooltip("Bottom View");
+				ImGui::SetTooltip(Loc("Bottom View"));
 			}
 		}
 		ImGui::Spacing();
@@ -1389,7 +1390,7 @@ void UIMainForm::RenderOldCameraButtons()
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-				ImGui::SetTooltip("Reset View");
+				ImGui::SetTooltip(Loc("Reset View"));
 			}
 		}
 		ImGui::EndGroup();
@@ -1418,7 +1419,7 @@ void UIMainForm::RenderOldCameraButtons()
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-				ImGui::SetTooltip("Free camera mode");
+				ImGui::SetTooltip(Loc("Free camera mode"));
 			}
 			if (bPushColor)
 			{
@@ -1445,7 +1446,7 @@ void UIMainForm::RenderOldCameraButtons()
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-				ImGui::SetTooltip("Snap the camera to the center of coordinates|scene");
+				ImGui::SetTooltip(Loc("Snap the camera to the center of coordinates|scene"));
 			}
 			if (bPushColor)
 			{
@@ -1472,7 +1473,7 @@ void UIMainForm::RenderOldCameraButtons()
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-				ImGui::SetTooltip("Automatic camera flyover of the scene");
+				ImGui::SetTooltip(Loc("Automatic camera flyover of the scene"));
 			}
 			if (bPushColor)
 			{
@@ -1506,7 +1507,7 @@ void UIMainForm::RenderAxisButtons()
 		if (ImGui::IsItemHovered())
 		{
 			ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-			ImGui::SetTooltip("Select X Axis");
+			ImGui::SetTooltip(Loc("Select X Axis"));
 		}
 		if (bPushColor)
 		{
@@ -1532,7 +1533,7 @@ void UIMainForm::RenderAxisButtons()
 		if (ImGui::IsItemHovered())
 		{
 			ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-			ImGui::SetTooltip("Select Y Axis");
+			ImGui::SetTooltip(Loc("Select Y Axis"));
 		}
 		if (bPushColor)
 		{
@@ -1558,7 +1559,7 @@ void UIMainForm::RenderAxisButtons()
 		if (ImGui::IsItemHovered())
 		{
 			ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-			ImGui::SetTooltip("Select Z Axis");
+			ImGui::SetTooltip(Loc("Select Z Axis"));
 		}
 		if (bPushColor)
 		{
@@ -1584,7 +1585,7 @@ void UIMainForm::RenderAxisButtons()
 		if (ImGui::IsItemHovered())
 		{
 			ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-			ImGui::SetTooltip("Select ZX Axis");
+			ImGui::SetTooltip(Loc("Select ZX Axis"));
 		}
 		if (bPushColor)
 		{

@@ -27,18 +27,18 @@ void UIPortalTool::Draw()
             }
             if (ImGui::Button(Loc("Compute All Portals"),ImVec2(-1,0)))
             {
-                if (mrYes == ELog.DlgMsg(mtConfirmation, mbYes |mbNo, "Are you sure want to destroy all existing portals and compute them again?"))
+                if (mrYes == ELog.DlgMsg(mtConfirmation, mbYes |mbNo, Loc("Are you sure want to destroy all existing portals and compute them again?")))
                 {
                     int cnt = PortalUtils.CalculateAllPortals();
-                    if (cnt) ELog.DlgMsg(mtInformation, "Calculated '%d' portal(s).", cnt);
+                    if (cnt) ELog.DlgMsg(mtInformation, Loc("Calculated '%d' portal(s)."), cnt);
                 }
             }
             if (ImGui::Button(Loc("Compute Sel. Portals"),ImVec2(-1,0)))
             {
-                if (mrYes == ELog.DlgMsg(mtConfirmation, mbYes |mbNo, "Are you sure want to destroy all existing portals and compute them again?"))
+                if (mrYes == ELog.DlgMsg(mtConfirmation, mbYes |mbNo, Loc("Are you sure want to destroy all existing portals and compute them again?")))
                 {
                     int cnt = PortalUtils.CalculateSelectedPortals();
-                    if (cnt) ELog.DlgMsg(mtInformation, "Calculated '%d' portal(s).", cnt);
+                    if (cnt) ELog.DlgMsg(mtInformation, Loc("Calculated '%d' portal(s)."), cnt);
                 }
             }
             if (ImGui::Button(Loc("Remove Similar"),ImVec2(-1,0)))

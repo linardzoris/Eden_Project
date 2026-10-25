@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "UIMacroView.h"
+#include "../../xrEUI/EditorLocalization.h"
 
 #include "../../xrEUI/ImNodeEditor/imnodes.h"
 
@@ -113,11 +114,11 @@ void CUIMacroView::Draw()
 	if (!IsOpen)
 		return;
 
-	if (ImGui::Begin("Macro Node Viewer", &IsOpen))
+	if (ImGui::Begin(Loc("Macro Node Viewer"), &IsOpen))
 	{
 		auto& io = ImGui::GetIO();
 		
-		if (ImGui::Button("Run"))
+		if (ImGui::Button(Loc("Run")))
 		{
 			Exec();
 		}
@@ -136,7 +137,7 @@ void CUIMacroView::Draw()
 
 		if (ImGui::BeginPopup("##nodesviewportcontextmenumacro"))
 		{
-			if (ImGui::BeginMenu("Create Node"))
+			if (ImGui::BeginMenu(Loc("Create Node")))
 			{
 				for (const MacroNodeTypes& Node : CommandsList)
 				{
@@ -153,7 +154,7 @@ void CUIMacroView::Draw()
 				ImGui::EndMenu();
 			}
 
-			if (HoveredNodeID != -1 && ImGui::MenuItem("Remove"))
+			if (HoveredNodeID != -1 && ImGui::MenuItem(Loc("Remove")))
 			{
 				Nodes.erase
 				(

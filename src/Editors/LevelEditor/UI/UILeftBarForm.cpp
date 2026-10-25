@@ -48,7 +48,7 @@ void RenderToolButton(ESceneToolBase * tool, ObjClassID tool_id)
 		col_tool = ImGui::GetStyle().Colors[ImGuiCol_ButtonActive];
 
 	ImGui::PushStyleColor(ImGuiCol_Button, col_tool);
-	if (ImGui::Button(tool->ClassDesc(), ImVec2(-1, 15)))
+	if (ImGui::Button(Loc(tool->ClassDesc()), ImVec2(-1, ImGui::GetFrameHeight())))
 	{
 		ExecCommand(COMMAND_CHANGE_TARGET, tool_id);
 	}
@@ -114,7 +114,7 @@ void UILeftBarForm::Draw()
 				if (!IsVisible) IconColor.w = 0.5f;
 
 				ImGui::PushStyleColor(ImGuiCol_Text, IconColor);
-				if (ImGui::Button(Icon.c_str(), ImVec2(20, 15)))
+				if (ImGui::Button(Icon.c_str(), ImVec2(20, ImGui::GetFrameHeight())))
 				{
 					tool->m_EditFlags.set(ESceneToolBase::flVisible, !IsVisible);
 					UI->RedrawScene();
@@ -127,7 +127,7 @@ void UILeftBarForm::Draw()
 				ImVec4 BtnColor = IsActive ? Style.Colors[ImGuiCol_ButtonActive] : Style.Colors[ImGuiCol_Button];
 
 				ImGui::PushStyleColor(ImGuiCol_Button, BtnColor);
-				if (ImGui::Button(tool->ClassDesc(), ImVec2(-1, 15)))
+				if (ImGui::Button(Loc(tool->ClassDesc()), ImVec2(-1, ImGui::GetFrameHeight())))
 				{
 					ExecCommand(COMMAND_CHANGE_TARGET, IsActive ? OBJCLASS_DUMMY : Tools[id]);
 				}
@@ -211,10 +211,10 @@ void UILeftBarForm::Draw()
 		}
 
 		ImGui::Separator();
-		ImGui::Checkbox("+/- Mode", &m_SnapListMode); ImGui::SameLine(0, 10);
+		ImGui::Checkbox(Loc("+/- Mode"), &m_SnapListMode); ImGui::SameLine(0, 10);
 		if (ImGui::Button("X"))
 		{
-			if (ELog.DlgMsg(mtConfirmation, mbYes | mbNo, "Are you sure to clear snap objects?") == mrYes)
+			if (ELog.DlgMsg(mtConfirmation, mbYes | mbNo, Loc("Are you sure to clear snap objects?")) == mrYes)
 				ExecCommand(COMMAND_CLEAR_SNAP_OBJECTS);
 		}
 		ImGui::PopStyleVar(2);

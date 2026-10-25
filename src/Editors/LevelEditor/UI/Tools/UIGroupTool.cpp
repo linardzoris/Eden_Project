@@ -69,7 +69,7 @@ void UIGroupTool::Draw()
 					Tools->UpdateProperties(TRUE);
 				}
 			}
-			ImGui::Text("Current:%s", m_Current.c_str()? m_Current.c_str():"");
+			ImGui::Text(Loc("Current:%s"), m_Current.c_str()? m_Current.c_str():"");
 		}
 		ImGui::Separator();
 		ImGui::Indent(ImGui::GetTreeNodeToLabelSpacing());

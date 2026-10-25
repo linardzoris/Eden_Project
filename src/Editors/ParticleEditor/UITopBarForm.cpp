@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../xrEUI/EditorLocalization.h"
 
 UITopBarForm::UITopBarForm()
 {
@@ -47,7 +48,7 @@ void UITopBarForm::Draw()
         if (ImGui::IsItemHovered())
         {
             ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-            ImGui::SetTooltip("Undo the last action.");
+            ImGui::SetTooltip(Loc("Undo the last action."));
         }
         ImGui::SameLine();
 
@@ -60,7 +61,7 @@ void UITopBarForm::Draw()
         if (ImGui::IsItemHovered())
         {
             ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-            ImGui::SetTooltip("Repeat the last action.");
+            ImGui::SetTooltip(Loc("Repeat the last action."));
         }
         ImGui::SameLine();
 
@@ -72,7 +73,7 @@ void UITopBarForm::Draw()
         if (ImGui::IsItemHovered())
         {
             ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-            ImGui::SetTooltip("Save the particles in unpacked form, in 'rawdata/particles'");
+            ImGui::SetTooltip(Loc("Save the particles in unpacked form, in 'rawdata/particles'"));
         }
         ImGui::SameLine();
 
@@ -84,7 +85,7 @@ void UITopBarForm::Draw()
         if (ImGui::IsItemHovered())
         {
             ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-            ImGui::SetTooltip("Reload particles from 'rawdata/particles'");
+            ImGui::SetTooltip(Loc("Reload particles from 'rawdata/particles'"));
         }
         ImGui::SameLine();
 
@@ -96,7 +97,7 @@ void UITopBarForm::Draw()
         if (ImGui::IsItemHovered())
         {
             ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-            ImGui::SetTooltip("Open file .xr");
+            ImGui::SetTooltip(Loc("Open file .xr"));
         }
         ImGui::SameLine();
 
@@ -108,7 +109,7 @@ void UITopBarForm::Draw()
         if (ImGui::IsItemHovered())
         {
             ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-            ImGui::SetTooltip("Save file .xr");
+            ImGui::SetTooltip(Loc("Save file .xr"));
         }
         ImGui::SameLine();
 
@@ -120,7 +121,7 @@ void UITopBarForm::Draw()
         if (ImGui::IsItemHovered())
         {
             ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-            ImGui::SetTooltip("Open folder 'GameData'");
+            ImGui::SetTooltip(Loc("Open folder 'GameData'"));
         }
         ImGui::SameLine();
 
@@ -132,7 +133,7 @@ void UITopBarForm::Draw()
         if (ImGui::IsItemHovered())
         {
             ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-            ImGui::SetTooltip("Particle Validation.");
+            ImGui::SetTooltip(Loc("Particle Validation."));
         }
     }
     ImGui::End();

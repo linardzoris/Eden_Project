@@ -2,6 +2,7 @@
 #include "UITopBarForm.h"
 #include <shellapi.h>
 #include "IconsFontAwesome6.h"
+#include "../../xrEUI/EditorLocalization.h"
 UITopBarForm::UITopBarForm()
 {
     m_timeUndo               = 0;
@@ -28,7 +29,7 @@ UITopBarForm::~UITopBarForm() {}
 			if (ImGui::IsItemHovered()) \
 			{ \
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand); \
-				ImGui::SetTooltip(Hint); \
+				ImGui::SetTooltip(Loc(Hint)); \
 			} \
 			ImGui::SameLine()
 
@@ -42,7 +43,7 @@ UITopBarForm::~UITopBarForm() {}
 			if (ImGui::IsItemHovered()) \
 			{ \
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand); \
-				ImGui::SetTooltip(Hint); \
+				ImGui::SetTooltip(Loc(Hint)); \
 			} \
 			ImGui::SameLine()
 #define STR_HELPER(x) #x
@@ -56,7 +57,7 @@ UITopBarForm::~UITopBarForm() {}
 			if (ImGui::IsItemHovered()) \
 			{ \
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand); \
-				ImGui::SetTooltip(Hint); \
+				ImGui::SetTooltip(Loc(Hint)); \
 			} \
 			ImGui::SameLine()
 #define IMGUI_HINT_AF_BUTTON(Name, Hint, Callback) \
@@ -65,7 +66,7 @@ UITopBarForm::~UITopBarForm() {}
 			if (ImGui::IsItemHovered()) \
 			{ \
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand); \
-				ImGui::SetTooltip(Hint); \
+				ImGui::SetTooltip(Loc(Hint)); \
 			} \
 			ImGui::SameLine()
 
@@ -99,16 +100,16 @@ void UITopBarForm::Draw()
 
 		if (ImGui::BeginTable("##ToolbarTable", 10, ImGuiTableFlags_BordersV | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ContextMenuInBody | ImGuiTableFlags_Hideable))
 		{
-			ImGui::TableSetupColumn("Actions");
-			ImGui::TableSetupColumn("File");
-			ImGui::TableSetupColumn("PIE Pre-Build");
-			ImGui::TableSetupColumn("PIE Actions");
-			ImGui::TableSetupColumn("Compile Actions");
-			ImGui::TableSetupColumn("Engine");
-			ImGui::TableSetupColumn("Directory Actions");
-			ImGui::TableSetupColumn("Sound Preferences");
-			ImGui::TableSetupColumn("Physics");
-			ImGui::TableSetupColumn("Preferences");
+			ImGui::TableSetupColumn(Loc("Actions"));
+			ImGui::TableSetupColumn(Loc("File"));
+			ImGui::TableSetupColumn(Loc("PIE Pre-Build"));
+			ImGui::TableSetupColumn(Loc("PIE Actions"));
+			ImGui::TableSetupColumn(Loc("Compile Actions"));
+			ImGui::TableSetupColumn(Loc("Engine"));
+			ImGui::TableSetupColumn(Loc("Directory Actions"));
+			ImGui::TableSetupColumn(Loc("Sound Preferences"));
+			ImGui::TableSetupColumn(Loc("Physics"));
+			ImGui::TableSetupColumn(Loc("Preferences"));
 
 			auto yMaxSize = ImGui::GetContentRegionAvail().y;
 
@@ -155,15 +156,15 @@ void UITopBarForm::Draw()
 				if (ImGui::IsItemHovered())
 				{
 					ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-					ImGui::SetTooltip("Play in Editor settings");
+					ImGui::SetTooltip(Loc("Play in Editor settings"));
 				}
 
 				ImGui::SameLine();
 				if (ImGui::BeginPopup("test"))
 				{
-					ImGui::Checkbox("Verify space restrictors", &m_VerifySpaceRestrictors);
-					ImGui::Checkbox("Apply camera pos to actor", &UseCameraPosForActor);
-					ImGui::Checkbox("Build artefact spawn positions", &((CLevelPreferences*)EPrefs)->PIEArtSpawnPos);
+					ImGui::Checkbox(Loc("Verify space restrictors"), &m_VerifySpaceRestrictors);
+					ImGui::Checkbox(Loc("Apply camera pos to actor"), &UseCameraPosForActor);
+					ImGui::Checkbox(Loc("Build artefact spawn positions"), &((CLevelPreferences*)EPrefs)->PIEArtSpawnPos);
 					ImGui::EndPopup();
 				}
 			}
@@ -192,27 +193,27 @@ void UITopBarForm::Draw()
 			if (ImGui::TableNextColumn())
 			{
 				ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 3);
-				ImGui::Checkbox("Hint ", &MainForm->GetRenderForm()->UseHint);
+				ImGui::Checkbox(Loc("Hint "), &MainForm->GetRenderForm()->UseHint);
 				ImGui::SameLine();
 
 				ImGui::BeginDisabled(psDeviceFlags.is(rsMuteSounds));
 				ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 3);
 				ImGui::SetNextItemWidth(150);
-				ImGui::SliderFloat("Volume", &EPrefs->sound_volume, 0, 1, "%.2f");
+				ImGui::SliderFloat(Loc("Volume"), &EPrefs->sound_volume, 0, 1, "%.2f");
 				ImGui::EndDisabled();
 			}
 
 			if (ImGui::TableNextColumn())
 			{
 				ImGui::SetCursorPosY(3);
-				if (ImGui::Checkbox("Phys Simulation", &m_Simulate))
+				if (ImGui::Checkbox(Loc("Phys Simulation"), &m_Simulate))
 				{
 					ExecCommand(COMMAND_SIMULATE, true);
 				}
 				if (ImGui::IsItemHovered())
 				{
 					ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-					ImGui::SetTooltip("Activates the physics simulation of the selected objects");
+					ImGui::SetTooltip(Loc("Activates the physics simulation of the selected objects"));
 				}
 				ImGui::SameLine(0, 10);
 
@@ -220,7 +221,7 @@ void UITopBarForm::Draw()
 
 
 				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.f, 0.f, 0.f, 0.15f));
-				if (ImGui::Button("Use Pos"))
+				if (ImGui::Button(Loc("Use Pos")))
 				{
 					ExecCommand(COMMAND_USE_SIMULATE_POSITIONS, true);
 				}
@@ -228,7 +229,7 @@ void UITopBarForm::Draw()
 				if (ImGui::IsItemHovered())
 				{
 					ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-					ImGui::SetTooltip("Use the position of the selected object when physics simulation is active\r\nThe position of the object will be applied when simulating physics");
+					ImGui::SetTooltip(Loc("Use the position of the selected object when physics simulation is active\r\nThe position of the object will be applied when simulating physics"));
 				}
 				ImGui::PopStyleColor();
 			}

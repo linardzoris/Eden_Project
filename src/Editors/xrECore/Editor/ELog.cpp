@@ -7,6 +7,7 @@
 #include "ELog.h"
 #include "UILogForm.h"
 #include "ui_main.h"
+#include "../xrEUI/XrUIManager.h"
 
 //----------------------------------------------------
 CLog ELog;
@@ -139,6 +140,17 @@ int CLog::DlgMsg (TMsgDlgType mt, int btn, LPCSTR _Format, ...)
 
 	int res=0;
 
+	// Information/warning/error messages become ImGui modal message boxes;
+	// only confirmations (which need the user's choice) stay native modal.
+	if (mtConfirmation != mt && mtSkip != mt)
+	{
+		if (GUIManager)
+			GUIManager->AddPopup(mt, buf);
+		Msg(mt, buf);
+		in_use = false;
+		return mrOK;
+	}
+
     ExecCommand(COMMAND_RENDER_FOCUS);
 
     res=MessageDlg(buf, mt, btn);
@@ -173,6 +185,18 @@ int CLog::DlgMsg (TMsgDlgType mt, LPCSTR _Format, ...)
 	vsprintf( buf, _Format, l );
 
     int res=0;
+
+	// Information/warning/error messages become ImGui modal message boxes;
+	// only confirmations (which need the user's choice) stay native modal.
+	if (mtConfirmation != mt && mtSkip != mt)
+	{
+		if (GUIManager)
+			GUIManager->AddPopup(mt, buf);
+		Msg(mt, buf);
+		in_use = false;
+		return mrOK;
+	}
+
     ExecCommand(COMMAND_RENDER_FOCUS);
 
     if (mtConfirmation==mt)	res = MessageDlg(buf, mt,  mbYes | mbNo | mbCancel);

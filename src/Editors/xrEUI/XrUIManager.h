@@ -13,6 +13,16 @@ enum TShiftState_
 using TShiftState = int;
 inline int UIToolBarSize = 24;
 
+// Non-blocking editor notification (replaces native modal boxes for
+// information/warning/error messages). Type matches TMsgDlgType values.
+struct XREUI_API EditorToast
+{
+	int Type;
+	xr_string Text;
+	float Life;
+	float TotalLife;
+};
+
 class XREUI_API XrUIManager
 {
 public:
@@ -42,6 +52,13 @@ public:
 	virtual bool IsPlayInEditor() { return false; }
 	void ApplyShortCutInput(DWORD Key);
 
+	void AddToast(int Type, const char* Text);
+	void DrawToasts();
+
+	// Queued ImGui modal message boxes (one shown per frame until confirmed)
+	void AddPopup(int Type, const char* Text);
+	void DrawPopups();
+
 protected:
 	virtual void OnDrawUI();
 
@@ -51,6 +68,8 @@ private:
 	xr_vector<IEditorWnd*> m_UIArray;
 	string_path m_name_ini;
 	float m_ScaleDpi;
+	xr_vector<EditorToast> m_Toasts;
+	xr_vector<EditorToast> m_Popups;
 
 public: 
 	template<typename T> 

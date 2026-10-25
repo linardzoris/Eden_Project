@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../../../xrEUI/EditorLocalization.h"
 
 UIObjectList* UIObjectList::Form = nullptr;
 
@@ -17,7 +18,7 @@ void UIObjectList::Draw()
 {
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(400, 400));
 
-	if (!ImGui::Begin("Object List", &bOpen))
+	if (!ImGui::Begin(Loc("Object List"), &bOpen))
 	{
 		ImGui::PopStyleVar(1);
 		ImGui::End();
@@ -29,19 +30,19 @@ void UIObjectList::Draw()
 
 
 	ImGui::BeginGroup();
-	if (ImGui::RadioButton("All", m_Mode == M_All))
+	if (ImGui::RadioButton(Loc("All"), m_Mode == M_All))
 	{
 		m_Mode = M_All;
 		m_Root.ClearSelcted();
 	}
 	ImGui::SameLine();
-	if (ImGui::RadioButton("Visible", m_Mode == M_Visible))
+	if (ImGui::RadioButton(Loc("Visible"), m_Mode == M_Visible))
 	{
 		m_Mode = M_Visible;
 		m_Root.ClearSelcted();
 	}
 	ImGui::SameLine();
-	if (ImGui::RadioButton("Invisible", m_Mode == M_Inbvisible))
+	if (ImGui::RadioButton(Loc("Invisible"), m_Mode == M_Inbvisible))
 	{
 		m_Mode = M_Inbvisible;
 		m_Root.ClearSelcted();
@@ -53,7 +54,7 @@ void UIObjectList::Draw()
 	const float Spacing = ImGui::GetStyle().ItemSpacing.x;
 	const float BtnWidth = (Avail - Spacing * 2) / 3.0f;
 
-	if (ImGui::Button("Focus", ImVec2(BtnWidth, 0)))
+	if (ImGui::Button(Loc("Focus"), ImVec2(BtnWidth, 0)))
 	{
 		for (UITreeItem* Item : m_Root.Items)
 		{
@@ -72,7 +73,7 @@ void UIObjectList::Draw()
 	}
 
 	ImGui::SameLine();
-	if (ImGui::Button("Show", ImVec2(BtnWidth, 0)))
+	if (ImGui::Button(Loc("Show"), ImVec2(BtnWidth, 0)))
 	{
 		for (UITreeItem* Item : m_Root.Items)
 		{
@@ -83,7 +84,7 @@ void UIObjectList::Draw()
 	}
 
 	ImGui::SameLine();
-	if (ImGui::Button("Hide", ImVec2(BtnWidth, 0)))
+	if (ImGui::Button(Loc("Hide"), ImVec2(BtnWidth, 0)))
 	{
 		for (UITreeItem* Item : m_Root.Items)
 		{
@@ -214,7 +215,7 @@ void UIObjectList::DrawObjects()
 		IsFocused = IsDocked || ImGui::IsWindowFocused();
 
 		ImGui::TableSetupScrollFreeze(1, 1);
-		ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthStretch);
+		ImGui::TableSetupColumn(Loc("Label"), ImGuiTableColumnFlags_WidthStretch);
 		ImGui::TableHeadersRow();
 		m_Root.DrawRoot();
 		ImGui::EndTable();

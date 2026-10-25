@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../../xrEUI/EditorLocalization.h"
 UIPropertiesModal* UIPropertiesModal::Form = nullptr;
 UIPropertiesModal::UIPropertiesModal()
 {
@@ -14,12 +15,12 @@ UIPropertiesModal::~UIPropertiesModal()
 void UIPropertiesModal::Draw()
 {
 	m_Props->Draw();
-	if (ImGui::Button("Ok"))
+	if (ImGui::Button(Loc("Ok")))
 	{
 		m_Result = R_Ok;
 		bOpen = false;
 	}ImGui::SameLine();
-	if (ImGui::Button("Cancel"))
+	if (ImGui::Button(Loc("Cancel")))
 	{
 		bOpen = false;
 	}
@@ -30,7 +31,7 @@ void UIPropertiesModal::Update()
 	if (Form && !Form->IsClosed())
 	{
 		ImGui::SetNextWindowSize(ImVec2(400, 400), ImGuiCond_FirstUseEver);
-		if (ImGui::BeginPopupModal("Properties Modal",&Form->bOpen,0, true))
+		if (ImGui::BeginPopupModal(Loc("Properties Modal"),&Form->bOpen,0, true))
 		{
 			Form->Draw();
 			ImGui::EndPopup();

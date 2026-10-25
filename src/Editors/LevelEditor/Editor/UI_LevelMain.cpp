@@ -4,6 +4,7 @@
 #include "UI\UIEditLibrary.h"
 #include "Editor/Utils/ContentView.h"
 #include "../xrECore/Editor/UIEditLightAnim.h"
+#include "../../xrEUI/EditorLocalization.h"
 
 ECORE_API extern bool bIsLevelEditor;
 CLevelMain* LUI = (CLevelMain*)UI;
@@ -550,7 +551,7 @@ CCommandVar CommandUndo(CCommandVar p1, CCommandVar p2)
 	if (!Scene->locked())
 	{
 		if (!Scene->Undo())
-			ELog.DlgMsg(mtInformation, "Undo buffer empty");
+			ELog.DlgMsg(mtInformation, Loc("Undo buffer empty"));
 		else
 		{
 			LTools->Reset();
@@ -572,7 +573,7 @@ CCommandVar CommandRedo(CCommandVar p1, CCommandVar p2)
 	if (!Scene->locked()) 
 	{
 		if (!Scene->Redo()) 
-			ELog.DlgMsg(mtInformation, "Redo buffer empty");
+			ELog.DlgMsg(mtInformation, Loc("Redo buffer empty"));
 		else 
 		{
 			LTools->Reset();

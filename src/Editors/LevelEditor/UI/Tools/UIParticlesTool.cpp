@@ -42,7 +42,7 @@ void UIParticlesTool::Draw()
                         ((EParticlesObject*)(*_F))->Play();
                 }
             }ImGui::SameLine(); 
-            if (ImGui::Button("stop", ImVec2(0, ImGui::GetFrameHeight())))
+            if (ImGui::Button(Loc("stop"), ImVec2(0, ImGui::GetFrameHeight())))
             {
                 ObjectIt _F = Scene->FirstObj(OBJCLASS_PS);
                 ObjectIt _E = Scene->LastObj(OBJCLASS_PS);

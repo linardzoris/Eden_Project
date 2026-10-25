@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../../xrEUI/EditorLocalization.h"
 
 UILPropertiesForm::UILPropertiesForm()
 {
@@ -12,7 +13,7 @@ void UILPropertiesForm::Draw()
 {
 	if (bOpen)
 	{
-		if (ImGui::Begin("Properties", &bOpen))
+		if (ImGui::Begin(Loc("Properties"), &bOpen))
 		{
 			if (LTools->PropUpdateIsCompleted)
 			{
@@ -20,7 +21,7 @@ void UILPropertiesForm::Draw()
 			}
 			else
 			{
-				ImGui::Text("Async loading...");
+				ImGui::Text(Loc("Async loading..."));
 			}
 		}
 		ImGui::End();

@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "UIPostProcess.h"
+#include "../../xrEUI/EditorLocalization.h"
 
 static CMainPPE MyForm;
 
@@ -402,7 +403,7 @@ void CMainPPE::DrawTool()
 		{
 			ImGui::SetWindowPos({ XPos + 5,  YPos + WndSize.y + 5 + HeaderSize });
 			//ImGui::SetWindowSize({ 300, 50 });
-			if (ImGui::Combo("Mode", &ModeIter, AllModes, IM_ARRAYSIZE(AllModes)))
+			if (ImGui::Combo(Loc("Mode"), &ModeIter, AllModes, IM_ARRAYSIZE(AllModes)))
 			{
 				LoadData();
 			}
@@ -446,13 +447,13 @@ void CMainPPE::DrawTool()
 			ImGui::SetCursorPos({ 92, OldYPos });
 			if (ImGui::BeginChild("HelperPointButtons", { 130, 40 }))
 			{
-				if (ImGui::Button("Add", { 32, 19 }))
+				if (ImGui::Button(Loc("Add"), { 32, 19 }))
 				{
 					AddKey(InputItemName);
 				}
 
 				ImGui::SetCursorPos({ 35, 0 });
-				if (ImGui::Button("Del", { 33, 19 }))
+				if (ImGui::Button(Loc("Del"), { 33, 19 }))
 				{
 					size_t Iter = 0;
 					for (const PointItem& Item : ListData)
@@ -474,7 +475,7 @@ void CMainPPE::DrawTool()
 				}
 
 				ImGui::SetCursorPos({ 71, 0 });
-				if (ImGui::Button("Clear", { 40, 19 }))
+				if (ImGui::Button(Loc("Clear"), { 40, 19 }))
 				{
 					auto PP = GetCurrentParam();
 
@@ -495,12 +496,12 @@ void CMainPPE::DrawTool()
 			if (ListData.empty())
 			{
 				float Temp = 0;
-				ImGui::InputFloat("Key Time ", &Temp, 0.01f, 0.5f, "%.2f");
+				ImGui::InputFloat(Loc("Key Time "), &Temp, 0.01f, 0.5f, "%.2f");
 			}
 			else
 			{
 				float& Value = ListData[GetSelectedItemID()].Value;
-				ImGui::InputFloat("Key Time ", &Value, 0.01f, 0.5f, "%.2f");
+				ImGui::InputFloat(Loc("Key Time "), &Value, 0.01f, 0.5f, "%.2f");
 
 				if (Value < 0)
 					Value = 0;
@@ -508,25 +509,25 @@ void CMainPPE::DrawTool()
 
 			if (ModeIter == 3)
 			{
-				ImGui::InputFloat("Duality [H]", &Duality.x, 0.01f, 0.5f);
-				ImGui::InputFloat("Duality [V]", &Duality.y, 0.01f, 0.5f);
+				ImGui::InputFloat(Loc("Duality [H]"), &Duality.x, 0.01f, 0.5f);
+				ImGui::InputFloat(Loc("Duality [V]"), &Duality.y, 0.01f, 0.5f);
 			}
 			else if (ModeIter == 6)
 			{
-				ImGui::InputFloat("Influence", &Influence, 0.01f, 0.5f);
-				ImGui::InputText("Texture", Texture, sizeof(Texture));
+				ImGui::InputFloat(Loc("Influence"), &Influence, 0.01f, 0.5f);
+				ImGui::InputText(Loc("Texture"), Texture, sizeof(Texture));
 			}
 			else if (ModeIter == 4)
 			{
-				ImGui::InputFloat("Noise [Intensity]", &Noise.x, 0.01f, 0.5f);
-				ImGui::InputFloat("Noise [Grain]", &Noise.y, 0.01f, 0.5f);
-				ImGui::InputFloat("Noise [FPS]", &Noise.z, 0.01f, 0.5f);
+				ImGui::InputFloat(Loc("Noise [Intensity]"), &Noise.x, 0.01f, 0.5f);
+				ImGui::InputFloat(Loc("Noise [Grain]"), &Noise.y, 0.01f, 0.5f);
+				ImGui::InputFloat(Loc("Noise [FPS]"), &Noise.z, 0.01f, 0.5f);
 			}
 			else
 			{
 				if (ModeIter == 2 || ModeIter == 5)
 				{
-					ImGui::InputFloat("Itensity", &Itensity, 0.01f, 0.5f, "%.2f");
+					ImGui::InputFloat(Loc("Itensity"), &Itensity, 0.01f, 0.5f, "%.2f");
 
 					if (Itensity < 0)
 						Itensity = 0;
@@ -543,9 +544,9 @@ void CMainPPE::DrawTool()
 
 void CMainPPE::DrawPicker()
 {
-	ImGui::ColorEdit4("Color", (float*)&Color);
+	ImGui::ColorEdit4(Loc("Color"), (float*)&Color);
 
-	if (UsePicker && ImGui::Begin("EditHelper"))
+	if (UsePicker && ImGui::Begin(Loc("EditHelper")))
 	{
 		static float Color[4] = { 1, 1, 1, 1 };
 		ImGui::ColorPicker4("Color", Color);
@@ -563,7 +564,7 @@ void CMainPPE::Draw()
 	if (!bOpen)
 		return;
 
-	if (ImGui::Begin("Post Process Editor", &bOpen))
+	if (ImGui::Begin(Loc("Post Process Editor"), &bOpen))
 	{
 		ImVec2 BtnSize = { 40, 20 };
 
@@ -573,23 +574,23 @@ void CMainPPE::Draw()
 			ImGui::SameLine();
 		}
 
-		if (ImGui::Button("New", BtnSize))
+		if (ImGui::Button(Loc("New"), BtnSize))
 			NewClick = true;
 		ImGui::SameLine();
 
-		if (ImGui::Button("Load", BtnSize))
+		if (ImGui::Button(Loc("Load"), BtnSize))
 			LoadClick = true;
 		ImGui::SameLine();
 
-		if (ImGui::Button("Save", BtnSize))
+		if (ImGui::Button(Loc("Save"), BtnSize))
 			SaveClick = true;
 
 		HeaderSize = BtnSize.y;
 #if 0
 		ImGui::BeginMainMenuBar();
-		ImGui::MenuItem("New", "", &NewClick);
-		ImGui::MenuItem("Load", "", &LoadClick);
-		ImGui::MenuItem("Save", "", &SaveClick);
+		ImGui::MenuItem(Loc("New"), "", &NewClick);
+		ImGui::MenuItem(Loc("Load"), "", &LoadClick);
+		ImGui::MenuItem(Loc("Save"), "", &SaveClick);
 		bool Temp = false;
 		ImGui::MenuItem(FileName.c_str(), "", Temp, false);
 

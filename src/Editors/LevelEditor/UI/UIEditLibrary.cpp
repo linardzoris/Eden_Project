@@ -3,6 +3,7 @@
 #include "imgui_internal.h"
 
 #include "../xrEUI/IconsFontAwesome6.h"
+#include "../../xrEUI/EditorLocalization.h"
 
 #include "../../xrECore/Editor/Library.h"
 #include "../xrECore/Editor/ExportObjectOGF.h"
@@ -59,8 +60,8 @@ void UIEditLibrary::OnItemFocused(ListItem* item)
 		}
 		else
 		{
-			PHelper().CreateCaption(Info, "Faces", "THM not found");
-			PHelper().CreateCaption(Info, "Vertexes", "THM not found");
+			PHelper().CreateCaption(Info, "Faces", Loc("THM not found"));
+			PHelper().CreateCaption(Info, "Vertexes", Loc("THM not found"));
 			PreviewProps->AssignItems(Info);
 		}
 
@@ -169,7 +170,7 @@ void UIEditLibrary::DrawObjects()
 	string256 buf;
 	xr_strcpy(buf, SearchQuery.c_str());
 	ImGui::SetNextItemWidth(-1);
-	if (ImGui::InputTextWithHint("##value", "Search...", buf, sizeof(buf)))
+	if (ImGui::InputTextWithHint("##value", Loc("Search..."), buf, sizeof(buf)))
 	{
 		SearchQuery = buf;
 
@@ -217,7 +218,7 @@ void UIEditLibrary::DrawObjects()
 void UIEditLibrary::GenerateLOD(const RStringVec& props, bool bHighQuality)
 {
 	u32 lodsCnt = 0;
-	SPBItem* pb = UI->ProgressStart(props.size(), "Making LOD");
+	SPBItem* pb = UI->ProgressStart(props.size(), Loc("Making LOD"));
 
 	for (const shared_str& str : props)
 	{
@@ -276,7 +277,7 @@ void UIEditLibrary::GenerateLOD(const RStringVec& props, bool bHighQuality)
 static xr_task_group LODTask;
 void UIEditLibrary::MakeLOD(bool bHighQuality)
 {
-	int res = ELog.DlgMsg(mtConfirmation, TMsgDlgButtons() | mbYes | mbNo | mbCancel, "Do you want to select multiple objects?");
+	int res = ELog.DlgMsg(mtConfirmation, TMsgDlgButtons() | mbYes | mbNo | mbCancel, Loc("Do you want to select multiple objects?"));
 
 	if (res == mrCancel)
 		return;
@@ -388,13 +389,13 @@ void UIEditLibrary::DrawRightBar()
 			ImGui::SetTooltip
 			(
 				UseWorldPropWnd
-				? "Currently using the shared properties window\nClick to switch to the internal properties window"
-				: "Currently using the internal properties window\nClick to switch to the shared properties window"
+				? Loc("Currently using the shared properties window\nClick to switch to the internal properties window")
+				: Loc("Currently using the internal properties window\nClick to switch to the shared properties window")
 			);
 		}
 		ImGui::SameLine();
 
-		if (ImGui::Button("Properties", ImVec2(-1, 0)))
+		if (ImGui::Button(Loc("Properties"), ImVec2(-1, 0)))
 		{
 			OnPropertiesClick();
 		}
@@ -412,7 +413,7 @@ void UIEditLibrary::DrawRightBar()
 				ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
 			}
 
-			if (ImGui::Button("Make Thumbnail", ImVec2(-1, 0)))
+			if (ImGui::Button(Loc("Make Thumbnail"), ImVec2(-1, 0)))
 			{
 				UI->RedrawScene(false);
 
@@ -435,17 +436,17 @@ void UIEditLibrary::DrawRightBar()
 			if (ImGui::IsItemHovered())
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
 
-			ImGui::Text("Make LOD:");
+			ImGui::Text(Loc("Make LOD:"));
 			ImGui::SameLine();
 
-			if (ImGui::Button("HQ", ImVec2(25, 0)))
+			if (ImGui::Button(Loc("HQ"), ImVec2(25, 0)))
 				MakeLOD(true);
 			if (ImGui::IsItemHovered())
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
 
 			ImGui::SameLine();
 
-			if (ImGui::Button("LQ", ImVec2(25, 0)))
+			if (ImGui::Button(Loc("LQ"), ImVec2(25, 0)))
 				MakeLOD(false);
 			if (ImGui::IsItemHovered())
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
@@ -457,7 +458,7 @@ void UIEditLibrary::DrawRightBar()
 			}
 		}
 
-		if (ImGui::Checkbox("Preview", &m_Preview))
+		if (ImGui::Checkbox(Loc("Preview"), &m_Preview))
 		{
 			((CLevelPreferences*)(EPrefs))->PreviewRenderLibrary = m_Preview;
 			OnPreviewClick();
@@ -465,26 +466,26 @@ void UIEditLibrary::DrawRightBar()
 
 		ImGui::SameLine();
 
-		if (ImGui::Checkbox("Dropper", &m_Dropper))
+		if (ImGui::Checkbox(Loc("Dropper"), &m_Dropper))
 			PickSurface();
 
 		if (ImGui::IsItemHovered())
 			ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-		if (ImGui::Button("Remove Object", ImVec2(-1, 0)))
+		if (ImGui::Button(Loc("Remove Object"), ImVec2(-1, 0)))
 		{
 			ActualItemList().RemoveSelectItem();
 		}
 		
 		if (ImGui::IsItemHovered())
 			ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-		if (ImGui::Button("Import Object", ImVec2(-1, 0)))
+		if (ImGui::Button(Loc("Import Object"), ImVec2(-1, 0)))
 		{
 			ImportClick();
 		}
 
 		if (ImGui::IsItemHovered())
 			ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-		if (ImGui::Button("Export OBJ", ImVec2(-1, 0)))
+		if (ImGui::Button(Loc("Export OBJ"), ImVec2(-1, 0)))
 		{
 			ExportObj();
 		}
@@ -505,7 +506,7 @@ void UIEditLibrary::DrawRightBar()
 		if (ImGui::IsItemHovered())
 			ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
 
-		if (ImGui::Button("Close", ImVec2(-1, 0)))
+		if (ImGui::Button(Loc("Close"), ImVec2(-1, 0)))
 			Close();
 		if (ImGui::IsItemHovered())
 			ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
@@ -538,7 +539,7 @@ void UIEditLibrary::DrawRightBar()
 
 void UIEditLibrary::RenderSaveButton()
 {
-	if (ImGui::Button("Save", ImVec2(-1, 0)))
+	if (ImGui::Button(Loc("Save"), ImVec2(-1, 0)))
 	{
 		RStringVec sel_strings;
 		ChangeReference(sel_strings);
@@ -662,7 +663,7 @@ void UIEditLibrary::ExportObj()
 {
 	if (!m_Preview)
 	{
-		SPBItem* pb = UI->ProgressStart(m_pEditObjects.size(), "Expotring to OBJ");
+		SPBItem* pb = UI->ProgressStart(m_pEditObjects.size(), Loc("Expotring to OBJ"));
 		CSceneObject* SO = new CSceneObject((LPVOID)0, (LPSTR)0);
 
 		for (ListItem* item : ActualItemList().m_SelectedItems)
@@ -688,7 +689,7 @@ void UIEditLibrary::ExportObj()
 	}
 	else
 	{
-		SPBItem* pb = UI->ProgressStart(m_pEditObjects.size(), "Expotring to OBJ");
+		SPBItem* pb = UI->ProgressStart(m_pEditObjects.size(), Loc("Expotring to OBJ"));
 		for (CSceneObject* SO : m_pEditObjects)
 		{
 			CEditableObject* O = SO->GetReference();
@@ -704,7 +705,7 @@ void UIEditLibrary::ExportObj()
 		}
 		UI->ProgressEnd(pb);
 	}
-	ELog.DlgMsg(mtInformation, "Done.");
+	ELog.DlgMsg(mtInformation, "%s", Loc("Done."));
 }
 
 UIPropertiesForm* UIEditLibrary::GetPropertyWnd()
@@ -821,7 +822,7 @@ void UIEditLibrary::Draw()
 
 		if (bShowProps && !UseWorldPropWnd)
 		{
-			if (ImGui::Begin("Objects properties", &bShowProps))
+			if (ImGui::Begin(Loc("Objects properties"), &bShowProps))
 			{
 				GetPropertyWnd()->Draw();
 			}
@@ -829,7 +830,7 @@ void UIEditLibrary::Draw()
 		}
 	}
 
-	if (!ImGui::Begin("Object Library", &bOpen))
+	if (!ImGui::Begin(Loc("Object Library"), &bOpen))
 	{
 		ImGui::PopStyleVar(1);
 		ImGui::End();
@@ -844,7 +845,7 @@ void UIEditLibrary::Draw()
 
 		ImGui::EndChild();
 		ImGui::SetNextItemWidth(-200);
-		ImGui::Text(" Items count: %u", ActualItemList().m_Items.size());
+		ImGui::Text(Loc(" Items count: %u"), ActualItemList().m_Items.size());
 		ImGui::EndGroup();
 	}
 
@@ -879,7 +880,7 @@ void UIEditLibrary::ImportClick()
 
 				if (FS.exist(save_nm.c_str()))
 				{
-					if (mrNo == ELog.DlgMsg(mtConfirmation, (mbYes | mbNo), "Object '%s' already exist. Owerwrite it?", nm.c_str()))
+					if (mrNo == ELog.DlgMsg(mtConfirmation, (mbYes | mbNo), Loc("Object '%s' already exist. Owerwrite it?"), nm.c_str()))
 					{
 						xr_delete(O);
 						break;
@@ -892,7 +893,7 @@ void UIEditLibrary::ImportClick()
 			}
 			else
 			{
-				ELog.DlgMsg(mtError, "Can't load file '%s'.", it->c_str());
+				ELog.DlgMsg(mtError, Loc("Can't load file '%s'."), it->c_str());
 			}
 
 			xr_delete(O);

@@ -49,7 +49,7 @@ void UIWayTool::Draw()
                 if (ImGui::Button(Loc("Create 1-Link"), ImVec2(size / 2, 0))) 
                 {
                     if (m_WayMode) {
-                        ELog.DlgMsg(mtInformation, "Before editing enter Point Mode.");
+                        ELog.DlgMsg(mtInformation, Loc("Before editing enter Point Mode."));
                         return;
                     }
                     bool bRes = false;
@@ -77,7 +77,7 @@ void UIWayTool::Draw()
                 if (ImGui::Button(Loc("Create 2-Link"), ImVec2(size / 2, 0))) 
                 {
                     if (m_WayMode) {
-                        ELog.DlgMsg(mtInformation, "Before editing enter Point Mode.");
+                        ELog.DlgMsg(mtInformation, Loc("Before editing enter Point Mode."));
                         return;
                     }
                     bool bRes = false;
@@ -102,7 +102,7 @@ void UIWayTool::Draw()
                 if (ImGui::Button(Loc("Invert Link"), ImVec2(size / 2, 0))) 
                 {
                     if (m_WayMode) {
-                        ELog.DlgMsg(mtInformation, "Before editing enter Point Mode.");
+                        ELog.DlgMsg(mtInformation, Loc("Before editing enter Point Mode."));
                         return;
                     }
                     ObjectList lst;
@@ -116,7 +116,7 @@ void UIWayTool::Draw()
                 if (ImGui::Button(Loc("Remove Link"), ImVec2(size / 2, 0)))
                 {
                     if (m_WayMode) {
-                        ELog.DlgMsg(mtInformation, "Before editing enter Point Mode.");
+                        ELog.DlgMsg(mtInformation, Loc("Before editing enter Point Mode."));
                         return;
                     }
                     ObjectList lst;

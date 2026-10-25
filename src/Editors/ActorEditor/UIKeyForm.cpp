@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../xrEUI/EditorLocalization.h"
 
 constexpr u8 NotifyWidth = 2;
 
@@ -41,7 +42,7 @@ void UIKeyForm::Draw()
 	bool Mark3 = bMarksPresent34 || ((CAEPreferences*)EPrefs)->bAlwaysShowKeyBar34;
 	bool Mark4 = bMarksPresent34 || ((CAEPreferences*)EPrefs)->bAlwaysShowKeyBar34;
 
-	ImGui::Begin("KeyForm");
+	ImGui::Begin(Loc("KeyForm"));
 	{
 		float a, b, c;
 		ATools->GetStatTime(a, b, c);
@@ -50,11 +51,11 @@ void UIKeyForm::Draw()
 		ImGui::BeginChild("Left", ImVec2(130, 100));
 		{
 		
-			ImGui::Checkbox("Auto", &m_AutoChange);
-			ImGui::Text("Left1");
-			ImGui::Text("Right1");
-			ImGui::Text("Left2");
-			ImGui::Text("Right2");
+			ImGui::Checkbox(Loc("Auto"), &m_AutoChange);
+			ImGui::Text(Loc("Left1"));
+			ImGui::Text(Loc("Right1"));
+			ImGui::Text(Loc("Left2"));
+			ImGui::Text(Loc("Right2"));
 			ImGui::Separator();
 			ImGui::EndChild();
 		}ImGui::SameLine();
@@ -105,7 +106,7 @@ void UIKeyForm::Draw()
 			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2, 0));
 			{
 				ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
-				ImGui::Text("LOD:"); ImGui::SameLine();
+				ImGui::Text(Loc("LOD:")); ImGui::SameLine();
 				ImGui::PopStyleVar();
 
 			}
@@ -121,25 +122,25 @@ void UIKeyForm::Draw()
 
 			if (!Mark1) ImGui::BeginDisabled();
 			ImGui::PushID("left1");
-			if (ImGui::Button("Del") && Mark1) { SetMark(0, 3); } ImGui::SameLine(); 	if (ImGui::Button("Up") && Mark1) { SetMark(0, 2); } ImGui::SameLine(); 	if (ImGui::Button("Down", ImVec2(-1, 0)) && Mark1) { SetMark(0, 1); }
+			if (ImGui::Button(Loc("Del")) && Mark1) { SetMark(0, 3); } ImGui::SameLine(); 	if (ImGui::Button(Loc("Up")) && Mark1) { SetMark(0, 2); } ImGui::SameLine(); 	if (ImGui::Button(Loc("Down"), ImVec2(-1, 0)) && Mark1) { SetMark(0, 1); }
 			ImGui::PopID();
 			if (!Mark1) ImGui::EndDisabled();
 
 			if (!Mark2) ImGui::BeginDisabled();
 			ImGui::PushID("right1");
-			if (ImGui::Button("Del") && Mark2) { SetMark(1, 3); } ImGui::SameLine(); 	if (ImGui::Button("Up") && Mark2) { SetMark(1, 2); } ImGui::SameLine(); 	if (ImGui::Button("Down", ImVec2(-1, 0)) && Mark2) { SetMark(1, 1); }
+			if (ImGui::Button(Loc("Del")) && Mark2) { SetMark(1, 3); } ImGui::SameLine(); 	if (ImGui::Button(Loc("Up")) && Mark2) { SetMark(1, 2); } ImGui::SameLine(); 	if (ImGui::Button(Loc("Down"), ImVec2(-1, 0)) && Mark2) { SetMark(1, 1); }
 			ImGui::PopID();
 			if (!Mark2) ImGui::EndDisabled();
 
 			if (!Mark3) ImGui::BeginDisabled();
 			ImGui::PushID("left2");
-			if (ImGui::Button("Del") && Mark3) { SetMark(2, 3); } ImGui::SameLine(); 	if (ImGui::Button("Up") && Mark3) { SetMark(2, 2); } ImGui::SameLine(); 	if (ImGui::Button("Down", ImVec2(-1, 0)) && Mark3) { SetMark(2, 1); }
+			if (ImGui::Button(Loc("Del")) && Mark3) { SetMark(2, 3); } ImGui::SameLine(); 	if (ImGui::Button(Loc("Up")) && Mark3) { SetMark(2, 2); } ImGui::SameLine(); 	if (ImGui::Button(Loc("Down"), ImVec2(-1, 0)) && Mark3) { SetMark(2, 1); }
 			ImGui::PopID();
 			if (!Mark3) ImGui::EndDisabled();
 
 			if (!Mark4) ImGui::BeginDisabled();
 			ImGui::PushID("right2");
-			if (ImGui::Button("Del") && Mark4) { SetMark(3, 3); } ImGui::SameLine(); 	if (ImGui::Button("Up") && Mark4) { SetMark(3, 2); } ImGui::SameLine(); 	if (ImGui::Button("Down", ImVec2(-1, 0)) && Mark4) { SetMark(3, 1); }
+			if (ImGui::Button(Loc("Del")) && Mark4) { SetMark(3, 3); } ImGui::SameLine(); 	if (ImGui::Button(Loc("Up")) && Mark4) { SetMark(3, 2); } ImGui::SameLine(); 	if (ImGui::Button(Loc("Down"), ImVec2(-1, 0)) && Mark4) { SetMark(3, 1); }
 			ImGui::PopID();
 			if (!Mark4) ImGui::EndDisabled();
 
@@ -165,7 +166,7 @@ void UIKeyForm::Draw()
 
 			if (NotifiesOpened) {
 
-				if (ImGui::Button("Add")) {
+				if (ImGui::Button(Loc("Add"))) {
 					ImGui::OpenPopup("add_notify_bone");
 				}
 
@@ -194,12 +195,12 @@ void UIKeyForm::Draw()
 					DrawNotify(Track);
 					ImGui::PlotHistogram("##animnotifytrack", m_TempForPlotHistogram.data(), m_TempForPlotHistogram.size(), 0, NULL, 0.0f, 1.0f, size);
 					if (NotifyBoneOpened) {
-						if (ImGui::Button("Add")) {
+						if (ImGui::Button(Loc("Add"))) {
 							Track.second.push_back({});
 							m_currentNotify = nullptr;
 						}
 						ImGui::SameLine(146);
-						if (ImGui::Button("Remove Bone")) {
+						if (ImGui::Button(Loc("Remove Bone"))) {
 							ToRemove = Track.first;
 							m_currentNotify = nullptr;
 						}
@@ -207,7 +208,7 @@ void UIKeyForm::Draw()
 							ImGui::PushID(id++);
 							ImGui::Text(std::to_string(i).c_str());
 							ImGui::SameLine(116);
-							if (ImGui::Button("Del")) {
+							if (ImGui::Button(Loc("Del"))) {
 								ToRemove = Track.first;
 								ToRemove2 = i;
 								m_currentNotify = nullptr;
@@ -274,7 +275,7 @@ void UIKeyForm::Draw()
 								m_currentNotify = nullptr;
 							}
 							ImGui::SameLine();
-							if (ImGui::Button("Current keyframe")) {
+							if (ImGui::Button(Loc("Current keyframe"))) {
 								float LocalPosA = m_Position - NotifyWidth/ ItemSize.x;
 								float LocalPosB = m_Position + NotifyWidth / ItemSize.x;
 								float TimeOffsetA = detail::RoundToTwoDecimals(LocalPosA);
@@ -316,7 +317,7 @@ void UIKeyForm::Draw()
 		ImGui::PopStyleVar();
 	
 		if (m_currentNotify) {
-			ImGui::Text("External ref");
+			ImGui::Text(Loc("External ref"));
 			ImGui::SameLine(150);
 			auto InputTextLambda = [&](const char* label, shared_str& str)
 			{

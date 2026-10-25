@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../xrEUI/EditorLocalization.h"
 
 UITopBarForm::UITopBarForm()
 {
@@ -44,7 +45,7 @@ void UITopBarForm::Draw()
         if (ImGui::IsItemHovered())
         {
             ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-            ImGui::SetTooltip("Undo the last action.");
+            ImGui::SetTooltip(Loc("Undo the last action."));
         }
         ImGui::SameLine();
 
@@ -57,7 +58,7 @@ void UITopBarForm::Draw()
         if (ImGui::IsItemHovered())
         {
             ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-            ImGui::SetTooltip("Repeat the last action.");
+            ImGui::SetTooltip(Loc("Repeat the last action."));
         }
         ImGui::SameLine();
 
@@ -69,7 +70,7 @@ void UITopBarForm::Draw()
         if (ImGui::IsItemHovered())
         {
             ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-            ImGui::SetTooltip("Save all '.xr'");
+            ImGui::SetTooltip(Loc("Save all '.xr'"));
         }
         ImGui::SameLine();
 
@@ -81,7 +82,7 @@ void UITopBarForm::Draw()
         if (ImGui::IsItemHovered())
         {
             ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-            ImGui::SetTooltip("Reload everything '.xr'");
+            ImGui::SetTooltip(Loc("Reload everything '.xr'"));
         }
         ImGui::SameLine();
 
@@ -93,7 +94,7 @@ void UITopBarForm::Draw()
         if (ImGui::IsItemHovered())
         {
             ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-            ImGui::SetTooltip("Open folder 'GameData'");
+            ImGui::SetTooltip(Loc("Open folder 'GameData'"));
         }
     }
     ImGui::End();

@@ -41,11 +41,11 @@ void UISectorTool::Draw()
                 int Size = PortalUtils.CalculateAllPortals();
                 if (Size > 0)
                 {
-                    ELog.DlgMsg(mtInformation, "Recalculated %d portals.", Size);
+                    ELog.DlgMsg(mtInformation, Loc("Recalculated %d portals."), Size);
                 }
                 else
                 {
-                    ELog.DlgMsg(mtInformation, "Recalculated portals error! Portals is empty...");
+                    ELog.DlgMsg(mtInformation, Loc("Recalculated portals error! Portals is empty..."));
                 }
             }           
             ImGui::SameLine(0, 2);
@@ -62,15 +62,15 @@ void UISectorTool::Draw()
             if (ImGui::Button(Loc("Create Default"), ImVec2(size / 2, 0)))
             {
                 CCustomObject* O = Scene->FindObjectByName(DEFAULT_SECTOR_NAME, OBJCLASS_SECTOR);
-                if (O) ELog.DlgMsg(mtInformation, "Default sector already present. Remove this and try again.");
+                if (O) ELog.DlgMsg(mtInformation, Loc("Default sector already present. Remove this and try again."));
                 else {
-                    if (!PortalUtils.CreateDefaultSector()) ELog.DlgMsg(mtInformation, "Default can't created.");
+                    if (!PortalUtils.CreateDefaultSector()) ELog.DlgMsg(mtInformation, Loc("Default can't created."));
                 }
             }
             ImGui::SameLine(0, 2);
             if (ImGui::Button(Loc("Remove Default"), ImVec2(size / 2, 0)))
             {
-                if (!PortalUtils.RemoveDefaultSector()) ELog.DlgMsg(mtInformation, "Default sector not found.");
+                if (!PortalUtils.RemoveDefaultSector()) ELog.DlgMsg(mtInformation, Loc("Default sector not found."));
             }
 
         }

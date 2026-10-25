@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../xrEUI/EditorLocalization.h"
 
 UITopBarForm::UITopBarForm()
 {
@@ -19,7 +20,7 @@ void UITopBarForm::Draw()
     ImVec2 iconSize = { ImGui::GetWindowDpiScale() * 20, ImGui::GetWindowDpiScale() * 20 };
 
     ImGuiViewport* viewport = ImGui::GetMainViewport();
-    ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x, viewport->Pos.y + ImGui::GetWindowDpiScale() * UI->GetMenuBarHeight()));
+    ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x, viewport->Pos.y + UI->GetMenuBarHeight()));
     ImGui::SetNextWindowSize(ImVec2(viewport->Size.x, ImGui::GetWindowDpiScale() * UIToolBarSize));
     ImGui::SetNextWindowViewport(viewport->ID);
 
@@ -47,7 +48,7 @@ void UITopBarForm::Draw()
         if (ImGui::IsItemHovered())
         {
             ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-            ImGui::SetTooltip("Undo the last action.");
+            ImGui::SetTooltip(Loc("Undo the last action."));
         }
         ImGui::SameLine();
         m_tRedo->Load();
@@ -59,7 +60,7 @@ void UITopBarForm::Draw()
         if (ImGui::IsItemHovered())
         {
             ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-            ImGui::SetTooltip("Repeat the last action.");
+            ImGui::SetTooltip(Loc("Repeat the last action."));
         }
         ImGui::SameLine();
 
@@ -71,7 +72,7 @@ void UITopBarForm::Draw()
         if (ImGui::IsItemHovered())
         {
             ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-            ImGui::SetTooltip("Clear/New Scene");
+            ImGui::SetTooltip(Loc("Clear/New Scene"));
         }
         ImGui::SameLine();
         m_tOpen->Load();
@@ -82,7 +83,7 @@ void UITopBarForm::Draw()
         if (ImGui::IsItemHovered())
         {
             ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-            ImGui::SetTooltip("Open file");
+            ImGui::SetTooltip(Loc("Open file"));
         }
         ImGui::SameLine();
         m_tSave->Load();
@@ -93,7 +94,7 @@ void UITopBarForm::Draw()
         if (ImGui::IsItemHovered())
         {
             ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-            ImGui::SetTooltip("Save file");
+            ImGui::SetTooltip(Loc("Save file"));
         }
         ImGui::SameLine();
 
@@ -105,13 +106,13 @@ void UITopBarForm::Draw()
         if (ImGui::IsItemHovered())
         {
             ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-            ImGui::SetTooltip("Open 'gamedata' folder");
+            ImGui::SetTooltip(Loc("Open 'gamedata' folder"));
         }
         ImGui::SameLine();
 
         bool Simulate = ATools->IsPhysics();
 
-        if (ImGui::Checkbox("Simulate", &Simulate))
+        if (ImGui::Checkbox(Loc("Simulate"), &Simulate))
         {
             if(Simulate)
                 ATools->PhysicsSimulate();
@@ -121,11 +122,11 @@ void UITopBarForm::Draw()
         if (ImGui::IsItemHovered())
         {
             ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-            ImGui::SetTooltip("Activates physics simulation.");
+            ImGui::SetTooltip(Loc("Activates physics simulation."));
         }
         ImGui::SameLine();
 
-        if (ATools->CurrentObject() && ImGui::Button("Make Thumbnail"))
+        if (ATools->CurrentObject() && ImGui::Button(Loc("Make Thumbnail")))
         {
             ATools->MakeThumbnail();
         }

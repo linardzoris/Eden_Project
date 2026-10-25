@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../xrEUI/EditorLocalization.h"
 
 UIBoneForm* UIBoneForm::Form = nullptr;
 UIBoneForm::UIBoneForm() {}
@@ -14,9 +15,9 @@ void UIBoneForm::Draw()
 {
     if (bOpen)
     {
-        ImGui::OpenPopup("Bone Form");
+        ImGui::OpenPopup(Loc("Bone Form"));
     }
-    if (!ImGui::BeginPopupModal("Bone Form", &bOpen, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoResize))
+    if (!ImGui::BeginPopupModal(Loc("Bone Form"), &bOpen, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoResize))
     {
         bOpen = false;
         ImGui::CloseCurrentPopup();
@@ -24,16 +25,16 @@ void UIBoneForm::Draw()
     }
     else
     {
-        ImGui::Text("Total bone:%d", m_EditObject->BoneCount());
+        ImGui::Text(Loc("Total bone:%d"), m_EditObject->BoneCount());
         {
             ImGui::BeginChild("Part1", ImVec2(300, 300));
             ImGui::AlignTextToFramePadding();
-            ImGui::Text("Part #1:(%d B)", m_List[0].size());
+            ImGui::Text(Loc("Part #1:(%d B)"), m_List[0].size());
             ImGui::SameLine();
             ImGui::SetNextItemWidth(-50);
             ImGui::InputText("##name", m_Name[0], sizeof(m_Name[0]));
             ImGui::SameLine();
-            if (ImGui::Button("Clear", ImVec2(-1, 0)))
+            if (ImGui::Button(Loc("Clear"), ImVec2(-1, 0)))
                 Clear(0);
             {
                 ImGui::BeginChild("List", ImVec2(0, 0), true, ImGuiWindowFlags_None);
@@ -51,12 +52,12 @@ void UIBoneForm::Draw()
         {
             ImGui::BeginChild("Part2", ImVec2(300, 300));
             ImGui::AlignTextToFramePadding();
-            ImGui::Text("Part #2:(%d B)", m_List[1].size());
+            ImGui::Text(Loc("Part #2:(%d B)"), m_List[1].size());
             ImGui::SameLine();
             ImGui::SetNextItemWidth(-50);
             ImGui::InputText("##name", m_Name[1], sizeof(m_Name[1]));
             ImGui::SameLine();
-            if (ImGui::Button("Clear", ImVec2(-1, 0)))
+            if (ImGui::Button(Loc("Clear"), ImVec2(-1, 0)))
                 Clear(1);
             {
                 ImGui::BeginChild("List", ImVec2(0, 0), true, ImGuiWindowFlags_None);
@@ -74,12 +75,12 @@ void UIBoneForm::Draw()
         {
             ImGui::BeginChild("Part3", ImVec2(300, 300));
             ImGui::AlignTextToFramePadding();
-            ImGui::Text("Part #3:(%d B)", m_List[2].size());
+            ImGui::Text(Loc("Part #3:(%d B)"), m_List[2].size());
             ImGui::SameLine();
             ImGui::SetNextItemWidth(-50);
             ImGui::InputText("##name", m_Name[2], sizeof(m_Name[2]));
             ImGui::SameLine();
-            if (ImGui::Button("Clear", ImVec2(-1, 0)))
+            if (ImGui::Button(Loc("Clear"), ImVec2(-1, 0)))
                 Clear(2);
             {
                 ImGui::BeginChild("List", ImVec2(0, 0), true, ImGuiWindowFlags_None);
@@ -97,12 +98,12 @@ void UIBoneForm::Draw()
         {
             ImGui::BeginChild("Part4", ImVec2(300, 300));
             ImGui::AlignTextToFramePadding();
-            ImGui::Text("Part #4:(%d B)", m_List[3].size());
+            ImGui::Text(Loc("Part #4:(%d B)"), m_List[3].size());
             ImGui::SameLine();
             ImGui::SetNextItemWidth(-50);
             ImGui::InputText("##name", m_Name[3], sizeof(m_Name[3]));
             ImGui::SameLine();
-            if (ImGui::Button("Clear", ImVec2(-1, 0)))
+            if (ImGui::Button(Loc("Clear"), ImVec2(-1, 0)))
                 Clear(3);
             {
                 ImGui::BeginChild("List", ImVec2(0, 0), true, ImGuiWindowFlags_None);
@@ -117,28 +118,28 @@ void UIBoneForm::Draw()
             DragDropTarget(3);
         }
 
-        if (ImGui::Button("Ok", ImVec2(70, 0)))
+        if (ImGui::Button(Loc("Ok"), ImVec2(70, 0)))
         {
             Save();
         }
         ImGui::SameLine();
-        if (ImGui::Button("Cancel", ImVec2(70, 0)))
+        if (ImGui::Button(Loc("Cancel"), ImVec2(70, 0)))
         {
             bOpen = false;
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine(0, 20);
-        if (ImGui::Button("Reset To Default"))
+        if (ImGui::Button(Loc("Reset To Default")))
         {
             ToDefault();
         }
         ImGui::SameLine(0, 20);
-        if (ImGui::Button("Load From"))
+        if (ImGui::Button(Loc("Load From")))
         {
             LoadFrom();
         }
         ImGui::SameLine();
-        if (ImGui::Button("Save To"))
+        if (ImGui::Button(Loc("Save To")))
         {
             SaveTo();
         }
