@@ -4,6 +4,10 @@
 #include "../xrECore/Editor/EditorChooseEvents.h"
 #include "IconsFontAwesome6.h"
 #include "UILodEditorForm.h"
+#include "UIThmEditorForm.h"
+#include "UIOmfEditorForm.h"
+#include "UIOggParamsForm.h"
+#include "UIDbArchiveForm.h"
 
 UIMainForm* MainForm = nullptr;
 UIMainForm::UIMainForm()
@@ -71,6 +75,10 @@ void UIMainForm::Draw()
     m_KeyForm->Draw();
     m_Render->Draw();
     UILodEditorForm::Update();
+    UIThmEditorForm::Update();
+    UIOmfEditorForm::Update();
+    UIOggParamsForm::Update();
+    UIDbArchiveForm::Update();
 }
 
 void UIMainForm::ResetEnd()

@@ -47,6 +47,16 @@ target_link_libraries(ActorEditor PUBLIC xrEUI)
 target_link_libraries(ActorEditor PUBLIC xrEProps)
 target_link_libraries(ActorEditor PUBLIC xrECore)
 
+# LibOGG / LibVorbis (OGG sound params editor; xrECore links these PRIVATE,
+# so the editor exe needs its own copy)
+set(AE_OGG ${CMAKE_BINARY_DIR}/packages/ImeSense.Packages.LibOgg.1.3.5.4/)
+set(AE_VOB ${CMAKE_BINARY_DIR}/packages/ImeSense.Packages.LibVorbis.1.3.7.4/)
+target_link_libraries(ActorEditor PRIVATE ${AE_OGG}native/lib/${CMAKE_VS_PLATFORM_NAME}/Release/libogg.lib)
+target_include_directories(ActorEditor PRIVATE "${AE_OGG}/native/include/")
+target_link_libraries(ActorEditor PRIVATE ${AE_VOB}native/lib/${CMAKE_VS_PLATFORM_NAME}/Release/libvorbisfile.lib)
+target_link_libraries(ActorEditor PRIVATE ${AE_VOB}native/lib/${CMAKE_VS_PLATFORM_NAME}/Release/libvorbis.lib)
+target_include_directories(ActorEditor PRIVATE "${AE_VOB}/native/include/")
+
 # Move precompiled header
 set_target_properties(ActorEditor PROPERTIES DISABLE_PRECOMPILE_HEADERS ON)
 

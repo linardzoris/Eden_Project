@@ -4,6 +4,10 @@
 #include "../xrEUI/imgui_EditorEx.h"
 #include "../xrEUI/EditorLocalization.h"
 #include "UILodEditorForm.h"
+#include "UIThmEditorForm.h"
+#include "UIOmfEditorForm.h"
+#include "UIOggParamsForm.h"
+#include "UIDbArchiveForm.h"
 UIMainMenuForm::UIMainMenuForm()
 {
 }
@@ -80,6 +84,14 @@ void UIMainMenuForm::Draw()
 			if (ImGui::MenuItem(Loc("Light Anim Editor"), "")) { ExecCommand(COMMAND_LIGHTANIM_EDITOR); }
 			if (ImGui::MenuItem(Loc("Minimap Editor"), "")) { ExecCommand(COMMAND_MINIMAP_EDITOR); }
 			if (ImGui::MenuItem(Loc("LOD Editor"), "")) { UILodEditorForm::Show(); }
+			ImGui::EndMenu();
+		}
+		if (ImGui::BeginMenu(Loc("Tools")))
+		{
+			if (ImGui::MenuItem(Loc("THM Editor"), "")) { UIThmEditorForm::Show(); }
+			if (ImGui::MenuItem(Loc("OMF Editor"), "")) { UIOmfEditorForm::Show(); }
+			if (ImGui::MenuItem(Loc("OGG Sound Params"), "")) { UIOggParamsForm::Show(); }
+			if (ImGui::MenuItem(Loc("DB Archive Tool"), "")) { UIDbArchiveForm::Show(); }
 			ImGui::EndMenu();
 		}
 
