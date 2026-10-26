@@ -204,7 +204,7 @@ void SDL_Application()
 			// The SDL renderer backend has no ImGuiBackendFlags_RendererHasTextures
 			// support, so the atlas is legacy and only bakes glyphs from the
 			// ranges given here: CJK ranges must be passed explicitly.
-			MergeConfig.GlyphRanges = io.Fonts->GetGlyphRangesChineseSimplifiedCommon();
+			MergeConfig.GlyphRanges = io.Fonts->GetGlyphRangesChineseFull();
 			if (io.Fonts->AddFontFromFileTTF(Platform::ANSI_TO_UTF8(FullPath).c_str(), 13.0f, &MergeConfig))
 			{
 				Msg("* LevelBuilder UI: merged CJK font '%s'", FullPath);
@@ -228,7 +228,7 @@ void SDL_Application()
 
 					ImFontConfig MergeConfig = {};
 					MergeConfig.MergeMode = true;
-					MergeConfig.GlyphRanges = io.Fonts->GetGlyphRangesChineseSimplifiedCommon();
+					MergeConfig.GlyphRanges = io.Fonts->GetGlyphRangesChineseFull();
 					if (io.Fonts->AddFontFromFileTTF(Platform::ANSI_TO_UTF8(SysPath).c_str(), 13.0f, &MergeConfig))
 					{
 						Msg("* LevelBuilder UI: merged system CJK font '%s'", SysPath);
