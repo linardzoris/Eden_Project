@@ -48,19 +48,10 @@ void UIMainMenuForm::Draw()
 				if (ImGui::MenuItem(Loc("Export OMF..."), "")) { ExecCommand(COMMAND_EXPORT_OMF); }
 				if (ImGui::MenuItem(Loc("Export OBJ..."), "")) { ExecCommand(COMMAND_EXPORT_OBJ); }
 				if (ImGui::MenuItem(Loc("Export DM..."), "")) { ExecCommand(COMMAND_EXPORT_DM); }
-				if (ImGui::MenuItem(Loc("Export C++..."), "")) { ExecCommand(COMMAND_EXPORT_CPP); }
 				ImGui::EndMenu();
 			}
 			ImGui::Separator();
 			if (ImGui::MenuItem(Loc("Quit"), "Alt+F4")) { ExecCommand(COMMAND_QUIT); }
-			ImGui::EndMenu();
-		}
-		if (ImGui::BeginMenu(Loc("Preview Object")))
-		{
-			if (ImGui::MenuItem(Loc("Custom..."),"")) { ExecCommand(COMMAND_SELECT_PREVIEW_OBJ, false); }
-			if (ImGui::MenuItem(Loc("Clear"), "")) { ExecCommand(COMMAND_SELECT_PREVIEW_OBJ, true); }
-			ImGui::Separator();
-			if (ImGui::MenuItem(Loc("Preferences"), "")) { ExecCommand(COMMAND_PREVIEW_OBJ_PREF); }
 			ImGui::EndMenu();
 		}
 		if (ImGui::BeginMenu(Loc("Editors")))
@@ -81,8 +72,6 @@ void UIMainMenuForm::Draw()
 				if (ImGui::MenuItem(Loc("Synchronize Sounds (Hard)"), "")) { ExecCommand(COMMAND_SYNC_SOUNDS_HARD); }
 				ImGui::EndMenu();
 			}
-			if (ImGui::MenuItem(Loc("Light Anim Editor"), "")) { ExecCommand(COMMAND_LIGHTANIM_EDITOR); }
-			if (ImGui::MenuItem(Loc("Minimap Editor"), "")) { ExecCommand(COMMAND_MINIMAP_EDITOR); }
 			if (ImGui::MenuItem(Loc("LOD Editor"), "")) { UILodEditorForm::Show(); }
 			ImGui::EndMenu();
 		}

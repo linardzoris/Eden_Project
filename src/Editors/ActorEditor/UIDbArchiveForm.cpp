@@ -181,7 +181,9 @@ struct UnpackStats
 	int crc_mismatch = 0;
 };
 
-// parse + extract one archive into out_dir (parse errors are logged here)
+// parse + extract one archive into out_root\<entry_point>\ (parse errors are
+// logged here). Record names are relative to the archive entry point (usually
+// "gamedata"), so multiple archives merge into a single tree.
 static bool UnpackArchive(LPCSTR archive_path, const fs::path& out_root, UnpackStats& st, xr_string& entry_point)
 {
 	xr_vector<DbRecord> recs;
@@ -199,6 +201,10 @@ static bool UnpackArchive(LPCSTR archive_path, const fs::path& out_root, UnpackS
 		return false;
 	}
 
+	// merge target: out_root\<entry_point>\ ("gamedata" when the header is absent)
+	xr_string ep = entry_point.empty() ? "gamedata" : entry_point;
+	fs::path base = out_root / fs::path(ep.c_str());
+
 	xr_vector<char> src_buf, dst_buf;
 	for (const auto& rec : recs)
 	{
@@ -207,7 +213,7 @@ static bool UnpackArchive(LPCSTR archive_path, const fs::path& out_root, UnpackS
 		if (name.find("..") != xr_string::npos)
 			continue; // refuse path traversal entries
 
-		fs::path target = out_root / fs::path(name.c_str());
+		fs::path target = base / fs::path(name.c_str());
 		if (!name.empty() && name.back() == '\\')
 		{
 			std::error_code ec;
@@ -326,11 +332,9 @@ void UIDbArchiveForm::DoUnpack()
 		SPBItem* PB = UI->ProgressStart((int)archives.size(), "Unpacking archives");
 		for (const auto& arch : archives)
 		{
-			// each archive gets its own subfolder named after the file to
-			// avoid collisions between archives sharing internal paths
-			fs::path sub = out_root / arch.filename();
+			// contents merge into out_root\<entry_point>\ across all archives
 			UnpackStats st;
-			if (UnpackArchive(arch.string().c_str(), sub, st, entry_point))
+			if (UnpackArchive(arch.string().c_str(), out_root, st, entry_point))
 			{
 				++ok_archives;
 				total.extracted += st.extracted;

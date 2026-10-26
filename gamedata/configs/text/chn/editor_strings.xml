@@ -1195,4 +1195,6 @@
 	<string id="Folder (batch)"><text>目录（批量）</text></string>
 	<string id="Recursive"><text>递归子目录</text></string>
 	<string id="Unpack all"><text>全部解包</text></string>
+	<string id="Only large objects should use BLODs, small objects use FLODs instead. Engine&amp;Compiler prioritize BLODs over FLODs. BLODs and FLODs are saved as independent textures."><text>只有大型物体应使用 BLOD，小型物体使用 FLOD。引擎和编译器会优先使用 BLOD 而非 FLOD。BLOD 与 FLOD 保存为各自独立的纹理。</text></string>
+	<string id="WARNING: First-time generation results in wrong albedo, this is a bug TBD. FIX: Generate any LQ for once upon first AE use!"><text>警告：首次生成的反照率（albedo）是错误的，这是待查 bug。解决方法：AE 启动后先随便生成一次 LQ 预热！</text></string>
 </string_table>

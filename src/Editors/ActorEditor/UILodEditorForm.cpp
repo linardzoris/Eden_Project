@@ -13,7 +13,32 @@ UILodEditorForm::~UILodEditorForm()
 {
 }
 
-// enumerate all library objects, keep only MU-static ones (hide static/dynamic/HOM)
+// fast object classification: read only the flags + version chunks
+// (EOBJ_CHUNK_FLAGS / EOBJ_CHUNK_VERSION inside EOBJ_CHUNK_OBJECT_BODY).
+// The full Load parses every mesh/bone/surface - that is what made the scan
+// take seconds on large libraries; the MU/LOD decision needs one u32.
+static bool ReadObjectFlags(LPCSTR full, u32& flags)
+{
+	IReader* F = FS.r_open(full);
+	if (!F)
+		return false;
+	IReader* OBJ = F->open_chunk(EOBJ_CHUNK_OBJECT_BODY);
+	bool ok = false;
+	if (OBJ)
+	{
+		u16 version = 0;
+		if (OBJ->r_chunk(EOBJ_CHUNK_VERSION, &version) && version == EOBJ_CURRENT_VERSION &&
+			OBJ->find_chunk(EOBJ_CHUNK_FLAGS))
+		{
+			flags = OBJ->r_u32();
+			ok = true;
+		}
+		OBJ->close();
+	}
+	FS.r_close(F);
+	return ok;
+}
+
 void UILodEditorForm::ScanObjects()
 {
 	// preserve the selection across rescans
@@ -37,8 +62,15 @@ void UILodEditorForm::ScanObjects()
 		PB->Inc();
 		FS.update_path(full, _objects_, f.name.c_str());
 
+		u32 flags = 0;
+		if (!ReadObjectFlags(full, flags))
+			continue;
+
+		// unloaded object is enough here: IsMUStatic/HasHQ/HasLQ only need
+		// the flags word and path-derived texture names
 		CEditableObject* O = new CEditableObject(full);
-		if (O->Load(full) && O->IsMUStatic())
+		O->m_objectFlags.assign(flags);
+		if (O->IsMUStatic())
 		{
 			xr_path rel(f.name.c_str());
 			Item it;
@@ -444,9 +476,9 @@ void UILodEditorForm::DrawActions()
 	}
 
 	ImGui::Separator();
-	ImGui::TextWrapped("Only large objects should use BLODs, small objects use FLODs instead. Engine&Compiler prioritize BLODs over FLODs. BLODs and FLODs are saved as independent textures.");
+	ImGui::TextWrapped(Loc("Only large objects should use BLODs, small objects use FLODs instead. Engine&Compiler prioritize BLODs over FLODs. BLODs and FLODs are saved as independent textures."));
 	ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 200, 80, 255));
-	ImGui::TextWrapped("WARNING: First-time generation results in wrong albedo, this is a bug TBD. FIX: Generate any LQ for once upon first AE use!");
+	ImGui::TextWrapped(Loc("WARNING: First-time generation results in wrong albedo, this is a bug TBD. FIX: Generate any LQ for once upon first AE use!"));
 	ImGui::PopStyleColor();
 }
 

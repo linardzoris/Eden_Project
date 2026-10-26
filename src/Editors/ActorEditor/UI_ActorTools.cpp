@@ -67,8 +67,7 @@ void CActorTools::Render()
 {
 	if (!m_bReady) return;
 	PrepareLighting();
-	m_PreviewObject.Render();
-	if (m_pEditObject) 
+	if (m_pEditObject)
 	{
 		Fmatrix World = Fidentity;
 		{
@@ -122,7 +121,6 @@ void CActorTools::OnFrame()
 {
 	if (!m_bReady) return;
 	//.    if (m_KeyBar) m_KeyBar->UpdateBar();
-	m_PreviewObject.Update();
 	if (m_pEditObject)
 	{
 		// update matrix
@@ -136,11 +134,6 @@ void CActorTools::OnFrame()
 		if (!MainForm->GetLeftBarForm()->GetRenderMode() == UILeftBarForm::Render_Engine)
 		{
 			m_pEditObject->OnFrame();
-
-			if (m_PreviewObject.m_pObject != nullptr)
-			{
-				m_PreviewObject.m_pObject->OnFrame();
-			}
 		}
 
 		if (!MainForm->GetKeyForm()->AutoChange())
@@ -219,7 +212,6 @@ bool CActorTools::OnCreate()
 	m_ObjectItems->m_Flags.set(UIItemListForm::fMultiSelect, true);
 	m_Props = new UIPropertiesForm();
 	m_ObjectItems->SetOnItemsFocusedEvent(TOnILItemsFocused(this, &CActorTools::OnObjectItemsFocused));
-	m_PreviewObject.OnCreate();
 
 	// key bar
 	OnDeviceCreate();
@@ -235,9 +227,7 @@ void CActorTools::OnDestroy()
 
 	xr_delete(m_Props);
 	xr_delete(m_ObjectItems);
-	m_PreviewObject.OnDestroy();
 
-	m_PreviewObject.Clear();
 	m_RenderObject.Clear();
 	xr_delete(m_pEditObject);
 }
@@ -413,7 +403,6 @@ void CActorTools::Clear()
 		m_pEditObject->DeletePhysicsShell();
 	xr_delete(m_pEditObject);
 	m_RenderObject.Clear();
-	//	m_PreviewObject.Clear();
 	m_ObjectItems->ClearList();
 	m_Props->ClearProperties();
 
@@ -653,35 +642,15 @@ bool CActorTools::Pick(TShiftState Shift)
 
 bool CActorTools::RayPick(const Fvector& start, const Fvector& dir, float& dist, Fvector* pt, Fvector* n)
 {
-	if (m_PreviewObject.m_pObject)
+	Fvector np; np.mad(start, dir, dist);
+	if ((start.y > 0) && (np.y < 0.f))
 	{
-		SRayPickInfo pinf;
-		if (m_PreviewObject.m_pObject->RayPick(dist, start, dir, Fidentity, &pinf))
-		{
-			if (pt) pt->set(pinf.pt);
-			if (n)
-			{
-				const Fvector* PT[3];
-				pinf.e_mesh->GetFacePT(pinf.inf.id, PT);
-				n->mknormal(*PT[0], *PT[1], *PT[2]);
-			}
-			return true;
-		}
-		else
-			return false;
+		if (pt) pt->set(start);
+		if (n)	n->set(0.f, 1.f, 0.f);
+		return true;
 	}
 	else
-	{
-		Fvector np; np.mad(start, dir, dist);
-		if ((start.y > 0) && (np.y < 0.f))
-		{
-			if (pt) pt->set(start);
-			if (n)	n->set(0.f, 1.f, 0.f);
-			return true;
-		}
-		else
-			return false;
-	}
+		return false;
 }
 
 void CActorTools::GetStatTime(float& a, float& b, float& c)
@@ -718,21 +687,6 @@ void CActorTools::GetStatTime(float& a, float& b, float& c)
 bool CActorTools::IsEngineMode()
 {
 	return MainForm->GetLeftBarForm()->GetRenderMode() == UILeftBarForm::Render_Engine;
-}
-
-void CActorTools::SelectPreviewObject(bool bClear)
-{
-	if (bClear)
-	{
-		m_PreviewObject.Clear(); return;
-	}
-	
-	m_PreviewObject.SelectObject();
-}
-
-void CActorTools::SetPreviewObjectPrefs()
-{
-	m_PreviewObject.SetPreferences();
 }
 
 void CActorTools::OnObjectModified(void)
@@ -804,71 +758,6 @@ bool CActorTools::ExportOBJ(LPCSTR name)
 }
 
 
-bool CActorTools::ExportCPP(LPCSTR name)
-{
-	if (m_pEditObject)
-	{
-		EditMeshVec& meshes = m_pEditObject->Meshes();
-		string128 tmp;
-		IWriter* W = FS.w_open(name);
-
-		for (EditMeshIt m_it = meshes.begin(); m_it != meshes.end(); m_it++)
-		{
-			CEditableMesh* mesh = *m_it;
-			mesh->GenerateVNormals(0, true);
-
-			const st_Face* faces = mesh->GetFaces();
-			const Fvector* verts = mesh->GetVertices();
-			const Fvector* vnormals = mesh->GetVNormals();
-			const Fvector* normals = mesh->GetNormals();
-
-			sprintf(tmp, "MESH %s {", mesh->Name().c_str());
-			W->w_string(tmp);
-			sprintf(tmp, "\tVERTEX_COUNT %d", mesh->GetVCount());
-			W->w_string(tmp);
-			sprintf(tmp, "\tFACE_COUNT %d", mesh->GetFCount());
-			W->w_string(tmp);
-			W->w_string("\tconst Fvector vertices[VERTEX_COUNT] = {");
-			for (u32 v_id = 0; v_id < mesh->GetVCount(); v_id++)
-			{
-				sprintf(tmp, "\t\t{% 3.6f,\t% 3.6f,\t% 3.6f},", VPUSH(verts[v_id]));
-				W->w_string(tmp);
-			}
-			W->w_string("\t}");
-			W->w_string("\tconst u16 faces[FACE_COUNT*3] = {");
-			for (u32 f_id = 0; f_id < mesh->GetFCount(); f_id++)
-			{
-				sprintf(tmp, "\t\t%-d,\t\t%-d,\t\t%-d,", faces[f_id].pv[0].pindex, faces[f_id].pv[1].pindex, faces[f_id].pv[2].pindex);
-				W->w_string(tmp);
-			}
-			W->w_string("\t}");
-
-			if (normals)
-			{
-				W->w_string("\tconst Fvector normals[FACE_COUNT*3] = {");
-				for (u32 n_id = 0; n_id < mesh->GetFCount() * 3; n_id++)
-				{
-					sprintf(tmp, "\t\t{% 3.6f,\t% 3.6f,\t% 3.6f},", VPUSH(normals[n_id]));
-					W->w_string(tmp);
-				}
-				W->w_string("\t}");
-			}
-
-			W->w_string("\tconst Fvector vnormals[FACE_COUNT*3] = {");
-			for (u32 vn_id = 0; vn_id < mesh->GetFCount() * 3; vn_id++)
-			{
-				sprintf(tmp, "\t\t{% 3.6f,\t% 3.6f,\t% 3.6f},", VPUSH(vnormals[vn_id]));
-				W->w_string(tmp);
-			}
-			W->w_string("\t}");
-			W->w_string("}");
-		}
-		FS.w_close(W);
-		return true;
-	}
-	return false;
-}
-
 #include "../xrECore/Editor/EDetailModel.h"
 bool CActorTools::ExportDM(LPCSTR name)
 {
@@ -910,14 +799,6 @@ void CActorTools::SetCurrentMotion(LPCSTR name, u16 slot)
 			if (M)
 			{
 				m_pEditObject->SetActiveSMotion(M);
-			}
-
-			if (m_PreviewObject.m_pObject != nullptr)
-			{
-				if (CSMotion* PM = m_PreviewObject.m_pObject->FindSMotionByName(name))
-				{
-					m_PreviewObject.m_pObject->SetActiveSMotion(PM);
-				}
 			}
 
 			PlayMotion();

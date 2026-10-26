@@ -138,20 +138,6 @@ CCommandVar CActorTools::CommandExportOMF(CCommandVar p1, CCommandVar p2)
 	}
 	return res;
 }
-CCommandVar CActorTools::CommandExportCPP(CCommandVar p1, CCommandVar p2)
-{
-	CCommandVar res 				= FALSE;
-	xr_string fn=p1.IsString()?xr_string(p1):xr_string("");
-	if (p1.IsString()||EFS.GetSaveName(_import_,fn,0,7))
-	{
-		if (0!=(res=ExportCPP(fn.c_str())))	
-			ELog.Msg(mtInformation,"Export complete.");
-		else        		    			
-			ELog.Msg(mtError,"Export failed.");
-	}
-	return res;
-}
-
 CCommandVar CActorTools::CommandUndo(CCommandVar p1, CCommandVar p2)
 {
 	if(!Undo())	
@@ -325,16 +311,6 @@ CCommandVar CommandMakePreview(CCommandVar p1, CCommandVar p2)
 	ATools->MakePreview();
 	return TRUE;
 }
-CCommandVar CommandPreviewObjPref(CCommandVar p1, CCommandVar p2)
-{
-	ATools->SetPreviewObjectPrefs();
-	return TRUE;
-}
-CCommandVar CommandSelectPreviewObj(CCommandVar p1, CCommandVar p2)
-{
-	ATools->SelectPreviewObject(p1);
-	return TRUE;
-}
 CCommandVar CommandLoadFirstRecent(CCommandVar p1, CCommandVar p2)
 {
 	if (EPrefs->FirstRecentFile())
@@ -450,7 +426,6 @@ void CActorMain::RegisterCommands()
 	REGISTER_CMD_CE(COMMAND_EXPORT_OBJ, "File\\Export OBJ", ATools, CActorTools::CommandExportOBJ, true);
 	REGISTER_CMD_CE(COMMAND_EXPORT_OGF, "File\\Export OGF", ATools, CActorTools::CommandExportOGF, true);
 	REGISTER_CMD_CE(COMMAND_EXPORT_OMF, "File\\Export OMF", ATools, CActorTools::CommandExportOMF, true);
-	REGISTER_CMD_CE(COMMAND_EXPORT_CPP, "File\\Export CPP", ATools, CActorTools::CommandExportCPP, true);
 	REGISTER_CMD_CE(COMMAND_UNDO, "Edit\\Undo", ATools, CActorTools::CommandUndo, false);
 	REGISTER_CMD_CE(COMMAND_REDO, "Edit\\Redo", ATools, CActorTools::CommandRedo, false);
 	REGISTER_CMD_C(COMMAND_OPTIMIZE_MOTIONS, ATools, CActorTools::CommandOptimizeMotions);
@@ -459,8 +434,6 @@ void CActorMain::RegisterCommands()
 	// ui
 	REGISTER_CMD_S(COMMAND_SHOW_CLIPMAKER, CommandShowClipMaker);
 	REGISTER_CMD_S(COMMAND_MAKE_PREVIEW, CommandMakePreview);
-	REGISTER_CMD_S(COMMAND_PREVIEW_OBJ_PREF, CommandPreviewObjPref);
-	REGISTER_CMD_S(COMMAND_SELECT_PREVIEW_OBJ, CommandSelectPreviewObj);
 	REGISTER_CMD_SE(COMMAND_LOAD_FIRSTRECENT, "File\\Load First Recent", CommandLoadFirstRecent, true);
 	REGISTER_CMD_S(COMMAND_UPDATE_TOOLBAR, CommandUpdateToolBar);
 	REGISTER_CMD_S(COMMAND_UPDATE_CAPTION, CommandUpdateCaption);

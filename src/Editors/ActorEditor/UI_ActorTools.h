@@ -77,44 +77,6 @@ private:
 
 };
 
-class PreviewModel:
-	public IEditorWnd
-{
-	UIPropertiesForm*	m_Props;
-	float			m_fSpeed;
-	float			m_fSegment;
-	Flags32			m_Flags;
-	Fvector			m_vPosition;
-	xr_string 		m_LastObjectName;
-public:
-	CEditableObject*m_pObject;
-public:
-	enum{
-		pmScroll	= (1<<0),
-		force_dword = u32(-1)
-	};
-	enum EScrollAxis{
-		saZp,
-		saZn,
-		saXp,
-		saXn,
-		saforceDWORD=u32(-1)
-	};
-	EScrollAxis		m_ScrollAxis;
-public:
-					PreviewModel		(){m_pObject=0;m_fSpeed=5.f;m_fSegment=50.f;m_Flags.zero();m_Props=0;m_vPosition.set(0,0,0);m_ScrollAxis=saZp;}
-	virtual void	OnCreate			();
-	virtual void	OnDestroy			();
-	virtual void	Draw    			();
-	void			Clear				();
-	void			SelectObject		();
-	void			SetPreferences		();
-	void			Render				();
-	void			Update				();
-   /* void			RestoreParams		(TFormStorage* s);
-	void			SaveParams			(TFormStorage* s);*/
-};
-
 class CActorTools: public CToolCustom
 {
 	typedef CToolCustom inherited;
@@ -196,7 +158,6 @@ protected:
 	bool				VerifyMotionRefs		();
 public:
 	EngineModel			m_RenderObject;
-	PreviewModel		m_PreviewObject;
 	CUIBoneView*        BoneView;
 
 	UIPropertiesForm*		m_Props;
@@ -264,8 +225,6 @@ public:
 	void				GetStatTime			(float& a, float& b, float& c);
 
 	bool				IsEngineMode		();
-	void 				SelectPreviewObject	(bool bClear);
-	void				SetPreviewObjectPrefs();
 
 	void				SelectListItem		(LPCSTR pref, LPCSTR name, bool bVal, bool bLeaveSel, bool bExpand);
 
@@ -275,7 +234,6 @@ public:
 	bool				ExportOGF			(LPCSTR name);
 	bool				ExportOMF			(LPCSTR name);
 	bool				ExportDM			(LPCSTR name);
-	bool 				ExportCPP			(LPCSTR name);
 	bool				SaveMotions			(LPCSTR name, bool bSelOnly);
 	bool				AppendMotion		(LPCSTR fn);
 	bool				RemoveMotion		(LPCSTR name);
@@ -339,7 +297,6 @@ public:
 	CCommandVar         CommandExportOBJ	(CCommandVar p1, CCommandVar p2);
 	CCommandVar         CommandExportOGF	(CCommandVar p1, CCommandVar p2);
 	CCommandVar         CommandExportOMF	(CCommandVar p1, CCommandVar p2);
-	CCommandVar 		CommandExportCPP	(CCommandVar p1, CCommandVar p2);
 	CCommandVar 		CommandUndo			(CCommandVar p1, CCommandVar p2);
 	CCommandVar 		CommandRedo			(CCommandVar p1, CCommandVar p2);
 	CCommandVar 		CommandOptimizeMotions(CCommandVar p1, CCommandVar p2);

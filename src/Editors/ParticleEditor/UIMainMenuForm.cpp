@@ -63,8 +63,6 @@ void UIMainMenuForm::Draw()
                 if (ImGui::MenuItem(Loc("Synchronize Sounds (Hard)"), "")) { ExecCommand(COMMAND_SYNC_SOUNDS_HARD); }
                 ImGui::EndMenu();
             }
-            if (ImGui::MenuItem(Loc("Light Anim Editor"), "")) { ExecCommand(COMMAND_LIGHTANIM_EDITOR); }
-            if (ImGui::MenuItem(Loc("Minimap Editor"), "")) { ExecCommand(COMMAND_MINIMAP_EDITOR); }
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu(Loc("Options")))
