@@ -34,22 +34,35 @@ struct DbRecord
 // folder picker (no EFS equivalent for directories)
 static bool BrowseFolder(char* buf, size_t sz)
 {
+	// BIF_NEWDIALOGSTYLE requires COM (STA) on the calling thread; without it
+	// SHBrowseForFolderA hangs forever. Initialize here and balance on exit;
+	// if the thread already uses another COM model, fall back to the
+	// old-style dialog which does not need COM.
+	HRESULT hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+	bool com_owned = (hr == S_OK || hr == S_FALSE);
+	bool new_style = com_owned;
+
 	BROWSEINFOA bi = {};
 	char display[MAX_PATH] = "";
 	bi.hwndOwner = GetForegroundWindow();
 	bi.pszDisplayName = display;
 	bi.lpszTitle = "Select folder";
-	bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
+	bi.ulFlags = BIF_RETURNONLYFSDIRS | (new_style ? BIF_NEWDIALOGSTYLE : 0);
 	LPITEMIDLIST pidl = SHBrowseForFolderA(&bi);
-	if (!pidl)
-		return false;
-	char path[MAX_PATH] = "";
-	BOOL ok = SHGetPathFromIDListA(pidl, path);
-	CoTaskMemFree(pidl);
-	if (!ok)
-		return false;
-	strncpy_s(buf, sz, path, _TRUNCATE);
-	return true;
+	bool ok = false;
+	if (pidl)
+	{
+		char path[MAX_PATH] = "";
+		if (SHGetPathFromIDListA(pidl, path))
+		{
+			strncpy_s(buf, sz, path, _TRUNCATE);
+			ok = true;
+		}
+		CoTaskMemFree(pidl);
+	}
+	if (com_owned)
+		CoUninitialize();
+	return ok;
 }
 
 // replicate xrCompressor::write_file_header (xrCompress.cpp L138-164):
@@ -159,43 +172,36 @@ static bool ParseArchive(LPCSTR path, xr_vector<DbRecord>& recs, xr_string& entr
 // unpack
 // ---------------------------------------------------------------------------
 
-void UIDbArchiveForm::DoUnpack()
+struct UnpackStats
 {
-	if (!m_ArchivePath[0] || !m_UnpackDir[0])
-	{
-		ELog.Msg(mtError, "DB Tool: archive path and output dir are required.");
-		return;
-	}
-	if (strstr(m_UnpackDir, m_ArchivePath) == m_UnpackDir)
-	{
-		ELog.Msg(mtError, "DB Tool: output dir is inside the archive path??");
-		return;
-	}
+	int extracted = 0;
+	int dirs = 0;
+	int raw = 0;
+	int lzo = 0;
+	int crc_mismatch = 0;
+};
 
+// parse + extract one archive into out_dir (parse errors are logged here)
+static bool UnpackArchive(LPCSTR archive_path, const fs::path& out_root, UnpackStats& st, xr_string& entry_point)
+{
 	xr_vector<DbRecord> recs;
-	xr_string entry_point;
 	xr_string err;
-	if (!ParseArchive(m_ArchivePath, recs, entry_point, err))
+	if (!ParseArchive(archive_path, recs, entry_point, err))
 	{
-		ELog.Msg(mtError, "DB Tool: %s (%s).", err.c_str(), m_ArchivePath);
-		return;
+		ELog.Msg(mtError, "DB Tool: %s (%s).", err.c_str(), archive_path);
+		return false;
 	}
 
-	FILE* f = fopen(m_ArchivePath, "rb");
+	FILE* f = fopen(archive_path, "rb");
 	if (!f)
 	{
-		ELog.Msg(mtError, "DB Tool: can't reopen archive '%s'.", m_ArchivePath);
-		return;
+		ELog.Msg(mtError, "DB Tool: can't reopen archive '%s'.", archive_path);
+		return false;
 	}
 
-	fs::path out_root = fs::path(m_UnpackDir);
-	int extracted = 0, skipped_dirs = 0, raw_files = 0, lzo_files = 0, crc_mismatch = 0;
 	xr_vector<char> src_buf, dst_buf;
-
-	SPBItem* PB = UI->ProgressStart((int)recs.size(), "Unpacking archive");
 	for (const auto& rec : recs)
 	{
-		PB->Inc();
 		xr_string name = rec.name;
 		std::transform(name.begin(), name.end(), name.begin(), [](char c) { return (char)tolower((u8)c); });
 		if (name.find("..") != xr_string::npos)
@@ -206,7 +212,7 @@ void UIDbArchiveForm::DoUnpack()
 		{
 			std::error_code ec;
 			fs::create_directories(target, ec);
-			++skipped_dirs;
+			++st.dirs;
 			continue;
 		}
 
@@ -218,7 +224,7 @@ void UIDbArchiveForm::DoUnpack()
 			FILE* out = fopen(target.string().c_str(), "wb");
 			if (out)
 				fclose(out);
-			++extracted;
+			++st.extracted;
 			continue;
 		}
 
@@ -240,15 +246,15 @@ void UIDbArchiveForm::DoUnpack()
 			dst_buf.resize(rec.size_real);
 			rtc_decompress(dst_buf.data(), rec.size_real, src_buf.data(), rec.size_compr);
 			data = dst_buf.data();
-			++lzo_files;
+			++st.lzo;
 		}
 		else
 		{
-			++raw_files;
+			++st.raw;
 		}
 
 		if (rec.size_real && crc32(data, rec.size_real) != rec.crc)
-			++crc_mismatch;
+			++st.crc_mismatch;
 
 		std::error_code ec;
 		fs::create_directories(target.parent_path(), ec);
@@ -261,14 +267,104 @@ void UIDbArchiveForm::DoUnpack()
 		if (rec.size_real)
 			fwrite(data, 1, rec.size_real, out);
 		fclose(out);
-		++extracted;
+		++st.extracted;
 	}
-	UI->ProgressEnd(PB);
 	fclose(f);
+	return true;
+}
+
+// a file is treated as an archive when its extension starts with ".db" or is .xdb/.pack
+static bool IsArchiveFile(const fs::path& p)
+{
+	std::wstring ext = p.extension().wstring();
+	std::transform(ext.begin(), ext.end(), ext.begin(), ::towlower);
+	return ext.size() >= 3 && (ext.compare(0, 3, L".db") == 0 || ext == L".pack" || ext == L".xdb");
+}
+
+void UIDbArchiveForm::DoUnpack()
+{
+	if (m_BatchMode)
+	{
+		if (!m_BatchDir[0] || !m_UnpackDir[0])
+		{
+			ELog.Msg(mtError, "DB Tool: batch folder and output dir are required.");
+			return;
+		}
+		fs::path root = fs::path(m_BatchDir);
+		if (!fs::exists(root))
+		{
+			ELog.Msg(mtError, "DB Tool: batch folder doesn't exist '%s'.", m_BatchDir);
+			return;
+		}
+
+		// collect all archive files in the folder
+		xr_vector<fs::path> archives;
+		std::error_code ec;
+		if (m_Recursive)
+		{
+			for (auto& entry : fs::recursive_directory_iterator(root, ec))
+				if (entry.is_regular_file() && IsArchiveFile(entry.path()))
+					archives.push_back(entry.path());
+		}
+		else
+		{
+			for (auto& entry : fs::directory_iterator(root, ec))
+				if (entry.is_regular_file() && IsArchiveFile(entry.path()))
+					archives.push_back(entry.path());
+		}
+		if (archives.empty())
+		{
+			ELog.Msg(mtError, "DB Tool: no archive files found in '%s'.", m_BatchDir);
+			return;
+		}
+		std::sort(archives.begin(), archives.end());
+
+		fs::path out_root = fs::path(m_UnpackDir);
+		UnpackStats total;
+		int ok_archives = 0;
+		xr_string entry_point;
+		SPBItem* PB = UI->ProgressStart((int)archives.size(), "Unpacking archives");
+		for (const auto& arch : archives)
+		{
+			// each archive gets its own subfolder named after the file to
+			// avoid collisions between archives sharing internal paths
+			fs::path sub = out_root / arch.filename();
+			UnpackStats st;
+			if (UnpackArchive(arch.string().c_str(), sub, st, entry_point))
+			{
+				++ok_archives;
+				total.extracted += st.extracted;
+				total.dirs += st.dirs;
+				total.raw += st.raw;
+				total.lzo += st.lzo;
+				total.crc_mismatch += st.crc_mismatch;
+			}
+			PB->Inc();
+		}
+		UI->ProgressEnd(PB);
+
+		string1024 stat;
+		xr_sprintf(stat, "Batch unpack done: %d/%u archives, %d files (%d raw, %d lzo), %d dirs, %d crc mismatches.",
+			ok_archives, (u32)archives.size(), total.extracted, total.raw, total.lzo, total.dirs, total.crc_mismatch);
+		m_LastResult = stat;
+		ELog.Msg(mtInformation, "DB Tool: %s", m_LastResult.c_str());
+		return;
+	}
+
+	if (!m_ArchivePath[0] || !m_UnpackDir[0])
+	{
+		ELog.Msg(mtError, "DB Tool: archive path and output dir are required.");
+		return;
+	}
+
+	UnpackStats st;
+	xr_string entry_point;
+	if (!UnpackArchive(m_ArchivePath, fs::path(m_UnpackDir), st, entry_point))
+		return;
 
 	string1024 stat;
 	xr_sprintf(stat, "Unpack done: %d files (%d raw, %d lzo), %d dirs, %d crc mismatches, entry point '%s'.",
-		extracted, raw_files, lzo_files, skipped_dirs, crc_mismatch, entry_point.c_str());
+		st.extracted, st.raw, st.lzo, st.dirs, st.crc_mismatch, entry_point.c_str());
 	m_LastResult = stat;
 	ELog.Msg(mtInformation, "DB Tool: %s", m_LastResult.c_str());
 }
@@ -440,16 +536,35 @@ void UIDbArchiveForm::DoPack()
 
 void UIDbArchiveForm::DrawUnpackTab()
 {
-	ImGui::InputText("##arch", m_ArchivePath, sizeof(m_ArchivePath));
+	ImGui::RadioButton(Loc("Single archive"), &m_BatchMode, 0);
 	ImGui::SameLine();
-	if (ImGui::Button(Loc("Browse...")))
+	ImGui::RadioButton(Loc("Folder (batch)"), &m_BatchMode, 1);
+	ImGui::Separator();
+
+	if (!m_BatchMode)
 	{
-		xr_string fn = m_ArchivePath;
-		if (EFS.GetOpenName("$fs_root$", fn, false, 0, -1, "*.db;*.xdb;*.pack"))
-			xr_strcpy(m_ArchivePath, sizeof(m_ArchivePath), fn.c_str());
+		ImGui::InputText("##arch", m_ArchivePath, sizeof(m_ArchivePath));
+		ImGui::SameLine();
+		if (ImGui::Button((xr_string(Loc("Browse...")) + "##arch").c_str()))
+		{
+			xr_string fn = m_ArchivePath;
+			if (EFS.GetOpenName("$fs_root$", fn, false, 0, -1, "*.db*;*.xdb;*.pack"))
+				xr_strcpy(m_ArchivePath, sizeof(m_ArchivePath), fn.c_str());
+		}
+		ImGui::SameLine();
+		ImGui::TextUnformatted(Loc("Archive"));
 	}
-	ImGui::SameLine();
-	ImGui::TextUnformatted(Loc("Archive"));
+	else
+	{
+		ImGui::InputText("##batchdir", m_BatchDir, sizeof(m_BatchDir));
+		ImGui::SameLine();
+		if (ImGui::Button((xr_string(Loc("Browse...")) + "##batchdir").c_str()))
+			BrowseFolder(m_BatchDir, sizeof(m_BatchDir));
+		ImGui::SameLine();
+		ImGui::TextUnformatted(Loc("Source folder"));
+
+		ImGui::Checkbox(Loc("Recursive"), &m_Recursive);
+	}
 
 	ImGui::InputText("##outdir", m_UnpackDir, sizeof(m_UnpackDir));
 	ImGui::SameLine();
@@ -458,7 +573,7 @@ void UIDbArchiveForm::DrawUnpackTab()
 	ImGui::SameLine();
 	ImGui::TextUnformatted(Loc("Output folder"));
 
-	if (ImGui::Button(Loc("Unpack")))
+	if (ImGui::Button(m_BatchMode ? Loc("Unpack all") : Loc("Unpack")))
 		DoUnpack();
 	if (!m_LastResult.empty())
 		ImGui::TextUnformatted(m_LastResult.c_str());

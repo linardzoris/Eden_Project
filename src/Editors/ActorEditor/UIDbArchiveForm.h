@@ -24,6 +24,9 @@ private:
 
 	char m_ArchivePath[1024] = "";
 	char m_UnpackDir[1024] = "";
+	char m_BatchDir[1024] = "";
+	int m_BatchMode = 0;          // unpack: 0 = single archive, 1 = whole folder
+	bool m_Recursive = false;     // batch mode: scan subfolders too
 	char m_PackSrcDir[1024] = "";
 	char m_PackOutPath[1024] = "";
 	char m_EntryPoint[128] = "gamedata";

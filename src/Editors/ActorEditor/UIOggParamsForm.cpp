@@ -3,8 +3,36 @@
 #include "imgui.h"
 #include "../xrEUI/EditorLocalization.h"
 #include "../xrECore/Importer/AudioWav.h"
+#include "../xrECore/Engine/ai_sounds.h"
 #include <vorbis/vorbisfile.h>
 #include <windows.h>
+
+// the game type token table lives in xrECore/Engine/ai_sounds.cpp but is not
+// exported from the DLL; duplicate it here for the UI only (sg_Undefined = 0)
+static xr_token ae_game_type_token[] = {
+	{ "undefined",            sg_Undefined },
+	{ "Item picking up",      SOUND_TYPE_ITEM_PICKING_UP },
+	{ "Item dropping",        SOUND_TYPE_ITEM_DROPPING },
+	{ "Item taking",          SOUND_TYPE_ITEM_TAKING },
+	{ "Item hiding",          SOUND_TYPE_ITEM_HIDING },
+	{ "Item using",           SOUND_TYPE_ITEM_USING },
+	{ "Weapon shooting",      SOUND_TYPE_WEAPON_SHOOTING },
+	{ "Weapon empty clicking",SOUND_TYPE_WEAPON_EMPTY_CLICKING },
+	{ "Weapon bullet hit",    SOUND_TYPE_WEAPON_BULLET_HIT },
+	{ "Weapon recharging",    SOUND_TYPE_WEAPON_RECHARGING },
+	{ "NPC dying",            SOUND_TYPE_MONSTER_DYING },
+	{ "NPC injuring",         SOUND_TYPE_MONSTER_INJURING },
+	{ "NPC step",             SOUND_TYPE_MONSTER_STEP },
+	{ "NPC talking",          SOUND_TYPE_MONSTER_TALKING },
+	{ "NPC attacking",        SOUND_TYPE_MONSTER_ATTACKING },
+	{ "NPC eating",           SOUND_TYPE_MONSTER_EATING },
+	{ "Anomaly idle",         SOUND_TYPE_ANOMALY_IDLE },
+	{ "Object breaking",      SOUND_TYPE_WORLD_OBJECT_BREAKING },
+	{ "Object colliding",     SOUND_TYPE_WORLD_OBJECT_COLLIDING },
+	{ "Object exploding",     SOUND_TYPE_WORLD_OBJECT_EXPLODING },
+	{ "World ambient",        SOUND_TYPE_WORLD_AMBIENT },
+	{ 0, 0 }
+};
 
 // ---------------------------------------------------------------------------
 // Memory-backed ov_callbacks over a raw byte buffer
@@ -420,11 +448,35 @@ void UIOggParamsForm::Draw()
 		m_Dirty = true;
 	if (ImGui::DragFloat(Loc("Max AI distance"), &m_MaxAIDist, 0.1f, 0.1f, 10000.0f, "%.2f"))
 		m_Dirty = true;
-	int game_type = (int)m_GameType;
-	if (ImGui::InputInt(Loc("Game type"), &game_type))
+	// game type shown as human-readable text (same mapping as the Sound Editor);
+	// unknown values fall back to a hex display but stay unchanged until picked
 	{
-		m_GameType = (u32)game_type;
-		m_Dirty = true;
+		int count = 0, current = -1;
+		char unknown_label[32];
+		for (; ae_game_type_token[count].name; ++count)
+			if ((u32)ae_game_type_token[count].id == m_GameType)
+				current = count;
+		if (current < 0)
+		{
+			sprintf_s(unknown_label, sizeof(unknown_label), "Unknown (0x%08X)", m_GameType);
+			if (ImGui::BeginCombo(Loc("Game type"), unknown_label))
+				ImGui::EndCombo();
+		}
+		else if (ImGui::BeginCombo(Loc("Game type"), ae_game_type_token[current].name))
+		{
+			for (int i = 0; i < count; ++i)
+			{
+				bool selected = (i == current);
+				if (ImGui::Selectable(ae_game_type_token[i].name, selected))
+				{
+					m_GameType = (u32)ae_game_type_token[i].id;
+					m_Dirty = true;
+				}
+				if (selected)
+					ImGui::SetItemDefaultFocus();
+			}
+			ImGui::EndCombo();
+		}
 	}
 	if (ImGui::SliderFloat(Loc("Encode quality"), &m_Quality, 0.5f, 1.0f, "%.2f"))
 		m_Dirty = true;

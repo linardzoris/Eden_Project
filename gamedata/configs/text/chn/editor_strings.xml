@@ -1191,4 +1191,8 @@
 	<string id="Max AI distance"><text>最大 AI 距离</text></string>
 	<string id="Game type"><text>游戏类型</text></string>
 	<string id="Encode quality"><text>编码质量</text></string>
+	<string id="Single archive"><text>单个档案</text></string>
+	<string id="Folder (batch)"><text>目录（批量）</text></string>
+	<string id="Recursive"><text>递归子目录</text></string>
+	<string id="Unpack all"><text>全部解包</text></string>
 </string_table>
