@@ -450,8 +450,10 @@ void gpu_optix_rebuild_global_scene()
 		map_ids(EmbreeMain.murefs_geom_transp);
 	}
 
-	// Embree parity for the global scene: tnear 0.1 and the Embree energy cutoff
-	g_globalScene = gpu_optix_scene_create(verts.data(), verts.size(), indices.data(), fd.data(), fd.size(), 0.1f, EmbreeEnergyMAX);
+	// Embree parity for the global scene: same tnear as the CPU Embree path
+	// (EMBREE_TNEAR 0.01 - 0.1 tunnelled through thin walls) and the Embree
+	// energy cutoff
+	g_globalScene = gpu_optix_scene_create(verts.data(), verts.size(), indices.data(), fd.data(), fd.size(), 0.01f, EmbreeEnergyMAX);
 	if (!g_globalScene)
 		clMsg("[GpuBaker] global scene build failed");
 	else

@@ -17,6 +17,10 @@ using Implicit_it = Implicit::iterator;
 #include "../xrForms/xrThread.h"
 #include "../xrForms/CompilersUI.h"
 
+#include "gpu_baker/OptiXBakerHost.h"
+
+extern CompilersMode gCompilerMode;
+
 class ImplicitThread :
 	public CThread
 {
@@ -158,6 +162,180 @@ void ImplicitExecute::Execute()
 }
 
 static xr_vector<u32> not_clear;
+
+// GPU bake of an implicit map: same per-texel jitter/triangle math as
+// ImplicitExecute::Execute, but the LightPoint occlusion work for every
+// (texel, jitter, face) sample runs in batched OptiX launches instead of one
+// CPU shadow ray at a time. A 1024x1024 terrain texture is ~4M samples x ~245
+// lights - hundreds of millions of rays on CPU, a handful of GPU launches here.
+struct implicit_gpu_sample
+{
+	GpuBakePoint pt;
+	u32 texel;
+};
+
+static void ImplicitLightingGPU(ImplicitDeflector& defl)
+{
+	CTimer tGPU;
+	tGPU.Start();
+
+	const u32 W = defl.Width();
+	const u32 H = defl.Height();
+
+	Fvector2 dim, half;
+	dim.set(float(W), float(H));
+	half.set(.5f / dim.x, .5f / dim.y);
+
+	// Jitter data (same as the CPU path)
+	Fvector2 JS;
+	JS.set(.499f / dim.x, .499f / dim.y);
+	u32 Jcount;
+	Fvector2* Jitter;
+	Jitter_Select(Jitter, Jcount);
+
+	const u32 flags = (inlc_global_data()->b_nosun() ? LP_dont_sun : 0);
+	GpuBakeScene* scene = gpu_optix_global_scene();
+	R_ASSERT(scene);
+
+	// pass 1: gather bake points, parallel over rows (each thread owns its row)
+	Status("Gathering implicit samples...");
+	xr_vector<xr_vector<implicit_gpu_sample>> rows(H);
+	xr_parallel_for
+	(
+		size_t(0), size_t(H),
+		[&](size_t V)
+		{
+			xr_vector<implicit_gpu_sample>& dst = rows[V];
+			for (u32 U = 0; U < W; U++)
+			{
+				for (u32 J = 0; J < Jcount; J++)
+				{
+					// LUMEL space
+					Fvector2 P;
+					P.x = float(U) / dim.x + half.x + Jitter[J].x * JS.x;
+					P.y = float(V) / dim.y + half.y + Jitter[J].y * JS.y;
+					xr_vector<Face*>& space = cl_globs.Hash().query(P.x, P.y);
+
+					// World space
+					for (vecFaceIt it = space.begin(); it != space.end(); it++)
+					{
+						Face* F = *it;
+						_TCF& tc = F->tc[0];
+						Fvector B;
+						if (!tc.isInside(P, B))
+							continue;
+
+						// We found triangle and have barycentric coords
+						Vertex* V1 = F->v[0];
+						Vertex* V2 = F->v[1];
+						Vertex* V3 = F->v[2];
+						Fvector wP, wN;
+						wP.from_bary(V1->P, V2->P, V3->P, B);
+						wN.from_bary(V1->N, V2->N, V3->N, B);
+						wN.normalize();
+
+						implicit_gpu_sample s;
+						s.pt.P[0] = wP.x;	s.pt.P[1] = wP.y;	s.pt.P[2] = wP.z;
+						s.pt.N[0] = wN.x;	s.pt.N[1] = wN.y;	s.pt.N[2] = wN.z;
+						s.pt.skipFace = gpu_optix_face_id(F);	// same face the CPU path passes as skip
+						s.texel = u32(V) * W + U;
+						dst.push_back(s);
+					}
+				}
+			}
+			Progress(float(V) / float(H));
+		}
+	);
+
+	// flatten into contiguous point / texel arrays
+	size_t total = 0;
+	for (u32 V = 0; V < H; V++)
+		total += rows[V].size();
+
+	xr_vector<GpuBakePoint> points(total);
+	xr_vector<u32> texel_ids(total);
+	{
+		size_t off = 0;
+		for (u32 V = 0; V < H; V++)
+		{
+			const size_t n = rows[V].size();
+			for (size_t i = 0; i < n; i++)
+			{
+				points[off + i] = rows[V][i].pt;
+				texel_ids[off + i] = rows[V][i].texel;
+			}
+			off += n;
+			rows[V].clear();
+		}
+	}
+	rows.clear();
+
+	clMsg("[GpuBaker] implicit '%s': %u samples", defl.texture->name, (u32)total);
+
+	// pass 2: batched GPU bake
+	Status("GPU baking implicit samples...");
+	xr_vector<GpuBakeColor> colors(total);
+	bool gpu_ok = total > 0;
+	const size_t CHUNK = 1 << 19;
+	for (size_t off = 0; off < total; off += CHUNK)
+	{
+		const size_t n = (total - off) < CHUNK ? (total - off) : CHUNK;
+		Progress(float(off) / float(_max(total, size_t(1))));
+		if (!gpu_optix_bake_points(scene, &points[off], (int)n, &colors[off], flags))
+		{
+			clMsg("[GpuBaker] implicit bake failed, falling back to CPU");
+			gpu_ok = false;
+			break;
+		}
+	}
+
+	if (!gpu_ok)
+	{
+		// let the caller run the original multithreaded CPU path
+		RunImplicitMultithread(defl);
+		return;
+	}
+
+	// pass 3: fold per-texel results (same C.scale(Fcount); C.mul(.5f) as CPU)
+	Status("Folding implicit lighting...");
+	xr_vector<base_color_c> acc(W * H);
+	xr_vector<u32> counts(W * H);
+	for (size_t i = 0; i < total; i++)
+	{
+		const GpuBakeColor& c = colors[i];
+		base_color_c cc;
+		cc.rgb.set(c.rgb[0], c.rgb[1], c.rgb[2]);
+		cc.sun = c.sun;
+		cc.hemi = c.hemi;
+		const u32 t = texel_ids[i];
+		acc[t].add(cc);
+		counts[t]++;
+	}
+
+	for (u32 V = 0; V < H; V++)
+	{
+		for (u32 U = 0; U < W; U++)
+		{
+			const u32 t = V * W + U;
+			if (counts[t])
+			{
+				base_color_c C = acc[t];
+				C.scale(counts[t]);
+				C.mul(.5f);
+				defl.Lumel(U, V)._set(C);
+				defl.Marker(U, V) = 255;
+			}
+			else
+			{
+				defl.Marker(U, V) = 0;
+			}
+		}
+	}
+
+	clMsg("[GpuBaker] implicit '%s': GPU lighting done (%.1fs)", defl.texture->name, tGPU.GetElapsed_sec());
+	Progress(1.f);
+}
+
 void ImplicitLightingExec()
 {
 
@@ -205,7 +383,10 @@ void ImplicitLightingExec()
 		Progress(0);
 		cl_globs.Initialize(defl);
 
-		RunImplicitMultithread(defl);
+		if (gCompilerMode.GPUBaking && gpu_optix_ready())
+			ImplicitLightingGPU(defl);
+		else
+			RunImplicitMultithread(defl);
 
 		defl.faces.clear();
 

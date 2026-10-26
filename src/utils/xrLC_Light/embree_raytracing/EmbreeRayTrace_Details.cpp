@@ -78,6 +78,11 @@ struct RayQueryContext
 	Face* skip = 0;
 	R_Light* Light = 0;
 	float energy = 1.0f;
+	// Whole-program optimization (LTCG) flags a speculative 16-byte write past
+	// this struct via the opaque Embree filter callback path (C4789 -> LNK1257).
+	// The details filter never writes beyond `energy`, keep headroom so the
+	// full-rebuild diagnostic stays silent.
+	float ltcg_pad[16] = { 0 };
 };
 
 ICF void FilterRaytraceDetails(const struct RTCFilterFunctionNArguments* args)

@@ -41,6 +41,12 @@ EmbreeData EmbreeMain;
 // можно и 0.10f Было раньше так
 float EmbreeEnergyMAX = 0.01f;
 
+// Shadow ray start offset (tnear) in meters, on top of LightPoint's 1cm normal
+// offset. 0.1 tunnelled straight through walls/ceilings thinner than ~11cm
+// (thin-wall light leaks); 0.01 keeps 2cm total clearance for float precision,
+// which matches the legacy OPCODE path that started rays right at the origin.
+#define EMBREE_TNEAR 0.01f
+
 struct RayQueryContext
 {
 	RTCRayQueryContext context;		// must stay first (filters cast the pointer back)
@@ -162,7 +168,7 @@ float EmbreeData::RaytraceEmbreeProcess(R_Light& L, Fvector& P, Fvector& N, floa
 	data_hits.energy[0] = 1.0f;
 
 	RTCRay ray;
-	SetRay1(ray, P, N, 0.1f, range);
+	SetRay1(ray, P, N, EMBREE_TNEAR, range);
 
 	RTCOccludedArguments args;
 	rtcInitOccludedArguments(&args);
@@ -194,7 +200,7 @@ void EmbreeData::RaytraceEmbreeProcess8(Fvector& P, Fvector* dirs, float* ranges
 		{
 			valid[i] = -1;
 			data_hits.energy[i] = 1.0f;
-			SetRay1(ray8, i, P, dirs[i], 0.1f, ranges[i]);
+			SetRay1(ray8, i, P, dirs[i], EMBREE_TNEAR, ranges[i]);
 		}
 		else
 		{

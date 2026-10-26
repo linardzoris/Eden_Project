@@ -8,10 +8,11 @@
 #define GPU_LT_POINT		1
 #define GPU_LT_SECONDARY	2
 
-// mirrors light_point.h LP_* flags
+// mirrors light_point.h LP_* flags exactly:
+// LP_UseFaceDisable=(1<<0), LP_dont_rgb=(1<<1), LP_dont_hemi=(1<<2), LP_dont_sun=(1<<3)
 #define GPU_LP_DONT_RGB		(1 << 1)
-#define GPU_LP_DONT_SUN		(1 << 2)
-#define GPU_LP_DONT_HEMI	(1 << 3)
+#define GPU_LP_DONT_HEMI	(1 << 2)
+#define GPU_LP_DONT_SUN		(1 << 3)
 
 struct GpuLight
 {
