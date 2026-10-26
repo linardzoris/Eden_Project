@@ -79,6 +79,9 @@ void UIMainMenuForm::DrawMenuItem(const char* label, int command, int param, int
 	}
 }
 
+// Batch THM->LTX conversion lives in ETextureParams.cpp (xrECore, shared with
+// the ActorEditor THM editor); see ConvertThmToLtx() there.
+
 void UIMainMenuForm::Draw()
 {
 	if (IXBeginMainMenuBar())
@@ -293,6 +296,10 @@ void UIMainMenuForm::Draw()
 					TH->Save();
 					xr_delete(TH);
 				}
+			}
+			if (ImGui::MenuItem(Loc("Convert THM to LTX"), ""))
+			{
+				ConvertThmToLtx();
 			}
 			ImGui::EndMenu();
 		}

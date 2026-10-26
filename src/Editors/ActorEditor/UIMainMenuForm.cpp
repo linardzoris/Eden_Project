@@ -73,10 +73,7 @@ void UIMainMenuForm::Draw()
 				ImGui::EndMenu();
 			}
 			if (ImGui::MenuItem(Loc("LOD Editor"), "")) { UILodEditorForm::Show(); }
-			ImGui::EndMenu();
-		}
-		if (ImGui::BeginMenu(Loc("Tools")))
-		{
+			ImGui::Separator();
 			if (ImGui::MenuItem(Loc("THM Editor"), "")) { UIThmEditorForm::Show(); }
 			if (ImGui::MenuItem(Loc("OMF Editor"), "")) { UIOmfEditorForm::Show(); }
 			if (ImGui::MenuItem(Loc("OGG Sound Params"), "")) { UIOggParamsForm::Show(); }

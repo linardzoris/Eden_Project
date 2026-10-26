@@ -213,3 +213,12 @@ extern xr_token	ttype_token[];
 #define THUMB_HEIGHT 	128
 #define THUMB_SIZE 		THUMB_HEIGHT*THUMB_WIDTH
 //----------------------------------------------------
+
+#ifdef _EDITOR
+// Batch-converts per-texture .thm metadata from $game_textures$ into a single
+// textures_converted.ltx. Review the output, then rename to textures.ltx --
+// consumed by CTextureDescrMngr::LoadLtx at runtime (see TextureDescrManager.cpp).
+// Only textures with non-default parameters and runtime-registered types
+// (ttImage / ttTerrain / ttNormalMap) are emitted.
+ECORE_API void ConvertThmToLtx();
+#endif

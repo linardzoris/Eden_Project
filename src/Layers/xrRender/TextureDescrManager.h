@@ -40,12 +40,13 @@ class CTextureDescrMngr
 	map_CS									m_detail_scalers;
 
 	void		LoadTHM		(LPCSTR initial);
+	bool		LoadLtx		(LPCSTR initial);	// single-file texture metadata (textures.ltx); false = not present
 
 public:
 				~CTextureDescrMngr();
 	void		Load		();
 	void		UnLoad		();
-public:
+	void		VerifyLtxVsThm	();				// debug: reload legacy THM set and diff against LTX-derived state
 	shared_str	GetBumpName		(const shared_str& tex_name) const;
 	float		GetMaterial		(const shared_str& tex_name) const;
 	void		GetTextureUsage	(const shared_str& tex_name, BOOL& bDiffuse, BOOL& bBump) const;

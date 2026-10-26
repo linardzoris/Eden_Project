@@ -77,6 +77,7 @@ xr_token							screenshot_format_token[] = {
 // Common
 extern int			psSkeletonUpdate;
 extern float		r__dtex_range;
+extern int			ps_r__textures_ltx;
 
 int			ps_r__LightSleepFrames		= 10	;
 
@@ -589,9 +590,19 @@ class CCC_DumpResources : public IConsole_Command
 {
 public:
 	CCC_DumpResources(LPCSTR N) : IConsole_Command(N) { bEmptyArgsHandled = TRUE; };
-	virtual void Execute(LPCSTR args) 
+	virtual void Execute(LPCSTR args)
 	{
 		dxRenderDeviceRender::Instance().Resources->Dump(false);
+	}
+};
+
+class CCC_VerifyTexturesLtx : public IConsole_Command
+{
+public:
+	CCC_VerifyTexturesLtx(LPCSTR N) : IConsole_Command(N) { bEmptyArgsHandled = TRUE; };
+	virtual void Execute(LPCSTR args)
+	{
+		dxRenderDeviceRender::Instance().Resources->m_textures_description.VerifyLtxVsThm();
 	}
 };
 
@@ -650,6 +661,8 @@ void		xrRender_initconsole	()
 
 	CMD4(CCC_Integer,	"rs_skeleton_update",	&psSkeletonUpdate,	2,		128	);
 	CMD4(CCC_Float,		"r__dtex_range",		&r__dtex_range,		5,		175	);
+	CMD4(CCC_Integer,	"r__textures_ltx",		&ps_r__textures_ltx,	0,	2	);
+	CMD1(CCC_VerifyTexturesLtx,	"r__textures_ltx_verify"						);
 
 // Common
 	CMD1(CCC_Screenshot,"screenshot"			);

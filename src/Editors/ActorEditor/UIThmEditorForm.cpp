@@ -387,6 +387,9 @@ void UIThmEditorForm::Draw()
 	ImGui::SameLine();
 	if (ImGui::Button(Loc("Close")))
 		bOpen = false;
+	ImGui::SameLine();
+	if (ImGui::Button(Loc("Batch THM -> LTX")))
+		ConvertThmToLtx();
 
 	ImGui::SameLine();
 	if (!m_FilePath.empty())

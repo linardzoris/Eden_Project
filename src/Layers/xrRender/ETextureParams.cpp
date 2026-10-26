@@ -530,4 +530,138 @@ u32 STextureParams::MemoryUsage(LPCSTR base_name)
 	}
 	return mem_usage;
 }
+
+// Converts per-texture .thm metadata from $game_textures$ into a single
+// textures_converted.ltx consumable by CTextureDescrMngr::LoadLtx (runtime
+// reads textures.ltx, see TextureDescrManager.cpp). Only textures with
+// non-default parameters and types the runtime registers are emitted.
+// Output goes to a NEW file on purpose: review it, then rename to textures.ltx.
+ECORE_API void ConvertThmToLtx()
+{
+	FS_FileSet				files;
+	FS.file_list			(files, "$game_textures$", FS_ListFiles, "*.thm");
+
+	IWriter* W = FS.w_open("$game_textures$", "textures_converted.ltx");
+	if (!W)
+	{
+		Msg("! ConvertThmToLtx: cannot create $game_textures$\\textures_converted.ltx");
+		return;
+	}
+
+	W->w_string("; texture metadata converted from .thm files");
+	W->w_string("; review, then rename to textures.ltx (runtime default name)");
+	W->w_string("; runtime defaults (not written): material=blin_phong, material_weight=0, bump_mode=none, no detail");
+
+	u32 total = files.size(), written = 0;
+	string_path fn;
+	for (const FS_File& f : files)
+	{
+		FS.update_path		(fn, "$game_textures$", f.name.c_str());
+		IReader* F = FS.r_open(fn);
+		if (!F)
+			continue;
+
+		char name[256];
+		xr_strcpy			(name, f.name.c_str());
+		if (LPSTR ext = strext(name))
+			*ext = 0;
+		_strlwr				(name);
+
+		STextureParams		tp;
+		tp.Clear			();
+		bool ok = !!F->find_chunk(THM_CHUNK_TYPE);
+		u32 thm_type = ok ? F->r_u32() : 0;
+		if (ok)
+			tp.Load			(*F);
+		FS.r_close			(F);
+
+		// mirror LoadTHM: only these types produce runtime entries
+		if (!ok || (thm_type != STextureParams::ttImage &&
+					thm_type != STextureParams::ttTerrain &&
+					thm_type != STextureParams::ttNormalMap))
+			continue;
+
+		bool has_material = tp.material != STextureParams::tmBlin_Phong || tp.material_weight != 0.0f;
+		bool has_bump = (tp.bump_mode == STextureParams::tbmUse || tp.bump_mode == STextureParams::tbmUseParallax);
+		bool has_detail = tp.detail_name.size() &&
+			tp.flags.is_any(STextureParams::flDiffuseDetail | STextureParams::flBumpDetail);
+
+		if (!has_material && !has_bump && !has_detail)
+			continue;
+
+		string512 line;
+
+		W->w_string			("");
+		xr_strconcat		(line, "[", name, "]");
+		W->w_string			(line);
+
+		if (has_material)
+		{
+			LPCSTR mat_name = "blin_phong";
+			switch (tp.material)
+			{
+			case STextureParams::tmOrenNayar_Blin:	mat_name = "orennayar_blin";	break;
+			case STextureParams::tmBlin_Phong:		mat_name = "blin_phong";		break;
+			case STextureParams::tmPhong_Metal:		mat_name = "phong_metal";		break;
+			case STextureParams::tmMetal_OrenNayar:	mat_name = "metal_orennayar";	break;
+			case STextureParams::tmPBR_Material:	mat_name = "pbr";				break;
+			}
+			xr_strconcat		(line, "material        = ", mat_name);
+			W->w_string			(line);
+			if (tp.material_weight != 0.0f)
+			{
+				xr_sprintf		(line, sizeof(line), "material_weight = %g", tp.material_weight);
+				W->w_string		(line);
+			}
+		}
+
+		if (has_bump)
+		{
+			if (tp.bump_name.size())
+			{
+				xr_strconcat	(line, "bump_mode       = ", tp.bump_mode == STextureParams::tbmUseParallax ? "parallax" : "use");
+				W->w_string		(line);
+				xr_strconcat	(line, "bump_name       = ", tp.bump_name.c_str());
+				W->w_string		(line);
+			}
+			else
+			{
+				Msg("! ConvertThmToLtx: '%s' has bump_mode but empty bump_name, skipped", name);
+			}
+		}
+
+		if (has_detail)
+		{
+			const bool bDiffuse = tp.flags.is(STextureParams::flDiffuseDetail);
+			const bool bBump	= tp.flags.is(STextureParams::flBumpDetail);
+			xr_strconcat		(line, "detail_name     = ", tp.detail_name.c_str());
+			W->w_string			(line);
+			xr_strconcat		(line, "detail_usage    = ", (bDiffuse && bBump) ? "diffuse_bump" : (bBump ? "bump" : "diffuse"));
+			W->w_string			(line);
+			if (!fsimilar(tp.detail_scale, 1.0f))
+			{
+				xr_sprintf		(line, sizeof(line), "detail_scale    = %g", tp.detail_scale);
+				W->w_string		(line);
+			}
+		}
+
+		// editor-only fields: kept for lossless migration, runtime LoadLtx
+		// safely ignores them
+		if (!fsimilar(tp.bump_virtual_height, 0.05f))
+		{
+			xr_sprintf			(line, sizeof(line), "virtual_height   = %g", tp.bump_virtual_height);
+			W->w_string			(line);
+		}
+		if (tp.ext_normal_map_name.size())
+		{
+			xr_strconcat		(line, "ext_normal_map   = ", tp.ext_normal_map_name.c_str());
+			W->w_string			(line);
+		}
+
+		++written;
+	}
+
+	FS.w_close				(W);
+	Msg("ConvertThmToLtx: scanned %d thm files, wrote %d sections to $game_textures$\\textures_converted.ltx", total, written);
+}
 #endif
