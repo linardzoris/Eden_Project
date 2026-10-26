@@ -197,9 +197,12 @@ static void ImplicitLightingGPU(ImplicitDeflector& defl)
 	GpuBakeScene* scene = gpu_optix_global_scene();
 	R_ASSERT(scene);
 
-	// pass 1: gather bake points, parallel over rows (each thread owns its row)
+	// pass 1: gather bake points, parallel over rows (each thread owns its row).
+	// Progress must be monotonic: rows complete out of order across workers, so
+	// report completed-row count instead of the row index (which jumps around).
 	Status("Gathering implicit samples...");
 	xr_vector<xr_vector<implicit_gpu_sample>> rows(H);
+	xr_atomic_u32 rows_done = 0;
 	xr_parallel_for
 	(
 		size_t(0), size_t(H),
@@ -243,7 +246,8 @@ static void ImplicitLightingGPU(ImplicitDeflector& defl)
 					}
 				}
 			}
-			Progress(float(V) / float(H));
+			// 0..0.9 during gathering; GPU bake continues 0.9..1.0 below
+			Progress(0.9f * float(rows_done.fetch_add(1) + 1) / float(H));
 		}
 	);
 
@@ -272,7 +276,7 @@ static void ImplicitLightingGPU(ImplicitDeflector& defl)
 
 	clMsg("[GpuBaker] implicit '%s': %u samples", defl.texture->name, (u32)total);
 
-	// pass 2: batched GPU bake
+	// pass 2: batched GPU bake (continues the progress scale from gathering)
 	Status("GPU baking implicit samples...");
 	xr_vector<GpuBakeColor> colors(total);
 	bool gpu_ok = total > 0;
@@ -280,7 +284,7 @@ static void ImplicitLightingGPU(ImplicitDeflector& defl)
 	for (size_t off = 0; off < total; off += CHUNK)
 	{
 		const size_t n = (total - off) < CHUNK ? (total - off) : CHUNK;
-		Progress(float(off) / float(_max(total, size_t(1))));
+		Progress(0.9f + 0.1f * (float(off) / float(_max(total, size_t(1)))));
 		if (!gpu_optix_bake_points(scene, &points[off], (int)n, &colors[off], flags))
 		{
 			clMsg("[GpuBaker] implicit bake failed, falling back to CPU");

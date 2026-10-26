@@ -14,11 +14,15 @@
 #include "../xrLC_Light/mu_model_light.h"
 xrCriticalSection task_CS;
 
+// xrDeflectoL_Direct.cpp: resets the cross-deflector GPU bake batch state
+void LmapsGpuBatchReset();
+
 #include <random>
 
 static thread_local std::mt19937 rng = std::mt19937(std::random_device()());
 xr_vector<int>		task_pool;
 xr_atomic_u32		ProgressData;
+xr_atomic_u32		ProgressShown;	// monotonic guard: deflectors complete out of order
 class CLMThread		: public CThread
 {
 private:
@@ -36,16 +40,12 @@ public:
 	{
 		CDeflector* D	= 0;
 
-		for (;;) 
+		for (;;)
 		{
 			// Get task
 			task_CS.Enter		();
-			Progress(float(ProgressData.load()) / float (lc_global_data()->g_deflectors().size()) );
 
-			if (ProgressData.load() % 8 == 0)
-				AditionalData("Deflectors: %u / %u", ProgressData.load(), lc_global_data()->g_deflectors().size() );
-
- 			if (task_pool.empty())	
+ 			if (task_pool.empty())
 			{
 				task_CS.Leave		();
 				return;
@@ -56,16 +56,29 @@ public:
 			task_pool.pop_back	();
 			task_CS.Leave		();
 
-			ProgressData.fetch_add(1);
-
-			
-
 			// Perform operation
 			try {
 				D->Light	(&DB,&LightsSelected,H);
 			} catch (...)
 			{
 				clMsg("* ERROR: CLMThread::Execute - light");
+			}
+
+			// Progress tracks COMPLETED deflectors (GPU bakes are quick, so
+			// claim-count would pin the bar at 100% while heavy deflectors
+			// still run); the CAS max-guard keeps the display strictly
+			// monotonic even though deflectors complete out of order.
+			const u32 done = ProgressData.fetch_add(1) + 1;
+			if (done % 8 == 0)
+				AditionalData("Deflectors: %u / %u", done, lc_global_data()->g_deflectors().size());
+			u32 shown = ProgressShown.load();
+			while (done > shown)
+			{
+				if (ProgressShown.compare_exchange_weak(shown, done))
+				{
+					Progress(float(done) / float(lc_global_data()->g_deflectors().size()));
+					break;
+				}
 			}
 		}
 	}
@@ -74,6 +87,9 @@ public:
 void	CBuild::LMapsLocal				()
 {
 		mem_Compact		();
+
+		// reset the cross-deflector GPU batch state (dead flag, queues, telemetry)
+		LmapsGpuBatchReset();
 
 		// Randomize deflectors
 		std::shuffle(lc_global_data()->g_deflectors().begin(), lc_global_data()->g_deflectors().end(), rng);

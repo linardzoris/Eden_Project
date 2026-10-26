@@ -59,8 +59,8 @@ namespace
 	int g_glLinear = 0;
 
 	GpuBakeScene* g_globalScene = nullptr;
-	std::unordered_map<base_Face*, int> g_faceIds;
-	std::mutex g_faceIdsMutex;
+	GpuBakeScene* g_staticScene = nullptr;		// static containers only (LMaps phase parity)
+	std::unordered_map<base_Face*, int> g_faceIds;	// read-only while bakers run (see gpu_optix_face_id)
 
 	bool cuda_check(cudaError_t e, const char* what)
 	{
@@ -396,6 +396,11 @@ void gpu_optix_rebuild_global_scene()
 		gpu_optix_scene_destroy(g_globalScene);
 		g_globalScene = nullptr;
 	}
+	if (g_staticScene)
+	{
+		gpu_optix_scene_destroy(g_staticScene);
+		g_staticScene = nullptr;
+	}
 	g_faceIds.clear();
 
 	std::vector<float> verts;
@@ -433,6 +438,10 @@ void gpu_optix_rebuild_global_scene()
 	};
 	capture(EmbreeMain.static_geom, false);
 	capture(EmbreeMain.static_geom_transp, true);
+	// static containers come first: the static-only scene is a strict prefix of
+	// the full arrays, so one face-id map serves both scenes
+	const size_t staticFaceCount = fd.size();
+	const size_t staticVertCountF = verts.size();
 	capture(EmbreeMain.murefs_geom, false);
 	capture(EmbreeMain.murefs_geom_transp, true);
 
@@ -450,7 +459,7 @@ void gpu_optix_rebuild_global_scene()
 		map_ids(EmbreeMain.murefs_geom_transp);
 	}
 
-	// Embree parity for the global scene: same tnear as the CPU Embree path
+	// Embree parity for the global scenes: same tnear as the CPU Embree path
 	// (EMBREE_TNEAR 0.01 - 0.1 tunnelled through thin walls) and the Embree
 	// energy cutoff
 	g_globalScene = gpu_optix_scene_create(verts.data(), verts.size(), indices.data(), fd.data(), fd.size(), 0.01f, EmbreeEnergyMAX);
@@ -458,11 +467,26 @@ void gpu_optix_rebuild_global_scene()
 		clMsg("[GpuBaker] global scene build failed");
 	else
 		AditionalData("[GpuBaker] global scene: %u faces", (unsigned)fd.size());
+
+	if (staticFaceCount)
+	{
+		g_staticScene = gpu_optix_scene_create(verts.data(), staticVertCountF, indices.data(),
+			fd.data(), staticFaceCount, 0.01f, EmbreeEnergyMAX);
+		if (!g_staticScene)
+			clMsg("[GpuBaker] static-only scene build failed");
+		else
+			AditionalData("[GpuBaker] static scene: %u faces (no MU)", (unsigned)staticFaceCount);
+	}
 }
 
 GpuBakeScene* gpu_optix_global_scene()
 {
 	return g_globalScene;
+}
+
+GpuBakeScene* gpu_optix_static_scene()
+{
+	return g_staticScene;
 }
 
 bool gpu_optix_ready()
@@ -472,7 +496,11 @@ bool gpu_optix_ready()
 
 int gpu_optix_face_id(base_Face* F)
 {
-	std::lock_guard<std::mutex> lock(g_faceIdsMutex);
+	// Lock-free on purpose: the map is built single-threaded during init and is
+	// READ-ONLY while bakers run (rebuild only happens when no baker threads
+	// exist). A per-call mutex here sits on the hottest path - one call per
+	// (lumel, jitter) sample - and 23 contending threads collapse into kernel
+	// waits (measured: phase time x10 under load).
 	auto it = g_faceIds.find(F);
 	return it == g_faceIds.end() ? -1 : it->second;
 }
@@ -482,6 +510,14 @@ bool gpu_optix_bake_points(GpuBakeScene* scene, const GpuBakePoint* points, int 
 {
 	if (!g_ready || !scene || !points || count <= 0 || !out)
 		return false;
+
+	// Single-flight submits: N worker threads each pushing upload+launch+sync
+	// through their own streams thrash the WDDM queue (measured ~40x effective
+	// ray throughput loss vs a single sequential submitter). The GPU is the
+	// serialization point anyway, so queue the submits; the callers' collection
+	// work still overlaps on the CPU.
+	static std::mutex s_bakeMutex;
+	std::lock_guard<std::mutex> bakeLock(s_bakeMutex);
 
 	// per-thread stream + scratch buffers so worker threads can bake in parallel
 	static thread_local cudaStream_t tls_stream = nullptr;
@@ -553,6 +589,11 @@ void gpu_optix_shutdown()
 		gpu_optix_scene_destroy(g_globalScene);
 		g_globalScene = nullptr;
 	}
+	if (g_staticScene)
+	{
+		gpu_optix_scene_destroy(g_staticScene);
+		g_staticScene = nullptr;
+	}
 	g_faceIds.clear();
 	if (g_dParams) cudaFree(g_dParams);
 	if (g_dTextures) cudaFree(g_dTextures);
@@ -589,6 +630,7 @@ void gpu_optix_shutdown()
 bool gpu_optix_init() { return false; }
 void gpu_optix_rebuild_global_scene() {}
 GpuBakeScene* gpu_optix_global_scene() { return nullptr; }
+GpuBakeScene* gpu_optix_static_scene() { return nullptr; }
 void gpu_optix_shutdown() {}
 bool gpu_optix_ready() { return false; }
 GpuBakeScene* gpu_optix_scene_create(const float*, size_t, const unsigned int*, const GpuFaceData*, size_t) { return nullptr; }

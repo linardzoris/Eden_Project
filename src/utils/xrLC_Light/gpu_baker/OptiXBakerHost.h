@@ -16,13 +16,21 @@ struct GpuBakeScene;
 // (taken from lc_global_data). Safe to call multiple times (no-op after first).
 bool gpu_optix_init();
 
-// Rebuilds the persistent global scene from the Embree face capture
+// Rebuilds the persistent global scenes from the Embree face capture
 // (EmbreeMain containers). Must be called whenever that capture is refreshed.
+// Builds two traversables: full (static + MU, mirrors the Embree scene with MU
+// attached) and static-only (what the Embree scene looks like while deflectors
+// are lit, with MU detached).
 void gpu_optix_rebuild_global_scene();
 
 // Persistent scene matching the Embree capture; used when tracing against the
-// whole level (reference lighting and the later deflector phases).
+// whole level (reference lighting and the implicit phase).
 GpuBakeScene* gpu_optix_global_scene();
+
+// Static-only scene (no MU geometry) - matches the Embree scene state during
+// the deflector (LMaps) phase, where MU proxies must neither shadow the static
+// lightmaps nor pay for their alpha anyhit callbacks.
+GpuBakeScene* gpu_optix_static_scene();
 
 void gpu_optix_shutdown();
 bool gpu_optix_ready();
