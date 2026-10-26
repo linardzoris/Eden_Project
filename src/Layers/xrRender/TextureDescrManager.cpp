@@ -254,6 +254,11 @@ bool CTextureDescrMngr::LoadLtx(LPCSTR initial)
 			}
 #endif // !MASTER_GOLD
 
+			// normalize null to "" -- thm mode stores a docked empty string,
+			// consumers must not see a null shared_str here
+			if (*bump_name == 0)
+				bump_name = "";
+
 			desc.m_spec->m_bump_name = bump_name;
 		}
 	}
@@ -546,8 +551,18 @@ void CTextureDescrMngr::VerifyLtxVsThm()
 	{
 		if (ltx_index.end() == ltx_index.find(thm_state[i].name))
 		{
-			Msg("! [ltx-verify] '%s': present in .thm set only", thm_state[i].name.c_str());
-			++only_thm;
+			const snap& t = thm_state[i];
+			// a default-valued thm entry is behaviorally identical to "no
+			// entry" (runtime getters return these same defaults), and the
+			// converter intentionally skips such textures -- not a loss
+			const bool is_default = fsimilar(t.material, 1.0f) && !t.steep && !t.pbr &&
+				0 == xr_strlen(t.bump.c_str()) && 0 == xr_strlen(t.detail.c_str()) && 0 == t.usage;
+			if (!is_default)
+			{
+				Msg("! [ltx-verify] '%s': present in .thm set only (non-default: material=%f bump='%s' detail='%s')",
+					t.name.c_str(), t.material, t.bump.c_str(), t.detail.c_str());
+				++only_thm;
+			}
 		}
 	}
 

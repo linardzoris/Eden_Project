@@ -153,6 +153,9 @@ void Startup(LPSTR lpCmdLine)
 
 void SDL_Application()
 {
+	// Show the IME composition window when typing Chinese in input fields
+	SDL_SetHint(SDL_HINT_IME_IMPLEMENTED_UI, "1");
+
 	if (!SDL_Init(SDL_INIT_EVENTS) != 0)
 	{
 		printf("Error: SDL_Init(): %s\n", SDL_GetError());
@@ -181,6 +184,64 @@ void SDL_Application()
 	ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
 	ImFont* defaultFont = io.Fonts->AddFontDefault(); 
+
+	// Merge a CJK-capable font so localized Chinese labels render:
+	// the embedded default font is ASCII-only, CJK glyphs show as '?'.
+	// Same approach and candidate list as XrUIManager::LoadEditorCjkFallbackFont.
+	{
+		string_path FullPath = {};
+		const char* BundledFonts[] = { "editors\\cjk.ttf", "editors\\cjk.otf" };
+		bool Loaded = false;
+
+		for (const char* Name : BundledFonts)
+		{
+			FS.update_path(FullPath, "$game_fonts$", Name);
+			if (!FS.TryLoad(FullPath))
+				continue;
+
+			ImFontConfig MergeConfig = {};
+			MergeConfig.MergeMode = true;
+			// The SDL renderer backend has no ImGuiBackendFlags_RendererHasTextures
+			// support, so the atlas is legacy and only bakes glyphs from the
+			// ranges given here: CJK ranges must be passed explicitly.
+			MergeConfig.GlyphRanges = io.Fonts->GetGlyphRangesChineseSimplifiedCommon();
+			if (io.Fonts->AddFontFromFileTTF(Platform::ANSI_TO_UTF8(FullPath).c_str(), 13.0f, &MergeConfig))
+			{
+				Msg("* LevelBuilder UI: merged CJK font '%s'", FullPath);
+				Loaded = true;
+				break;
+			}
+		}
+
+		if (!Loaded)
+		{
+			char WinDir[MAX_PATH] = {};
+			if (GetWindowsDirectoryA(WinDir, MAX_PATH) != 0)
+			{
+				static const char* SystemFonts[] = { "msyh.ttc", "msyh.ttf", "simhei.ttf", "Deng.ttf", "simsun.ttc" };
+				char SysPath[MAX_PATH] = {};
+				for (const char* Name : SystemFonts)
+				{
+					xr_sprintf(SysPath, "%s\\Fonts\\%s", WinDir, Name);
+					if (GetFileAttributesA(SysPath) == INVALID_FILE_ATTRIBUTES)
+						continue;
+
+					ImFontConfig MergeConfig = {};
+					MergeConfig.MergeMode = true;
+					MergeConfig.GlyphRanges = io.Fonts->GetGlyphRangesChineseSimplifiedCommon();
+					if (io.Fonts->AddFontFromFileTTF(Platform::ANSI_TO_UTF8(SysPath).c_str(), 13.0f, &MergeConfig))
+					{
+						Msg("* LevelBuilder UI: merged system CJK font '%s'", SysPath);
+						Loaded = true;
+						break;
+					}
+				}
+			}
+		}
+
+		if (!Loaded)
+			Msg("! LevelBuilder UI: no CJK font merged, Chinese labels will show as '?'");
+	}
 
 	ImFontConfig config;
 	config.FontDataOwnedByAtlas = false;

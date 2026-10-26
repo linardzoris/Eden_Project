@@ -536,6 +536,20 @@ u32 STextureParams::MemoryUsage(LPCSTR base_name)
 // reads textures.ltx, see TextureDescrManager.cpp). Only textures with
 // non-default parameters and types the runtime registers are emitted.
 // Output goes to a NEW file on purpose: review it, then rename to textures.ltx.
+
+// CInifile::_parse collapses all whitespace outside double quotes, so any
+// value containing spaces (yes, some thm bump names have stray spaces) must
+// be written quoted
+static void LtxWriteNameValue(IWriter* W, LPCSTR key, LPCSTR value)
+{
+	string512 line;
+	if (strchr(value, ' ') || strchr(value, '\t'))
+		xr_strconcat(line, key, "       = \"", value, "\"");
+	else
+		xr_strconcat(line, key, "       = ", value);
+	W->w_string(line);
+}
+
 ECORE_API void ConvertThmToLtx()
 {
 	FS_FileSet				files;
@@ -569,16 +583,21 @@ ECORE_API void ConvertThmToLtx()
 
 		STextureParams		tp;
 		tp.Clear			();
+		// THM_CHUNK_TYPE holds the thumbnail class (LoadTHM reads it only as a
+		// sanity check and ignores the value); the texture type lives in
+		// THM_CHUNK_TEXTURE_TYPE, parsed by STextureParams::Load into tp.type
 		bool ok = !!F->find_chunk(THM_CHUNK_TYPE);
-		u32 thm_type = ok ? F->r_u32() : 0;
 		if (ok)
+		{
+			[[maybe_unused]] u32 thm_class = F->r_u32();
 			tp.Load			(*F);
+		}
 		FS.r_close			(F);
 
 		// mirror LoadTHM: only these types produce runtime entries
-		if (!ok || (thm_type != STextureParams::ttImage &&
-					thm_type != STextureParams::ttTerrain &&
-					thm_type != STextureParams::ttNormalMap))
+		if (!ok || (tp.type != STextureParams::ttImage &&
+					tp.type != STextureParams::ttTerrain &&
+					tp.type != STextureParams::ttNormalMap))
 			continue;
 
 		bool has_material = tp.material != STextureParams::tmBlin_Phong || tp.material_weight != 0.0f;
@@ -617,17 +636,14 @@ ECORE_API void ConvertThmToLtx()
 
 		if (has_bump)
 		{
+			// write bump_mode even when the name is empty: thm mode keeps
+			// steep-parallax state for such entries, conversion must be faithful
+			xr_strconcat	(line, "bump_mode       = ", tp.bump_mode == STextureParams::tbmUseParallax ? "parallax" : "use");
+			W->w_string		(line);
 			if (tp.bump_name.size())
-			{
-				xr_strconcat	(line, "bump_mode       = ", tp.bump_mode == STextureParams::tbmUseParallax ? "parallax" : "use");
-				W->w_string		(line);
-				xr_strconcat	(line, "bump_name       = ", tp.bump_name.c_str());
-				W->w_string		(line);
-			}
+				LtxWriteNameValue(W, "bump_name", tp.bump_name.c_str());
 			else
-			{
-				Msg("! ConvertThmToLtx: '%s' has bump_mode but empty bump_name, skipped", name);
-			}
+				Msg("! ConvertThmToLtx: '%s' has bump_mode but empty bump_name (kept as-is, runtime will warn)", name);
 		}
 
 		if (has_detail)

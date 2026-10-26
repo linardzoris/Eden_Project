@@ -33,14 +33,14 @@
 	<string id="Export as archive"><text>导出为归档</text></string>
 	<string id="Validate##list"><text>校验##list</text></string>
 	<string id="Validate"><text>校验</text></string>
-	<string id="Validate at make"><text>编译时校验</text></string>
+	<string id="Validate at make"><text>生成时校验</text></string>
 	<string id="Validate LODs"><text>校验 LOD</text></string>
 	<string id="Validate Dublicate Names"><text>校验重名</text></string>
 	<string id="Summary Info"><text>摘要信息</text></string>
 	<string id="Highlight Texture"><text>高亮纹理</text></string>
 	<string id="Clear Debug Draw"><text>清除调试绘制</text></string>
-	<string id="Export entire Scene as Obj"><text>导出整个场景为 Obj</text></string>
-	<string id="Export selection as Obj"><text>导出选中对象为 Obj</text></string>
+	<string id="Export entire Scene as Obj"><text>导出整个场景为Wavefront Obj</text></string>
+	<string id="Export selection as Obj"><text>导出选中对象为Wavefront Obj</text></string>
 
 	<!-- Compile -->
 	<string id="Make"><text>生成</text></string>
@@ -48,13 +48,13 @@
 	<string id="Make Game"><text>生成游戏数据</text></string>
 	<string id="Make Puddles"><text>生成水洼</text></string>
 	<string id="Make Details"><text>生成细节</text></string>
-	<string id="Make Hom"><text>生成 HOM</text></string>
-	<string id="Make SOM"><text>生成 SOM</text></string>
-	<string id="Make AI-Map (25 bit)"><text>生成 AI 地图 (25 位)</text></string>
-	<string id="Make AI-Map (Legacy)"><text>生成 AI 地图 (兼容模式)</text></string>
+	<string id="Make Hom"><text>生成HOM</text></string>
+	<string id="Make SOM"><text>生成SOM</text></string>
+	<string id="Make AI-Map (25 bit)"><text>生成AI Map(25 位)</text></string>
+	<string id="Make AI-Map (Legacy)"><text>生成AI Map(兼容模式)</text></string>
 	<string id="Geometry &amp; Light"><text>几何与光照</text></string>
 	<string id="Detail Object Light"><text>细节对象光照</text></string>
-	<string id="AI-Map"><text>AI 地图</text></string>
+	<string id="AI-Map"><text>AI Map</text></string>
 	<string id="High"><text>高</text></string>
 	<string id="Low"><text>低</text></string>
 	<string id="Verify"><text>验证</text></string>
@@ -67,29 +67,29 @@
 	<string id="Clear Error List"><text>清除错误列表</text></string>
 
 	<!-- Objects -->
-	<string id="Library Editor"><text>库编辑器</text></string>
+	<string id="Library Editor"><text>对象库编辑器</text></string>
 	<string id="Clip Editor"><text>剪辑编辑器</text></string>
 	<string id="Multi Rename"><text>批量重命名</text></string>
 	<string id="Multi Replace"><text>批量替换</text></string>
-	<string id="Reload"><text>重新加载</text></string>
+	<string id="Reload"><text>重新加载对象库</text></string>
 
 	<!-- Images -->
-	<string id="Image Editor"><text>图像编辑器</text></string>
+	<string id="Image Editor"><text>纹理编辑器</text></string>
 	<string id="Reload Textures"><text>重新加载纹理</text></string>
 	<string id="Synchronize Textures"><text>同步纹理</text></string>
 	<string id="Check New Textures"><text>检查新纹理</text></string>
 	<string id="Edit minimap"><text>编辑小地图</text></string>
-	<string id="Sync THM"><text>同步 THM</text></string>
+	<string id="Sync THM"><text>同步THM</text></string>
 
 	<!-- Sounds -->
-	<string id="Sound Editor"><text>声音编辑器</text></string>
-	<string id="Synchronize Sounds (Soft)"><text>同步声音 (软)</text></string>
-	<string id="Synchronize Sounds (Hard)"><text>同步声音 (硬)</text></string>
-	<string id="Refresh Environment Library"><text>刷新环境库</text></string>
-	<string id="Refresh Environment Geometry"><text>刷新环境几何</text></string>
+	<string id="Sound Editor"><text>音效编辑器</text></string>
+	<string id="Synchronize Sounds (Soft)"><text>同步音效(仅修改)</text></string>
+	<string id="Synchronize Sounds (Hard)"><text>同步音效(所有)</text></string>
+	<string id="Refresh Environment Library"><text>刷新音效环境库</text></string>
+	<string id="Refresh Environment Geometry"><text>刷新音效环境几何</text></string>
 
 	<!-- Options -->
-	<string id="Render"><text>渲染</text></string>
+	<string id="Render"><text>渲染视图</text></string>
 	<string id="Quality"><text>质量</text></string>
 	<string id="Fill Mode"><text>填充模式</text></string>
 	<string id="Point"><text>点</text></string>
@@ -115,7 +115,7 @@
 	<string id="Stats"><text>统计</text></string>
 
 	<!-- Windows -->
-	<string id="Light Anim Editor"><text>光动画编辑器</text></string>
+	<string id="Light Anim Editor"><text>光照动画编辑器</text></string>
 	<string id="Macro Editor"><text>宏编辑器</text></string>
 	<string id="Snap List"><text>吸附列表</text></string>
 	<string id="Objects Tools"><text>对象工具</text></string>
@@ -124,7 +124,7 @@
 	<string id="Theme"><text>主题</text></string>
 
 	<!-- Help / Plugins / misc -->
-	<string id="Wiki"><text>维基</text></string>
+	<string id="Wiki"><text>百科</text></string>
 	<string id="About..."><text>关于...</text></string>
 	<string id="Reinit"><text>重新初始化</text></string>
 	<string id="Object List"><text>对象列表</text></string>
@@ -136,11 +136,11 @@
 	<string id="Optimize Motions"><text>优化动作</text></string>
 	<string id="Batch Convert..."><text>批量转换...</text></string>
 	<string id="Export"><text>导出</text></string>
-	<string id="Export OGF..."><text>导出 OGF...</text></string>
-	<string id="Export OMF..."><text>导出 OMF...</text></string>
-	<string id="Export OBJ..."><text>导出 OBJ...</text></string>
-	<string id="Export DM..."><text>导出 DM...</text></string>
-	<string id="Export C++..."><text>导出 C++...</text></string>
+	<string id="Export OGF..."><text>导出为OGF</text></string>
+	<string id="Export OMF..."><text>导出为OMF</text></string>
+	<string id="Export OBJ..."><text>导出为OBJ</text></string>
+	<string id="Export DM..."><text>导出为DM</text></string>
+	<string id="Export C++..."><text>导出为C++</text></string>
 	<string id="Preview Object"><text>预览对象</text></string>
 	<string id="Custom..."><text>自定义...</text></string>
 	<string id="Preferences"><text>偏好设置</text></string>
@@ -152,15 +152,15 @@
 	<string id="Post Process"><text>后期处理</text></string>
 
 	<!-- ParticleEditor / ShaderEditor -->
-	<string id="Save .xr"><text>保存 .xr</text></string>
-	<string id="Load .xr"><text>加载 .xr</text></string>
+	<string id="Save .xr"><text>保存.xr</text></string>
+	<string id="Load .xr"><text>加载.xr</text></string>
 	<string id="Compact"><text>压缩</text></string>
 
 	<!-- LevelBuilder -->
 	<string id="Levels"><text>关卡列表</text></string>
 	<string id="Settings"><text>设置</text></string>
 	<string id="Name"><text>名称</text></string>
-	<string id="Prop"><text>启用</text></string>
+	<string id="Prop"><text>属性</text></string>
 	<string id="Run Compiler"><text>运行编译器</text></string>
 	<string id="Disable Auto-Scroll"><text>关闭自动滚动</text></string>
 	<string id="Enable Auto-Scroll"><text>开启自动滚动</text></string>
@@ -168,41 +168,41 @@
 	<string id="Minimal resize"><text>缩小窗口</text></string>
 	<string id="ShowMain"><text>主界面</text></string>
 	<string id="Levels Compiler"><text>关卡编译器</text></string>
-	<string id="No Sun"><text>无太阳光</text></string>
-	<string id="No Hemi"><text>无半球光</text></string>
+	<string id="No Sun"><text>禁用静态光照烘焙</text></string>
+	<string id="No Hemi"><text>禁用半球光照烘焙</text></string>
 	<string id="No Smooth Group"><text>忽略平滑组</text></string>
 	<string id="Skip Progressive"><text>跳过渐进网格</text></string>
-	<string id="Tesselation"><text>细分</text></string>
+	<string id="Tesselation"><text>细分曲面</text></string>
 	<string id="Skip invalid faces"><text>跳过无效面</text></string>
-	<string id="Texture RGBA"><text>纹理 RGBA</text></string>
-	<string id="Skip Subdivide"><text>跳过细分</text></string>
-	<string id="Skip Welding"><text>跳过焊接</text></string>
-	<string id="lmaps"><text>光照图尺寸</text></string>
-	<string id="Simple LMAP pack"><text>简单光照图打包</text></string>
+	<string id="Texture RGBA"><text>无损存储LightMap</text></string>
+	<string id="Skip Subdivide"><text>跳过细分曲面</text></string>
+	<string id="Skip Welding"><text>跳过顶点合并</text></string>
+	<string id="lmaps"><text>LightMap尺寸</text></string>
+	<string id="Simple LMAP pack"><text>LightMap简单打包</text></string>
 	<string id="Overload Prebuild"><text>覆盖预构建设置</text></string>
-	<string id="JitterMU"><text>MU 抖动采样</text></string>
-	<string id="Jitter"><text>抖动采样</text></string>
-	<string id="Lightmap Density"><text>光照图密度</text></string>
+	<string id="JitterMU"><text>物体抖动采样</text></string>
+	<string id="Jitter"><text>光照抖动采样</text></string>
+	<string id="Lightmap Density"><text>LightMap像素密度</text></string>
 	<string id="Dist Weld"><text>焊接距离</text></string>
-	<string id="Details Compiler"><text>细节编译器</text></string>
+	<string id="Details Compiler"><text>细节对象编译器</text></string>
 	<string id="AI Compiler"><text>AI 编译器</text></string>
-	<string id="AI Compiler ai.level"><text>编译 AI 地图 (ai.level)</text></string>
-	<string id="Draft AI-Map"><text>AI 地图草稿模式</text></string>
+	<string id="AI Compiler ai.level"><text>编译level.ai</text></string>
+	<string id="Draft AI-Map"><text>草稿模式</text></string>
 	<string id="Pure Covers"><text>纯掩体计算</text></string>
 	<string id="Verbose"><text>详细输出</text></string>
-	<string id="AI Compiler all.spawn"><text>编译出生点 (all.spawn)</text></string>
-	<string id="No Separator Check"><text>跳过连接校验</text></string>
+	<string id="AI Compiler all.spawn"><text>编译all.spawn</text></string>
+	<string id="No Separator Check"><text>跳过Separator校验</text></string>
 	<string id="Name all.spawn :"><text>自定义spawn文件名:</text></string>
 	<string id="Name level start:"><text>起点关卡名:</text></string>
 	<string id="Silent mode"><text>静默模式</text></string>
-	<string id="Use Intel Embree"><text>使用 Intel Embree</text></string>
+	<string id="Use Intel Embree"><text>使用Intel Embree</text></string>
 	<string id="Embree Optimized"><text>Embree优化</text></string>
 	<string id="Embree Compacted"><text>Embree紧凑BVH</text></string>
 	<string id="GPU Baking (OptiX)"><text>启用GPU烘焙（OptiX CUDA）</text></string>
 	<string id="Embree Robust"><text>Embree精确模式</text></string>
 	<string id="Clear temp files"><text>清理临时文件</text></string>
 	<string id="Skip THM"><text>跳过纹理元数据</text></string>
-	<string id="Save cform to obj"><text>导出 cform 为 obj</text></string>
+	<string id="Save cform to obj"><text>导出cform为obj</text></string>
 	<string id="Threads Max"><text>最大线程数</text></string>
 	<string id="Complete"><text>完成</text></string>
 	<string id="In Progress"><text>进行中</text></string>
@@ -217,7 +217,7 @@
 	<string id="Status"><text>状态</text></string>
 
 	<!-- Properties tree captions (all editors, via xrEProps renderer) -->
-	<string id="2 Sided"><text>双面</text></string>
+	<string id="2 Sided"><text>双面渲染</text></string>
 	<string id="Action"><text>动作</text></string>
 	<string id="Actions"><text>动作</text></string>
 	<string id="Align To Path"><text>对齐到路径</text></string>
@@ -237,11 +237,11 @@
 	<string id="Back Face Culling"><text>背面剔除</text></string>
 	<string id="Base Texture"><text>基础纹理</text></string>
 	<string id="Base texture blended"><text>基础纹理混合</text></string>
-	<string id="Base Volume"><text>基础体积</text></string>
-	<string id="Basis U"><text>U 基向量</text></string>
-	<string id="Basis V"><text>V 基向量</text></string>
-	<string id="BBox Max"><text>包围盒最大</text></string>
-	<string id="BBox Min"><text>包围盒最小</text></string>
+	<string id="Base Volume"><text>基础音量</text></string>
+	<string id="Basis U"><text>U基向量</text></string>
+	<string id="Basis V"><text>V基向量</text></string>
+	<string id="BBox Max"><text>包围盒最大值</text></string>
+	<string id="BBox Min"><text>包围盒最小值</text></string>
 	<string id="Breakable"><text>可破坏</text></string>
 	<string id="Brightness"><text>亮度</text></string>
 	<string id="Brush Size"><text>笔刷大小</text></string>
@@ -256,7 +256,7 @@
 	<string id="Change LevelMap to"><text>关卡地图更改为</text></string>
 	<string id="ChangeKeyTime(sec)"><text>关键帧时间(秒)</text></string>
 	<string id="Clear Color"><text>清除颜色</text></string>
-	<string id="Collide With Dynamic"><text>与动态物体碰撞</text></string>
+	<string id="Collide With Dynamic"><text>可与动态物体发生碰撞</text></string>
 	<string id="Collision"><text>碰撞</text></string>
 	<string id="Color"><text>颜色</text></string>
 	<string id="Command"><text>命令</text></string>
@@ -348,7 +348,7 @@
 	<string id="MANAGE"><text>管理</text></string>
 	<string id="Map version"><text>地图版本</text></string>
 	<string id="Max"><text>最大</text></string>
-	<string id="Max ai dist"><text>AI 最大距离</text></string>
+	<string id="Max ai dist"><text>AI最大距离</text></string>
 	<string id="Max dist"><text>最大距离</text></string>
 	<string id="Max Particles"><text>最大粒子数</text></string>
 	<string id="Maximum"><text>最大值</text></string>
@@ -360,7 +360,7 @@
 	<string id="Modif Name"><text>修改名称</text></string>
 	<string id="Modified Time"><text>修改时间</text></string>
 	<string id="More Stats Info"><text>更多统计</text></string>
-	<string id="Motionable"><text>可动作</text></string>
+	<string id="Motionable"><text>可运动</text></string>
 	<string id="Move"><text>移动</text></string>
 	<string id="Move Sens"><text>移动灵敏度</text></string>
 	<string id="Move To"><text>移动到</text></string>
@@ -391,7 +391,7 @@
 	<string id="profile (ltx)"><text>配置 (ltx)</text></string>
 	<string id="Profile (spawn section)"><text>配置 (出生区段)</text></string>
 	<string id="Proportional"><text>成比例</text></string>
-	<string id="Quadratic"><text>二次</text></string>
+	<string id="Quadratic"><text>二次项系数</text></string>
 	<string id="Radius Inner"><text>内半径</text></string>
 	<string id="Radius Outer"><text>外半径</text></string>
 	<string id="Random Init"><text>随机初始化</text></string>
@@ -415,7 +415,7 @@
 	<string id="Size U (0..1)"><text>U 尺寸 (0..1)</text></string>
 	<string id="Size V (0..1)"><text>V 尺寸 (0..1)</text></string>
 	<string id="Sky Color"><text>天空颜色</text></string>
-	<string id="Slow Calculate Mode"><text>慢速计算模式</text></string>
+	<string id="Slow Calculate Mode"><text>精确计算模式</text></string>
 	<string id="Smooth Height"><text>平滑高度</text></string>
 	<string id="Sources"><text>源</text></string>
 	<string id="Spawn Type"><text>出生类型</text></string>
@@ -454,8 +454,8 @@
 	<string id="View Distance"><text>可视距离</text></string>
 	<string id="Visible Radius"><text>可见半径</text></string>
 	<string id="Volume"><text>音量</text></string>
-	<string id="VolumeType"><text>体积类型</text></string>
-	<string id="WAVE name"><text>WAVE 名称</text></string>
+	<string id="VolumeType"><text>音量类型</text></string>
+	<string id="WAVE name"><text>Wave名称</text></string>
 	<string id="Waves"><text>波浪</text></string>
 	<string id="Way Name"><text>路径名</text></string>
 	<string id="Weight (p/m)"><text>权重 (p/m)</text></string>
@@ -463,16 +463,16 @@
 	<string id="Zoom"><text>缩放</text></string>
 
 	<!-- LevelEditor side panels / tool panels -->
-	<string id="Add    "><text>添加    </text></string>
+	<string id="Add    "><text>添加 </text></string>
 	<string id="Delete "><text>删除 </text></string>
 	<string id="Invert "><text>反转 </text></string>
 	<string id="Ref's Select:   "><text>引用选择:   </text></string>
 	<string id="Selected:       "><text>选中:       </text></string>
 	<string id="Select by Current: "><text>按当前选择: </text></string>
 	<string id="Add Selected To List"><text>添加选中到列表</text></string>
-	<string id="AI Map Nodes"><text>AI 地图节点</text></string>
+	<string id="AI Map Nodes"><text>AI Map节点</text></string>
 	<string id="Align To Object..."><text>对齐到对象...</text></string>
-	<string id="Affect in D3D"><text>影响 D3D</text></string>
+	<string id="Affect in D3D"><text>影响D3D渲染</text></string>
 	<string id="Attach Object..."><text>附加对象...</text></string>
 	<string id="Attach Shape..."><text>附加形状...</text></string>
 	<string id="Auto Link"><text>自动连接</text></string>
@@ -480,15 +480,15 @@
 	<string id="Box Pick"><text>盒选</text></string>
 	<string id="Capture Volume"><text>捕获体积</text></string>
 	<string id="Center To Group"><text>居中到组</text></string>
-	<string id="Clear AI Map"><text>清空 AI 地图</text></string>
+	<string id="Clear AI Map"><text>清空 AI Map</text></string>
 	<string id="Clear Details"><text>清空细节</text></string>
 	<string id="Clear Level"><text>清空关卡</text></string>
 	<string id="Clear Select"><text>清除选择</text></string>
 	<string id="Clear Slots"><text>清空槽位</text></string>
 	<string id="Compute All Portals"><text>计算全部传送门</text></string>
 	<string id="Compute Sel. Portals"><text>计算选中传送门</text></string>
-	<string id="Create 1-Link"><text>创建 1-链接</text></string>
-	<string id="Create 2-Link"><text>创建 2-链接</text></string>
+	<string id="Create 1-Link"><text>创建单连链接</text></string>
+	<string id="Create 2-Link"><text>创建双连链接</text></string>
 	<string id="Create Default"><text>创建默认</text></string>
 	<string id="Create New Multiple (From Object)"><text>新建多个 (从对象)</text></string>
 	<string id="Create New Single (From Mesh)"><text>新建单个 (从网格)</text></string>
@@ -524,7 +524,7 @@
 	<string id="Make List From Selected"><text>从选中生成列表</text></string>
 	<string id="Make Thumbnail"><text>生成缩略图</text></string>
 	<string id="Multiple Append"><text>追加多个</text></string>
-	<string id="No heatmap loaded. Only the R channel is active."><text>未加载热力图。 仅 R 通道生效。</text></string>
+	<string id="No heatmap loaded. Only the R channel is active."><text>未加载热力图，仅 R 通道参数生效。</text></string>
 	<string id="Object Tools"><text>对象工具</text></string>
 	<string id="Pivot Alignment"><text>轴心对齐</text></string>
 	<string id="Random Append"><text>随机追加</text></string>
@@ -533,7 +533,7 @@
 	<string id="Random Transform"><text>随机变换</text></string>
 	<string id="Recalc"><text>重算</text></string>
 	<string id="Recalculate Portals"><text>重算传送门</text></string>
-	<string id="Reference Select"><text>引用选择</text></string>
+	<string id="Reference Select"><text>选择引用项</text></string>
 	<string id="Refresh"><text>刷新</text></string>
 	<string id="Reload Refs"><text>重载引用</text></string>
 	<string id="Remove Default"><text>移除默认</text></string>
@@ -547,9 +547,9 @@
 	<string id="Requires a terrain selection."><text>需要先选择地形。</text></string>
 	<string id="Reset Selected"><text>重置选中</text></string>
 	<string id="Save As ..."><text>另存为 ...</text></string>
-	<string id="Select 0-Link"><text>选择 0-链接</text></string>
-	<string id="Select 1-Link"><text>选择 1-链接</text></string>
-	<string id="Select 2-Link"><text>选择 2-链接</text></string>
+	<string id="Select 0-Link"><text>选择无链接</text></string>
+	<string id="Select 1-Link"><text>选择单连链接</text></string>
+	<string id="Select 2-Link"><text>选择双连链接</text></string>
 	<string id="Select ..."><text>选择 ...</text></string>
 	<string id="Select by Selected:"><text>按选中对象选择:</text></string>
 	<string id="Select Object From List"><text>从列表选择对象</text></string>
@@ -622,8 +622,8 @@
 	<string id="Select ZX Axis"><text>选择 ZX 轴</text></string>
 
 	<!-- LevelEditor top bar -->
-	<string id="PIE Pre-Build"><text>PIE 预构建</text></string>
-	<string id="PIE Actions"><text>PIE 动作</text></string>
+	<string id="PIE Pre-Build"><text>PIE预构建</text></string>
+	<string id="PIE Actions"><text>PIE动作</text></string>
 	<string id="Compile Actions"><text>编译动作</text></string>
 	<string id="Engine"><text>引擎</text></string>
 	<string id="Directory Actions"><text>目录动作</text></string>
@@ -635,33 +635,33 @@
 	<string id="Hint "><text>提示 </text></string>
 	<string id="Phys Simulation"><text>物理模拟</text></string>
 	<string id="Use Pos"><text>应用位置</text></string>
-	<string id="Play in Editor settings"><text>PIE 设置</text></string>
+	<string id="Play in Editor settings"><text>PIE设置</text></string>
 	<string id="Undo the last action"><text>撤销上一步操作</text></string>
 	<string id="Repeat the last action"><text>重复上一步操作</text></string>
 	<string id="Clear/New Scene"><text>新建/清空场景</text></string>
 	<string id="Open level"><text>打开关卡</text></string>
 	<string id="Save level"><text>保存关卡</text></string>
 	<string id="Build CFORM"><text>构建 CFORM</text></string>
-	<string id="Build AI-Map"><text>构建 AI 地图</text></string>
+	<string id="Build AI-Map"><text>构建 AI Map</text></string>
 	<string id="Build Game Graph"><text>构建游戏图</text></string>
-	<string id="Stop Play in Editor"><text>停止 PIE</text></string>
-	<string id="Start Play in Editor"><text>启动 PIE</text></string>
+	<string id="Stop Play in Editor"><text>停止PIE</text></string>
+	<string id="Start Play in Editor"><text>启动PIE</text></string>
 	<string id="Reload Configs"><text>重载配置</text></string>
 	<string id="Build and Make"><text>构建并生成</text></string>
 	<string id="Play level"><text>运行关卡</text></string>
 	<string id="Play level in game"><text>在游戏中运行关卡</text></string>
-	<string id="Open 'gamedata' folder"><text>打开 gamedata 目录</text></string>
+	<string id="Open 'gamedata' folder"><text>打开gamedata目录</text></string>
 	<string id="Activates the physics simulation of the selected objects"><text>激活选中对象的物理模拟</text></string>
 	<string id="Use the position of the selected object when physics simulation is active&#13;&#10;The position of the object will be applied when simulating physics"><text>物理模拟激活时使用选中对象的位置&#13;&#10;模拟物理时将应用该对象的位置</text></string>
 
 	<!-- LevelEditor object library -->
-	<string id="THM not found"><text>未找到 THM</text></string>
+	<string id="THM not found"><text>未找到THM</text></string>
 	<string id="Search..."><text>搜索...</text></string>
-	<string id="Making LOD"><text>生成 LOD 中</text></string>
+	<string id="Making LOD"><text>生成LOD中</text></string>
 	<string id="Do you want to select multiple objects?"><text>是否要选择多个对象？</text></string>
 	<string id="Currently using the shared properties window&#10;Click to switch to the internal properties window"><text>当前使用共享属性窗口&#10;点击切换到内部属性窗口</text></string>
 	<string id="Currently using the internal properties window&#10;Click to switch to the shared properties window"><text>当前使用内部属性窗口&#10;点击切换到共享属性窗口</text></string>
-	<string id="Make LOD:"><text>生成 LOD:</text></string>
+	<string id="Make LOD:"><text>生成LOD:</text></string>
 	<string id="HQ"><text>高精度</text></string>
 	<string id="LQ"><text>低精度</text></string>
 	<string id="Dropper"><text>取色器</text></string>
@@ -694,7 +694,7 @@
 	<string id="stop"><text>停止</text></string>
 	<string id="Current:%s"><text>当前:%s</text></string>
 	<string id="+/- Mode"><text>加减模式</text></string>
-	<string id="Are you sure to clear AI Map?"><text>确定要清空 AI 地图吗？</text></string>
+	<string id="Are you sure to clear AI Map?"><text>确定要清空 AI Map吗？</text></string>
 	<string id="Are you sure to reset slots?"><text>确定要重置槽位吗？</text></string>
 	<string id="Are you sure to clear details?"><text>确定要清空细节吗？</text></string>
 	<string id="Are you sure to clear snap objects?"><text>确定要清空吸附对象吗？</text></string>
@@ -704,18 +704,18 @@
 	<!-- LevelEditor environment generator -->
 	<string id="Targets: %d%s"><text>目标: %d%s</text></string>
 	<string id="(terrain)"><text>(地形)</text></string>
-	<string id="Area: %.1f m^2   Estimated: %d"><text>区域: %f 平方米   预计: %d</text></string>
+	<string id="Area: %.1f m^2   Estimated: %d"><text>区域: %f 平方米   预计对象数量: %d</text></string>
 	<string id="Max Density"><text>最大密度</text></string>
 	<string id="obj/m^2, per-channel upper bound"><text>个/平方米，单通道上限</text></string>
-	<string id="Objects: %s"><text>对象: %s</text></string>
+	<string id="Objects: %s"><text>对象数量: %s</text></string>
 	<string id="(empty)"><text>（空）</text></string>
 	<string id="Density"><text>密度</text></string>
-	<string id="%.1f objects estimated"><text>[xrEnvGen]::预计 %f 个对象</text></string>
+	<string id="%.1f objects estimated"><text>[xrEnvGen]::预计生成 %f 个对象</text></string>
 	<string id="inactive (needs terrain + heatmap)"><text>[xrEnvGen]::未激活 (需要地形 + 热力图)</text></string>
 	<string id="An object or terrain must be selected!"><text>[xrEnvGen]::无效，必须选中对象或地形！</text></string>
 	<string id="Invalid, target is not Terrain!"><text>[xrEnvGen]::无效，目标不是地形！</text></string>
 	<string id="Nothing to generate: check channel object lists and densities."><text>[xrEnvGen]::没有可生成内容：请检查通道对象列表和密度。</text></string>
-	<string id="Target area size: %.1f; Estimated generation: %d, proceed?"><text>[xrEnvGen]::目标区域大小: %.1f；预计生成: %d，是否继续？</text></string>
+	<string id="Target area size: %.1f; Estimated generation: %d, proceed?"><text>[xrEnvGen]::目标区域大小: %f；预计生成对象数量: %d，是否继续？</text></string>
 
 	<!-- LevelEditor macro / dialogs node editors -->
 	<string id="Macro Node Viewer"><text>宏节点查看器</text></string>
@@ -746,7 +746,7 @@
 	<string id="Portal"><text>传送门</text></string>
 	<string id="Static Particles"><text>静态粒子</text></string>
 	<string id="Detail Objects"><text>细节对象</text></string>
-	<string id="AI Map"><text>AI 地图</text></string>
+	<string id="AI Map"><text>AI Map</text></string>
 	<string id="Wallmarks"><text>弹痕</text></string>
 	<string id="Fog Volumes"><text>雾体积</text></string>
 	<string id="Puddles"><text>水洼</text></string>
@@ -1048,13 +1048,13 @@
 	<string id="Total %d MU-Objects selected,"><text>已选 %d 个 MU 对象，</text></string>
 	<string id="%d %s will be generated,"><text>将生成 %d 个 %s，</text></string>
 	<string id="estimated processing time: %d seconds."><text>预计处理时间: %d 秒。</text></string>
-	<string id="LeftBar"><text>左栏</text></string>
+	<string id="LeftBar"><text>属性</text></string>
 	<string id="Render:"><text>渲染:</text></string>
 	<string id="Editor"><text>编辑器</text></string>
 	<string id="Model"><text>模型</text></string>
-	<string id="8bit"><text>8 位</text></string>
-	<string id="16bit"><text>16 位</text></string>
-	<string id="32bit"><text>32 位</text></string>
+	<string id="8bit"><text>8位</text></string>
+	<string id="16bit"><text>16位</text></string>
+	<string id="32bit"><text>32位</text></string>
 	<string id="Auto Smooth"><text>自动平滑</text></string>
 	<string id="Bone View"><text>骨骼视图</text></string>
 	<string id="Bone Parts"><text>骨骼分区</text></string>
@@ -1098,7 +1098,7 @@
 	<string id="Building OK."><text>构建成功。</text></string>
 	<string id="Making terminated."><text>生成已终止。</text></string>
 	<string id="Making finished."><text>生成完成。</text></string>
-	<string id="AI-Map succesfully exported."><text>AI 地图导出成功。</text></string>
+	<string id="AI-Map succesfully exported."><text>AI Map导出成功。</text></string>
 	<string id="Details succesfully exported."><text>细节对象导出成功。</text></string>
 	<string id="Building terminated..."><text>构建已终止...</text></string>
 	<string id="Building OK..."><text>构建成功...</text></string>
@@ -1195,6 +1195,6 @@
 	<string id="Folder (batch)"><text>目录（批量）</text></string>
 	<string id="Recursive"><text>递归子目录</text></string>
 	<string id="Unpack all"><text>全部解包</text></string>
-	<string id="Only large objects should use BLODs, small objects use FLODs instead. Engine&amp;Compiler prioritize BLODs over FLODs. BLODs and FLODs are saved as independent textures."><text>只有大型物体应使用 BLOD，小型物体使用 FLOD。引擎和编译器会优先使用 BLOD 而非 FLOD。BLOD 与 FLOD 保存为各自独立的纹理。</text></string>
-	<string id="WARNING: First-time generation results in wrong albedo, this is a bug TBD. FIX: Generate any LQ for once upon first AE use!"><text>警告：首次生成的反照率（albedo）是错误的，这是待查 bug。解决方法：AE 启动后先随便生成一次 LQ 预热！</text></string>
+	<string id="Only large objects should use BLODs, small objects use FLODs instead. Engine&amp;Compiler prioritize BLODs over FLODs. BLODs and FLODs are saved as independent textures."><text>为节约性能，应只对大型物体使用BLOD，对小型物体使用FLOD。编译器会优先编译BLOD，只有在BLOD不存在时回退FLOD。引擎运行时无法选择使用BLOD或FLOD（UV布局不同）。生成的BLOD与FLOD将保存为各自独立的纹理。</text></string>
+	<string id="WARNING: First-time generation results in wrong albedo, this is a bug TBD. FIX: Generate any LQ for once upon first AE use!"><text>警告：首次生成的LOD色彩是错误的，这是待查Bug。解决方法：启动后先随便生成一张LQ预热！</text></string>
 </string_table>
