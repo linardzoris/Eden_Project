@@ -25,6 +25,8 @@
 #include "engine/XrGamePersistentEditors.h"
 #include "../../../xrEngine/string_table.h"
 
+#include "../../xrEUI/EditorLocalization.h"
+
 
 ECommandVec 		ECommands;
 BOOL 				bAllowReceiveCommand	= FALSE;
@@ -224,9 +226,9 @@ CCommandVar	TUI::CommandRenderFocus(CCommandVar p1, CCommandVar p2)
 }
 CCommandVar	TUI::CommandBreakLastOperation(CCommandVar p1, CCommandVar p2)
 {
-	if (mrYes==ELog.DlgMsg(mtConfirmation,mbYes|mbNo,"Are you sure to break current action?")){
+	if (mrYes==ELog.DlgMsg(mtConfirmation,mbYes|mbNo,Loc("Are you sure to break current action?"))){
 		NeedBreak	();
-		ELog.Msg	(mtInformation,"Execution canceled.");
+		ELog.Msg	(mtInformation,Loc("Execution canceled."));
 	}
 	return 1;
 }
@@ -415,14 +417,14 @@ CCommandVar 	CommandSoundEditor(CCommandVar p1, CCommandVar p2)
 }
 CCommandVar CommandSyncSounds(CCommandVar p1, CCommandVar p2)
 {
-	if (ELog.DlgMsg(mtConfirmation, mbYes | mbNo, "Are you sure to synchronize sounds?") == mrYes)
+	if (ELog.DlgMsg(mtConfirmation, mbYes | mbNo, Loc("Are you sure to synchronize sounds?")) == mrYes)
 		SndLib->RefreshSounds(true, true);
 	return TRUE;
 }
 
 CCommandVar CommandSyncSoundsHard(CCommandVar p1, CCommandVar p2)
 {
-	if (ELog.DlgMsg(mtConfirmation, mbYes | mbNo, "Are you sure to synchronize sounds?") == mrYes)
+	if (ELog.DlgMsg(mtConfirmation, mbYes | mbNo, Loc("Are you sure to synchronize sounds?")) == mrYes)
 		SndLib->RefreshSounds(true, false);
 	return TRUE;
 }
@@ -465,7 +467,7 @@ CCommandVar 	CommandCheckTextures(CCommandVar p1, CCommandVar p2)
 }
 CCommandVar 	CommandRefreshTextures(CCommandVar p1, CCommandVar p2)
 {
-	if (ELog.DlgMsg(mtConfirmation,mbYes|mbNo,"Are you sure to synchronize textures?")==mrYes)
+	if (ELog.DlgMsg(mtConfirmation,mbYes|mbNo,Loc("Are you sure to synchronize textures?"))==mrYes)
 		ImageLib.RefreshTextures(0);
 	return				TRUE;
 }
@@ -621,7 +623,7 @@ CCommandVar 	ExecuteCommandList(LPCSTR text)
 			if (CMD){
 				SESubCommand* SUB= FindSubCommandByName(CMD,sub_cmd_name.c_str());
 				if (!sub_cmd_name.empty()&&!SUB){
-					ELog.DlgMsg	(mtError,"Can't find sub-command: '%s'",sub_cmd_name.c_str());
+					ELog.DlgMsg	(mtError,Loc("Can't find sub-command: '%s'"),sub_cmd_name.c_str());
 					res			= FALSE;
 					break;
 				}
@@ -634,13 +636,13 @@ CCommandVar 	ExecuteCommandList(LPCSTR text)
 				ParseParam		(sp1,p1);
 				ParseParam		(sp2,p2);
 				// execute command
-				if (FALSE==ExecCommand(CMD->idx,p1,p2)){	
-					ELog.DlgMsg	(mtError,"Can't execute command: '%s'",cmd.c_str());
+				if (FALSE==ExecCommand(CMD->idx,p1,p2)){
+					ELog.DlgMsg	(mtError,Loc("Can't execute command: '%s'"),cmd.c_str());
 					res			= FALSE;
 					break;
 				}
 			}else{
-				ELog.DlgMsg		(mtError,"Can't find command: '%s'",cmd.c_str());
+				ELog.DlgMsg		(mtError,Loc("Can't find command: '%s'"),cmd.c_str());
 				res				= FALSE;
 				break;
 			}
