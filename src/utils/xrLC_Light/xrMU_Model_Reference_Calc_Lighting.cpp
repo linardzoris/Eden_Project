@@ -125,7 +125,7 @@ void o_test(int iA, int iB, int count, base_color* A, base_color* B, float& C, f
 	simple_optimize(_A, _B, C, D);
 }
 
-void xrMU_Reference::calc_lighting()
+void xrMU_Reference::fit_reference_lighting()
 {
 	model->calc_lighting(color, xform, inlc_global_data()->RCAST_Model(), inlc_global_data()->L_static(), (inlc_global_data()->b_nosun() ? LP_dont_sun : 0) | LP_DEFAULT, false);
 
@@ -152,4 +152,49 @@ void xrMU_Reference::calc_lighting()
 		for (u32 index = 0; index < 5; index++)
 			o_test(4, index, (u32)color.size(), &model->color.front(), &color.front(), _s[index], _b[index]);
 	}
+
+	// Store as the shared per-model fit (only non-unique references publish it:
+	// unique instances fit in parallel and must never race on the cache). The
+	// hemi scale is applied by the consumer, the cache keeps the raw regression.
+	if (!bake_unique)
+	{
+		model->c_scale_ref		= c_scale;
+		model->c_bias_ref		= c_bias;
+		model->reference_fitted	= true;
+	}
+}
+
+void xrMU_Reference::calc_lighting()
+{
+	// Non-unique instances share the per-model reference fit (one bake per model
+	// instead of one per instance) - this is what keeps big MU scenes cheap.
+	if (!bake_unique && model->reference_fitted)
+	{
+		c_scale			= model->c_scale_ref;
+		c_bias			= model->c_bias_ref;
+		c_scale.hemi	*= model->hemi_scale_reference;
+
+		// Keep 'color' populated: the LOD billboard color path in export_ogf
+		// interpolates from it. Reconstruct the world bake by applying the fit
+		// to the model-space bake (same transform the runtime applies).
+		color.resize(model->color.size());
+		for (u32 i = 0; i < color.size(); i++)
+		{
+			base_color_c	c;
+			model->color[i]._get(c);
+			c.rgb.mul(c_scale.rgb);
+			c.rgb.add(c_bias.rgb);
+			c.sun			= c.sun * c_scale.sun + c_bias.sun;
+			c.hemi			= c.hemi * c_scale.hemi + c_bias.hemi;
+			color[i]._set(c);
+		}
+		return;
+	}
+
+	fit_reference_lighting();
+
+	if (bake_unique)
+		c_scale.hemi	*= hemi_scale_per_instance; // instance-level tuning replaces the model scale
+	else
+		c_scale.hemi	*= model->hemi_scale_reference;
 }

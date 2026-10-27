@@ -54,6 +54,14 @@ public:
 	v_subdivs				m_subdivs;
 
 	xr_vector<base_color>	color;
+
+	// Reference lighting fit cache: the first non-unique reference of this model
+	// bakes once at its own position and all other non-unique refs reuse the fit.
+	base_color_c			c_scale_ref;
+	base_color_c			c_bias_ref;
+	bool					reference_fitted;
+	// Per-model hemi brightness multiplier (from the .object, AE-editable)
+	float					hemi_scale_reference;
 private:
 	_face*					create_face			( _vertex* v0, _vertex* v1, _vertex* v2, b_face& F );
 	_vertex*				create_vertex		( Fvector& P );

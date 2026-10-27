@@ -94,7 +94,7 @@ void xrLoad(LPCSTR name, bool draft_mode)
 			u32 version;
 			fs->r_chunk(EB_Version, &version);
 			R_ASSERT(XRCL_CURRENT_VERSION >= 17);
-			R_ASSERT(XRCL_CURRENT_VERSION <= 18);
+			R_ASSERT(XRCL_CURRENT_VERSION <= 19);
 
 			// Header
 			b_params			Params;
@@ -227,7 +227,7 @@ void xrLoad(LPCSTR name, bool draft_mode)
 		u32 version;
 		fs.r_chunk(EB_Version, &version);
 		R_ASSERT(XRCL_CURRENT_VERSION >= 17);
-		R_ASSERT(XRCL_CURRENT_VERSION <= 18);
+		R_ASSERT(XRCL_CURRENT_VERSION <= 19);
 
 		// Header
 		b_params				Params;

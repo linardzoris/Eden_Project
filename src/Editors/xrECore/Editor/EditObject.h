@@ -212,6 +212,9 @@ public:
 public:
 	// options
 	Flags32			m_objectFlags;
+	// MU static objects: reference-level hemi brightness multiplier (baked once per model,
+	// shared by all instances that are not marked "bake unique")
+	float			m_MUHemiScaleReference = 1.f;
 	enum{
 		eoDynamic 	 	= (1<<0),			
 		eoProgressive 	= (1<<1),			
@@ -571,6 +574,7 @@ private:
 #define EOBJ_CHUNK_SMOTIONS2		0x0924
 #define EOBJ_CHUNK_LODS				0x0925
 #define EOBJ_CHUNK_SMOTIONS3		0x0926
+#define EOBJ_CHUNK_MU_PARAMS		0x0927
 //----------------------------------------------------
 
 

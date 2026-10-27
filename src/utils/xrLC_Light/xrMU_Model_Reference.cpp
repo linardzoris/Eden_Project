@@ -18,6 +18,12 @@ void xrMU_Reference::Load( IReader& F, xr_vector<xrMU_Model*>& mu_models )
 	flags				= R.flags;
 	sector				= R.sector;
 
+	// MU lighting options transported through the reserved slots
+	bake_unique				= R.flags.is(MUREF_FLAG_BAKE_UNIQUE);
+	hemi_scale_per_instance	= 1.f;
+	if (R.flags.is(MUREF_FLAG_HEMI_SCALE_VALID))
+		memcpy(&hemi_scale_per_instance, &R.reserved[0], sizeof(float));
+
 	c_scale.rgb.set		(1,1,1);
 	c_scale.hemi		= 1;
 	c_scale.sun			= 1;

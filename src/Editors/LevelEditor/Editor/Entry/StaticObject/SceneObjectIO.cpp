@@ -8,6 +8,7 @@
 #define SCENEOBJ_CHUNK_PLACEMENT     	0x0904
 #define SCENEOBJ_CHUNK_FLAGS			0x0905
 #define SCENEOBJ_CHUNK_SURFACE			0x0906
+#define SCENEOBJ_CHUNK_MU_PARAMS		0x0907
 bool CSceneObject::LoadLTX(CInifile& ini, LPCSTR sect_name)
 {
     bool bRes = true;
@@ -56,6 +57,11 @@ bool CSceneObject::LoadLTX(CInifile& ini, LPCSTR sect_name)
 //            ELog.Msg( mtError, "CSceneObject: '%s' different file version!", ref_name.c_str() );
 
       	m_Flags.assign(ini.r_u32(sect_name, "flags"));
+        if (ini.line_exist(sect_name, "mu_bake_unique"))
+        {
+            m_MUBakeUnique				= ini.r_bool(sect_name, "mu_bake_unique");
+            m_MUHemiScalePerInstance	= ini.r_float(sect_name, "mu_hemi_scale_per_instance");
+        }
         if (m_Flags.test(flUseSurface))
         {
             SIniFileStream 			ini_stream;
@@ -124,6 +130,11 @@ void CSceneObject::SaveLTX(CInifile& ini, LPCSTR sect_name)
     ini.w_string				(sect_name, "reference_name", m_ReferenceName.c_str());
 
 	ini.w_u32					(sect_name, "flags", m_Flags.get());
+    if (IsMUStatic())
+    {
+        ini.w_bool				(sect_name, "mu_bake_unique", m_MUBakeUnique);
+        ini.w_float				(sect_name, "mu_hemi_scale_per_instance", m_MUHemiScalePerInstance);
+    }
     if (m_Flags.test(flUseSurface))
     {
         SIniFileStream 			ini_stream;
@@ -217,6 +228,10 @@ bool CSceneObject::LoadStream(IReader& F)
         if (F.find_chunk(SCENEOBJ_CHUNK_FLAGS)){
         	m_Flags.assign(F.r_u32());
         }
+        if (F.find_chunk(SCENEOBJ_CHUNK_MU_PARAMS)){
+            m_MUBakeUnique				= F.r_u8();
+            m_MUHemiScalePerInstance	= F.r_float();
+        }
         if (m_Flags.test(flUseSurface))
         {
             if (F.find_chunk(SCENEOBJ_CHUNK_SURFACE))
@@ -275,7 +290,15 @@ void CSceneObject::SaveStream(IWriter& F)
     F.open_chunk	(SCENEOBJ_CHUNK_FLAGS);
 	F.w_u32			(m_Flags.flags);
     F.close_chunk	();
-    
+
+    if (IsMUStatic())
+    {
+        F.open_chunk	(SCENEOBJ_CHUNK_MU_PARAMS);
+        F.w_u8			(m_MUBakeUnique ? 1 : 0);
+        F.w_float		(m_MUHemiScalePerInstance);
+        F.close_chunk	();
+    }
+
     if (m_Flags.test(flUseSurface))
     {
         F.open_chunk(SCENEOBJ_CHUNK_SURFACE);

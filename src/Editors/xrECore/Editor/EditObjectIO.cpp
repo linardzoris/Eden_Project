@@ -94,6 +94,11 @@ void CEditableObject::Save(IWriter& F)
 
     F.w_chunk		(EOBJ_CHUNK_FLAGS,&m_objectFlags.flags,sizeof(m_objectFlags.flags));
 
+    // MU static: reference hemi scale (always written, tiny)
+    F.open_chunk	(EOBJ_CHUNK_MU_PARAMS);
+    F.w_float		(m_MUHemiScaleReference);
+    F.close_chunk	();
+
     // meshes
     F.open_chunk	(EOBJ_CHUNK_EDITMESHES);
     int count		= 0;
@@ -216,6 +221,9 @@ bool CEditableObject::Load(IReader& F)
 		}
 
 		R_ASSERT(F.r_chunk(EOBJ_CHUNK_FLAGS, &m_objectFlags.flags));
+
+		if (F.find_chunk(EOBJ_CHUNK_MU_PARAMS))
+			m_MUHemiScaleReference = F.r_float();
 
 		if (F.find_chunk	(EOBJ_CHUNK_CLASSSCRIPT))
 			F.r_stringZ		(m_ClassScript);

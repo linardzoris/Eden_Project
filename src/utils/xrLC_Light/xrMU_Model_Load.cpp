@@ -30,6 +30,15 @@ void xrMU_Model::Load	( IReader& F, u32 version )
 	R_ASSERT				( version > 17 );
 	F.r	(&*sm_groups.begin(),(u32)sm_groups.size()*sizeof(u32));
 
+	// MU reference hemi scale (float bits) - appended after sm_groups since
+	// build version 19; older files end here and keep the default of 1.
+	// Note: 0.0f is a legal value (no hemi), never use it as a sentinel.
+	if (version >= 19)
+	{
+		u32 bits = F.r_u32();
+		memcpy(&hemi_scale_reference, &bits, sizeof(float));
+	}
+
 	// CONVERT and OPTIMIZE
 	for (u32 v_it=0; v_it<b_vertices.size(); v_it++)
 	{

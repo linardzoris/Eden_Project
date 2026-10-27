@@ -361,7 +361,7 @@ struct SNodePositionOld
 #pragma pack	(pop)
 
 
-constexpr u32 XRCL_CURRENT_VERSION = 18; //17;	// input
+constexpr u32 XRCL_CURRENT_VERSION = 19; //18;	// input (19: MU models carry hemi_scale_reference)
 constexpr u32 XRCL_PRODUCTION_VERSION = 14; // output 
 constexpr u32 CFORM_CURRENT_VERSION = 4;
 

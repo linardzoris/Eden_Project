@@ -319,6 +319,11 @@ void CSceneObject::FillProp(LPCSTR pref, PropItemVec& items)
 	V->OnChangeEvent.bind(this, &CSceneObject::ReferenceChange);
 	if (IsDynamic())
 		inherited::AnimationFillProp(pref, items);
+	if (IsMUStatic())
+	{
+		PHelper().CreateBOOL(items, PrepareKey(pref, "MU Lighting\\Hemi Bake Unique"), &m_MUBakeUnique);
+		PHelper().CreateFloat(items, PrepareKey(pref, "MU Lighting\\Hemi Scale (Per Instance)"), &m_MUHemiScalePerInstance, 0.f, 2.f);
+	}
 	SurfaceVec& s_lst = m_Surfaces;
 
 	shared_str Pref1 = PrepareKey(pref, "Surfaces").c_str();

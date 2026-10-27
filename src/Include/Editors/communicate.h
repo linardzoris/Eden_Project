@@ -130,6 +130,7 @@ struct b_mu_model
     b_face*				m_pFaces;
     u32*				m_smgroups;
 	u16					lod_id;				// u16(-1) = no lod, just static geometry
+	u32					hemi_scale_reference_bits; // float bits: per-model hemi scale shared by non-unique MU refs
 };
 
 /*
@@ -142,7 +143,13 @@ struct b_mu_reference
     Flags32				flags;
 	u16					sector;
     u32					reserved	[8];
+	// Reserved slot layout used by the build (flags bit 1 marks validity):
+	//   reserved[0] = float bits: per-instance hemi scale (applied when flags bit 0 = bake unique)
 };
+
+// b_mu_reference.flags bits consumed by the compiler
+#define MUREF_FLAG_BAKE_UNIQUE			(1<<0)
+#define MUREF_FLAG_HEMI_SCALE_VALID		(1<<1)
 
 struct b_params
 {

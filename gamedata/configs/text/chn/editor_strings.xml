@@ -1064,6 +1064,10 @@
 	<string id="Item Properties"><text>物体属性</text></string>
 	<string id="Open file"><text>打开文件</text></string>
 	<string id="Save file"><text>保存文件</text></string>
+	<string id="MU Lighting"><text>MU 光照</text></string>
+	<string id="Hemi Bake Unique"><text>单独烘焙 Hemi</text></string>
+	<string id="Hemi Scale (Per Instance)"><text>Hemi 缩放 (实例)</text></string>
+	<string id="Hemi Scale (Reference)"><text>Hemi 缩放 (参考)</text></string>
 	<string id="Simulate"><text>模拟</text></string>
 	<string id="Activates physics simulation."><text>激活物理模拟。</text></string>
 	<string id="Undo the last action."><text>撤销上一步操作。</text></string>

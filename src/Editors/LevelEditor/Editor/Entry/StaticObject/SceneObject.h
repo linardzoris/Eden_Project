@@ -25,6 +25,10 @@ private:
 	// options
     Flags32			m_Flags;
 public:
+	// MU static lighting options (only meaningful when the reference is MU-static)
+	BOOL			m_MUBakeUnique = FALSE;			// bake hemi fit separately for this instance
+	float			m_MUHemiScalePerInstance = 1.f;	// hemi brightness multiplier applied when baked unique
+public:
     virtual void 	SetScale				(const Fvector& scale)
     {
     	if (m_pReference && m_pReference->IsDynamic()){
