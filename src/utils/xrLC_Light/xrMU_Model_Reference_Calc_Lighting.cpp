@@ -161,7 +161,21 @@ void xrMU_Reference::fit_reference_lighting()
 		model->c_scale_ref		= c_scale;
 		model->c_bias_ref		= c_bias;
 		model->reference_fitted	= true;
+
+		clMsg("[MU] model '%s': hemi fit scale=%.3f bias=%.3f (ref scale=%.2f)",
+			*model->m_name, c_scale.hemi, c_bias.hemi, model->hemi_scale_reference);
 	}
+}
+
+// The user-facing hemi scale is a multiplier on the FINAL hemi brightness:
+// hemi_final = (A*C + D) * s, which means the scale must be applied to both the
+// regression scale AND the bias. Multiplying only c_scale.hemi gets dominated
+// by the (often large) bias term - e.g. trees under open sky fit with a small
+// C and a large D, so 0.5 vs 0.1 looked nearly identical without this.
+static void apply_hemi_scale(base_color_c& scale, base_color_c& bias, float s)
+{
+	scale.hemi	*= s;
+	bias.hemi	*= s;
 }
 
 void xrMU_Reference::calc_lighting()
@@ -172,7 +186,7 @@ void xrMU_Reference::calc_lighting()
 	{
 		c_scale			= model->c_scale_ref;
 		c_bias			= model->c_bias_ref;
-		c_scale.hemi	*= model->hemi_scale_reference;
+		apply_hemi_scale(c_scale, c_bias, model->hemi_scale_reference);
 
 		// Keep 'color' populated: the LOD billboard color path in export_ogf
 		// interpolates from it. Reconstruct the world bake by applying the fit
@@ -194,7 +208,7 @@ void xrMU_Reference::calc_lighting()
 	fit_reference_lighting();
 
 	if (bake_unique)
-		c_scale.hemi	*= hemi_scale_per_instance; // instance-level tuning replaces the model scale
+		apply_hemi_scale(c_scale, c_bias, hemi_scale_per_instance); // instance-level tuning replaces the model scale
 	else
-		c_scale.hemi	*= model->hemi_scale_reference;
+		apply_hemi_scale(c_scale, c_bias, model->hemi_scale_reference);
 }
