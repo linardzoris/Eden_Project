@@ -323,8 +323,8 @@ void R_dsgraph_structure::r_dsgraph_insert_shadow_proxy	(dxRender_Visual *pVisua
 		Nps->val.ds = pass.ds->sh;
 		mapNormalCS::TNode*			Ncs		= Nps->val.mapCS.insert	(pass.constants._get());
 #else //USE_DX11
-		mapNormalVS::TNode*			Nvs		= map.insert		(&*pass.vs);
-		mapNormalPS::TNode*			Nps		= Nvs->val.insert	(&*pass.ps->ps);
+		mapNormalVS::TNode*			Nvs		= map.insert		(pass.vs->vs);
+		mapNormalPS::TNode*			Nps		= Nvs->val.insert	(pass.ps->ps);
 		mapNormalCS::TNode*			Ncs		= Nps->val.insert	(pass.constants._get());
 #endif
 		mapNormalStates::TNode*		Nstate	= Ncs->val.insert	(pass.state->state);
