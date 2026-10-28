@@ -83,6 +83,9 @@ void	CRender::render_lights	(light_Package& LP)
 		//	}
 		//	if (left_some_lights_that_doesn't cast shadows)
 		//		accumulate them
+		// Shadow proxy (r__shadow_proxy_lod): reset before the shadowed-light
+		// loop; each light marks it active while its SMAP is built.
+		shadow_proxy_active = FALSE;
 		while (!LP.v_shadowed.empty())
 		{
 			// if (has_spot_shadowed)
@@ -105,6 +108,9 @@ void	CRender::render_lights	(light_Package& LP)
 
 				// render
 				phase = PHASE_SMAP;
+				// Shadow proxy (r__shadow_proxy_lod): active for this light's SMAP
+				shadow_proxy_active		= TRUE;
+				shadow_proxy_light_pos	= L->position;
 
 #if USE_DX11
 				r_pmask(true, !!RImplementation.o.Tshadows);
@@ -182,6 +188,8 @@ void	CRender::render_lights	(light_Package& LP)
 					L->svis.end();
 				r_pmask(true, false);
 			}
+			// Shadow proxy (r__shadow_proxy_lod): shadowed-light loop is over
+			shadow_proxy_active = FALSE;
 			{
 				PROF_EVENT("UNSHADOWED_LIGHTS");
 				//		switch-to-accumulator

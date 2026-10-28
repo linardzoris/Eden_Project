@@ -404,6 +404,8 @@ void CDeflector::L_Direct_Edge (CDB::COLLIDER* DB, base_lighting* LightsSelected
 		LightPoint(DB, inlc_global_data()->RCAST_Model(), C, P, N, *LightsSelected, (inlc_global_data()->b_nosun() ? LP_dont_sun : 0) | (inlc_global_data()->b_nohemi() ? LP_dont_hemi : 0) | LP_DEFAULT, skip); //.
 
 		C.mul		(.5f);
+		if (inlc_global_data()->b_nohemi())
+			C.hemi	= 1.f;	// nohemi: hemi 通道输出全白而非全黑
 		lm.surface	[_y*lm.width+_x]._set	(C);
 		lm.marker	[_y*lm.width+_x]		= 255;
 	}
@@ -512,9 +514,13 @@ void CDeflector::L_Direct	(CDB::COLLIDER* DB, base_lighting* LightsSelected, HAS
 				if (Fcount) {
 					C.scale			(Fcount);
 					C.mul			(.5f);
+					if (inlc_global_data()->b_nohemi())
+						C.hemi		= 1.f;	// nohemi: hemi 通道输出全白而非全黑
 					lm.surface		[V*lm.width+U]._set(C);
 					lm.marker		[V*lm.width+U] = 255;
 				} else {
+					if (inlc_global_data()->b_nohemi())
+						C.hemi		= 1.f;
 					lm.surface		[V*lm.width+U]._set(C);	// 0-0-0-0-0
 					lm.marker		[V*lm.width+U] = 0;
 				}

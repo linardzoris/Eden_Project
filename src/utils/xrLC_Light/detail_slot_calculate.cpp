@@ -53,7 +53,9 @@ public:
 
 
 //-----------------------------------------------------------------------------------------------------------------
-const int	LIGHT_Count				=	7;
+// 输出是 slot 内平均值（量化到 15 级），不需要 225 个全阴影追踪采样，
+// 5x5=25 个采样平均后结果基本一致（约 1/9 射线数）
+const int	LIGHT_Count				=	2;
 
 //-----------------------------------------------------------------
 __declspec(thread)		u64			t_start	= 0;
@@ -353,6 +355,17 @@ bool detail_slot_calculate( u32 _x, u32 _z, DetailSlot&	DS, DWORDVec& box_result
 
 	// select lights
 	Selected.select		( gl_data.g_lights, S.P, S.R );
+
+	// 无光源早退：rgb/hemi/sun 全空时全路径计算结果必为 0，跳过所有采样射线
+	if (Selected.rgb.empty() && Selected.hemi.empty() && Selected.sun.empty())
+	{
+		DS.c_dir			= 0;
+		DS.c_hemi			= 0;
+		DS.c_r				= 0;
+		DS.c_g				= 0;
+		DS.c_b				= 0;
+		return true;
+	}
 
 	// lighting itself
 	base_color		amount;

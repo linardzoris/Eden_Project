@@ -64,6 +64,12 @@ public:
 	u32															counter_S	;
 	u32															counter_D	;
 	BOOL														b_loaded	;
+
+	// Shadow proxy state (r__shadow_proxy_lod): position of the light currently
+	// casting a shadow map and whether a real shadow pass is being built (the
+	// z-prefill pass runs in PHASE_SMAP too but must keep the legacy mesh path).
+	Fvector														shadow_proxy_light_pos	;
+	BOOL														shadow_proxy_active		;
 public:
 	virtual		void					set_Transform			(Fmatrix*	M	)				{ VERIFY(M);	val_pTransform = M;	}
 	virtual		void					set_HUD					(BOOL 		V	)				{ val_bHUD		= V;				}
@@ -85,6 +91,8 @@ public:
 		marker				= 0;
 		r_pmask				(true,true);
 		b_loaded			= FALSE	;
+		shadow_proxy_active	= FALSE	;
+		shadow_proxy_light_pos.set(0,0,0);
 	};
 
 	void		r_dsgraph_destroy()
@@ -126,6 +134,10 @@ public:
 
 	void		r_dsgraph_insert_dynamic						(dxRender_Visual	*pVisual, Fvector& Center);
 	void		r_dsgraph_insert_static							(dxRender_Visual	*pVisual);
+	// Shadow proxy (r__shadow_proxy_lod 1): insert an FLOD billboard visual into
+	// the shadow-map normal passes, bypassing the main-camera SSA discard (these
+	// proxies exist precisely for far objects).
+	void		r_dsgraph_insert_shadow_proxy					(dxRender_Visual	*pVisual);
 
 	void		r_dsgraph_render_graph							(u32	_priority,	bool _clear=true);
 	void		r_dsgraph_render_hud							();

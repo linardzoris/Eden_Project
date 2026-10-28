@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "../../xrEngine/Fmesh.h"
 #include "FLOD.h"
+#include "xrRender_console.h"
 
 struct _hw 
 {
@@ -76,38 +77,49 @@ void FLOD::Copy			(dxRender_Visual *pFrom	)
 }
 void FLOD::Render		(float LOD)
 {
-	/*
-	Fvector				Ldir;
-	Ldir.sub			(vis.sphere.P,Device.vCameraPosition);
-	Ldir.normalize		();
+#if RENDER!=R_R1
+	// Main pass: billboards are batch-rendered by r_dsgraph_render_lods, this
+	// stays empty. SMAP pass (r__shadow_proxy_lod 1): this visual was inserted
+	// by r_dsgraph_insert_shadow_proxy with the SE_R2_SHADOW_AREF element
+	// (alpha-tested shadow shader) - draw the facet facing the shadow light.
+	// The z-prefill pass also runs in PHASE_SMAP but never sees
+	// shadow_proxy_active set, so it keeps the legacy mesh path.
+	if (RImplementation.phase != CRender::PHASE_SMAP || !RImplementation.shadow_proxy_active || ps_r__shadow_proxy_lod != 1)
+		return;
 
+	// Direction toward the shadow light. Facet vertices are already in world
+	// space (per-reference LOD node), so the identity tree xform applies.
+	Fvector							Ldir;
+	Ldir.sub						(vis.sphere.P, RImplementation.shadow_proxy_light_pos).normalize();
+
+	// best-facing facet, same semantics as the main-pass facet selection
 	int					best_id		= 0;
 	float				best_dot	= Ldir.dotproduct(facets[0].N);
-	float				dot;
+	for (int f = 1; f < 8; f++)
+	{
+		float dot = Ldir.dotproduct(facets[f].N);
+		if (dot > best_dot) { best_dot = dot; best_id = f; }
+	}
 
-	dot	= Ldir.dotproduct	(facets[1].N); if (dot>best_dot) { best_id=1; best_dot=dot; }
-	dot	= Ldir.dotproduct	(facets[2].N); if (dot>best_dot) { best_id=2; best_dot=dot; }
-	dot	= Ldir.dotproduct	(facets[3].N); if (dot>best_dot) { best_id=3; best_dot=dot; }
-	dot	= Ldir.dotproduct	(facets[4].N); if (dot>best_dot) { best_id=4; best_dot=dot; }
-	dot	= Ldir.dotproduct	(facets[5].N); if (dot>best_dot) { best_id=5; best_dot=dot; }
-	dot	= Ldir.dotproduct	(facets[6].N); if (dot>best_dot) { best_id=6; best_dot=dot; }
-	dot	= Ldir.dotproduct	(facets[7].N); if (dot>best_dot) { best_id=7; best_dot=dot; }
-
-#pragma todo("Smooth transitions")
-#pragma todo("5-coloring")
-
-	// Fill VB
+	// Pack a single quad. No view-direction shift here (the shadow bias handles
+	// acne); p1/n1/t1 duplicate p0/n0/t0 - the shadow VS only reads those.
 	_face&		F					= facets[best_id];
 	u32			vOffset				= 0;
-	_hw*		V					= (_hw*) RCache.Vertex.Lock(4,geom->vb_stride,vOffset);
-	V[0].set	(F.v[0].v,F.N,F.v[0].c_rgb_hemi,F.v[0].t.x,F.v[0].t.y);
-	V[1].set	(F.v[1].v,F.N,F.v[1].c_rgb_hemi,F.v[1].t.x,F.v[1].t.y);
-	V[2].set	(F.v[2].v,F.N,F.v[2].c_rgb_hemi,F.v[2].t.x,F.v[2].t.y);
-	V[3].set	(F.v[3].v,F.N,F.v[3].c_rgb_hemi,F.v[3].t.x,F.v[3].t.y);
-	RCache.Vertex.Unlock			(4,geom->vb_stride);
+	_hw*		V					= (_hw*) RCache.Vertex.Lock(4, geom->vb_stride, vOffset);
+	static const int	vid [4]		= {3,0,2,1};
+	for (u32 vit = 0; vit < 4; ++vit)
+	{
+		int				id			= vid[vit];
+		V[vit].p0		= F.v[id].v;			V[vit].p1		= F.v[id].v;
+		V[vit].n0		= F.N;					V[vit].n1		= F.N;
+		V[vit].t0		= F.v[id].t;			V[vit].t1		= F.v[id].t;
+		V[vit].sun_af	= color_rgba(F.v[id].c_sun, F.v[id].c_sun, 255, 255);
+		V[vit].rgbh0	= F.v[id].c_rgb_hemi;	V[vit].rgbh1	= F.v[id].c_rgb_hemi;
+	}
+	RCache.Vertex.Unlock			(4, geom->vb_stride);
 
-	// Draw IT
-	RCache.set_Geometry		(geom);
-	RCache.Render			(D3DPT_TRIANGLEFAN,vOffset,2);
-	*/
+	RCache.tree.set_m_xform			(Fidentity);
+	RCache.set_Geometry				(geom);
+	RCache.Render					(D3DPT_TRIANGLELIST, vOffset, 0, 4, 0, 2);
+#endif
 }

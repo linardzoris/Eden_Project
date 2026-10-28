@@ -66,6 +66,10 @@ void CRender::render_sun_cascades()
 	if ( b_need_to_render_sunshafts )
 		m_sun_cascades[m_sun_cascades.size()-1].reset_chain = true;
 
+	// Shadow proxy (r__shadow_proxy_lod): reset per frame; each cascade marks it
+	// active while its SMAP is built. The z-prefill pass never sees it active.
+	shadow_proxy_active = FALSE;
+
 	for( u32 i = 0; i < m_sun_cascades.size(); ++i )
 		render_sun_cascade ( i );
 
@@ -286,6 +290,10 @@ void CRender::render_sun_cascade(u32 cascade_ind)
 		bool bSpecialFull = mapNormalPasses[1][0].size() || mapMatrixPasses[1][0].size() || mapSorted.size();
 		VERIFY(!bSpecialFull);
 		phase = PHASE_SMAP;
+		// Shadow proxy (r__shadow_proxy_lod): this is a real shadow pass, mark it
+		// and give the proxies the sun COP (far away along the light direction).
+		shadow_proxy_active		= TRUE;
+		shadow_proxy_light_pos	= cull_COP;
 		r_pmask(true, !!RImplementation.o.Tshadows);
 	}
 

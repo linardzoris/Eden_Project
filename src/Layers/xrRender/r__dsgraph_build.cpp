@@ -289,6 +289,52 @@ void R_dsgraph_structure::r_dsgraph_insert_static	(dxRender_Visual *pVisual)
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
+#if RENDER!=R_R1
+// r__shadow_proxy_lod 1: insert an FLOD billboard visual into the shadow-map
+// normal passes using its SE_R2_SHADOW_AREF element. Unlike r_dsgraph_insert_static
+// this bypasses the main-camera SSA discard - the proxies exist precisely for far
+// objects that are billboarded in the main view.
+void R_dsgraph_structure::r_dsgraph_insert_shadow_proxy	(dxRender_Visual *pVisual)
+{
+	CRender&	RI				=	RImplementation;
+
+	if (pVisual->vis.marker	==	RI.marker)	return	;
+	pVisual->vis.marker			=	RI.marker			;
+
+	ShaderElement*	sh		= pVisual->shader->E[SE_R2_SHADOW_AREF]._get();
+	if (0==sh)								return;
+	if (!pmask[sh->flags.iPriority/2])		return;
+
+	counter_S					++;
+
+	float distSQ;
+	float SSA					=	CalcSSA	(distSQ,pVisual->vis.sphere.P,pVisual);
+
+	for ( u32 iPass = 0; iPass<sh->passes.size(); ++iPass)
+	{
+		SPass&						pass	= *sh->passes[iPass];
+		mapNormal_T&				map		= mapNormalPasses[sh->flags.iPriority/2][iPass];
+
+#ifdef USE_DX11
+		mapNormalVS::TNode*			Nvs		= map.insert		(&*pass.vs);
+		mapNormalGS::TNode*			Ngs		= Nvs->val.insert	(&*pass.gs->gs);
+		mapNormalPS::TNode*			Nps		= Ngs->val.insert	(&*pass.ps->ps);
+		Nps->val.hs = pass.hs->sh;
+		Nps->val.ds = pass.ds->sh;
+		mapNormalCS::TNode*			Ncs		= Nps->val.mapCS.insert	(pass.constants._get());
+#else //USE_DX11
+		mapNormalVS::TNode*			Nvs		= map.insert		(&*pass.vs);
+		mapNormalPS::TNode*			Nps		= Nvs->val.insert	(&*pass.ps->ps);
+		mapNormalCS::TNode*			Ncs		= Nps->val.insert	(pass.constants._get());
+#endif
+		mapNormalStates::TNode*		Nstate	= Ncs->val.insert	(pass.state->state);
+		mapNormalTextures::TNode*	Ntex	= Nstate->val.insert(pass.T._get());
+
+		Ntex->val.push_back({SSA,pVisual});
+	}
+}
+#endif
+
 void CRender::add_leafs_Dynamic	(dxRender_Visual *pVisual)
 {
 	//PROF_EVENT("add_leafs_Dynamic")
@@ -411,6 +457,22 @@ void CRender::add_leafs_Static(dxRender_Visual *pVisual)
 			float		D;
 			float		ssa		=		CalcSSA(D,pV->vis.sphere.P,pV);
 			ssa					*=		pV->lod_factor;
+#if RENDER!=R_R1
+			// r__shadow_proxy_lod: shadow behavior for MU objects already replaced
+			// by their billboard facet in the main view (pure-billboard zone).
+			// 0 - legacy: cast from the full mesh; 1 - cast from the facet
+			// (alpha-tested); 2 - no shadow at all. The cross-fade zone
+			// (ssa >= r_ssaLOD_B) always keeps the mesh shadow.
+			const bool	shadow_phase	=	(phase==PHASE_SMAP) && !!shadow_proxy_active;
+			const int	proxy_mode		=	shadow_phase ? ps_r__shadow_proxy_lod : 0;
+			const bool	lod_state		=	ssa < r_ssaLOD_B;
+			if (shadow_phase && lod_state && proxy_mode==2)	return;
+			if (shadow_phase && lod_state && proxy_mode==1)
+			{
+				r_dsgraph_insert_shadow_proxy	(pVisual);
+				return;
+			}
+#endif
 			if (ssa<r_ssaLOD_A)
 			{
 				if (ssa<r_ssaDISCARD)	return;
@@ -419,7 +481,7 @@ void CRender::add_leafs_Static(dxRender_Visual *pVisual)
 				N->val.pVisual		=	pVisual;
 			}
 #if RENDER!=R_R1
-			if (ssa>r_ssaLOD_B || phase==PHASE_SMAP)
+			if (ssa>r_ssaLOD_B || (shadow_phase && proxy_mode==0))
 #else
 			if (ssa>r_ssaLOD_B)
 #endif
@@ -622,7 +684,19 @@ void CRender::add_Static(dxRender_Visual *pVisual, u32 planes)
 			float		D;
 			float		ssa		= CalcSSA	(D,pV->vis.sphere.P,pV);
 			ssa					*= pV->lod_factor;
-			if (ssa<r_ssaLOD_A)	
+#if RENDER!=R_R1
+			// r__shadow_proxy_lod: same shadow-proxy policy as add_leafs_Static.
+			const bool	shadow_phase	=	(phase==PHASE_SMAP) && !!shadow_proxy_active;
+			const int	proxy_mode		=	shadow_phase ? ps_r__shadow_proxy_lod : 0;
+			const bool	lod_state		=	ssa < r_ssaLOD_B;
+			if (shadow_phase && lod_state && proxy_mode==2)	return;
+			if (shadow_phase && lod_state && proxy_mode==1)
+			{
+				r_dsgraph_insert_shadow_proxy	(pVisual);
+				return;
+			}
+#endif
+			if (ssa<r_ssaLOD_A)
 			{
 				if (ssa<r_ssaDISCARD)	return;
 				mapLOD_Node*	N		= mapLOD.insertInAnyWay(D);
@@ -630,7 +704,7 @@ void CRender::add_Static(dxRender_Visual *pVisual, u32 planes)
 				N->val.pVisual			= pVisual;
 			}
 #if RENDER!=R_R1
-			if (ssa>r_ssaLOD_B || phase==PHASE_SMAP)
+			if (ssa>r_ssaLOD_B || (shadow_phase && proxy_mode==0))
 #else
 			if (ssa>r_ssaLOD_B)
 #endif

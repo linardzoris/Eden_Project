@@ -130,7 +130,7 @@ void ImplicitExecute::Execute()
 							wN.from_bary(V1->N, V2->N, V3->N, B);
 							wN.normalize();
 
-							u32 flags = (inlc_global_data()->b_nosun() ? LP_dont_sun : 0);
+							u32 flags = (inlc_global_data()->b_nosun() ? LP_dont_sun : 0) | (inlc_global_data()->b_nohemi() ? LP_dont_hemi : 0);
 							LightPoint(&DB, inlc_global_data()->RCAST_Model(), C, wP, wN, inlc_global_data()->L_static(), flags, F);
 							Fcount++;
 						}
@@ -147,6 +147,8 @@ void ImplicitExecute::Execute()
 				// Calculate lighting amount
 				C.scale(Fcount);
 				C.mul(.5f);
+				if (inlc_global_data()->b_nohemi())
+					C.hemi	= 1.f;	// nohemi: hemi 通道输出全白而非全黑
 				defl.Lumel(U, V)._set(C);
 				defl.Marker(U, V) = 255;
 			}
@@ -193,7 +195,7 @@ static void ImplicitLightingGPU(ImplicitDeflector& defl)
 	Fvector2* Jitter;
 	Jitter_Select(Jitter, Jcount);
 
-	const u32 flags = (inlc_global_data()->b_nosun() ? LP_dont_sun : 0);
+	const u32 flags = (inlc_global_data()->b_nosun() ? LP_dont_sun : 0) | (inlc_global_data()->b_nohemi() ? LP_dont_hemi : 0);
 	GpuBakeScene* scene = gpu_optix_global_scene();
 	R_ASSERT(scene);
 
@@ -326,6 +328,8 @@ static void ImplicitLightingGPU(ImplicitDeflector& defl)
 				base_color_c C = acc[t];
 				C.scale(counts[t]);
 				C.mul(.5f);
+				if (inlc_global_data()->b_nohemi())
+					C.hemi	= 1.f;	// nohemi: hemi 通道输出全白而非全黑
 				defl.Lumel(U, V)._set(C);
 				defl.Marker(U, V) = 255;
 			}

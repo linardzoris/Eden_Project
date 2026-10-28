@@ -127,7 +127,9 @@ void o_test(int iA, int iB, int count, base_color* A, base_color* B, float& C, f
 
 void xrMU_Reference::fit_reference_lighting()
 {
-	model->calc_lighting(color, xform, inlc_global_data()->RCAST_Model(), inlc_global_data()->L_static(), (inlc_global_data()->b_nosun() ? LP_dont_sun : 0) | LP_DEFAULT, false);
+	// nohemi: 拟合烘焙同样跳过 hemi 射线（rgb/sun 仍计算，供对应通道回归）
+	u32 flags = (inlc_global_data()->b_nosun() ? LP_dont_sun : 0) | (inlc_global_data()->b_nohemi() ? LP_dont_hemi : 0) | LP_DEFAULT;
+	model->calc_lighting(color, xform, inlc_global_data()->RCAST_Model(), inlc_global_data()->L_static(), flags, false);
 
 	R_ASSERT(color.size() == model->color.size());
 
@@ -188,6 +190,13 @@ void xrMU_Reference::calc_lighting()
 		c_bias			= model->c_bias_ref;
 		apply_hemi_scale(c_scale, c_bias, model->hemi_scale_reference);
 
+		if (inlc_global_data()->b_nohemi())
+		{
+			// nohemi: 运行期 hemi = 顶点色*0 + 1 = 恒全白
+			c_scale.hemi	= 0.f;
+			c_bias.hemi		= 1.f;
+		}
+
 		// Keep 'color' populated: the LOD billboard color path in export_ogf
 		// interpolates from it. Reconstruct the world bake by applying the fit
 		// to the model-space bake (same transform the runtime applies).
@@ -211,4 +220,11 @@ void xrMU_Reference::calc_lighting()
 		apply_hemi_scale(c_scale, c_bias, hemi_scale_per_instance); // instance-level tuning replaces the model scale
 	else
 		apply_hemi_scale(c_scale, c_bias, model->hemi_scale_reference);
+
+	if (inlc_global_data()->b_nohemi())
+	{
+		// nohemi: 运行期 hemi = 顶点色*0 + 1 = 恒全白（优先级高于 hemi scale）
+		c_scale.hemi	= 0.f;
+		c_bias.hemi		= 1.f;
+	}
 }

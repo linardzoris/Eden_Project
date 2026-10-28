@@ -32,6 +32,10 @@ extern ECORE_API	float		ps_r__Detail_density;
 
 extern ECORE_API	float		ps_r__Tree_SBC;		// scale bias correct
 
+// Shadow proxy for MU objects already in billboard LOD state:
+// 0 - legacy mesh shadow, 1 - billboard facet shadow (alpha-tested), 2 - no shadow
+extern ECORE_API	int			ps_r__shadow_proxy_lod;
+
 extern ECORE_API	float		ps_r__WallmarkTTL		;
 extern ECORE_API	float		ps_r__WallmarkSHIFT		;
 extern ECORE_API	float		ps_r__WallmarkSHIFT_V	;

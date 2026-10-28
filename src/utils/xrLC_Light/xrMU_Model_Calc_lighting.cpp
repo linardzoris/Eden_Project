@@ -53,6 +53,31 @@ var _x	= var(x);
 //-----------------------------------------------------------------------
 void xrMU_Model::calc_lighting	(xr_vector<base_color>& dest, const Fmatrix& xform, CDB::MODEL* MDL, base_lighting& lights, u32 flags, bool use_opcode)
 {
+	const bool b_no_hemi	=	inlc_global_data()->b_nohemi();
+
+	// nohemi: hemi-only 自烘焙通道（dont_rgb+dont_sun）无其余光照可算，
+	// 完全跳过追踪，直接输出 hemi=1 全白（保留平移 (_tmp_) 通道的 translucency）
+	if (b_no_hemi && (flags & LP_dont_rgb) && (flags & LP_dont_sun))
+	{
+		dest.resize(m_vertices.size());
+		for (size_t Iter = 0; Iter < m_vertices.size(); Iter++)
+		{
+			_vertex& V = *m_vertices[Iter];
+			base_color_c vC;
+			vC.hemi = 1.f;
+			for (u32 f = 0; f < V.m_adjacents.size(); f++)
+				vC._tmp_ += V.m_adjacents[f]->Shader().vert_translucency;
+			if (V.m_adjacents.size())
+				vC._tmp_ /= float(V.m_adjacents.size());
+			dest[Iter]._set(vC);
+		}
+		return;
+	}
+
+	// nohemi: 跳过 hemi 阴影射线（rgb/sun 仍正常计算）
+	if (b_no_hemi)
+		flags |= LP_dont_hemi;
+
 	// trans-map
 	typedef	xr_multimap<float,v_vertices>	mapVert;
 	typedef	mapVert::iterator				mapVertIt;
@@ -358,6 +383,12 @@ void xrMU_Model::calc_lighting	(xr_vector<base_color>& dest, const Fmatrix& xfor
 	{
 		Fvector		ptPos	= SafeVertices[I].P;
 		base_color	ptColor	= SafeVertices[I].C;
+		if (b_no_hemi)
+		{
+			base_color_c	c;	ptColor._get(c);
+			c.hemi	= 1.f;	// nohemi: 最终输出 hemi 恒为全白（覆盖中间的 .5f 等缩放）
+			ptColor._set(c);
+		}
 		dest[I]				= ptColor;
 	}
 }

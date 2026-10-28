@@ -88,6 +88,8 @@ float		ps_r__Detail_rainbow_hemi	= 0.75f	;
 
 float		ps_r__Tree_SBC				= 1.5f	;	// scale bias correct
 
+int			ps_r__shadow_proxy_lod		= 0		;	// MU LOD shadow proxy: 0=mesh, 1=billboard facet (aref), 2=off
+
 float		ps_r__WallmarkTTL			= 50.f	;
 float		ps_r__WallmarkSHIFT			= 0.001f;
 float		ps_r__WallmarkSHIFT_V		= 0.001f;
@@ -662,6 +664,7 @@ void		xrRender_initconsole	()
 	CMD4(CCC_Integer,	"rs_skeleton_update",	&psSkeletonUpdate,	2,		128	);
 	CMD4(CCC_Float,		"r__dtex_range",		&r__dtex_range,		5,		175	);
 	CMD4(CCC_Integer,	"r__textures_ltx",		&ps_r__textures_ltx,	0,	2	);
+	CMD4(CCC_Integer,	"r__shadow_proxy_lod",	&ps_r__shadow_proxy_lod,	0,	2	);
 	CMD1(CCC_VerifyTexturesLtx,	"r__textures_ltx_verify"						);
 
 // Common

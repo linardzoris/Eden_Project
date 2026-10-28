@@ -100,6 +100,7 @@ const		u32					LUMINANCE_size = 16;
 #define		SE_R2_NORMAL_LQ		1	// low quality
 #define		SE_R2_SHADOW		2	// shadow generation
 #define		SE_R2_REFLECTIONS	3	// reflections generation
+#define		SE_R2_SHADOW_AREF	5	// shadow generation with alpha test (LOD shadow proxies)
 
 #if USE_DX11
 #define		SE_R2_DETAIL_SHADOW_HQ 2	 // shadow generation (Wind)
