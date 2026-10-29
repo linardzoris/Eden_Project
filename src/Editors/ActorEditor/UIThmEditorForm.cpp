@@ -2,6 +2,7 @@
 #include "UIThmEditorForm.h"
 #include "imgui.h"
 #include "../xrEUI/EditorLocalization.h"
+#include "../xrECore/Editor/device.h" // REDevice: preview texture creation
 
 // The xr_token tables live in ETextureParams.cpp (xrECore) but are not
 // exported from the DLL; duplicate them here under local names for the UI only
@@ -70,6 +71,14 @@ static xr_token ae_tbmode_token[] = {
 #define THM_OBJECT_VERSION  0x0012
 #define THM_CHUNK_OBJECTPARAM 0x0816
 
+// .object format chunk ids (see EditObject.h / EditObjectIO.cpp in xrECore;
+// duplicated locally to avoid pulling the whole CEditableObject interface)
+#define EOBJC_OBJECT_BODY      0x7777
+#define EOBJC_VERSION          0x0900
+#define EOBJC_FLAGS            0x0903
+#define EOBJC_SURFACES3        0x0907
+#define EOBJC_CURRENT_VERSION  0x0010
+
 UIThmEditorForm* UIThmEditorForm::Form = nullptr;
 
 UIThmEditorForm::UIThmEditorForm()
@@ -78,6 +87,11 @@ UIThmEditorForm::UIThmEditorForm()
 
 UIThmEditorForm::~UIThmEditorForm()
 {
+	if (m_PreviewTexture)
+	{
+		((IDirect3DBaseTexture9*)m_PreviewTexture)->Release();
+		m_PreviewTexture = nullptr;
+	}
 }
 
 // ----------------------------------------------------------------------------
@@ -214,6 +228,220 @@ static bool TextToColor(const char* text, u32& color)
 }
 
 // ----------------------------------------------------------------------------
+// companion .object file metadata (flags + surfaces), used for object thms;
+// implemented as static members of UIThmEditorForm (private nested types)
+// ----------------------------------------------------------------------------
+
+bool UIThmEditorForm::ObjReadStringZ(IReader& S, xr_string& out)
+{
+	out.clear();
+	while (!S.eof())
+	{
+		char c = (char)S.r_u8();
+		if (!c)
+			return true;
+		out += c;
+	}
+	return false; // ran out before the terminator
+}
+
+// EOBJ_CHUNK_SURFACES3 payload: u32 count, then per surface: name, engine
+// shader, compiler shader, game material, texture, vmap, flags, fvf,
+// tc count (must be >= 1)
+bool UIThmEditorForm::ObjParseSurfaces3(IReader& S, xr_vector<ObjSurface>& out)
+{
+	out.clear();
+	if (S.elapsed() < 4)
+		return false;
+	u32 cnt = S.r_u32();
+	for (u32 i = 0; i < cnt; ++i)
+	{
+		ObjSurface sf;
+		if (!ObjReadStringZ(S, sf.name)) return false;
+		if (!ObjReadStringZ(S, sf.engine_shader)) return false;
+		if (!ObjReadStringZ(S, sf.compile_shader)) return false;
+		if (!ObjReadStringZ(S, sf.game_mtl)) return false;
+		if (!ObjReadStringZ(S, sf.texture)) return false;
+		if (!ObjReadStringZ(S, sf.vmap)) return false;
+		if (S.elapsed() < 12)
+			return false;
+		sf.flags = S.r_u32();
+		sf.fvf = S.r_u32();
+		u32 tc_cnt = S.r_u32();
+		if (tc_cnt < 1)
+			return false;
+		out.push_back(sf);
+	}
+	return true;
+}
+
+bool UIThmEditorForm::ParseObjectFile(LPCSTR path, ThmEntry& out)
+{
+	FILE* file = fopen(path, "rb");
+	if (!file)
+	{
+		ELog.Msg(mtInformation, "THM Editor: no companion object file '%s', only the thm will be saved.", path);
+		return false;
+	}
+	fseek(file, 0, SEEK_END);
+	long fsize = ftell(file);
+	fseek(file, 0, SEEK_SET);
+	if (fsize <= 0)
+	{
+		fclose(file);
+		ELog.Msg(mtError, "THM Editor: empty object file '%s'.", path);
+		return false;
+	}
+	xr_vector<char> buf((size_t)fsize);
+	bool bad = fread(buf.data(), 1, (size_t)fsize, file) != (size_t)fsize;
+	fclose(file);
+	if (bad)
+	{
+		ELog.Msg(mtError, "THM Editor: object read failed '%s'.", path);
+		return false;
+	}
+
+	IReader F(buf.data(), (u32)buf.size());
+	IReader* body = F.open_chunk(EOBJC_OBJECT_BODY);
+	if (!body)
+	{
+		ELog.Msg(mtError, "THM Editor: EOBJ_CHUNK_OBJECT_BODY missing '%s'.", path);
+		return false;
+	}
+
+	bool have_ver = false, have_flags = false, have_surf3 = false;
+	u16 version = 0;
+	u32 flags = 0;
+	xr_vector<ObjSurface> surfaces;
+	xr_vector<ObjRawChunk> raw;
+
+	// chunk walk: VERSION / FLAGS / SURFACES3 parsed, everything else kept
+	// as raw payload for byte-identical round-trip (meshes are never touched)
+	while (!body->eof())
+	{
+		u32 id = body->r_u32();
+		u32 sz = body->r_u32();
+		u32 pos = body->tell();
+		u32 plain = id & ~CFS_CompressMark;
+		if (plain == EOBJC_VERSION)
+		{
+			have_ver = true;
+			version = body->r_u16();
+		}
+		else if (plain == EOBJC_FLAGS)
+		{
+			have_flags = true;
+			flags = body->r_u32();
+		}
+		else if (plain == EOBJC_SURFACES3)
+		{
+			have_surf3 = true;
+			// parse from a bounds-checked copy of the payload
+			xr_vector<char> payload(sz ? sz : 1, 0);
+			if (sz)
+				body->r(payload.data(), sz);
+			IReader S(payload.data(), sz);
+			if (!ObjParseSurfaces3(S, surfaces))
+			{
+				ELog.Msg(mtError, "THM Editor: malformed EOBJ_CHUNK_SURFACES3 '%s'.", path);
+				have_surf3 = false;
+			}
+		}
+		else
+		{
+			ObjRawChunk c;
+			c.id = id;
+			c.data.resize(sz);
+			if (sz)
+				body->r(c.data.data(), sz);
+			raw.push_back(c);
+		}
+		body->seek(pos + sz);
+	}
+	body->close();
+
+	if (!have_ver || version != EOBJC_CURRENT_VERSION)
+	{
+		ELog.Msg(mtError, "THM Editor: unsupported object version (0x%04X) '%s'.", version, path);
+		return false;
+	}
+	if (!have_flags)
+	{
+		ELog.Msg(mtError, "THM Editor: EOBJ_CHUNK_FLAGS missing '%s'.", path);
+		return false;
+	}
+	if (!have_surf3)
+	{
+		// old surfaces chunk layouts are read-only for this tool
+		ELog.Msg(mtError, "THM Editor: EOBJ_CHUNK_SURFACES3 missing or invalid '%s', only the thm will be saved.", path);
+		return false;
+	}
+
+	out.has_object = true;
+	out.object_flags = flags;
+	out.surfaces = surfaces;
+	out.object_chunks = raw;
+	ELog.Msg(mtInformation, "THM Editor: loaded '%s' (%d surfaces).", path, (int)surfaces.size());
+	return true;
+}
+
+bool UIThmEditorForm::WriteObjectFile(LPCSTR path, const ThmEntry& e)
+{
+	CMemoryWriter body;
+	body.open_chunk(EOBJC_VERSION);
+	body.w_u16(EOBJC_CURRENT_VERSION);
+	body.close_chunk();
+
+	for (const ObjRawChunk& c : e.object_chunks)
+	{
+		u32 plain = c.id & ~CFS_CompressMark;
+		if (plain == EOBJC_FLAGS)
+		{
+			body.open_chunk(EOBJC_FLAGS);
+			body.w_u32(e.object_flags);
+			body.close_chunk();
+		}
+		else if (plain == EOBJC_SURFACES3)
+		{
+			body.open_chunk(EOBJC_SURFACES3);
+			body.w_u32((u32)e.surfaces.size());
+			for (const ObjSurface& sf : e.surfaces)
+			{
+				body.w_stringZ(sf.name.c_str());
+				body.w_stringZ(sf.engine_shader.c_str());
+				body.w_stringZ(sf.compile_shader.c_str());
+				body.w_stringZ(sf.game_mtl.c_str());
+				body.w_stringZ(sf.texture.c_str());
+				body.w_stringZ(sf.vmap.c_str());
+				body.w_u32(sf.flags);
+				body.w_u32(sf.fvf);
+				body.w_u32(1);
+			}
+			body.close_chunk();
+		}
+		else
+		{
+			// untouched chunk (meshes, bones, motions...), id incl. the
+			// compression flag preserved
+			body.w_chunk(c.id, (void*)c.data.data(), (u32)c.data.size());
+		}
+	}
+
+	CMemoryWriter F;
+	F.open_chunk(EOBJC_OBJECT_BODY);
+	F.w(body.pointer(), body.size());
+	F.close_chunk();
+
+	if (!F.save_to(path))
+	{
+		ELog.Msg(mtError, "THM Editor: can't save '%s'.", path);
+		return false;
+	}
+	ELog.Msg(mtInformation, "THM Editor: saved '%s'.", path);
+	return true;
+}
+
+// ----------------------------------------------------------------------------
 // file IO
 // ----------------------------------------------------------------------------
 
@@ -322,6 +550,24 @@ bool UIThmEditorForm::ParseThm(LPCSTR path, ThmEntry& out)
 	out.dirty = false;
 	out.thm_type = s.type;
 
+	// decompress the preview image (DATA chunk may be LZO-compressed); used
+	// only for display, the compressed blob is what gets written back
+	if (s.has_data)
+	{
+		IReader F3(buf.data(), (u32)buf.size());
+		IReader* D = F3.open_chunk(THM_CHUNK_DATA);
+		if (D)
+		{
+			u32 cnt = D->length() / sizeof(u32);
+			if (cnt == THUMB_SIZE)
+			{
+				out.pixels.resize(THUMB_SIZE);
+				D->r(out.pixels.data(), THUMB_SIZE * sizeof(u32));
+			}
+			D->close();
+		}
+	}
+
 	if (s.type == ECustomThumbnail::ETObject)
 	{
 		if (!s.have_objparam)
@@ -336,6 +582,14 @@ bool UIThmEditorForm::ParseThm(LPCSTR path, ThmEntry& out)
 		out.has_data = s.has_data;
 		out.data_id = s.data_id;
 		out.blob = s.blob;
+
+		// companion .object: flags + surfaces are read for editing; without
+		// it the entry still works (thm-only edit + preview)
+		xr_string obj_path = path;
+		size_t dot = obj_path.find_last_of('.');
+		if (dot != xr_string::npos)
+			obj_path = obj_path.substr(0, dot) + ".object";
+		out.has_object = ParseObjectFile(obj_path.c_str(), out);
 		return true;
 	}
 
@@ -375,6 +629,18 @@ bool UIThmEditorForm::WriteThm(ThmEntry& e)
 
 	if (e.kind == KindObject)
 	{
+		// companion .object first: if it fails, keep the thm dirty so the
+		// user can retry without losing the edits
+		if (e.has_object)
+		{
+			xr_string obj_path = e.path;
+			size_t dot = obj_path.find_last_of('.');
+			if (dot != xr_string::npos)
+				obj_path = obj_path.substr(0, dot) + ".object";
+			if (!WriteObjectFile(obj_path.c_str(), e))
+				return false;
+		}
+
 		// preview blob goes back untouched, chunk id including the
 		// compression flag preserved
 		if (e.has_data && !e.blob.empty())
@@ -749,24 +1015,193 @@ void UIThmEditorForm::DrawMaterialBump()
 	}
 }
 
-// object thumbnail panel: face/vertex counters from THM_CHUNK_OBJECTPARAM;
-// the preview image is round-tripped untouched, not editable here
+// object thumbnail panel: preview image, read-only face/vertex counters,
+// object flags and the surfaces of the companion .object (engine/compiler
+// shader, game material, texture, two-sided). Edits apply to all selected
+// object entries; per-surface fields compare the same surface index across
+// the selection for the mixed state.
 void UIThmEditorForm::DrawObject()
 {
-	if (ImGui::CollapsingHeader(Loc("Object Parameters"), ImGuiTreeNodeFlags_DefaultOpen))
+	int prim = PrimaryIndex();
+	const ThmEntry& primary = m_Entries[prim];
+
+	DrawObjectPreview();
+
+	ImGui::TextDisabled("%s: %u   %s: %u", Loc("Faces"), primary.face_count, Loc("Vertexes"), primary.vertex_count);
+
+	if (!primary.has_object)
 	{
-		if (InputIntX(Loc("Faces"), &m_FaceCount, FieldMixedEntry([](const ThmEntry& e) { return (int)e.face_count; })))
+		ImGui::TextDisabled("%s", Loc("No companion .object file found"));
+		return;
+	}
+
+	if (ImGui::CollapsingHeader(Loc("Object Flags"), ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		struct ObjFlagEntry { const char* label; u32 flag; };
+		const ObjFlagEntry oflags[] = {
+			{ "Dynamic",        eofDynamic },
+			{ "Progressive",    eofProgressive },
+			{ "Using LOD",      eofUsingLOD },
+			{ "HOM",            eofHOM },
+			{ "Multiple Usage", eofMultipleUsage },
+			{ "Sound Occluder", eofSoundOccluder },
+			{ "HQ Export",      eofHQExport },
+			{ "Skip Optimize",  eofSkipOpt },
+		};
+		for (const auto& f : oflags)
 		{
-			int v = m_FaceCount;
-			ForSelectedKind(KindObject, [&](ThmEntry& e) { e.face_count = (u32)v; });
+			bool on = (primary.object_flags & f.flag) != 0;
+			bool mixed = FieldMixedEntry([f](const ThmEntry& e) { return (int)(e.object_flags & f.flag); });
+			bool newval = false;
+			if (CheckboxX(Loc(f.label), on, mixed, newval))
+			{
+				ForSelectedKind(KindObject, [f, newval](ThmEntry& e) {
+					if (newval)
+						e.object_flags |= f.flag;
+					else
+						e.object_flags &= ~f.flag;
+				});
+			}
 		}
-		if (InputIntX(Loc("Vertexes"), &m_VertexCount, FieldMixedEntry([](const ThmEntry& e) { return (int)e.vertex_count; })))
+	}
+
+	if (primary.surfaces.empty())
+		return;
+
+	if (ImGui::CollapsingHeader(Loc("Surfaces"), ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		// surface list (per-index mixed marker)
+		ImGui::BeginChild("obj_surface_list", ImVec2(0, ImGui::GetFrameHeightWithSpacing() * 5.0f), ImGuiChildFlags_FrameStyle);
+		for (int i = 0; i < (int)primary.surfaces.size(); ++i)
 		{
-			int v = m_VertexCount;
-			ForSelectedKind(KindObject, [&](ThmEntry& e) { e.vertex_count = (u32)v; });
+			// per-index full-record comparison: any field difference counts as mixed
+			bool mixed = false;
+			if (m_Selection.size() > 1)
+			{
+				const ObjSurface* first = nullptr;
+				for (int sel : m_Selection)
+				{
+					const ThmEntry& e = m_Entries[sel];
+					if (!e.has_object || i >= (int)e.surfaces.size())
+						continue;
+					const ObjSurface& sf = e.surfaces[i];
+					if (!first) { first = &sf; continue; }
+					if (first->name != sf.name || first->engine_shader != sf.engine_shader ||
+						first->compile_shader != sf.compile_shader || first->game_mtl != sf.game_mtl ||
+						first->texture != sf.texture || first->vmap != sf.vmap ||
+						first->flags != sf.flags || first->fvf != sf.fvf)
+					{
+						mixed = true;
+						break;
+					}
+				}
+			}
+
+			xr_string label;
+			label += std::to_string(i).c_str();
+			label += ": ";
+			label += primary.surfaces[i].name.c_str();
+			if (mixed)
+				label += " *";
+			if (ImGui::Selectable(label.c_str(), m_SurfaceIndex == i))
+				m_SurfaceIndex = i;
 		}
-		ImGui::Separator();
-		ImGui::TextDisabled("%s", Loc("Object preview image is kept unchanged"));
+		ImGui::EndChild();
+
+		if (m_SurfaceIndex < 0 || m_SurfaceIndex >= (int)primary.surfaces.size())
+			m_SurfaceIndex = 0;
+		const ObjSurface& ps = primary.surfaces[m_SurfaceIndex];
+
+		// mixed helper: compares the same surface index across the selection,
+		// entries without that surface are skipped
+		auto surf_mixed = [this](auto get) -> bool
+		{
+			if (m_Selection.size() < 2)
+				return false;
+			const ObjSurface* first = nullptr;
+			for (int sel : m_Selection)
+			{
+				const ThmEntry& e = m_Entries[sel];
+				if (!e.has_object || m_SurfaceIndex >= (int)e.surfaces.size())
+					continue;
+				const ObjSurface& sf = e.surfaces[m_SurfaceIndex];
+				if (!first) { first = &sf; continue; }
+				if (get(*first) != get(sf))
+					return true;
+			}
+			return false;
+		};
+		auto apply_surface = [this](auto set)
+		{
+			ForSelectedKind(KindObject, [this, set](ThmEntry& e) {
+				if (!e.has_object || m_SurfaceIndex >= (int)e.surfaces.size())
+					return;
+				set(e.surfaces[m_SurfaceIndex]);
+			});
+		};
+
+		ImGui::Text("%s: %s", Loc("Name"), ps.name.c_str());
+
+		if (InputTextX(Loc("Engine Shader"), m_SurfShader, sizeof(m_SurfShader), surf_mixed([](const ObjSurface& sf) { return sf.engine_shader; })))
+			apply_surface([this](ObjSurface& sf) { sf.engine_shader = m_SurfShader; });
+
+		if (InputTextX(Loc("Compiler Shader"), m_SurfCompiler, sizeof(m_SurfCompiler), surf_mixed([](const ObjSurface& sf) { return sf.compile_shader; })))
+			apply_surface([this](ObjSurface& sf) { sf.compile_shader = m_SurfCompiler; });
+
+		if (InputTextX(Loc("Game Material"), m_SurfMtl, sizeof(m_SurfMtl), surf_mixed([](const ObjSurface& sf) { return sf.game_mtl; })))
+			apply_surface([this](ObjSurface& sf) { sf.game_mtl = m_SurfMtl; });
+
+		if (InputTextX(Loc("Texture"), m_SurfTexture, sizeof(m_SurfTexture), surf_mixed([](const ObjSurface& sf) { return sf.texture; })))
+			apply_surface([this](ObjSurface& sf) { sf.texture = m_SurfTexture; });
+
+		bool sided = (ps.flags & esf2Sided) != 0;
+		bool sided_mixed = surf_mixed([](const ObjSurface& sf) { return (int)(sf.flags & esf2Sided); });
+		bool newval = false;
+		if (CheckboxX(Loc("Two-sided"), sided, sided_mixed, newval))
+			apply_surface([newval](ObjSurface& sf) { sf.flags = newval ? (sf.flags | esf2Sided) : (sf.flags & ~esf2Sided); });
+	}
+}
+
+// preview image of the primary entry (object or texture kind, whatever has
+// DATA-chunk pixels)
+void UIThmEditorForm::DrawObjectPreview()
+{
+	int prim = PrimaryIndex();
+	if (prim < 0)
+		return;
+	const ThmEntry& e = m_Entries[prim];
+	if (e.pixels.empty())
+		return;
+	UpdatePreviewTexture(e);
+	if (m_PreviewTexture)
+		ImGui::Image(m_PreviewTexture, ImVec2(THUMB_WIDTH, THUMB_HEIGHT));
+}
+
+void UIThmEditorForm::UpdatePreviewTexture(const ThmEntry& e)
+{
+	if (m_PreviewTexture && m_PreviewPath == e.path)
+		return; // preview never changes while loaded, cache by path
+
+	if (m_PreviewTexture)
+	{
+		((IDirect3DBaseTexture9*)m_PreviewTexture)->Release();
+		m_PreviewTexture = nullptr;
+		m_PreviewPath.clear();
+	}
+
+	ID3DTexture2D* tex = nullptr;
+	if (SUCCEEDED(REDevice->CreateTexture(THUMB_WIDTH, THUMB_HEIGHT, 1, 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &tex, 0)))
+	{
+		D3DLOCKED_RECT rect;
+		if (SUCCEEDED(tex->LockRect(0, &rect, 0, D3DLOCK_DISCARD)))
+		{
+			u8* dst = (u8*)rect.pBits;
+			for (u32 y = 0; y < THUMB_HEIGHT; ++y)
+				memcpy(dst + (size_t)y * rect.Pitch, e.pixels.data() + (size_t)y * THUMB_WIDTH, THUMB_WIDTH * sizeof(u32));
+			tex->UnlockRect(0);
+		}
+		m_PreviewTexture = tex;
+		m_PreviewPath = e.path;
 	}
 }
 
@@ -781,6 +1216,19 @@ void UIThmEditorForm::Draw()
 		{
 			m_FaceCount = (int)primary.face_count;
 			m_VertexCount = (int)primary.vertex_count;
+			if (primary.has_object)
+			{
+				if (m_SurfaceIndex < 0 || m_SurfaceIndex >= (int)primary.surfaces.size())
+					m_SurfaceIndex = primary.surfaces.empty() ? -1 : 0;
+				if (m_SurfaceIndex >= 0)
+				{
+					const ObjSurface& sf = primary.surfaces[m_SurfaceIndex];
+					xr_strcpy(m_SurfShader, sizeof(m_SurfShader), sf.engine_shader.c_str());
+					xr_strcpy(m_SurfCompiler, sizeof(m_SurfCompiler), sf.compile_shader.c_str());
+					xr_strcpy(m_SurfMtl, sizeof(m_SurfMtl), sf.game_mtl.c_str());
+					xr_strcpy(m_SurfTexture, sizeof(m_SurfTexture), sf.texture.c_str());
+				}
+			}
 		}
 		else
 		{
