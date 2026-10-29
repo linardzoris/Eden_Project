@@ -48,6 +48,10 @@ if (WIN32)
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${NVTT}runtimes/win-x64/native/Release/nvtt.dll ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>/
     )
 
+    # DirectXTex (multithreaded BC7 compression)
+    target_include_directories(xrDXT PRIVATE "${CMAKE_BINARY_DIR}/packages/directxtex_desktop_2019.2024.6.5.1/include/")
+    target_link_libraries(xrDXT PRIVATE ${CMAKE_BINARY_DIR}/packages/directxtex_desktop_2019.2024.6.5.1/native/lib/${NUGET_PACKAGE_PLATFORM}/release/DirectXTex.lib)
+
     # RedImage
     target_link_libraries(xrDXT PUBLIC ${REDIMAGE_LIB})
     target_include_directories(xrDXT PUBLIC "${REDIMAGE_INCL}")

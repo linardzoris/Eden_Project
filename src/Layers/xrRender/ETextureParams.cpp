@@ -330,8 +330,16 @@ void STextureParams::FillProp(LPCSTR base_name, PropItemVec& items, PropValue::T
 		PHelper().CreateColor	   	(items, "Border\\Color",			&border_color		);
 	break;
 	case ttBumpMap:	
-		PHelper().CreateChoose		(items, "Bump\\Special NormalMap",	&ext_normal_map_name,smTexture,base_name);
-		PHelper().CreateFloat	   	(items, "Bump\\Virtual Height (m)",	&bump_virtual_height, 0.f, 0.1f, 0.001f, 3);
+		// PBR bump maps are compressed as-is, so format/mipmaps/material are editable
+		P = PHelper().CreateToken32		(items, "Format",	   				(u32*)&fmt, 		tfmt_token);
+
+		PHelper().CreateFlag32			(items, "MipMaps\\Enabled",			&flags,				flGenerateMipMaps);
+		PHelper().CreateToken32			(items, "MipMaps\\Filter",			(u32*)&mip_filter,	tparam_token);
+
+		PHelper().CreateChoose			(items, "Bump\\Special NormalMap",	&ext_normal_map_name,smTexture,base_name);
+		PHelper().CreateFloat	   		(items, "Bump\\Virtual Height (m)",	&bump_virtual_height, 0.f, 0.1f, 0.001f, 3);
+
+		PHelper().CreateToken32			(items, "Material\\Base",			(u32*)&material,	tmtl_token);
 	break;
 	case ttNormalMap:	
 		P = PHelper().CreateToken32	(items, "Format",	   				(u32*)&fmt, 		tfmt_token); P->Owner()->Enable(false);

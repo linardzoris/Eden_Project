@@ -10,6 +10,7 @@
 
 extern int DXTCompressImageRI(LPCSTR out_name, u8* raw_data, u32 w, u32 h, u32 pitch, STextureParams* fmt, u32 depth);
 extern int DXTCompressImageNVTT(LPCSTR out_name, u8* raw_data, u32 w, u32 h, u32 pitch, STextureParams* fmt, u32 depth);
+extern int DXTCompressImageDirectXTex(LPCSTR out_name, u8* raw_data, u32 w, u32 h, u32 pitch, STextureParams* fmt, u32 depth);
 extern int DXTCompressBump(LPCSTR out_name, u8* raw_data, u8* normal_map, u32 w, u32 h, u32 pitch, STextureParams* fmt, u32 depth);
 
 #ifdef IXR_WINDOWS
@@ -61,6 +62,49 @@ void DXTUtils::Converter::MakePNG(xr_path From, xr_path To)
 }
 #endif
 
+// Regular image compression dispatch (shared by ttImage/ttCubeMap/ttNormalMap/ttTerrain
+// and PBR bump passthrough)
+static int CompressImageDispatch(LPCSTR out_name, u8* raw_data, u32 w, u32 h, u32 pitch, STextureParams* fmt, u32 depth)
+{
+#ifdef IXR_WINDOWS
+	// BC7 through DirectXTex: multithreaded block compression,
+	// the old NVTT+RedImage round-trip was single-threaded and very slow
+	if (fmt->fmt == STextureParams::tfBC7)
+		return DXTCompressImageDirectXTex(out_name, raw_data, w, h, pitch, fmt, depth);
+#endif
+
+	switch (fmt->mip_filter)
+	{
+		case STextureParams::kMIPFilterAdvanced:
+		case STextureParams::kMIPFilterBox:
+		case STextureParams::kMIPFilterTriangle:
+		case STextureParams::kMIPFilterKaiser:
+		{
+			return DXTCompressImageNVTT(out_name, raw_data, w, h, pitch, fmt, depth);
+		}
+
+		case STextureParams::kMIPFilterPoint:
+		case STextureParams::kMIPFilterCubic:
+		case STextureParams::kMIPFilterCatrom:
+		case STextureParams::kMIPFilterMitchell:
+			return DXTCompressImageRI(out_name, raw_data, w, h, pitch, fmt, depth);
+			
+		case STextureParams::kMIPFilterGaussian:
+		case STextureParams::kMIPFilterSinc	:
+		case STextureParams::kMIPFilterBessel:
+		case STextureParams::kMIPFilterHanning:
+		case STextureParams::kMIPFilterHamming:
+		case STextureParams::kMIPFilterBlackman:
+		{
+			Msg("Unsupported mip filter in %s!", out_name);
+			fmt->mip_filter = STextureParams::kMIPFilterKaiser;
+			return DXTCompressImageNVTT(out_name, raw_data, w, h, pitch, fmt, depth);
+		}
+	}
+
+	return -1;
+}
+
 int DXT_API DXTUtils::Compress(const char* out_name, u8* raw_data, u8* normal_map, u32 w, u32 h, u32 pitch, STextureParams* fmt, u32 depth)
 {
 	switch (fmt->type) 
@@ -69,58 +113,15 @@ int DXT_API DXTUtils::Compress(const char* out_name, u8* raw_data, u8* normal_ma
 	case STextureParams::ttCubeMap:
 	case STextureParams::ttNormalMap:
 	case STextureParams::ttTerrain:
-	{
-		switch (fmt->mip_filter)
-		{
-			case STextureParams::kMIPFilterAdvanced:
-			case STextureParams::kMIPFilterBox:
-			case STextureParams::kMIPFilterTriangle:
-			case STextureParams::kMIPFilterKaiser:
-			{
-#ifdef IXR_WINDOWS
-				if (fmt->fmt == STextureParams::tfBC7)
-				{
-					// FX: Dirty hack for nvtt
-					fmt->fmt = STextureParams::tfRGBA;
+		return CompressImageDispatch(out_name, raw_data, w, h, pitch, fmt, depth);
 
-					int RetCode = DXTCompressImageNVTT(out_name, raw_data, w, h, pitch, fmt, depth);
-
-					RedImageTool::RedImage Img;
-					Img.LoadFromFile(out_name);
-					Img.Convert(RedImageTool::RedTexturePixelFormat::BC7);
-					Img.SaveToDds(out_name);
-
-					return RetCode;
-				}
-#endif
-
-				return DXTCompressImageNVTT(out_name, raw_data, w, h, pitch, fmt, depth);
-			}
-
-			case STextureParams::kMIPFilterPoint:
-			case STextureParams::kMIPFilterCubic:
-			case STextureParams::kMIPFilterCatrom:
-			case STextureParams::kMIPFilterMitchell:
-				return DXTCompressImageRI(out_name, raw_data, w, h, pitch, fmt, depth);
-				
-			case STextureParams::kMIPFilterGaussian:
-			case STextureParams::kMIPFilterSinc	:
-			case STextureParams::kMIPFilterBessel:
-			case STextureParams::kMIPFilterHanning:
-			case STextureParams::kMIPFilterHamming:
-			case STextureParams::kMIPFilterBlackman:
-			{
-				Msg("Unsupported mip filter in %s!", out_name);
-				fmt->mip_filter = STextureParams::kMIPFilterKaiser;
-				return DXTCompressImageNVTT(out_name, raw_data, w, h, pitch, fmt, depth);
-			}
-		}
-		
-		break;
-	}
 	case STextureParams::ttBumpMap:
+		// PBR bump maps are authored with their final channel layout:
+		// compress the raw data as-is instead of the legacy height/gloss swizzle
+		if (fmt->material == STextureParams::tmPBR_Material)
+			return CompressImageDispatch(out_name, raw_data, w, h, pitch, fmt, depth);
+
 		return DXTCompressBump(out_name, raw_data, normal_map, w, h, pitch, fmt, depth);
-		break;
 	default: NODEFAULT;
 	}
 	return -1;

@@ -183,7 +183,10 @@ bool CImageManager::MakeGameTexture(ETextureThumbnail* THM, LPCSTR game_name, u3
 	// remove old
 	FS.file_delete(game_name);
 	xr_string game_name2 = ChangeFileExt(game_name, "#.dds");
-	FS.file_delete(game_name2.c_str());
+	// PBR bump maps are standalone files: the # companion is authored separately
+	// and must not be deleted when the base map is regenerated
+	if (THM->m_TexParams.material != STextureParams::tmPBR_Material)
+		FS.file_delete(game_name2.c_str());
 
 	U32Vec 	ext_data;
 	if ((THM->m_TexParams.type == STextureParams::ttBumpMap) && (THM->m_TexParams.ext_normal_map_name.size()))
