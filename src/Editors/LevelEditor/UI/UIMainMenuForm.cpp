@@ -301,6 +301,10 @@ void UIMainMenuForm::Draw()
 			{
 				ConvertThmToLtx();
 			}
+			if (ImGui::MenuItem(Loc("Convert LTX to THM"), ""))
+			{
+				ConvertLtxToThm();
+			}
 			ImGui::EndMenu();
 		}
 		if (ImGui::BeginMenu(Loc("Sounds")))

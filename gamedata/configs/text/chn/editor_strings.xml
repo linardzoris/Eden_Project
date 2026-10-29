@@ -1157,6 +1157,14 @@
 	<string id="Bump virtual height"><text>Bump 虚拟高度</text></string>
 	<string id="Bump name"><text>Bump 名称</text></string>
 	<string id="Ext. normal map"><text>外部法线贴图</text></string>
+	<string id="Save All"><text>保存全部</text></string>
+	<string id="Batch THM -> LTX"><text>批量 THM -> LTX</text></string>
+	<string id="Batch LTX -> THM"><text>批量 LTX -> THM</text></string>
+	<string id="Convert LTX to THM"><text>LTX 转换为 THM</text></string>
+	<string id="(mixed)"><text>（混合）</text></string>
+	<string id="Files"><text>文件数</text></string>
+	<string id="Modified"><text>已修改</text></string>
+	<string id="Selected"><text>已选择</text></string>
 	<string id="Unpack"><text>解包</text></string>
 	<string id="Pack"><text>打包</text></string>
 	<string id="Archive"><text>档案文件</text></string>

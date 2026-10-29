@@ -221,4 +221,11 @@ extern xr_token	ttype_token[];
 // Only textures with non-default parameters and runtime-registered types
 // (ttImage / ttTerrain / ttNormalMap) are emitted.
 ECORE_API void ConvertThmToLtx();
+
+// Reverse of ConvertThmToLtx: reads the ltx named by system.ltx
+// [texture_descr]/file (default textures_converted.ltx) and, for every section
+// with a matching $game_textures$\<name>.thm, overwrites ONLY the fields the
+// section actually contains; lines absent from the section leave the thm
+// value untouched.
+ECORE_API void ConvertLtxToThm();
 #endif

@@ -77,8 +77,55 @@ UIThmEditorForm::~UIThmEditorForm()
 {
 }
 
-// helper: combo fed by an xr_token table, keeps raw numeric value in *value
-static bool TokenCombo(const char* label, u32& value, const xr_token* tokens)
+// ----------------------------------------------------------------------------
+// mixed-selection widget helpers
+//
+// When several list entries are selected and a field's value differs between
+// them ("mixed"), the widget frame is tinted orange; combos show "(mixed)" as
+// the preview text. Any edit still applies to the whole selection.
+// ----------------------------------------------------------------------------
+
+// label shown by combos when the value is mixed across the selection
+static const char* MixedLabel()
+{
+	return Loc("(mixed)");
+}
+
+// orange tint over the normal frame color: applied via PushStyleColor, the
+// alpha keeps the underlying frame visible
+static ImVec4 MixedFrameColor()
+{
+	ImVec4 c = ImGui::GetStyleColorVec4(ImGuiCol_FrameBg);
+	c.x = c.x * 0.3f + 0.70f;
+	c.y = c.y * 0.3f + 0.45f;
+	c.z = c.z * 0.3f + 0.10f;
+	c.w = 0.85f;
+	return c;
+}
+
+struct MixedStyle
+{
+	MixedStyle(bool mixed)
+	{
+		if (mixed)
+		{
+			ImGui::PushStyleColor(ImGuiCol_FrameBg, MixedFrameColor());
+			ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, MixedFrameColor());
+			ImGui::PushStyleColor(ImGuiCol_FrameBgActive, MixedFrameColor());
+			m_pops = 3;
+		}
+	}
+	~MixedStyle()
+	{
+		if (m_pops)
+			ImGui::PopStyleColor(m_pops);
+	}
+	int m_pops = 0;
+};
+
+// helper: combo fed by an xr_token table, keeps raw numeric value in *value;
+// shows "(mixed)" as preview text when mixed
+static bool TokenCombo(const char* label, u32& value, const xr_token* tokens, bool mixed = false)
 {
 	int current = -1;
 	int count = 0;
@@ -89,7 +136,7 @@ static bool TokenCombo(const char* label, u32& value, const xr_token* tokens)
 		current = 0;
 
 	bool changed = false;
-	if (ImGui::BeginCombo(label, tokens[current].name))
+	if (ImGui::BeginCombo(label, mixed ? MixedLabel() : tokens[current].name))
 	{
 		for (int i = 0; i < count; ++i)
 		{
@@ -104,6 +151,46 @@ static bool TokenCombo(const char* label, u32& value, const xr_token* tokens)
 		}
 		ImGui::EndCombo();
 	}
+	return changed;
+}
+
+static bool InputIntX(const char* label, int* value, bool mixed)
+{
+	MixedStyle style(mixed);
+	return ImGui::InputInt(label, value);
+}
+
+static bool DragFloatX(const char* label, float* value, float speed, float min_v, float max_v, const char* fmt, bool mixed)
+{
+	MixedStyle style(mixed);
+	return ImGui::DragFloat(label, value, speed, min_v, max_v, fmt);
+}
+
+static bool SliderIntX(const char* label, int* value, int min_v, int max_v, bool mixed)
+{
+	MixedStyle style(mixed);
+	return ImGui::SliderInt(label, value, min_v, max_v);
+}
+
+static bool InputTextX(const char* label, char* buf, size_t buf_size, bool mixed)
+{
+	MixedStyle style(mixed);
+	return ImGui::InputText(label, buf, buf_size);
+}
+
+// checkbox with tri-state display: when mixed the frame is tinted and the
+// checkmark shows the primary value; clicking toggles from the primary value
+// and the result lands in *out
+static bool CheckboxX(const char* label, bool value, bool mixed, bool& out)
+{
+	bool v = value;
+	bool changed;
+	{
+		MixedStyle style(mixed);
+		changed = ImGui::Checkbox(label, &v);
+	}
+	if (changed)
+		out = v;
 	return changed;
 }
 
@@ -123,9 +210,13 @@ static bool TextToColor(const char* text, u32& color)
 	return false;
 }
 
+// ----------------------------------------------------------------------------
+// file IO
+// ----------------------------------------------------------------------------
+
 // load any texture .thm by absolute path (may live outside the FS roots,
 // so read via CRT and parse in memory instead of FS.r_open)
-bool UIThmEditorForm::Load(LPCSTR path)
+bool UIThmEditorForm::ParseThm(LPCSTR path, ThmEntry& out)
 {
 	FILE* file = fopen(path, "rb");
 	if (!file)
@@ -172,44 +263,35 @@ bool UIThmEditorForm::Load(LPCSTR path)
 		return false;
 	}
 
-	m_Params.Clear();
-	m_Params.Load(F);
-
-	m_ThmType = type;
-	m_FilePath = path;
-	m_Dirty = false;
-	ResetEdits();
-	ELog.Msg(mtInformation, "THM Editor: loaded '%s'.", path);
+	out.path = path;
+	out.params.Clear();
+	out.params.Load(F);
+	out.thm_type = type;
+	out.dirty = false;
 	return true;
 }
 
-// write the loaded params back using the exact editor THM chunk layout
-bool UIThmEditorForm::Save(LPCSTR path)
+// write an entry back using the exact editor THM chunk layout
+bool UIThmEditorForm::WriteThm(ThmEntry& e)
 {
-	// pull editable string fields back into the params
-	m_Params.detail_name = m_DetailName;
-	m_Params.bump_name = m_BumpName;
-	m_Params.ext_normal_map_name = m_ExtNormalMap;
-
 	CMemoryWriter F;
 	F.open_chunk(THM_CHUNK_VERSION);
 	F.w_u16(THM_TEXTURE_VERSION);
 	F.close_chunk();
 
 	F.open_chunk(THM_CHUNK_TYPE);
-	F.w_u32(m_ThmType);
+	F.w_u32(e.thm_type);
 	F.close_chunk();
 
-	m_Params.Save(F);
+	e.params.Save(F);
 
-	if (!F.save_to(path))
+	if (!F.save_to(e.path.c_str()))
 	{
-		ELog.Msg(mtError, "THM Editor: can't save '%s'.", path);
+		ELog.Msg(mtError, "THM Editor: can't save '%s'.", e.path.c_str());
 		return false;
 	}
-	m_FilePath = path;
-	m_Dirty = false;
-	ELog.Msg(mtInformation, "THM Editor: saved '%s'.", path);
+	e.dirty = false;
+	ELog.Msg(mtInformation, "THM Editor: saved '%s'.", e.path.c_str());
 	return true;
 }
 
@@ -224,39 +306,182 @@ void UIThmEditorForm::ResetEdits()
 
 void UIThmEditorForm::DoLoad()
 {
-	xr_string fn = m_FilePath;
-	if (EFS.GetOpenName("$game_textures$", fn, false, 0, -1, "*.thm"))
-		Load(fn.c_str());
+	xr_string fn;
+	// multi-select open dialog: result is a comma-separated list of paths
+	if (!EFS.GetOpenName("$game_textures$", fn, true, 0, -1, "*.thm"))
+		return;
+
+	SStringVec lst;
+	_SequenceToList(lst, fn.c_str());
+
+	m_Entries.clear();
+	m_Selection.clear();
+	m_Anchor = -1;
+
+	u32 loaded = 0;
+	for (const auto& s : lst)
+	{
+		xr_string path = FS.fix_path(s);
+		ThmEntry e;
+		if (ParseThm(path.c_str(), e))
+		{
+			m_Entries.push_back(e);
+			++loaded;
+		}
+	}
+
+	if (!m_Entries.empty())
+		SelectOnly(0);
+	ELog.Msg(mtInformation, "THM Editor: imported %u of %u thm files.", loaded, (u32)lst.size());
 }
 
-void UIThmEditorForm::DoSave(bool save_as)
+void UIThmEditorForm::DoSaveSelected(bool save_as)
 {
-	if (!m_Dirty && !save_as && !m_FilePath.empty())
-		return; // nothing to do
+	if (!HasSelection())
+		return;
 
-	xr_string fn = m_FilePath;
-	if (save_as || fn.empty())
+	if (save_as)
 	{
+		if (m_Selection.size() != 1)
+			return; // save-as needs exactly one target
+		ThmEntry& e = m_Entries[m_Selection[0]];
+		xr_string fn = e.path;
 		if (!EFS.GetSaveName("$game_textures$", fn, 0, -1, "*.thm"))
 			return;
+		e.path = fn;
+		WriteThm(e);
+		return;
 	}
-	Save(fn.c_str());
+
+	u32 saved = 0;
+	for (int i : m_Selection)
+		if (m_Entries[i].dirty && WriteThm(m_Entries[i]))
+			++saved;
+	if (!saved)
+		ELog.Msg(mtInformation, "THM Editor: nothing to save in selection.");
+}
+
+void UIThmEditorForm::DoSaveAll()
+{
+	u32 saved = 0;
+	for (ThmEntry& e : m_Entries)
+		if (e.dirty && WriteThm(e))
+			++saved;
+	if (!saved)
+		ELog.Msg(mtInformation, "THM Editor: nothing to save.");
+	else
+		ELog.Msg(mtInformation, "THM Editor: saved %u files.", saved);
+}
+
+// ----------------------------------------------------------------------------
+// selection
+// ----------------------------------------------------------------------------
+
+bool UIThmEditorForm::Selected(int i) const
+{
+	for (int s : m_Selection)
+		if (s == i)
+			return true;
+	return false;
+}
+
+void UIThmEditorForm::SelectOnly(int i)
+{
+	m_Selection.clear();
+	m_Selection.push_back(i);
+	m_Anchor = i;
+}
+
+void UIThmEditorForm::ToggleSelect(int i)
+{
+	for (size_t k = 0; k < m_Selection.size(); ++k)
+	{
+		if (m_Selection[k] == i)
+		{
+			m_Selection.erase(m_Selection.begin() + k);
+			return; // keep the anchor so shift+click can re-add
+		}
+	}
+	// insert keeping the index list sorted
+	size_t pos = 0;
+	while (pos < m_Selection.size() && m_Selection[pos] < i)
+		++pos;
+	m_Selection.insert(m_Selection.begin() + pos, i);
+	m_Anchor = i;
+}
+
+void UIThmEditorForm::RangeSelect(int i)
+{
+	int a = (m_Anchor >= 0) ? m_Anchor : i;
+	int lo = (a < i) ? a : i;
+	int hi = (a > i) ? a : i;
+	m_Selection.clear();
+	for (int j = lo; j <= hi; ++j)
+		m_Selection.push_back(j);
+}
+
+// ----------------------------------------------------------------------------
+// UI
+// ----------------------------------------------------------------------------
+
+void UIThmEditorForm::DrawFileList()
+{
+	if (m_Entries.empty())
+		return;
+
+	ImGui::Separator();
+	ImGui::BeginChild("thm_file_list", ImVec2(0, ImGui::GetFrameHeightWithSpacing() * 6.0f), ImGuiChildFlags_FrameStyle);
+	for (int i = 0; i < (int)m_Entries.size(); ++i)
+	{
+		const xr_string& p = m_Entries[i].path;
+		size_t slash = p.find_last_of("\\/");
+		xr_string name = p.substr(slash + 1); // npos+1 == 0, keeps the full path
+		if (m_Entries[i].dirty)
+			name += " *";
+
+		bool sel = Selected(i);
+		if (ImGui::Selectable(name.c_str(), sel))
+		{
+			ImGuiIO& io = ImGui::GetIO();
+			if (io.KeyShift)
+				RangeSelect(i);
+			else if (io.KeyCtrl)
+				ToggleSelect(i);
+			else
+				SelectOnly(i);
+		}
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("%s", p.c_str());
+	}
+	ImGui::EndChild();
+
+	u32 dirty = 0;
+	for (const ThmEntry& e : m_Entries)
+		if (e.dirty)
+			++dirty;
+	ImGui::Text("%s: %u, %s: %u", Loc("Files"), (u32)m_Entries.size(), Loc("Modified"), dirty);
 }
 
 void UIThmEditorForm::DrawBasic()
 {
 	if (ImGui::CollapsingHeader(Loc("Texture Parameters"), ImGuiTreeNodeFlags_DefaultOpen))
 	{
-		if (TokenCombo(Loc("Type"), *(u32*)&m_Params.type, ae_ttype_token))
-			m_Dirty = true;
-		if (TokenCombo(Loc("Format"), *(u32*)&m_Params.fmt, ae_tfmt_token))
-			m_Dirty = true;
-		if (TokenCombo(Loc("Mip Filter"), m_Params.mip_filter, ae_tparam_token))
-			m_Dirty = true;
-		if (ImGui::InputInt(Loc("Width"), &m_Params.width))
-			m_Dirty = true;
-		if (ImGui::InputInt(Loc("Height"), &m_Params.height))
-			m_Dirty = true;
+		u32 v = m_Params.type;
+		if (TokenCombo(Loc("Type"), v, ae_ttype_token, FieldMixed([](const STextureParams& p) { return p.type; })))
+			ForSelected([&](STextureParams& p) { p.type = (STextureParams::ETType)v; });
+
+		v = m_Params.fmt;
+		if (TokenCombo(Loc("Format"), v, ae_tfmt_token, FieldMixed([](const STextureParams& p) { return p.fmt; })))
+			ForSelected([&](STextureParams& p) { p.fmt = (STextureParams::ETFormat)v; });
+
+		v = m_Params.mip_filter;
+		if (TokenCombo(Loc("Mip Filter"), v, ae_tparam_token, FieldMixed([](const STextureParams& p) { return p.mip_filter; })))
+			ForSelected([&](STextureParams& p) { p.mip_filter = v; });
+
+		if (InputIntX(Loc("Width"), &m_Params.width, FieldMixed([](const STextureParams& p) { return p.width; })))
+			ForSelected([&](STextureParams& p) { p.width = m_Params.width; });
+		if (InputIntX(Loc("Height"), &m_Params.height, FieldMixed([](const STextureParams& p) { return p.height; })))
+			ForSelected([&](STextureParams& p) { p.height = m_Params.height; });
 	}
 }
 
@@ -278,11 +503,10 @@ void UIThmEditorForm::DrawFlags()
 		for (const auto& f : flags)
 		{
 			bool on = m_Params.flags.is(f.flag);
-			if (ImGui::Checkbox(Loc(f.label), &on))
-			{
-				m_Params.flags.set(f.flag, on);
-				m_Dirty = true;
-			}
+			bool mixed = FieldMixed([f](const STextureParams& p) { return !!p.flags.is(f.flag); });
+			bool newval = false;
+			if (CheckboxX(Loc(f.label), on, mixed, newval))
+				ForSelected([&](STextureParams& p) { p.flags.set(f.flag, newval); });
 		}
 		ImGui::Separator();
 		const FlagEntry advanced[] = {
@@ -294,11 +518,10 @@ void UIThmEditorForm::DrawFlags()
 		for (const auto& f : advanced)
 		{
 			bool on = m_Params.flags.is(f.flag);
-			if (ImGui::Checkbox(Loc(f.label), &on))
-			{
-				m_Params.flags.set(f.flag, on);
-				m_Dirty = true;
-			}
+			bool mixed = FieldMixed([f](const STextureParams& p) { return !!p.flags.is(f.flag); });
+			bool newval = false;
+			if (CheckboxX(Loc(f.label), on, mixed, newval))
+				ForSelected([&](STextureParams& p) { p.flags.set(f.flag, newval); });
 		}
 	}
 }
@@ -307,29 +530,32 @@ void UIThmEditorForm::DrawColors()
 {
 	if (ImGui::CollapsingHeader(Loc("Border and Fade")))
 	{
-		if (ImGui::InputText(Loc("Border color"), m_BorderColor, sizeof(m_BorderColor), ImGuiInputTextFlags_CharsHexadecimal))
+		if (InputTextX(Loc("Border color"), m_BorderColor, sizeof(m_BorderColor), FieldMixed([](const STextureParams& p) { return p.border_color; })))
 		{
-			if (TextToColor(m_BorderColor, m_Params.border_color))
-				m_Dirty = true;
+			u32 color = m_Params.border_color;
+			if (TextToColor(m_BorderColor, color))
+				ForSelected([&](STextureParams& p) { p.border_color = color; });
 		}
 		ImGui::SameLine();
 		ImGui::TextDisabled("(ARGB hex)");
 
-		if (ImGui::InputText(Loc("Fade color"), m_FadeColor, sizeof(m_FadeColor), ImGuiInputTextFlags_CharsHexadecimal))
+		if (InputTextX(Loc("Fade color"), m_FadeColor, sizeof(m_FadeColor), FieldMixed([](const STextureParams& p) { return p.fade_color; })))
 		{
-			if (TextToColor(m_FadeColor, m_Params.fade_color))
-				m_Dirty = true;
+			u32 color = m_Params.fade_color;
+			if (TextToColor(m_FadeColor, color))
+				ForSelected([&](STextureParams& p) { p.fade_color = color; });
 		}
 		ImGui::SameLine();
 		ImGui::TextDisabled("(ARGB hex)");
 
-		if (ImGui::InputInt(Loc("Fade amount"), (int*)&m_Params.fade_amount))
-			m_Dirty = true;
+		if (InputIntX(Loc("Fade amount"), (int*)&m_Params.fade_amount, FieldMixed([](const STextureParams& p) { return p.fade_amount; })))
+			ForSelected([&](STextureParams& p) { p.fade_amount = m_Params.fade_amount; });
+
 		int delay = m_Params.fade_delay;
-		if (ImGui::SliderInt(Loc("Fade delay"), &delay, 0, 255))
+		if (SliderIntX(Loc("Fade delay"), &delay, 0, 255, FieldMixed([](const STextureParams& p) { return (int)p.fade_delay; })))
 		{
-			m_Params.fade_delay = (u8)delay;
-			m_Dirty = true;
+			u8 v = (u8)delay;
+			ForSelected([&](STextureParams& p) { p.fade_delay = v; });
 		}
 	}
 }
@@ -338,13 +564,11 @@ void UIThmEditorForm::DrawDetail()
 {
 	if (ImGui::CollapsingHeader(Loc("Detail")))
 	{
-		if (ImGui::InputText(Loc("Detail name"), m_DetailName, sizeof(m_DetailName)))
-		{
-			m_Params.detail_name = m_DetailName;
-			m_Dirty = true;
-		}
-		if (ImGui::DragFloat(Loc("Detail scale"), &m_Params.detail_scale, 0.01f, 0.0f, 100.0f, "%.3f"))
-			m_Dirty = true;
+		if (InputTextX(Loc("Detail name"), m_DetailName, sizeof(m_DetailName), FieldMixedStr([](const STextureParams& p) { return p.detail_name; })))
+			ForSelected([&](STextureParams& p) { p.detail_name = m_DetailName; });
+
+		if (DragFloatX(Loc("Detail scale"), &m_Params.detail_scale, 0.01f, 0.0f, 100.0f, "%.3f", FieldMixed([](const STextureParams& p) { return p.detail_scale; })))
+			ForSelected([&](STextureParams& p) { p.detail_scale = m_Params.detail_scale; });
 	}
 }
 
@@ -352,56 +576,105 @@ void UIThmEditorForm::DrawMaterialBump()
 {
 	if (ImGui::CollapsingHeader(Loc("Material and Bump"), ImGuiTreeNodeFlags_DefaultOpen))
 	{
-		if (TokenCombo(Loc("Material"), *(u32*)&m_Params.material, ae_tmtl_token))
-			m_Dirty = true;
-		if (ImGui::DragFloat(Loc("Material weight"), &m_Params.material_weight, 0.01f, 0.0f, 1.0f, "%.3f"))
-			m_Dirty = true;
+		u32 v = m_Params.material;
+		if (TokenCombo(Loc("Material"), v, ae_tmtl_token, FieldMixed([](const STextureParams& p) { return p.material; })))
+			ForSelected([&](STextureParams& p) { p.material = (STextureParams::ETMaterial)v; });
+
+		if (DragFloatX(Loc("Material weight"), &m_Params.material_weight, 0.01f, 0.0f, 1.0f, "%.3f", FieldMixed([](const STextureParams& p) { return p.material_weight; })))
+			ForSelected([&](STextureParams& p) { p.material_weight = m_Params.material_weight; });
+
 		ImGui::Separator();
-		if (TokenCombo(Loc("Bump mode"), *(u32*)&m_Params.bump_mode, ae_tbmode_token))
-			m_Dirty = true;
-		if (ImGui::DragFloat(Loc("Bump virtual height"), &m_Params.bump_virtual_height, 0.001f, 0.0f, 1.0f, "%.4f"))
-			m_Dirty = true;
-		if (ImGui::InputText(Loc("Bump name"), m_BumpName, sizeof(m_BumpName)))
-		{
-			m_Params.bump_name = m_BumpName;
-			m_Dirty = true;
-		}
-		if (ImGui::InputText(Loc("Ext. normal map"), m_ExtNormalMap, sizeof(m_ExtNormalMap)))
-		{
-			m_Params.ext_normal_map_name = m_ExtNormalMap;
-			m_Dirty = true;
-		}
+
+		v = m_Params.bump_mode;
+		if (TokenCombo(Loc("Bump mode"), v, ae_tbmode_token, FieldMixed([](const STextureParams& p) { return p.bump_mode; })))
+			ForSelected([&](STextureParams& p) { p.bump_mode = (STextureParams::ETBumpMode)v; });
+
+		if (DragFloatX(Loc("Bump virtual height"), &m_Params.bump_virtual_height, 0.001f, 0.0f, 1.0f, "%.4f", FieldMixed([](const STextureParams& p) { return p.bump_virtual_height; })))
+			ForSelected([&](STextureParams& p) { p.bump_virtual_height = m_Params.bump_virtual_height; });
+
+		if (InputTextX(Loc("Bump name"), m_BumpName, sizeof(m_BumpName), FieldMixedStr([](const STextureParams& p) { return p.bump_name; })))
+			ForSelected([&](STextureParams& p) { p.bump_name = m_BumpName; });
+
+		if (InputTextX(Loc("Ext. normal map"), m_ExtNormalMap, sizeof(m_ExtNormalMap), FieldMixedStr([](const STextureParams& p) { return p.ext_normal_map_name; })))
+			ForSelected([&](STextureParams& p) { p.ext_normal_map_name = m_ExtNormalMap; });
 	}
 }
 
 void UIThmEditorForm::Draw()
 {
+	// sync the edit mirror from the primary selection before widgets run
+	int prim = PrimaryIndex();
+	if (prim >= 0)
+	{
+		m_Params = m_Entries[prim].params;
+		ResetEdits();
+	}
+
 	if (ImGui::Button(Loc("Load...")))
 		DoLoad();
 	ImGui::SameLine();
+
+	ImGui::BeginDisabled(!HasSelection());
 	if (ImGui::Button(Loc("Save")))
-		DoSave(false);
+		DoSaveSelected(false);
+	ImGui::EndDisabled();
 	ImGui::SameLine();
-	if (ImGui::Button(Loc("Save as ...")))
-		DoSave(true);
+
+	{
+		bool can_save_as = (m_Selection.size() == 1);
+		if (!can_save_as)
+			ImGui::BeginDisabled();
+		if (ImGui::Button(Loc("Save as ...")))
+			DoSaveSelected(true);
+		if (!can_save_as)
+			ImGui::EndDisabled();
+	}
 	ImGui::SameLine();
+
+	// lights up as soon as the list exists
+	{
+		bool can_save_all = !m_Entries.empty();
+		if (!can_save_all)
+			ImGui::BeginDisabled();
+		if (ImGui::Button(Loc("Save All")))
+			DoSaveAll();
+		if (!can_save_all)
+			ImGui::EndDisabled();
+	}
+	ImGui::SameLine();
+
 	if (ImGui::Button(Loc("Close")))
 		bOpen = false;
 	ImGui::SameLine();
 	if (ImGui::Button(Loc("Batch THM -> LTX")))
 		ConvertThmToLtx();
-
 	ImGui::SameLine();
-	if (!m_FilePath.empty())
+	if (ImGui::Button(Loc("Batch LTX -> THM")))
+		ConvertLtxToThm();
+
+	if (!m_Entries.empty())
 	{
-		xr_string title = m_Dirty ? "* " : "";
-		title += m_FilePath;
+		xr_string title;
+		if (m_Selection.size() == 1)
+		{
+			const ThmEntry& e = m_Entries[m_Selection[0]];
+			title = e.dirty ? "* " : "";
+			title += e.path;
+		}
+		else
+		{
+			char buf[128];
+			sprintf_s(buf, sizeof(buf), "%s: %d", Loc("Selected"), (int)m_Selection.size());
+			title = buf;
+		}
 		ImGui::TextUnformatted(title.c_str());
 	}
 	else
 		ImGui::TextDisabled(Loc("No file loaded"));
 
-	if (!m_FilePath.empty())
+	DrawFileList();
+
+	if (prim >= 0)
 	{
 		ImGui::Separator();
 		ImGui::BeginChild("thm_params", ImVec2(0, 0), ImGuiChildFlags_None);

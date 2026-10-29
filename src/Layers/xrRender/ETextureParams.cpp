@@ -1,7 +1,7 @@
 #include "stdafx.h"
-          
 
 #include "ETextureParams.h"
+#include "../../xrCore/xr_ini.h"
 
 xr_token					tparam_token							[ ]={
 	{ "Advanced",			STextureParams::kMIPFilterAdvanced			},
@@ -687,5 +687,219 @@ ECORE_API void ConvertThmToLtx()
 
 	FS.w_close				(W);
 	Msg("ConvertThmToLtx: scanned %d thm files, wrote %d sections to $game_textures$\\textures_converted.ltx", total, written);
+}
+
+// ---- reverse conversion (Batch LTX -> THM) --------------------------------
+// same value as EThumbnailTexture.cpp (not exposed in a header)
+#define THM_TEXTURE_VERSION 0x0012
+
+// token tables mirror the runtime textures.ltx vocabulary (see
+// CTextureDescrMngr::LoadLtx); duplicated here because the runtime tables
+// are file-local to TextureDescrManager.cpp
+static xr_token ltx2thm_material_token[] =
+{
+	{ "orennayar_blin",		STextureParams::tmOrenNayar_Blin	},
+	{ "blin_phong",			STextureParams::tmBlin_Phong		},
+	{ "phong_metal",		STextureParams::tmPhong_Metal		},
+	{ "metal_orennayar",	STextureParams::tmMetal_OrenNayar	},
+	{ "pbr",				STextureParams::tmPBR_Material		},
+	{ 0,					0									}
+};
+
+static xr_token ltx2thm_bump_mode_token[] =
+{
+	{ "none",				STextureParams::tbmNone				},
+	{ "use",				STextureParams::tbmUse				},
+	{ "parallax",			STextureParams::tbmUseParallax		},
+	{ 0,					0									}
+};
+
+static xr_token ltx2thm_detail_usage_token[] =
+{
+	{ "none",				0									},
+	{ "diffuse",			1									},
+	{ "bump",				2									},
+	{ "diffuse_bump",		3									},
+	{ 0,					0									}
+};
+
+static bool ltx2thm_lookup_token(LPCSTR value, const xr_token* tokens, int& out_id)
+{
+	for (int i = 0; tokens[i].name; ++i)
+	{
+		if (0 == _stricmp(value, tokens[i].name))
+		{
+			out_id = tokens[i].id;
+			return true;
+		}
+	}
+	return false;
+}
+
+ECORE_API void ConvertLtxToThm()
+{
+	// file name comes from system.ltx [texture_descr]/file, default matches
+	// what ConvertThmToLtx writes
+	shared_str ltx_name = "textures_converted.ltx";
+	if (pSettings && pSettings->section_exist("texture_descr") && pSettings->line_exist("texture_descr", "file"))
+	{
+		shared_str custom = pSettings->r_string_wb("texture_descr", "file");
+		if (custom.size())
+			ltx_name = custom;
+	}
+
+	IReader* F = FS.r_open("$game_textures$", ltx_name.c_str());
+	if (!F)
+	{
+		Msg("! ConvertLtxToThm: cannot open $game_textures$\\%s", ltx_name.c_str());
+		return;
+	}
+
+	string_path ltx_dir;
+	FS.update_path(ltx_dir, "$game_textures$", "");
+	CInifile* ini = new CInifile(F, ltx_dir);
+
+	u32 matched = 0, updated = 0, skipped = 0;
+	for (CInifile::Sect* sect : ini->sections())
+	{
+		string_path thm_path;
+		FS.update_path(thm_path, "$game_textures$", sect->Name.c_str());
+		xr_strcat(thm_path, sizeof(thm_path), ".thm");
+
+		IReader* T = FS.r_open(thm_path);
+		if (!T)
+		{
+			Msg("! ConvertLtxToThm: [%s] has no matching .thm file, skipped", sect->Name.c_str());
+			++skipped;
+			continue;
+		}
+
+		u16 version = 0;
+		bool ok = !!T->r_chunk(THM_CHUNK_VERSION, &version) && version == THM_TEXTURE_VERSION;
+		u32 thm_type = 0;
+		if (ok)
+			ok = !!T->find_chunk(THM_CHUNK_TYPE);
+		if (ok)
+			thm_type = T->r_u32();
+		if (ok)
+			ok = !!T->find_chunk(THM_CHUNK_TEXTUREPARAM);
+		if (!ok)
+		{
+			FS.r_close(T);
+			Msg("! ConvertLtxToThm: '%s' is unsupported or corrupt, skipped", thm_path);
+			++skipped;
+			continue;
+		}
+
+		STextureParams tp;
+		tp.Clear();
+		tp.Load(*T);
+		FS.r_close(T);
+
+		// only the lines actually present in the section are applied;
+		// everything the section omits keeps its current thm value
+		bool touched = false;
+		if (sect->line_exist("material"))
+		{
+			LPCSTR value = ini->r_string(sect->Name.c_str(), "material");
+			int mat = 0;
+			if (ltx2thm_lookup_token(value, ltx2thm_material_token, mat))
+			{
+				tp.material = (STextureParams::ETMaterial)mat;
+				touched = true;
+			}
+			else
+				Msg("! ConvertLtxToThm: [%s] unknown material value '%s'", sect->Name.c_str(), value);
+		}
+		if (sect->line_exist("material_weight"))
+		{
+			tp.material_weight = ini->r_float(sect->Name.c_str(), "material_weight");
+			touched = true;
+		}
+		if (sect->line_exist("bump_mode"))
+		{
+			LPCSTR value = ini->r_string(sect->Name.c_str(), "bump_mode");
+			int bm = 0;
+			if (ltx2thm_lookup_token(value, ltx2thm_bump_mode_token, bm))
+			{
+				tp.bump_mode = (STextureParams::ETBumpMode)bm;
+				touched = true;
+			}
+			else
+				Msg("! ConvertLtxToThm: [%s] unknown bump_mode value '%s'", sect->Name.c_str(), value);
+		}
+		if (sect->line_exist("bump_name"))
+		{
+			tp.bump_name = ini->r_string_wb(sect->Name.c_str(), "bump_name");
+			touched = true;
+		}
+		if (sect->line_exist("detail_name"))
+		{
+			tp.detail_name = ini->r_string_wb(sect->Name.c_str(), "detail_name");
+			touched = true;
+			if (!sect->line_exist("detail_usage"))
+				Msg("! ConvertLtxToThm: [%s] has detail_name without detail_usage, detail flags left unchanged", sect->Name.c_str());
+		}
+		if (sect->line_exist("detail_usage"))
+		{
+			LPCSTR value = ini->r_string(sect->Name.c_str(), "detail_usage");
+			int du = 0;
+			if (ltx2thm_lookup_token(value, ltx2thm_detail_usage_token, du))
+			{
+				tp.flags.set(STextureParams::flDiffuseDetail, !!(du & 1));
+				tp.flags.set(STextureParams::flBumpDetail, !!(du & 2));
+				touched = true;
+			}
+			else
+				Msg("! ConvertLtxToThm: [%s] unknown detail_usage value '%s'", sect->Name.c_str(), value);
+		}
+		if (sect->line_exist("detail_scale"))
+		{
+			tp.detail_scale = ini->r_float(sect->Name.c_str(), "detail_scale");
+			touched = true;
+		}
+		if (sect->line_exist("virtual_height"))
+		{
+			tp.bump_virtual_height = ini->r_float(sect->Name.c_str(), "virtual_height");
+			touched = true;
+		}
+		if (sect->line_exist("ext_normal_map"))
+		{
+			tp.ext_normal_map_name = ini->r_string_wb(sect->Name.c_str(), "ext_normal_map");
+			touched = true;
+		}
+
+		if (!touched)
+		{
+			++matched;	// matched but contained no known keys, nothing to write
+			continue;
+		}
+
+		// write back using the same layout ETextureThumbnail::Save produces
+		CMemoryWriter W;
+		W.open_chunk(THM_CHUNK_VERSION);
+		W.w_u16(THM_TEXTURE_VERSION);
+		W.close_chunk();
+		W.open_chunk(THM_CHUNK_TYPE);
+		W.w_u32(thm_type);
+		W.close_chunk();
+		tp.Save(W);
+
+		if (W.save_to(thm_path))
+		{
+			++matched;
+			++updated;
+			Msg("ConvertLtxToThm: [%s] updated", sect->Name.c_str());
+		}
+		else
+		{
+			Msg("! ConvertLtxToThm: cannot write '%s'", thm_path);
+			++skipped;
+		}
+	}
+
+	CInifile::Destroy	(ini);
+	FS.r_close			(F);
+	Msg("ConvertLtxToThm: %d sections matched (%d thm updated), %d skipped", matched, updated, skipped);
 }
 #endif
