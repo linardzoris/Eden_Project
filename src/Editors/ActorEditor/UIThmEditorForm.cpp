@@ -392,40 +392,39 @@ bool UIThmEditorForm::WriteObjectFile(LPCSTR path, const ThmEntry& e)
 	body.w_u16(EOBJC_CURRENT_VERSION);
 	body.close_chunk();
 
+	// VERSION / FLAGS / SURFACES3 are parsed out during load and never end up
+	// in object_chunks, so they have to be re-serialized here explicitly: with
+	// them missing CEditableObject::Load fails on the FLAGS assert and neither
+	// the AE nor the THM editor can open the rewritten file.
+	body.open_chunk(EOBJC_FLAGS);
+	body.w_u32(e.object_flags);
+	body.close_chunk();
+
 	for (const ObjRawChunk& c : e.object_chunks)
 	{
 		u32 plain = c.id & ~CFS_CompressMark;
-		if (plain == EOBJC_FLAGS)
-		{
-			body.open_chunk(EOBJC_FLAGS);
-			body.w_u32(e.object_flags);
-			body.close_chunk();
-		}
-		else if (plain == EOBJC_SURFACES3)
-		{
-			body.open_chunk(EOBJC_SURFACES3);
-			body.w_u32((u32)e.surfaces.size());
-			for (const ObjSurface& sf : e.surfaces)
-			{
-				body.w_stringZ(sf.name.c_str());
-				body.w_stringZ(sf.engine_shader.c_str());
-				body.w_stringZ(sf.compile_shader.c_str());
-				body.w_stringZ(sf.game_mtl.c_str());
-				body.w_stringZ(sf.texture.c_str());
-				body.w_stringZ(sf.vmap.c_str());
-				body.w_u32(sf.flags);
-				body.w_u32(sf.fvf);
-				body.w_u32(1);
-			}
-			body.close_chunk();
-		}
-		else
-		{
-			// untouched chunk (meshes, bones, motions...), id incl. the
-			// compression flag preserved
-			body.w_chunk(c.id, (void*)c.data.data(), (u32)c.data.size());
-		}
+		if (plain == EOBJC_FLAGS || plain == EOBJC_SURFACES3)
+			continue; // rebuilt below from the parsed state
+		// untouched chunk (meshes, bones, motions...), id incl. the
+		// compression flag preserved
+		body.w_chunk(c.id, (void*)c.data.data(), (u32)c.data.size());
 	}
+
+	body.open_chunk(EOBJC_SURFACES3);
+	body.w_u32((u32)e.surfaces.size());
+	for (const ObjSurface& sf : e.surfaces)
+	{
+		body.w_stringZ(sf.name.c_str());
+		body.w_stringZ(sf.engine_shader.c_str());
+		body.w_stringZ(sf.compile_shader.c_str());
+		body.w_stringZ(sf.game_mtl.c_str());
+		body.w_stringZ(sf.texture.c_str());
+		body.w_stringZ(sf.vmap.c_str());
+		body.w_u32(sf.flags);
+		body.w_u32(sf.fvf);
+		body.w_u32(1);
+	}
+	body.close_chunk();
 
 	CMemoryWriter F;
 	F.open_chunk(EOBJC_OBJECT_BODY);
@@ -1195,9 +1194,14 @@ void UIThmEditorForm::UpdatePreviewTexture(const ThmEntry& e)
 		D3DLOCKED_RECT rect;
 		if (SUCCEEDED(tex->LockRect(0, &rect, 0, D3DLOCK_DISCARD)))
 		{
+			// THM_CHUNK_DATA stores the preview bottom-up: texture thumbnails are
+			// v-flipped right after downscaling (CImageManager::MakeThumbnailImage)
+			// and object thumbnails come from MakeScreenshot, which writes row 0 =
+			// image bottom. Rows must therefore be reversed when uploading to the
+			// top-down D3D texture, same as EImageThumbnail::Update does.
 			u8* dst = (u8*)rect.pBits;
 			for (u32 y = 0; y < THUMB_HEIGHT; ++y)
-				memcpy(dst + (size_t)y * rect.Pitch, e.pixels.data() + (size_t)y * THUMB_WIDTH, THUMB_WIDTH * sizeof(u32));
+				memcpy(dst + (size_t)y * rect.Pitch, e.pixels.data() + (size_t)(THUMB_HEIGHT - 1 - y) * THUMB_WIDTH, THUMB_WIDTH * sizeof(u32));
 			tex->UnlockRect(0);
 		}
 		m_PreviewTexture = tex;
