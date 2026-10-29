@@ -96,8 +96,7 @@ extern ECORE_API float			ps_r2_ls_bloom_speed;		// r2-only
 extern ECORE_API float			ps_r2_ls_depth_scale;		// 1.0f
 extern ECORE_API float			ps_r2_ls_depth_bias;		// -0.0001f
 extern ECORE_API float			ps_r2_ls_squality;			// 1.0f
-extern ECORE_API float			ps_r2_sun_far;
-extern ECORE_API float			ps_r2_sun_near;
+extern ECORE_API Fvector3		ps_r2_sun_csm_level;	// (near, mid, far) cascade distances
 extern ECORE_API float			ps_r2_sun_bias;			// 0.0001f
 extern ECORE_API float			ps_r2_sun_depth_far_scale;	// 1.00001f
 extern ECORE_API float			ps_r2_sun_depth_near_scale;	// 1.00001f

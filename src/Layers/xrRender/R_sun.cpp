@@ -49,18 +49,26 @@ void CRender::init_cacades()
 	float fBias = -0.0000025f;
 
 	m_sun_cascades[0].reset_chain = true;
-	m_sun_cascades[0].size = 15;
+	m_sun_cascades[0].size = ps_r2_sun_csm_level.x;
 	m_sun_cascades[0].bias = m_sun_cascades[0].size*fBias;
 
-	m_sun_cascades[1].size = 40;
+	m_sun_cascades[1].size = ps_r2_sun_csm_level.y;
 	m_sun_cascades[1].bias = m_sun_cascades[1].size*fBias;
 
- 	m_sun_cascades[2].size = 160;
+ 	m_sun_cascades[2].size = ps_r2_sun_csm_level.z;
  	m_sun_cascades[2].bias = m_sun_cascades[2].size*fBias;
 }
 
 void CRender::render_sun_cascades()
 {
+	// Sync cascade extents from r2_sun_csm_level so runtime changes apply immediately
+	float fBias = -0.0000025f;
+	for ( u32 i = 0; i < m_sun_cascades.size(); ++i )
+	{
+		m_sun_cascades[i].size = ps_r2_sun_csm_level[i];
+		m_sun_cascades[i].bias = m_sun_cascades[i].size*fBias;
+	}
+
 	bool b_need_to_render_sunshafts = RImplementation.Target->need_to_render_sunshafts();
 	bool last_cascade_chain_mode = m_sun_cascades.back().reset_chain;
 	if ( b_need_to_render_sunshafts )

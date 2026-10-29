@@ -166,9 +166,8 @@ float		ps_r2_ls_depth_scale = 0.9999f; // 1.00001f
 float		ps_r2_ls_depth_bias = 0.00001f; // -0.0001f
 float		ps_r2_ls_squality			= 2.0f;				// 1.00f
 
-float		ps_r2_sun_bias				= -0.01f;			// 
-float		ps_r2_sun_far				= 160.f;
-float		ps_r2_sun_near				= 20.f;
+Fvector3	ps_r2_sun_csm_level		= { 15.f, 40.f, 160.f };	// (near, mid, far) cascade distances
+float		ps_r2_sun_bias				= -0.01f;			//
 float		ps_r2_sun_depth_far_scale	= 1.00000f;			// 1.00001f
 float		ps_r2_sun_depth_near_scale	= 1.0000f;			// 1.00001f
 float		ps_r2_sun_lumscale			= 1.1f;				// 1.0f
@@ -588,6 +587,36 @@ public:
 
 };
 
+// r2_sun_csm_level: sun cascade distances (near, mid, far); enforce x < y < z
+class CCC_SunCSM : public CCC_Vector3
+{
+public:
+	CCC_SunCSM(LPCSTR N, Fvector* V, const Fvector _min, const Fvector _max) :
+		CCC_Vector3(N, V, _min, _max) {;}
+
+	virtual void	Execute	(LPCSTR args)
+	{
+		Fvector v;
+		if (3!=sscanf(args,"%f,%f,%f",&v.x,&v.y,&v.z))
+			InvalidSyntax();
+		else if ( (v.x >= v.y) || (v.y >= v.z) )
+		{
+			InvalidSyntax();
+			Msg("near < mid < far required");
+		}
+		else
+			CCC_Vector3::Execute(args);
+	}
+	virtual void	Status	(TStatus& S)
+	{
+		xr_sprintf	(S,sizeof(S),"%f,%f,%f",value->x,value->y,value->z);
+	}
+	virtual void	Info	(TInfo& I)
+	{
+		xr_sprintf(I,sizeof(I),"vector3 (near, mid, far) in range [%f,%f,%f]-[%f,%f,%f]",min.x,min.y,min.z,max.x,max.y,max.z);
+	}
+};
+
 class CCC_DumpResources : public IConsole_Command
 {
 public:
@@ -733,8 +762,7 @@ void		xrRender_initconsole	()
 	CMD3(CCC_Mask,		"r2_exp_donttest_shad",	&ps_r2_ls_flags,			R2FLAG_EXP_DONT_TEST_SHADOWED);
 	
 	CMD4(CCC_Float,		"r2_sun_bias",			&ps_r2_sun_bias,			-0.5,	+0.5	);
-	CMD4(CCC_Float,		"r2_sun_near",			&ps_r2_sun_near,			1.f,	50.f	);
-	CMD4(CCC_Float,		"r2_sun_far",			&ps_r2_sun_far,				51.f,	180.f	);
+	CMD4(CCC_SunCSM,	"r2_sun_csm_level",		&ps_r2_sun_csm_level,	Fvector().set(1.f,5.f,20.f),	Fvector().set(50.f,100.f,300.f));
 	CMD4(CCC_Float,		"r2_sun_depth_far_scale",&ps_r2_sun_depth_far_scale,0.5,	1.5		);
 	CMD4(CCC_Float,		"r2_sun_depth_near_scale",&ps_r2_sun_depth_near_scale,0.5,	1.5		);
 

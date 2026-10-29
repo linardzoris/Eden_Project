@@ -80,7 +80,7 @@ void CRenderTarget::accum_direct_cascade	( u32 sub_phase, Fmatrix& xform, Fmatri
 	}
 
 	// recalculate d_Z, to perform depth-clipping
-	Fvector	center_pt;			center_pt.mad	(Device.vCameraPosition,Device.vCameraDirection,ps_r2_sun_near);
+	Fvector	center_pt;			center_pt.mad	(Device.vCameraPosition,Device.vCameraDirection,ps_r2_sun_csm_level.x);
 	Device.mFullTransform.transform(center_pt)	;
 	d_Z							= center_pt.z	;
 
@@ -217,10 +217,13 @@ void CRenderTarget::accum_direct_cascade	( u32 sub_phase, Fmatrix& xform, Fmatri
 		float zMin,zMax;
 		if (SE_SUN_NEAR==sub_phase)	{
 			zMin = 0;
-			zMax = ps_r2_sun_near;
+			zMax = ps_r2_sun_csm_level.x;
+		} else if (SE_SUN_MIDDLE==sub_phase) {
+			zMin = ps_r2_sun_csm_level.x;
+			zMax = ps_r2_sun_csm_level.y;
 		} else {
-			zMin = ps_r2_sun_near;
-			zMax = ps_r2_sun_far;
+			zMin = ps_r2_sun_csm_level.y;
+			zMax = ps_r2_sun_csm_level.z;
 		}
 		center_pt.mad(Device.vCameraPosition,Device.vCameraDirection,zMin);	Device.mFullTransform.transform	(center_pt);
 		zMin = center_pt.z	;
@@ -386,10 +389,13 @@ void CRenderTarget::accum_direct_volumetric	(u32 sub_phase, const u32, const Fma
 		float zMin,zMax;
 		if (SE_SUN_NEAR==sub_phase)	{
 			zMin = 0;
-			zMax = ps_r2_sun_near;
+			zMax = ps_r2_sun_csm_level.x;
+		} else if (SE_SUN_MIDDLE==sub_phase) {
+			zMin = 0;
+			zMax = ps_r2_sun_csm_level.y;
 		} else {
 			zMin = 0;
-			zMax = ps_r2_sun_far;
+			zMax = ps_r2_sun_csm_level.z;
 		}
 
 		RCache.set_c("volume_range", zMin, zMax, 0, 0);
