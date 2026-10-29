@@ -8,6 +8,10 @@
 #include "metalic_roughness_light.hlsli"
 #include "ScreenSpaceContactShadows.hlsl"
 
+// xy: shadow UV scale - the far cascade rasterizes into the top-left quarter
+// of the shadow map at half resolution (r__sun_far_smap_half)
+uniform float4 cascade_uv_scale;
+
 float4 main(v2p_volume I) : SV_Target
 {
     float2 tcProj = I.tc.xy / I.tc.w;
@@ -28,7 +32,7 @@ float4 main(v2p_volume I) : SV_Target
     float4 PS = mul(m_shadow, Point);
 
 #ifdef USE_FAR_ATTENTION
-    float3 Factor = smoothstep(0.5f, 0.45f, abs(PS.xyz / PS.w - 0.5f));
+    float3 Factor = smoothstep(0.5f, 0.45f, abs(PS.xyz / PS.w * cascade_uv_scale.xyz - 0.5f));
     float Fade = Factor.x * Factor.y * Factor.z;
 	
     O.SSS *= 0.5f + 0.5f * Fade;

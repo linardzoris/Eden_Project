@@ -99,12 +99,17 @@ void CRenderTarget::accum_direct_cascade	( u32 sub_phase, Fmatrix& xform, Fmatri
 		RCache.set_ColorWriteEnable			()	;
 
 		float			fRange				= (SE_SUN_NEAR==sub_phase)?ps_r2_sun_depth_near_scale:ps_r2_sun_depth_far_scale;
-		Fmatrix			m_TexelAdjust		= 
+		// Far cascade optionally rasterizes into the top-left quarter of the
+		// shadow map at half resolution (r__sun_far_smap_half): halve the UV
+		// scale accordingly.
+		bool			bFarHalf			= (SE_SUN_FAR == sub_phase) && !!ps_r__sun_far_smap_half;
+		float			fUVScale			= bFarHalf ? 0.25f : 0.5f;
+		Fmatrix			m_TexelAdjust		=
 		{
-			0.5f,				0.0f,				0.0f,			0.0f,
-			0.0f,				-0.5f,				0.0f,			0.0f,
+			fUVScale,			0.0f,				0.0f,			0.0f,
+			0.0f,				-fUVScale,			0.0f,			0.0f,
 			0.0f,				0.0f,				fRange,			0.0f,
-			0.5f,				0.5f,				fBias,			1.0f
+			fUVScale,			fUVScale,			fBias,			1.0f
 		};
 
 		// compute xforms
@@ -197,6 +202,13 @@ void CRenderTarget::accum_direct_cascade	( u32 sub_phase, Fmatrix& xform, Fmatri
 
 		// setup
 		RCache.set_Element			(s_accum_direct->E[uiElementIndex]);
+
+		// Shadow UV scale (cascade_uv_scale): the far cascade samples the
+		// half-resolution quarter of the shadow map; the shader's edge fade
+		// needs to know about the remapped UV range.
+		if (bFarHalf)	RCache.set_c			("cascade_uv_scale",	0.5f,	0.5f,	1.0f,	1.0f	);
+		else			RCache.set_c			("cascade_uv_scale",	1.0f,	1.0f,	1.0f,	1.0f	);
+
 		RCache.set_c				("m_texgen",			m_Texgen);
 		RCache.set_c				("Ldynamic_dir",		L_dir.x,L_dir.y,L_dir.z,0		);
 		RCache.set_c				("Ldynamic_color",		L_clr.x,L_clr.y,L_clr.z,L_spec	);

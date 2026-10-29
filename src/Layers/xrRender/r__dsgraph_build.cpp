@@ -48,6 +48,13 @@ void R_dsgraph_structure::r_dsgraph_insert_dynamic	(dxRender_Visual *pVisual, Fv
 	float SSA				=	CalcSSA		(distSQ,Center,pVisual);
 	if (SSA<=r_ssaDISCARD)		return;
 
+	// Per-cascade min caster culling (r__sun_min_caster_texels): in sun shadow
+	// map passes skip visuals whose bounding sphere spans fewer than the
+	// threshold radius; they cannot produce a meaningful shadow.
+	if (val_smap_min_caster_R > 0.f && phase == PHASE_SMAP && shadow_proxy_active &&
+		pVisual->vis.sphere.R < val_smap_min_caster_R)
+		return;
+
 	// Distortive geometry should be marked and R2 special-cases it
 	// a) Allow to optimize RT order
 	// b) Should be rendered to special distort buffer in another pass
@@ -199,6 +206,13 @@ void R_dsgraph_structure::r_dsgraph_insert_static	(dxRender_Visual *pVisual)
 	float distSQ;
 	float SSA					=	CalcSSA		(distSQ,pVisual->vis.sphere.P,pVisual);
 	if (SSA<=r_ssaDISCARD)		return;
+
+	// Per-cascade min caster culling (r__sun_min_caster_texels): in sun shadow
+	// map passes skip visuals whose bounding sphere spans fewer than the
+	// threshold radius; they cannot produce a meaningful shadow.
+	if (val_smap_min_caster_R > 0.f && phase == PHASE_SMAP && shadow_proxy_active &&
+		pVisual->vis.sphere.R < val_smap_min_caster_R)
+		return;
 
 	// Distortive geometry should be marked and R2 special-cases it
 	// a) Allow to optimize RT order

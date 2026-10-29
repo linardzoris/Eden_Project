@@ -167,6 +167,8 @@ float		ps_r2_ls_depth_bias = 0.00001f; // -0.0001f
 float		ps_r2_ls_squality			= 2.0f;				// 1.00f
 
 Fvector3	ps_r2_sun_csm_level		= { 15.f, 40.f, 160.f };	// (near, mid, far) cascade distances
+float		ps_r__sun_min_caster_texels = 3.f;					// min caster culling threshold, in shadow map texels (0 = off)
+float		ps_r__sun_far_smap_half		= 1.f;					// render far sun cascade shadow map at half resolution
 float		ps_r2_sun_bias				= -0.01f;			//
 float		ps_r2_sun_depth_far_scale	= 1.00000f;			// 1.00001f
 float		ps_r2_sun_depth_near_scale	= 1.0000f;			// 1.00001f
@@ -763,6 +765,8 @@ void		xrRender_initconsole	()
 	
 	CMD4(CCC_Float,		"r2_sun_bias",			&ps_r2_sun_bias,			-0.5,	+0.5	);
 	CMD4(CCC_SunCSM,	"r2_sun_csm_level",		&ps_r2_sun_csm_level,	Fvector().set(1.f,5.f,20.f),	Fvector().set(50.f,100.f,300.f));
+	CMD4(CCC_Float,		"r__sun_min_caster_texels",	&ps_r__sun_min_caster_texels,	0.f,	16.f	);
+	CMD4(CCC_Float,		"r__sun_far_smap_half",		&ps_r__sun_far_smap_half,		0.f,	1.f		);
 	CMD4(CCC_Float,		"r2_sun_depth_far_scale",&ps_r2_sun_depth_far_scale,0.5,	1.5		);
 	CMD4(CCC_Float,		"r2_sun_depth_near_scale",&ps_r2_sun_depth_near_scale,0.5,	1.5		);
 

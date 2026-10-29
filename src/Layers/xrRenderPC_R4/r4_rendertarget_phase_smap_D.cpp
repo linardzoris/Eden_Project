@@ -7,7 +7,22 @@ void CRenderTarget::phase_smap_direct(light* L, u32 sub_phase)
 
 	//	Prepare viewport for shadow map rendering
 	if(sub_phase != SE_SUN_RAIN_SMAP) {
-		RImplementation.rmNormal();
+		// Far sun cascade: render the shadow map into the top-left quarter at
+		// half resolution (r__sun_far_smap_half); accumulate remaps shadow UVs
+		// to match.
+		if (SE_SUN_FAR == sub_phase && RImplementation.sun_smap_halfres) {
+			D3D_VIEWPORT VP = {
+				0.0f, 0.0f,
+				float(RImplementation.o.smapsize / 2),
+				float(RImplementation.o.smapsize / 2),
+				0.0f, 1.0f
+			};
+
+			RContext->RSSetViewports(1, &VP);
+		}
+		else {
+			RImplementation.rmNormal();
+		}
 	}
 	else {
 		D3D_VIEWPORT VP = {

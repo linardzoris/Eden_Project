@@ -302,11 +302,23 @@ void CRender::render_sun_cascade(u32 cascade_ind)
 		// and give the proxies the sun COP (far away along the light direction).
 		shadow_proxy_active		= TRUE;
 		shadow_proxy_light_pos	= cull_COP;
+		// Far sun cascade optionally rasterizes its shadow map at half resolution
+		// (r__sun_far_smap_half); phase_smap_direct and the accumulate remap read
+		// this flag.
+		sun_smap_halfres		= (cascade_ind == m_sun_cascades.size() - 1) && !!ps_r__sun_far_smap_half;
 		r_pmask(true, !!RImplementation.o.Tshadows);
 	}
 
 	// Fill the database
+	// Per-cascade min caster culling (r__sun_min_caster_texels): casters whose
+	// bounding sphere spans fewer than N texels of this cascade's shadow map
+	// cannot produce a meaningful shadow, skip them entirely. The far cascade
+	// rasterizes at half resolution so its meters-per-texel is doubled.
+	val_smap_min_caster_R	= ps_r__sun_min_caster_texels * m_sun_cascades[cascade_ind].size / float(o.smapsize);
+	if (sun_smap_halfres)
+		val_smap_min_caster_R	*= 2.f;
 	r_dsgraph_render_subspace(pOutdoorSector, &cull_frustum, cull_xform, cull_COP, TRUE);
+	val_smap_min_caster_R	= 0.f;
 
 	// Finalize & Cleanup
 	fuckingsun->X.D.combine = cull_xform;
@@ -340,6 +352,7 @@ void CRender::render_sun_cascade(u32 cascade_ind)
 
 	// End SMAP-render
 	r_pmask(true, false);
+	sun_smap_halfres		= FALSE;
 
 	// Accumulate
 	PROF_EVENT("Render Cascade: Accumulate");

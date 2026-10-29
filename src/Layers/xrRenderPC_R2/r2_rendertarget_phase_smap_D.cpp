@@ -35,6 +35,14 @@ void	CRenderTarget::phase_smap_direct		(light* L, u32 sub_phase)
 	RCache.set_CullMode			( CULL_CCW	);	// near
 	if (RImplementation.o.HW_smap)		RCache.set_ColorWriteEnable	( FALSE		);
 	else								RCache.set_ColorWriteEnable	( );
+
+	// Far sun cascade: render the shadow map into the top-left quarter at half
+	// resolution (r__sun_far_smap_half); accumulate remaps shadow UVs to match.
+	if (SE_SUN_FAR == sub_phase && RImplementation.sun_smap_halfres)
+	{
+		D3DVIEWPORT9	VP	=	{ 0, 0, RImplementation.o.smapsize / 2, RImplementation.o.smapsize / 2, 0.0f, 1.0f };
+		CHK_DX				(RDevice->SetViewport(&VP));
+	}
 }
 
 void	CRenderTarget::phase_smap_direct_tsh	(light* L, u32 sub_phase)

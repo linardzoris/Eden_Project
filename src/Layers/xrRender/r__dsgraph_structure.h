@@ -70,6 +70,13 @@ public:
 	// z-prefill pass runs in PHASE_SMAP too but must keep the legacy mesh path).
 	Fvector														shadow_proxy_light_pos	;
 	BOOL														shadow_proxy_active		;
+	// Per-cascade min caster culling (r__sun_min_caster_texels): during sun
+	// shadow map passes, visuals with a bounding sphere radius below this
+	// threshold are skipped. Zero disables the cull.
+	float														val_smap_min_caster_R	;
+	// Far sun cascade renders its shadow map at half resolution
+	// (r__sun_far_smap_half); phase_smap_direct consumes this flag.
+	BOOL														sun_smap_halfres		;
 public:
 	virtual		void					set_Transform			(Fmatrix*	M	)				{ VERIFY(M);	val_pTransform = M;	}
 	virtual		void					set_HUD					(BOOL 		V	)				{ val_bHUD		= V;				}
@@ -93,6 +100,8 @@ public:
 		b_loaded			= FALSE	;
 		shadow_proxy_active	= FALSE	;
 		shadow_proxy_light_pos.set(0,0,0);
+		val_smap_min_caster_R	= 0.f	;
+		sun_smap_halfres		= FALSE	;
 	};
 
 	void		r_dsgraph_destroy()

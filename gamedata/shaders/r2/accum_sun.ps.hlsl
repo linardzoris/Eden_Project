@@ -2,6 +2,10 @@
 #include "lmodel.hlsli"
 #include "shadow.hlsli"
 
+// xy: shadow UV scale - the far cascade rasterizes into the top-left quarter
+// of the shadow map at half resolution (r__sun_far_smap_half)
+uniform float4 cascade_uv_scale;
+
 float4 main(float4 tc : TEXCOORD0, float4 tcJ : TEXCOORD1) : COLOR
 {
     float4 _P = tex2Dproj(s_position, tc);
@@ -31,7 +35,7 @@ float4 main(float4 tc : TEXCOORD0, float4 tcJ : TEXCOORD1) : COLOR
 
 #ifdef USE_FAR_ATTENTION
     // Far edge fading code
-    float3 tc_f = abs(PS.xyz / PS.w - float3(0.5f, 0.5f, 0.5f));
+    float3 tc_f = abs(PS.xyz / PS.w * cascade_uv_scale.xyz - float3(0.5f, 0.5f, 0.5f));
 
     float3 border = 0.4f;
     float3 fac = 1.0f - saturate((tc_f - border) / (0.5f - border));
