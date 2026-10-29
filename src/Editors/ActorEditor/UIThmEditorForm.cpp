@@ -66,6 +66,9 @@ static xr_token ae_tbmode_token[] = {
 
 // same value as EThumbnailTexture.cpp (not exposed in a header)
 #define THM_TEXTURE_VERSION 0x0012
+// same values as EThumbnailObject.cpp (not exposed in a header)
+#define THM_OBJECT_VERSION  0x0012
+#define THM_CHUNK_OBJECTPARAM 0x0816
 
 UIThmEditorForm* UIThmEditorForm::Form = nullptr;
 
@@ -214,8 +217,61 @@ static bool TextToColor(const char* text, u32& color)
 // file IO
 // ----------------------------------------------------------------------------
 
-// load any texture .thm by absolute path (may live outside the FS roots,
-// so read via CRT and parse in memory instead of FS.r_open)
+// chunk-header walk result used to classify a .thm file before parsing
+struct ThmScan
+{
+	bool have_type = false;
+	u32  type = 0;
+	bool have_texparam = false;
+	bool have_objparam = false;
+	u32  faces = 0;
+	u32  verts = 0;
+	bool has_data = false;   // THM_CHUNK_DATA present (preview blob)
+	u32  data_id = 0;        // chunk id incl. CFS_CompressMark
+	xr_vector<char> blob;    // raw payload, round-tripped untouched
+};
+
+// iterate over all chunk headers; captures TYPE, the presence of the texture/
+// object param chunks and the raw preview data blob (object thm preview must
+// survive round-trips byte-identical)
+static void ScanThmChunks(IReader& F, ThmScan& s)
+{
+	while (!F.eof())
+	{
+		u32 id = F.r_u32();
+		u32 sz = F.r_u32();
+		u32 pos = F.tell();
+		switch (id & ~CFS_CompressMark)
+		{
+		case THM_CHUNK_TYPE:
+			s.have_type = true;
+			s.type = F.r_u32();
+			break;
+		case THM_CHUNK_TEXTUREPARAM:
+			s.have_texparam = true;
+			break;
+		case THM_CHUNK_OBJECTPARAM:
+			s.have_objparam = true;
+			s.faces = F.r_u32();
+			s.verts = F.r_u32();
+			break;
+		case THM_CHUNK_DATA:
+			s.has_data = true;
+			s.data_id = id;
+			if (sz)
+			{
+				s.blob.resize(sz);
+				F.r(s.blob.data(), sz);
+			}
+			break;
+		}
+		F.seek(pos + sz);
+	}
+}
+
+// load any .thm by absolute path (may live outside the FS roots, so read via
+// CRT and parse in memory instead of FS.r_open); kind auto-detected from the
+// THM_CHUNK_TYPE payload (ETTexture / ETObject)
 bool UIThmEditorForm::ParseThm(LPCSTR path, ThmEntry& out)
 {
 	FILE* file = fopen(path, "rb");
@@ -251,27 +307,65 @@ bool UIThmEditorForm::ParseThm(LPCSTR path, ThmEntry& out)
 		return false;
 	}
 
-	if (!F.find_chunk(THM_CHUNK_TYPE))
+	// classify the file
+	IReader scan(buf.data(), (u32)buf.size());
+	ThmScan s;
+	ScanThmChunks(scan, s);
+
+	if (!s.have_type)
 	{
 		ELog.Msg(mtError, "THM Editor: THM_CHUNK_TYPE missing, file: %s", path);
 		return false;
 	}
-	u32 type = F.r_u32();
-	if (type != ECustomThumbnail::ETTexture)
-	{
-		ELog.Msg(mtError, "THM Editor: not a texture thm (type %u), file: %s", type, path);
-		return false;
-	}
 
 	out.path = path;
-	out.params.Clear();
-	out.params.Load(F);
-	out.thm_type = type;
 	out.dirty = false;
-	return true;
+	out.thm_type = s.type;
+
+	if (s.type == ECustomThumbnail::ETObject)
+	{
+		if (!s.have_objparam)
+		{
+			ELog.Msg(mtError, "THM Editor: THM_CHUNK_OBJECTPARAM missing, file: %s", path);
+			return false;
+		}
+		out.kind = KindObject;
+		out.params.Clear();
+		out.face_count = s.faces;
+		out.vertex_count = s.verts;
+		out.has_data = s.has_data;
+		out.data_id = s.data_id;
+		out.blob = s.blob;
+		return true;
+	}
+
+	if (s.type == ECustomThumbnail::ETTexture)
+	{
+		if (!s.have_texparam)
+		{
+			ELog.Msg(mtError, "THM Editor: THM_CHUNK_TEXTUREPARAM missing, file: %s", path);
+			return false;
+		}
+		// re-parse from a fresh reader so chunk positions are untouched
+		IReader F2(buf.data(), (u32)buf.size());
+		F2.find_chunk(THM_CHUNK_TYPE); // sanity: already verified by the scan
+		F2.r_u32();
+		out.kind = KindTexture;
+		out.face_count = 0;
+		out.vertex_count = 0;
+		out.has_data = false;
+		out.data_id = 0;
+		out.blob.clear();
+		out.params.Clear();
+		out.params.Load(F2);
+		return true;
+	}
+
+	ELog.Msg(mtError, "THM Editor: unsupported thm type %u, file: %s", s.type, path);
+	return false;
 }
 
-// write an entry back using the exact editor THM chunk layout
+// write an entry back using the exact editor THM chunk layout of its kind
 bool UIThmEditorForm::WriteThm(ThmEntry& e)
 {
 	CMemoryWriter F;
@@ -279,11 +373,30 @@ bool UIThmEditorForm::WriteThm(ThmEntry& e)
 	F.w_u16(THM_TEXTURE_VERSION);
 	F.close_chunk();
 
-	F.open_chunk(THM_CHUNK_TYPE);
-	F.w_u32(e.thm_type);
-	F.close_chunk();
+	if (e.kind == KindObject)
+	{
+		// preview blob goes back untouched, chunk id including the
+		// compression flag preserved
+		if (e.has_data && !e.blob.empty())
+			F.w_chunk(e.data_id, e.blob.data(), (u32)e.blob.size());
 
-	e.params.Save(F);
+		F.open_chunk(THM_CHUNK_TYPE);
+		F.w_u32(e.thm_type);
+		F.close_chunk();
+
+		F.open_chunk(THM_CHUNK_OBJECTPARAM);
+		F.w_u32(e.face_count);
+		F.w_u32(e.vertex_count);
+		F.close_chunk();
+	}
+	else
+	{
+		F.open_chunk(THM_CHUNK_TYPE);
+		F.w_u32(e.thm_type);
+		F.close_chunk();
+
+		e.params.Save(F);
+	}
 
 	if (!F.save_to(e.path.c_str()))
 	{
@@ -333,6 +446,40 @@ void UIThmEditorForm::DoLoad()
 	if (!m_Entries.empty())
 		SelectOnly(0);
 	ELog.Msg(mtInformation, "THM Editor: imported %u of %u thm files.", loaded, (u32)lst.size());
+}
+
+// batch-import object .thm files from the $objects$ tree; appends to the
+// current list (kind is auto-detected per file)
+void UIThmEditorForm::DoLoadObject()
+{
+	xr_string fn;
+	if (!EFS.GetOpenName("$objects$", fn, true, 0, -1, "*.thm"))
+		return;
+
+	SStringVec lst;
+	_SequenceToList(lst, fn.c_str());
+
+	u32 loaded = 0;
+	for (const auto& s : lst)
+	{
+		xr_string path = FS.fix_path(s);
+		ThmEntry e;
+		if (ParseThm(path.c_str(), e))
+		{
+			m_Entries.push_back(e);
+			++loaded;
+		}
+	}
+
+	if (loaded)
+	{
+		// select the newly imported block
+		m_Selection.clear();
+		m_Anchor = -1;
+		for (int i = (int)m_Entries.size() - (int)loaded; i < (int)m_Entries.size(); ++i)
+			m_Selection.push_back(i);
+	}
+	ELog.Msg(mtInformation, "THM Editor: imported %u of %u object thm files.", loaded, (u32)lst.size());
 }
 
 void UIThmEditorForm::DoSaveSelected(bool save_as)
@@ -436,6 +583,8 @@ void UIThmEditorForm::DrawFileList()
 		const xr_string& p = m_Entries[i].path;
 		size_t slash = p.find_last_of("\\/");
 		xr_string name = p.substr(slash + 1); // npos+1 == 0, keeps the full path
+		if (m_Entries[i].kind == KindObject)
+			name += " [obj]";
 		if (m_Entries[i].dirty)
 			name += " *";
 
@@ -600,18 +749,51 @@ void UIThmEditorForm::DrawMaterialBump()
 	}
 }
 
+// object thumbnail panel: face/vertex counters from THM_CHUNK_OBJECTPARAM;
+// the preview image is round-tripped untouched, not editable here
+void UIThmEditorForm::DrawObject()
+{
+	if (ImGui::CollapsingHeader(Loc("Object Parameters"), ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		if (InputIntX(Loc("Faces"), &m_FaceCount, FieldMixedEntry([](const ThmEntry& e) { return (int)e.face_count; })))
+		{
+			int v = m_FaceCount;
+			ForSelectedKind(KindObject, [&](ThmEntry& e) { e.face_count = (u32)v; });
+		}
+		if (InputIntX(Loc("Vertexes"), &m_VertexCount, FieldMixedEntry([](const ThmEntry& e) { return (int)e.vertex_count; })))
+		{
+			int v = m_VertexCount;
+			ForSelectedKind(KindObject, [&](ThmEntry& e) { e.vertex_count = (u32)v; });
+		}
+		ImGui::Separator();
+		ImGui::TextDisabled("%s", Loc("Object preview image is kept unchanged"));
+	}
+}
+
 void UIThmEditorForm::Draw()
 {
 	// sync the edit mirror from the primary selection before widgets run
 	int prim = PrimaryIndex();
 	if (prim >= 0)
 	{
-		m_Params = m_Entries[prim].params;
-		ResetEdits();
+		const ThmEntry& primary = m_Entries[prim];
+		if (primary.kind == KindObject)
+		{
+			m_FaceCount = (int)primary.face_count;
+			m_VertexCount = (int)primary.vertex_count;
+		}
+		else
+		{
+			m_Params = primary.params;
+			ResetEdits();
+		}
 	}
 
 	if (ImGui::Button(Loc("Load...")))
 		DoLoad();
+	ImGui::SameLine();
+	if (ImGui::Button(Loc("Import Object THM...")))
+		DoLoadObject();
 	ImGui::SameLine();
 
 	ImGui::BeginDisabled(!HasSelection());
@@ -660,6 +842,8 @@ void UIThmEditorForm::Draw()
 			const ThmEntry& e = m_Entries[m_Selection[0]];
 			title = e.dirty ? "* " : "";
 			title += e.path;
+			if (e.kind == KindObject)
+				title += "  [obj]";
 		}
 		else
 		{
@@ -678,11 +862,18 @@ void UIThmEditorForm::Draw()
 	{
 		ImGui::Separator();
 		ImGui::BeginChild("thm_params", ImVec2(0, 0), ImGuiChildFlags_None);
-		DrawBasic();
-		DrawFlags();
-		DrawColors();
-		DrawDetail();
-		DrawMaterialBump();
+		if (SelectionAll(KindObject))
+			DrawObject();
+		else if (SelectionAll(KindTexture))
+		{
+			DrawBasic();
+			DrawFlags();
+			DrawColors();
+			DrawDetail();
+			DrawMaterialBump();
+		}
+		else
+			ImGui::TextDisabled("%s", Loc("Mixed texture and object selection"));
 		ImGui::EndChild();
 	}
 }
