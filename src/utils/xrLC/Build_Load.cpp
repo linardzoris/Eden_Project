@@ -7,6 +7,7 @@
 
 #include "../xrLC_Light/xrLC_GlobalData.h"
 #include "../xrLC_Light/xrFace.h"
+#include "../xrForms/CompilersUI.h"
 
 
 #include "../xrLC_Light/xrMU_Model.h"
@@ -46,6 +47,9 @@ struct R_Layer
 
 void CBuild::Load	(const b_params& Params, const IReader& _in_FS)
 {
+	LC_AUDIT_LOG("=== LOAD PHASE START ===");
+	LC_AUDIT_LOG("Version: %d, quality: %d", version, Params.m_quality);
+
 	IReader&	fs	= const_cast<IReader&>(_in_FS);
 	// HANDLE		hLargeHeap	= HeapCreate(0,64*1024*1024,0);
 	// clMsg		("* <LargeHeap> handle: %X",hLargeHeap);
@@ -61,6 +65,7 @@ void CBuild::Load	(const b_params& Params, const IReader& _in_FS)
 	string_path				sh_name;
 	FS.update_path			(sh_name,"$game_data$","shaders_xrlc.xr");
 	shaders().Load			(sh_name);
+	LC_AUDIT_LOG("Shaders loaded from: %s", sh_name);
 
 	//*******
 
@@ -85,6 +90,10 @@ void CBuild::Load	(const b_params& Params, const IReader& _in_FS)
 		
 		Progress(p_total += p_cost);
 		Status("* %16s: %d", "vertices", lc_global_data()->g_vertices().size());
+		LC_AUDIT_LOG("Vertices loaded: %u, scene BB: min(%.2f,%.2f,%.2f) max(%.2f,%.2f,%.2f)",
+			lc_global_data()->g_vertices().size(),
+			scene_bb.min.x, scene_bb.min.y, scene_bb.min.z,
+			scene_bb.max.x, scene_bb.max.y, scene_bb.max.z);
 		F->close();
 	}
 
@@ -129,6 +138,7 @@ void CBuild::Load	(const b_params& Params, const IReader& _in_FS)
 		}
 		Progress			(p_total+=p_cost);
 		clMsg				("* %16s: %d","faces",lc_global_data()->g_faces().size());
+		LC_AUDIT_LOG("Faces loaded: %u", lc_global_data()->g_faces().size());
 		F->close			();
 
 		if(g_using_smooth_groups)
@@ -173,6 +183,14 @@ void CBuild::Load	(const b_params& Params, const IReader& _in_FS)
 			mu_models().back()->Load			(*F, version );
 		}
 		F->close				();
+		LC_AUDIT_LOG("MU models loaded: %u", mu_models().size());
+		for (u32 m = 0; m < mu_models().size(); m++)
+		{
+			LC_AUDIT_LOG("  MU_model[%u]: name='%s' V(%zu) F(%zu) subdivs(%zu)",
+				m, mu_models()[m]->m_name.c_str(),
+				mu_models()[m]->m_vertices.size(), mu_models()[m]->m_faces.size(),
+				mu_models()[m]->m_subdivs.size());
+		}
 	}
 	F = fs.open_chunk		(EB_MU_refs);
 	if (F)
@@ -183,6 +201,7 @@ void CBuild::Load	(const b_params& Params, const IReader& _in_FS)
 			mu_refs().back()->Load			( *F, mu_models() );
 		}		
 		F->close				();
+		LC_AUDIT_LOG("MU refs loaded: %u", mu_refs().size());
 	}
 
 	//*******
@@ -284,6 +303,8 @@ void CBuild::Load	(const b_params& Params, const IReader& _in_FS)
 		clMsg	("*lighting*: HEMI:   %d lights",L_static().hemi.size());
 		clMsg	("*lighting*: SUN:    %d lights",L_static().sun.size());
 		clMsg	("*lighting*: STATIC: %d lights",L_static().rgb.size());
+		LC_AUDIT_LOG("Lights: HEMI(%u) SUN(%u) STATIC(%u)",
+			L_static().hemi.size(), L_static().sun.size(), L_static().rgb.size());
 		R_ASSERT(L_static().hemi.size());
 		R_ASSERT(L_static().sun.size());
 		R_ASSERT(L_static().rgb.size());
@@ -418,6 +439,8 @@ void CBuild::Load	(const b_params& Params, const IReader& _in_FS)
 			R_ASSERT2(!is_thm_missing, "Some of required thm's are missing. See log for details.");
 			R_ASSERT2(!is_tga_missing, "Some of required tga_textures are missing. See log for details.");
 		}
+		LC_AUDIT_LOG("Textures loaded: %u (thu missing=%d, tga missing=%d)",
+			textures().size(), is_thm_missing, is_tga_missing);
 	}
 
 	// post-process materials
@@ -431,6 +454,14 @@ void CBuild::Load	(const b_params& Params, const IReader& _in_FS)
 
 	// 
 	clMsg	("* sizes: V(%d),F(%d)",sizeof(Vertex),sizeof(Face));
+
+	LC_AUDIT_LOG("Materials: %u, shaders_render: %u, shaders_compile: %u, glows: %u, portals: %u, lods: %u",
+		materials().size(), shader_render.size(), shader_compile.size(),
+		glows.size(), portals.size(), lods.size());
+	LC_AUDIT_LOG("Parameters: pixels_per_meter=%.1f, jitter_samples=%d, lmap_size=%d, weld_distance=%.4f",
+		Params.m_lm_pixels_per_meter, Params.m_lm_jitter_samples,
+		gCompilerMode.LC_sizeLmaps, Params.m_weld_distance);
+	LC_AUDIT_LOG("=== LOAD PHASE END ===");
 }
 
 

@@ -50,6 +50,7 @@ void StartupLC()
 		lc_global_data()->SetLmapRGBA(gCompilerMode.LC_tex_rgba);
 		lc_global_data()->SetSkipSubdivide(gCompilerMode.LC_NoSubdivide);
 		lc_global_data()->SetSkipTHM(gCompilerMode.SkipTHM);
+		lc_global_data()->SetAuditMode(gCompilerMode.LC_Audit);
 
 		// Se7kills
 		lc_global_data()->SetIsIntelUse(gCompilerMode.Embree);

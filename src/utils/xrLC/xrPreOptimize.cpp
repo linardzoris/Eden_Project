@@ -27,13 +27,21 @@ IC bool				FaceEqual(Face& F1, Face& F2)
 
 void CBuild::PreOptimize()
 {
+    LC_AUDIT_LOG("=== PRE-OPTIMIZE START ===");
+    LC_AUDIT_LOG("SkipWeld: %d", lc_global_data()->GetSkipWeld());
+
     if (lc_global_data()->GetSkipWeld())
+    {
+        LC_AUDIT_LOG("SkipWeld enabled - bypassing PreOptimize entirely");
+        LC_AUDIT_LOG("=== PRE-OPTIMIZE END ===");
         return;
+    }
 
     std::unordered_map<size_t, vecVertex> hashTable;
   
     u32 Vcount = lc_global_data()->g_vertices().size();
     u32 Fcount = lc_global_data()->g_faces().size();
+    LC_AUDIT_LOG("Before weld: V(%u) F(%u), weld_distance=%.4f", Vcount, Fcount, g_params().m_weld_distance);
      
     u32 Vremoved = 0;
     u32 Fremoved = 0;
@@ -136,6 +144,12 @@ void CBuild::PreOptimize()
 	mem_Compact			();
 	clMsg("%d vertices removed. (%d left)",Vcount-lc_global_data()->g_vertices().size(),lc_global_data()->g_vertices().size());
 	clMsg("%d faces removed. (%d left)",   Fcount-lc_global_data()->g_faces().size(),   lc_global_data()->g_faces().size());
+
+	LC_AUDIT_LOG("After weld+cleanup: V(%u) removed, V(%u) remaining, F(%u) removed, F(%u) remaining",
+		Vcount - lc_global_data()->g_vertices().size(), lc_global_data()->g_vertices().size(),
+		Fcount - lc_global_data()->g_faces().size(), lc_global_data()->g_faces().size());
+	LC_AUDIT_LOG("Invalid faces detected: %u", InvalideFaces());
+	LC_AUDIT_LOG("=== PRE-OPTIMIZE END ===");
 }
 
 #include "../xrLC_Light/xrMU_Model.h"

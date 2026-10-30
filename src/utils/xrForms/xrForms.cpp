@@ -339,6 +339,7 @@ int APIENTRY WinMain
 	Serializer.Read("LC_tex_rgba", gCompilerMode.LC_tex_rgba);
 	Serializer.Read("LC_NoSubdivide", gCompilerMode.LC_NoSubdivide);
 	Serializer.Read("LC_skipWeld", gCompilerMode.LC_skipWeld);
+	Serializer.Read("LC_Audit", gCompilerMode.LC_Audit);
 	Serializer.Read("IsOverloadedSettings", gCompilerMode.IsOverloadedSettings);
 	Serializer.Read("LC_sizeLmaps", gCompilerMode.LC_sizeLmaps);
 	Serializer.Read("LC_JSampleMU", gCompilerMode.LC_JSampleMU);
@@ -382,6 +383,7 @@ int APIENTRY WinMain
 	Serializer.Write("LC_tex_rgba", gCompilerMode.LC_tex_rgba);
 	Serializer.Write("LC_NoSubdivide", gCompilerMode.LC_NoSubdivide);
 	Serializer.Write("LC_skipWeld", gCompilerMode.LC_skipWeld);
+	Serializer.Write("LC_Audit", gCompilerMode.LC_Audit);
 	Serializer.Write("IsOverloadedSettings", gCompilerMode.IsOverloadedSettings);
 	Serializer.Write("LC_sizeLmaps", gCompilerMode.LC_sizeLmaps);
 	Serializer.Write("LC_JSampleMU", gCompilerMode.LC_JSampleMU);

@@ -37,6 +37,7 @@ struct CompilersMode
 	bool LC_tex_rgba = false;
 	bool LC_NoSubdivide = false;
 	bool LC_skipWeld = false;
+	bool LC_Audit = false;      // maximum verbosity audit logging for xrLC pipeline
  
 	int LC_sizeLmaps = 1024 * 4;
 

@@ -58,9 +58,7 @@ void UIMainMenuForm::Draw()
 		{
 			if (ImGui::BeginMenu(Loc("Image")))
 			{
-				if (ImGui::MenuItem(Loc("Image Editor"), "")) { ExecCommand(COMMAND_IMAGE_EDITOR); }
-				ImGui::Separator();
-				if (ImGui::MenuItem(Loc("Synchronize Textures"), "")) { ExecCommand(COMMAND_REFRESH_TEXTURES); }
+				// Image Editor and Synchronize Textures entries are hidden intentionally
 				if (ImGui::MenuItem(Loc("Check New Textures"), "")) { ExecCommand(COMMAND_CHECK_TEXTURES); }
 				ImGui::EndMenu();
 			}

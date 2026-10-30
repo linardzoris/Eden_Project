@@ -6,6 +6,7 @@
 #include "Build.h"
 
 #include "../xrLC_Light/xrMU_Model.h"
+#include "../xrLC_Light/xrMU_Model_Reference.h"
 #include "../xrLC_Light/xrLC_GlobalData.h"
 #include "../xrLC_Light/xrFace.h"
 #include "../xrLC_Light/mu_model_light.h"
@@ -213,6 +214,16 @@ void GetMemoryUsedStorage()
 
 void CBuild::Run(LPCSTR P)
 {
+	LC_AUDIT_LOG("=== BUILD START ===");
+	LC_AUDIT_LOG("Level path: %s", P);
+	LC_AUDIT_LOG("Radiosity: %d, Progressive(Noise) skip: %d",
+		g_build_options.b_radiosity, g_build_options.b_noise);
+	LC_AUDIT_LOG("Scene BB: min(%.2f,%.2f,%.2f) max(%.2f,%.2f,%.2f)",
+		scene_bb.min.x, scene_bb.min.y, scene_bb.min.z,
+		scene_bb.max.x, scene_bb.max.y, scene_bb.max.z);
+	LC_AUDIT_LOG("Lights: HEMI(%u) SUN(%u) STATIC(%u)",
+		L_static().hemi.size(), L_static().sun.size(), L_static().rgb.size());
+
 	lc_global_data()->initialize();
 
 	//****************************************** Open Level
@@ -243,9 +254,14 @@ void CBuild::Run(LPCSTR P)
 	mem_Compact();
 
 	Phase("Optimizing...");
+	LC_AUDIT_LOG("PreOptimize start: V(%u) F(%u)",
+		lc_global_data()->g_vertices().size(), lc_global_data()->g_faces().size());
 	PreOptimize();
 	CorrectTJunctions();
 	mem_Compact();
+	LC_AUDIT_LOG("PreOptimize+TJunctions done: V(%u) F(%u) invalid_faces(%u)",
+		lc_global_data()->g_vertices().size(), lc_global_data()->g_faces().size(),
+		InvalideFaces());
 
 	// AdaptiveHT
 	BuildAdaptiveHT();
@@ -253,16 +269,20 @@ void CBuild::Run(LPCSTR P)
 	// Building normals
 	Phase("Building normals...");
 	mem_Compact();
+	LC_AUDIT_LOG("CalcNormals start: smooth_groups=%d", g_using_smooth_groups);
 	CalcNormals();
+	LC_AUDIT_LOG("CalcNormals done");
 
 	// Collision DB
 	//should be after normals, so that double-sided faces gets separated
 	Phase("Building collision database (CFORM)...");
 	mem_Compact();
+	LC_AUDIT_LOG("BuildCForm start");
 
 	if (!gCompilerMode.LC_BackingDisabled)
 		BuildCForm();
 	BuildPortals(*fs);
+	LC_AUDIT_LOG("BuildCForm done, portals=%u", portals.size());
 
 
 	// GLOBAL-ILLUMINATION
@@ -270,13 +290,18 @@ void CBuild::Run(LPCSTR P)
 	{
 		Phase("Radiosity-Solver...");
 		mem_Compact();
+		LC_AUDIT_LOG("Radiosity start");
 		Light_prepare();
 		xrPhase_Radiosity();
+		LC_AUDIT_LOG("Radiosity done");
 	}
 
 	// All lighting + lmaps building and saving
+	LC_AUDIT_LOG("=== LIGHT PIPELINE START ===");
 	Light();
 	RunAfterLight(fs);
+
+	LC_AUDIT_LOG("=== BUILD END ===");
 }
 
 void CBuild::StartMu()
@@ -286,18 +311,29 @@ void CBuild::StartMu()
 
 void CBuild::RunAfterLight(IWriter* fs)
 {
+	LC_AUDIT_LOG("=== RUN-AFTER-LIGHT START ===");
+	LC_AUDIT_LOG("RunAfterLight input: V(%u) F(%u) MU_models(%u) MU_refs(%u)",
+		lc_global_data()->g_vertices().size(), lc_global_data()->g_faces().size(),
+		mu_models().size(), mu_refs().size());
+
 	Phase("Building tangent-basis...");
+	LC_AUDIT_LOG("TangentBasis start: computing TB for all faces");
 	xrPhase_TangentBasis();
 	mem_Compact();
+	LC_AUDIT_LOG("TangentBasis done");
 
 	//****************************************** Convert to OGF
 	Phase("Converting to OGFs...");
+	LC_AUDIT_LOG("Flex2OGF start: static geometry -> OGF");
 	mem_Compact();
 	Flex2OGF();
+	LC_AUDIT_LOG("Flex2OGF done");
 
 	//****************************************** Export MU-models
 	Phase("Converting MU-models to OGFs...");
 	mem_Compact();
+	LC_AUDIT_LOG("MU calc_ogf: models=%u, refs=%u, threads=%d",
+		mu_models().size(), mu_refs().size(), gCompilerMode.ThreadsPerWork);
 	{
 		Status("MU : Models...");
 		// models are independent: heavy OGF building (dedup, TB, VIPM) runs in
@@ -305,29 +341,42 @@ void CBuild::RunAfterLight(IWriter* fs)
 		// uses thread_local mender buffers
 		xr_parallel_for(size_t(0), size_t(mu_models().size()), [&](size_t mId)
 		{
+			LC_AUDIT_LOG("  MU_OGF[%u]: exporting model '%s'... vertices=%zu faces=%zu subdivs=%zu",
+				mId, mu_models()[mId]->m_name.c_str(), mu_models()[mId]->m_vertices.size(),
+				mu_models()[mId]->m_faces.size(), mu_models()[mId]->m_subdivs.size());
 			calc_ogf(*mu_models()[mId]);
 		});
 
 		// VB/IB/SWI containers are global - register serially
 		for (u32 m = 0; m < mu_models().size(); m++)
+		{
 			export_geometry(*mu_models()[m]);
+			LC_AUDIT_LOG("  MU_geom[%u]: geometry exported", m);
+		}
 
 		Status("MU : References...");
 		for (u32 m = 0; m < mu_refs().size(); m++)
 		{
 			Progress(float(m) / float(mu_refs().size()));
+			LC_AUDIT_LOG("  MU_ref[%u]: model='%s' sector=%u", m,
+				mu_refs()[m]->model ? mu_refs()[m]->model->m_name.c_str() : "(null)",
+				mu_refs()[m]->sector);
 			export_ogf(*mu_refs()[m]);
 		}
 	}
+	LC_AUDIT_LOG("MU OGF export done");
 
 	//****************************************** Build sectors
 	Phase("Building sectors...");
 	mem_Compact();
+	LC_AUDIT_LOG("BuildSectors start");
 	BuildSectors();
+	LC_AUDIT_LOG("BuildSectors done");
 
 	//****************************************** Saving MISC stuff
 	Phase("Saving...");
 	mem_Compact();
+	LC_AUDIT_LOG("Save level file to: %s", pBuild->path);
 	SaveLights(*fs);
 
 	fs->open_chunk(fsL_GLOWS);
@@ -351,6 +400,8 @@ void CBuild::RunAfterLight(IWriter* fs)
 
 	clMsg("File is Saved");
 	clMsg("Compilation is Ended");
+
+	LC_AUDIT_LOG("=== RUN-AFTER-LIGHT END ===");
 }
 
 void CBuild::err_save()

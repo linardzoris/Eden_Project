@@ -271,13 +271,10 @@ void UIMainMenuForm::Draw()
 		}
 		if (ImGui::BeginMenu(Loc("Images")))
 		{
-			DrawMenuItem(Loc("Image Editor"), COMMAND_IMAGE_EDITOR);
-			ImGui::Separator();
-
+			// Image Editor and Synchronize Textures entries are hidden intentionally
 			DrawMenuItem(Loc("Reload Textures"), COMMAND_RELOAD_TEXTURES);
 			ImGui::Separator();
 
-			DrawMenuItem(Loc("Synchronize Textures"), COMMAND_REFRESH_TEXTURES);
 			DrawMenuItem(Loc("Check New Textures"), COMMAND_CHECK_TEXTURES);
 			ImGui::Separator();
 
@@ -535,6 +532,14 @@ void UIMainMenuForm::Draw()
 				if (ImGui::MenuItem(Loc("Real Time"), "", &selected))
 				{
 					psDeviceFlags.set(rsRenderRealTime, selected);
+				}
+			}
+			{
+				bool selected = psDeviceFlags.test(rsSunShadow);
+				if (ImGui::MenuItem(Loc("Sun Shadow"), "", &selected))
+				{
+					psDeviceFlags.set(rsSunShadow, selected);
+					UI->RedrawScene();
 				}
 			}
 			ImGui::Separator();

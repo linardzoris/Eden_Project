@@ -122,3 +122,8 @@ public:
 
 extern CBuild*		pBuild;			;
 extern vec2Face		g_XSplit		;
+
+// Audit log macro - zero overhead when disabled.
+// All audit output flows through clMsg() with a [AUDIT] prefix for easy grep.
+#define LC_AUDIT_LOG(fmt, ...) \
+	do { if (lc_global_data()->GetAuditMode()) clMsg(("[AUDIT] " fmt), ##__VA_ARGS__); } while(0)

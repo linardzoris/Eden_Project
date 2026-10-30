@@ -331,6 +331,13 @@ void DrawLCConfig()
 		ImGui::Checkbox(Loc("Skip Welding"), &gCompilerMode.LC_skipWeld);
 		HoverHelp("Skip the geometry welding phase - vertices and edges closer than 'Dist Weld'\n"
 			"are no longer merged. Use when welding corrupts imported or very dense geometry.");
+		ImGui::Checkbox(Loc("Audit Log"), &gCompilerMode.LC_Audit);
+		HoverHelp("Enable maximum verbosity audit logging for xrLC.\n"
+			"Dumps per-mesh, per-deflector, per-substep details:\n"
+			"vertex counts, face counts, material IDs, lightmap texels,\n"
+			"raycast batch sizes, OGF export stats - everything.\n"
+			"Use for debugging geometry/lighting issues. Adds significant\n"
+			"log volume and a small per-call overhead.");
 
 		ImGui::Separator();
 

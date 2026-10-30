@@ -420,7 +420,11 @@ _DDS:
 					Image.GetMips(), 0, D3DFMT_A8R8G8B8, D3DPOOL_SYSTEMMEM, &T_sysmem, nullptr
 				);
 
-				if (SUCCEEDED(result) && T_sysmem)
+				// NOTE: `result` is DXGI_ERROR_UNSUPPORTED here by definition (that is
+				// why the RedImage fallback was taken), so it must never gate the
+				// pixel upload. Gate on the CreateTexture result instead, otherwise
+				// the texture stays uninitialized memory (random/zeroed bump data).
+				if (SUCCEEDED(TextureApplyResult) && T_sysmem)
 				{
 					for (u32 level = 0; level < Image.GetMips(); ++level)
 					{

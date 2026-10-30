@@ -60,6 +60,7 @@ private:
 	bool _skipSubdivide;
 	u32 JSampleMU;
 	bool _OverrideSettings;
+	bool _audit_mode = false;
 
 private:
 	bool							b_vert_not_register;
@@ -167,6 +168,9 @@ public:
 
 	bool GetOverrideSettings() 
 	{  return _OverrideSettings; }
+
+	void SetAuditMode(bool v) { _audit_mode = v; }
+	bool GetAuditMode() const { return _audit_mode; }
 
 
 };
