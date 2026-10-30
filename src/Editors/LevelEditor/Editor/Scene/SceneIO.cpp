@@ -1,5 +1,10 @@
 #include "stdafx.h"
 #include <fstream>
+#include <mutex>
+
+// Serializes all save paths that share m_SaveCache: UndoSave can be invoked
+// from the properties worker thread while the main thread saves the scene.
+std::recursive_mutex g_scene_save_mutex;
 
 // file: SceneChunks.h
 #define CURRENT_FILE_VERSION    	0x00000005
@@ -346,6 +351,7 @@ xr_string EScene::LevelPartName(LPCSTR map_name, ObjClassID cls)
 
 void EScene::SaveLTX(LPCSTR map_name, bool bForUndo, bool bForceSaveAll)
 {
+	std::lock_guard<std::recursive_mutex> lock(g_scene_save_mutex);
 	VERIFY			(map_name);
 	R_ASSERT		(!bForUndo);
 
@@ -500,6 +506,7 @@ bool EScene::LoadToolLTX(ObjClassID clsid, LPCSTR fn)
 
 void EScene::Save(LPCSTR map_name, bool bUndo, bool bForceSaveAll)
 {
+	std::lock_guard<std::recursive_mutex> lock(g_scene_save_mutex);
 	R_ASSERT		(bUndo);
 	VERIFY			(map_name);
 
@@ -1040,6 +1047,7 @@ bool EScene::Load(LPCSTR map_name, bool bUndo)
 
 void EScene::SaveSelection( ObjClassID classfilter, LPCSTR fname )
 {
+	std::lock_guard<std::recursive_mutex> lock(g_scene_save_mutex);
 	VERIFY			( fname );
 
 	xr_string 		full_name;

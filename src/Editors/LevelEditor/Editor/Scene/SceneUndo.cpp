@@ -1,4 +1,7 @@
 #include "stdafx.h"
+#include <mutex>
+
+extern std::recursive_mutex g_scene_save_mutex;
 
 void EScene::UndoClear()
 {
@@ -17,6 +20,10 @@ void EScene::UndoSave()
     UI->RedrawScene();
 
     if (0==EPrefs->scene_undo_level) return;
+
+	// Guard against concurrent UndoSave from the properties worker thread and
+	// the main thread: both write the shared m_SaveCache and undo stack.
+	std::lock_guard<std::recursive_mutex> lock(g_scene_save_mutex);
 
 	UndoItem item;
 	GetTempFileNameA( FS.get_path(_temp_)->m_Path, "undo", 0, item.m_FileName );
