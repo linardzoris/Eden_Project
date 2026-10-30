@@ -5,6 +5,10 @@
 
 class light;
 
+// combine_1 debug view mode (0 = off, 1+ = show selected G-buffer channel),
+// set from the GraphicDebug ImGui window, consumed in CRenderTarget::phase_combine.
+extern int g_combine_debug_mode;
+
 //#define DU_SPHERE_NUMVERTEX 92
 //#define DU_SPHERE_NUMFACES	180
 //#define DU_CONE_NUMVERTEX	18

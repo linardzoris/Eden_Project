@@ -10,6 +10,11 @@
 
 Texture2D<float> s_occ;
 
+// Debug view mode: 0 = disabled (normal combine), 1+ = output the selected
+// G-buffer channel instead of the final color (picked in the GraphicDebug
+// ImGui window, passed from CRenderTarget::phase_combine).
+uniform float4 combine_debug_params; // x = mode
+
 struct _input
 {
     float4 tc0 : TEXCOORD0;
@@ -51,6 +56,36 @@ float4 main(_input I) : SV_Target
 #ifdef USE_LEGACY_LIGHT
 	Fog *= Fog;
 #endif
+
+    // G-buffer debug view: replaces the final color with the selected channel.
+    // Alpha is zeroed so the INVSRCALPHA/SRCALPHA blend passes the debug value
+    // through unmodified.
+    if (combine_debug_params.x > 0.5f)
+    {
+        int Mode = (int)(combine_debug_params.x + 0.5f);
+        float3 Debug = 0.0f;
+
+        switch (Mode)
+        {
+        case 1:  Debug = O.Hemi.xxx;             break; // hemispheric amount
+        case 2:  Debug = O.Normal * 0.5f + 0.5f; break; // world-space normal
+        case 3:  Debug = O.Color;                break; // albedo
+        case 4:  Debug = O.Metalness.xxx;        break; // metalness
+        case 5:  Debug = O.Roughness.xxx;        break; // roughness
+        case 6:  Debug = O.AO.xxx;               break; // ambient occlusion
+        case 7:  Debug = O.Depth.xxx;            break; // hardware depth
+        case 8:  Debug = O.SSS.xxx;              break; // static sun (SSS)
+        case 9:  Debug = O.View * 0.5f + 0.5f;   break; // view direction
+        case 10: Debug = frac(O.Point * 0.1f);   break; // world position
+        case 11: Debug = Light;                  break; // accumulator light
+        case 12: Debug = Ambient;                break; // ambient term
+        case 13: Debug = Occ * Ambient;          break; // occluded ambient
+        case 14: Debug = O.ParallaxShadow.xxx;   break; // POM self-shadow
+        case 15: Debug = O.SnowMask.xxx;         break; // snow mask
+        }
+
+        return float4(Debug, 0.0f);
+    }
 
     return float4(Color, Fog);
 }

@@ -37,6 +37,9 @@ public:
 };
 
 float		r_dtex_range		= 50.f;
+
+// combine_1 debug view mode, see r4_rendertarget.h
+int			g_combine_debug_mode	= 0;
 //////////////////////////////////////////////////////////////////////////
 ShaderElement*			CRender::rimp_select_sh_dynamic	(dxRender_Visual	*pVisual, float cdist_sq)
 {

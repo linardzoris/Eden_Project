@@ -187,6 +187,9 @@ void CRenderTarget::phase_combine()
 		RCache.set_c				("ssao_noise_tile_factor",	fSSAONoise	);
 		RCache.set_c				("ssao_kernel_size",		fSSAOKernelSize	);
 
+		// G-buffer debug view mode, consumed by combine_1.ps.hlsl
+		RCache.set_c				("combine_debug_params",	(float)g_combine_debug_mode, 0.f, 0.f, 0.f);
+
 		RCache.Render(D3DPT_TRIANGLELIST, Offset, 0, 4, 0, 2);
 	}
 

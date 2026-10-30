@@ -447,48 +447,29 @@ CRenderTarget::CRenderTarget()
 		static int stack_levels = 3;
 		ImGui::SliderInt("Stack Levels", &stack_levels, 0, 8);
 
-		// Live-tunable SSLR / VSLR / GTAO debug controls. These bind the same
-		// variables the r4_* console commands wrap; sliders apply immediately,
-		// items marked (vid_restart) need a renderer restart.
-		if (ImGui::CollapsingHeader("SSLR / VSLR / GTAO"))
+		// combine_1 G-buffer debug view: overrides the final combine output
+		// with the selected channel (see combine_1.ps.hlsl).
+		if (ImGui::CollapsingHeader("combine_1 debug"))
 		{
-			bool sslr_on = ps_r2_ls_flags_ext.test(R4FLAG_SSLR_ON_WORLD);
-			if (ImGui::Checkbox("SSLR enabled (vid_restart)", &sslr_on))
-				ps_r2_ls_flags_ext.set(R4FLAG_SSLR_ON_WORLD, sslr_on);
-
-			ImGui::SliderFloat("SSLR intensity", &ps_r4_sslr_intensity, 0.0f, 2.0f);
-			ImGui::SliderFloat("SSLR max dist (m)", &ps_r4_sslr_max_dist, 0.0f, 200.0f, "%.0f");
-			ImGui::SliderInt("SSLR quality (vid_restart)", &ps_r4_sslr_quality, 0, 2);
-			ImGui::SliderInt("SSLR steps (full budget)", &ps_r4_sslr_steps, 8, 64);
-			ImGui::SliderFloat("SSLR thickness gate", &ps_r4_sslr_thickness, 0.01f, 1.0f);
-			ImGui::SliderFloat("SSLR step growth", &ps_r4_sslr_trace_scale, 1.01f, 2.0f);
-
-			ImGui::Separator();
-
-			bool vslr_on = ps_r2_ls_flags_ext.test(R4FLAG_OFFSCREEN_REFLECTIONS);
-			if (ImGui::Checkbox("VSLR enabled (vid_restart)", &vslr_on))
-				ps_r2_ls_flags_ext.set(R4FLAG_OFFSCREEN_REFLECTIONS, vslr_on);
-
-			ImGui::SliderFloat("VSLR intensity", &ps_r4_vslr_intensity, 0.0f, 4.0f);
-			ImGui::SliderFloat("VSLR distance", &ps_r4_vslr_distance, 0.4f, 1.0f);
-			ImGui::SliderInt("VSLR hud-only 20m cubemap", &ps_r4_vslr_hud_only, 0, 1);
-			ImGui::SliderInt("VSLR quality (vid_restart)", &ps_r4_vslr_quality, 0, 2);
-
-			ImGui::Separator();
-
-			ImGui::SliderFloat("GTAO intensity", &ps_r4_gtao_intensity, 0.1f, 4.0f);
-			ImGui::SliderInt("GTAO res 0=half 1=full (restart)", &ps_r4_gtao_resolution, 0, 1);
-			ImGui::SliderInt("GTAO dirs (lines)", &ps_r4_gtao_dirs, 1, 8);
-			ImGui::SliderInt("GTAO steps/dir", &ps_r4_gtao_steps, 1, 16);
-			ImGui::SliderFloat("GTAO radius (m)", &ps_r4_gtao_radius, 0.1f, 4.0f);
-			ImGui::SliderFloat("GTAO max dist (m)", &ps_r4_gtao_max_dist, 0.0f, 500.0f, "%.0f");
-
-			ImGui::Separator();
-
-			ImGui::SliderFloat("Parallax min layers (nadir)", &ps_r4_parallax_min_layers, 1.0f, 32.0f);
-			ImGui::SliderFloat("Parallax max layers (grazing)", &ps_r4_parallax_max_layers, 2.0f, 64.0f);
-			ImGui::SliderInt("Parallax relief steps", &ps_r4_parallax_relief_steps, 1, 8);
-			ImGui::SliderInt("POM shadow steps", &ps_r4_pom_shadow_steps, 1, 32);
+			static const char* const DebugModes[] = {
+				"Off",
+				"O.Hemi",
+				"O.Normal",
+				"O.Color (albedo)",
+				"O.Metalness",
+				"O.Roughness",
+				"O.AO",
+				"O.Depth",
+				"O.SSS",
+				"O.View",
+				"O.Point",
+				"Accumulator light",
+				"Ambient",
+				"Occ * Ambient",
+				"O.ParallaxShadow",
+				"O.SnowMask",
+			};
+			ImGui::Combo("Debug channel", &g_combine_debug_mode, DebugModes, IM_ARRAYSIZE(DebugModes));
 		}
 
 		auto& perf = GPUEvents_Statistics();
