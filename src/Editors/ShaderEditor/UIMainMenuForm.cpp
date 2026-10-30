@@ -214,7 +214,8 @@ void UIMainMenuForm::Draw()
                     {
                         if (!UI->HasWindow<CUIThemeManager>())
                         {
-                            UI->Push(&ThemeInstance);
+                            // static-lifetime singleton, never delete it through the UI array
+                            UI->Push(&ThemeInstance, false);
                         }
                         ThemeInstance.Show(true);
                     }

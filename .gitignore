@@ -99,5 +99,5 @@ gamedata/sounds/
 *.fbx
 *.json
 *.ini
-gamedata/spawns/all.spawn
-gamedata/spawns/all.spawn
+.spawn
+/gamedata/spawns
