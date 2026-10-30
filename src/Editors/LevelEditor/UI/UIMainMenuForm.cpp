@@ -534,14 +534,6 @@ void UIMainMenuForm::Draw()
 					psDeviceFlags.set(rsRenderRealTime, selected);
 				}
 			}
-			{
-				bool selected = psDeviceFlags.test(rsSunShadow);
-				if (ImGui::MenuItem(Loc("Sun Shadow"), "", &selected))
-				{
-					psDeviceFlags.set(rsSunShadow, selected);
-					UI->RedrawScene();
-				}
-			}
 			ImGui::Separator();
 			{
 				bool selected = psDeviceFlags.test(rsStatistic);
