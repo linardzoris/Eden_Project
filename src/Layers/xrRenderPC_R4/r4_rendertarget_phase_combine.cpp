@@ -190,6 +190,9 @@ void CRenderTarget::phase_combine()
 		// G-buffer debug view mode, consumed by combine_1.ps.hlsl
 		RCache.set_c				("combine_debug_params",	(float)g_combine_debug_mode, 0.f, 0.f, 0.f);
 
+		// AO-to-hemi mode (r__use_ao_as_hemi), consumed by combine_1.ps.hlsl
+		RCache.set_c				("combine_ao_params",	(float)ps_r_use_ao_as_hemi, 0.f, 0.f, 0.f);
+
 		RCache.Render(D3DPT_TRIANGLELIST, Offset, 0, 4, 0, 2);
 	}
 

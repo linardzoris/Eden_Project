@@ -15,6 +15,12 @@ Texture2D<float> s_occ;
 // ImGui window, passed from CRenderTarget::phase_combine).
 uniform float4 combine_debug_params; // x = mode
 
+// AO-to-hemi mode (r__use_ao_as_hemi): 0 = AO darkens the final ambient
+// multiply only (legacy), 1 = AO folded into hemi irradiance with an
+// SSAO-only final multiply, 2 = AO folded into hemi and still applied by the
+// final multiply (stacked).
+uniform float4 combine_ao_params; // x = mode
+
 struct _input
 {
     float4 tc0 : TEXCOORD0;
@@ -32,20 +38,32 @@ float4 main(_input I) : SV_Target
     Light += O.SSS * DirectLight(Ldynamic_color, Ldynamic_dir.xyz, O.Normal, O.View.xyz, O.Color, O.Metalness, O.Roughness, O.F0) * O.ParallaxShadow;
 #endif
 
-    float Occ = O.AO * s_occ.SampleLevel(smp_rtlinear, I.tc0.xy, 0.0f).x;
+    float SSAO = s_occ.SampleLevel(smp_rtlinear, I.tc0.xy, 0.0f).x;
+    float Hemi = O.Hemi;
+    float Occ = O.AO * SSAO;
+
+    // AO-to-hemi mode, see combine_ao_params above.
+    [branch]
+    if (combine_ao_params.x > 0.5f)
+    {
+        Hemi *= O.AO;
+
+        if (combine_ao_params.x < 1.5f)
+            Occ = SSAO;
+    }
 
 #ifndef USE_LEGACY_LIGHT
 	#ifdef USE_SSLR_REFLECTIONS
 		float3 SpecularIrradance = s_refl.SampleLevel(smp_rtlinear, I.tc0, 0.0).xyz;
 		SpecularIrradance *= rcp(1.00001f - SpecularIrradance);
 	#else
-		float3 SpecularIrradance = CompureSpecularIrradance(reflect(O.View, O.Normal), O.Hemi, O.Roughness);
+		float3 SpecularIrradance = CompureSpecularIrradance(reflect(O.View, O.Normal), Hemi, O.Roughness);
 	#endif
 
-	float3 DiffuseIrradance = CompureDiffuseIrradance(O.Normal, O.Hemi) + L_ambient.xyz;	
+	float3 DiffuseIrradance = CompureDiffuseIrradance(O.Normal, Hemi) + L_ambient.xyz;
     float3 Ambient = AmbientLighting(DiffuseIrradance, SpecularIrradance, max(0.0, dot(O.Normal, -O.View.xyz)), O.Color, O.Metalness, O.Roughness, O.F0);
 #else
-    float3 Ambient = AmbientLighting(O.View, O.Normal, O.Color, O.Metalness, O.Roughness, O.Hemi, O.F0);
+    float3 Ambient = AmbientLighting(O.View, O.Normal, O.Color, O.Metalness, O.Roughness, Hemi, O.F0);
 #endif
 
     float3 Color = Occ * Ambient + Light;

@@ -153,6 +153,12 @@ extern ECORE_API float			ps_r4_sslr_max_dist;
 extern ECORE_API float			ps_r4_gtao_intensity;
 extern ECORE_API int			ps_r4_gtao_resolution;
 
+// combine_1 AO-to-hemi mode (R4/d3d11 only):
+// 0 = AO darkens the final ambient multiply only (legacy behavior),
+// 1 = AO folded into O.Hemi irradiance, final multiply uses SSAO only,
+// 2 = AO folded into O.Hemi and still applied by the final multiply (stacked).
+extern ECORE_API int			ps_r_use_ao_as_hemi;
+
 // GTAO: fine trace settings, hot-tunable. Dirs = horizon search slices
 // ("lines"), steps = march steps per slice, radius = world-space AO radius,
 // max_dist = view distance past which AO collapses to 1 (0 = unlimited).

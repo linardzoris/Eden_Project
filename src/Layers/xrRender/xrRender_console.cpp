@@ -214,6 +214,8 @@ float		ps_r4_sslr_max_dist = 40.0f;	// 0 = unlimited; SSLR trace cut-off in metr
 float		ps_r4_gtao_intensity = 1.0f;	// 1.0 = neutral; >1 = darker/more visible AO
 int			ps_r4_gtao_resolution = 1;	// 0=half-res, 1=full-res (vid_restart to apply)
 
+int			ps_r_use_ao_as_hemi = 0;	// 0=legacy final multiply, 1=AO into hemi (SSAO-only final), 2=AO into hemi (stacked)
+
 int			ps_r4_gtao_dirs = 3;			// horizon search slices ("lines")
 int			ps_r4_gtao_steps = 4;			// march steps per slice
 float		ps_r4_gtao_radius = 0.85f;		// world-space AO radius
@@ -858,6 +860,7 @@ void		xrRender_initconsole	()
 	CMD4(CCC_Float, "r4_vslr_intensity", &ps_r4_vslr_intensity, 0.0f, 4.0f);
 	CMD4(CCC_Float, "r4_gtao_intensity", &ps_r4_gtao_intensity, 0.1f, 4.0f);
 	CMD4(CCC_Integer, "r4_gtao_resolution", &ps_r4_gtao_resolution, 0, 1);	// 0=half-res, 1=full-res, vid_restart to apply
+	CMD4(CCC_Integer, "r__use_ao_as_hemi", &ps_r_use_ao_as_hemi, 0, 2);	// combine_1 AO-to-hemi mode (R4)
 	CMD4(CCC_Integer, "r4_gtao_dirs", &ps_r4_gtao_dirs, 1, 8);	// horizon slices
 	CMD4(CCC_Integer, "r4_gtao_steps", &ps_r4_gtao_steps, 1, 16);	// steps per slice
 	CMD4(CCC_Float, "r4_gtao_radius", &ps_r4_gtao_radius, 0.1f, 4.0f);	// world AO radius
