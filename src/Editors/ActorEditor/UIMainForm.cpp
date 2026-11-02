@@ -5,6 +5,7 @@
 #include "IconsFontAwesome6.h"
 #include "UILodEditorForm.h"
 #include "UIThmEditorForm.h"
+#include "UIImageConverterForm.h"
 #include "UIOmfEditorForm.h"
 #include "UIOggParamsForm.h"
 #include "UIDbArchiveForm.h"
@@ -76,6 +77,7 @@ void UIMainForm::Draw()
     m_Render->Draw();
     UILodEditorForm::Update();
     UIThmEditorForm::Update();
+    UIImageConverterForm::Update();
     UIOmfEditorForm::Update();
     UIOggParamsForm::Update();
     UIDbArchiveForm::Update();

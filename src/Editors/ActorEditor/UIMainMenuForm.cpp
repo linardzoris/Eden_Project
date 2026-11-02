@@ -5,6 +5,7 @@
 #include "../xrEUI/EditorLocalization.h"
 #include "UILodEditorForm.h"
 #include "UIThmEditorForm.h"
+#include "UIImageConverterForm.h"
 #include "UIOmfEditorForm.h"
 #include "UIOggParamsForm.h"
 #include "UIDbArchiveForm.h"
@@ -72,6 +73,7 @@ void UIMainMenuForm::Draw()
 			}
 			if (ImGui::MenuItem(Loc("LOD Editor"), "")) { UILodEditorForm::Show(); }
 			ImGui::Separator();
+			if (ImGui::MenuItem(Loc("Image Converter"), "")) { UIImageConverterForm::Show(); }
 			if (ImGui::MenuItem(Loc("THM Editor"), "")) { UIThmEditorForm::Show(); }
 			if (ImGui::MenuItem(Loc("OMF Editor"), "")) { UIOmfEditorForm::Show(); }
 			if (ImGui::MenuItem(Loc("OGG Sound Params"), "")) { UIOggParamsForm::Show(); }
