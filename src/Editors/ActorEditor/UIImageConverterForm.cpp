@@ -51,6 +51,9 @@ void UIImageConverterForm::Show()
 		return;
 	}
 	Form = new UIImageConverterForm();
+	// restore remembered directories from editor preferences
+	Form->m_ExportDir = EPrefs->ic_export_dir;
+	Form->m_LastDir = EPrefs->ic_last_dir;
 }
 
 // ----------------------------------------------------------------------------
@@ -563,6 +566,9 @@ void UIImageConverterForm::DoImport()
 	}
 
 	RebuildGroups();
+
+	// remember the import dialog directory across sessions
+	EPrefs->ic_last_dir = m_LastDir;
 
 	if (!m_Entries.empty())
 		SelectOnly((int)m_Entries.size() - 1);
@@ -1142,11 +1148,14 @@ void UIImageConverterForm::Draw()
 	if (ImGui::Button(Loc("Make Texture")))
 		m_ConfirmOpen = true;
 	ImGui::SameLine();
-	if (ImGui::Button(Loc("Export to...")))
+	if (ImGui::Button(Loc("Export Dir")))
 	{
 		xr_string dir;
 		if (PickFolder(dir))
+		{
 			m_ExportDir = dir;
+			EPrefs->ic_export_dir = dir; // persisted by SaveConfig
+		}
 	}
 	ImGui::SameLine();
 	if (ImGui::Button(Loc("Remove Selected")))

@@ -89,6 +89,10 @@ public:
 	xr_string		Compiler_xrLC;
 	xr_string		Compiler_xrDO;
 
+	// Image Converter remembered directories
+	xr_string		ic_export_dir;
+	xr_string		ic_last_dir;
+
 	std::map<std::string, std::string> custom_icons;
 protected:
 	void 			OnKeyboardCommonFileClick	(ButtonValue* value, bool& bModif, bool& bSafe);

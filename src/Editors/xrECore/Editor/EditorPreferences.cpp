@@ -363,6 +363,13 @@ void CCustomPreferences::Load()
 	}
 
 	sWeather = ((std::string)(JSONData["editor_prefs"]["weather"])).c_str();
+
+	// Image Converter remembered directories
+	if (JSONData["editor_prefs"].contains("ic_export_dir"))
+		ic_export_dir = ((std::string)JSONData["editor_prefs"]["ic_export_dir"]).c_str();
+	if (JSONData["editor_prefs"].contains("ic_last_dir"))
+		ic_last_dir = ((std::string)JSONData["editor_prefs"]["ic_last_dir"]).c_str();
+
 	if (JSONData["ContentBrowser"].contains("file_custom_icon"))
 	{
 		custom_icons = JSONData["ContentBrowser"]["file_custom_icon"].get<std::map<std::string, std::string>>();
@@ -438,6 +445,10 @@ void CCustomPreferences::Save()
     JSONData["editor_prefs"]["env_to_time"] = env_to_time;
     JSONData["editor_prefs"]["env_speed"] = env_speed;
     JSONData["editor_prefs"]["weather"] = sWeather.c_str() ? sWeather.c_str() : "";
+
+	// Image Converter remembered directories
+	JSONData["editor_prefs"]["ic_export_dir"] = ic_export_dir.c_str();
+	JSONData["editor_prefs"]["ic_last_dir"] = ic_last_dir.c_str();
 
 	JSONData["render"]["maximized"] = WndFlags & SDL_WINDOW_MAXIMIZED;
 
