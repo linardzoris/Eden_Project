@@ -101,3 +101,4 @@ gamedata/sounds/
 *.ini
 .spawn
 /gamedata/spawns
+umap_blender_importer/io_stalker2_umap.py
