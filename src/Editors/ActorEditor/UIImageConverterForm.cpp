@@ -160,6 +160,77 @@ static void ThresholdAlpha8(DirectX::ScratchImage& img, float thr)
 	}
 }
 
+// samples one RGBA texel of a companion image for the remap pass, resampling
+// from companion dims (sw, sh) to the dest pixel (dx, dy) of a dw x dh image:
+// area (box) average when downscaling, bilinear when upscaling. Replaces the
+// former DirectXTex Resize alignment step, which failed on the float4/BOX
+// upscale path (low-res RHA -> full-res N) for no recoverable reason.
+static void SampleRemap4(const DirectX::Image& src, size_t dx, size_t dy, size_t dw, size_t dh, float* out4)
+{
+	const float sw = (float)src.width, sh = (float)src.height;
+	const float sx0 = (float)dx * sw / (float)dw;
+	const float sy0 = (float)dy * sh / (float)dh;
+	const float sx1 = (float)(dx + 1) * sw / (float)dw;
+	const float sy1 = (float)(dy + 1) * sh / (float)dh;
+
+	if (sx1 - sx0 >= 1.f || sy1 - sy0 >= 1.f)
+	{
+		// downscale: box average over the covered source rect, fractional edges
+		int x0 = (int)floorf(sx0); if (x0 < 0) x0 = 0;
+		int y0 = (int)floorf(sy0); if (y0 < 0) y0 = 0;
+		int x1 = (int)ceilf(sx1); if (x1 > (int)src.width) x1 = (int)src.width;
+		int y1 = (int)ceilf(sy1); if (y1 > (int)src.height) y1 = (int)src.height;
+		float acc[4] = {};
+		float wsum = 0.f;
+		for (int y = y0; y < y1; ++y)
+		{
+			float ly = (float)y, ly1 = (float)y + 1.f;
+			float wy = (ly1 < sy1 ? ly1 : sy1) - (ly > sy0 ? ly : sy0);
+			const float* row = RowF(src, (size_t)y);
+			for (int x = x0; x < x1; ++x)
+			{
+				float lx = (float)x, lx1 = (float)x + 1.f;
+				float wx = (lx1 < sx1 ? lx1 : sx1) - (lx > sx0 ? lx : sx0);
+				float w = wx * wy;
+				const float* p = row + (size_t)x * 4;
+				acc[0] += p[0] * w;
+				acc[1] += p[1] * w;
+				acc[2] += p[2] * w;
+				acc[3] += p[3] * w;
+				wsum += w;
+			}
+		}
+		if (wsum > 0.f)
+		{
+			out4[0] = acc[0] / wsum;
+			out4[1] = acc[1] / wsum;
+			out4[2] = acc[2] / wsum;
+			out4[3] = acc[3] / wsum;
+			return;
+		}
+	}
+
+	// upscale (or degenerate rect): bilinear at the dest texel center, clamped
+	float cx = (sx0 + sx1) * 0.5f - 0.5f;
+	float cy = (sy0 + sy1) * 0.5f - 0.5f;
+	cx = cx < 0.f ? 0.f : (cx > sw - 1.f ? sw - 1.f : cx);
+	cy = cy < 0.f ? 0.f : (cy > sh - 1.f ? sh - 1.f : cy);
+	int ix = (int)cx, iy = (int)cy;
+	int ix1 = ix + 1 < (int)src.width ? ix + 1 : (int)src.width - 1;
+	int iy1 = iy + 1 < (int)src.height ? iy + 1 : (int)src.height - 1;
+	float tx = cx - (float)ix, ty = cy - (float)iy;
+	const float* p00 = RowF(src, (size_t)iy) + (size_t)ix * 4;
+	const float* p10 = RowF(src, (size_t)iy) + (size_t)ix1 * 4;
+	const float* p01 = RowF(src, (size_t)iy1) + (size_t)ix * 4;
+	const float* p11 = RowF(src, (size_t)iy1) + (size_t)ix1 * 4;
+	for (int k = 0; k < 4; ++k)
+	{
+		float a = p00[k] + (p10[k] - p00[k]) * tx;
+		float b = p01[k] + (p11[k] - p01[k]) * tx;
+		out4[k] = a + (b - a) * ty;
+	}
+}
+
 // header-only read used at import for the multiple-of-4 source size gate
 static bool ReadSourceSize(const char* path, int& w, int& h)
 {
@@ -529,32 +600,21 @@ bool UIImageConverterForm::ConvertEntry(ConvEntry& e)
 		return false;
 	const DirectX::Image* self_im = self_img.GetImage(0, 0, 0);
 
-	// companions (only the ones the recipe needs), aligned to self size
+	// companions (only the ones the recipe needs), kept at native resolution;
+	// dimension mismatch is handled by SampleRemap4 in the remap loop
 	DirectX::ScratchImage rha_img, n_img;
 	const DirectX::Image* rha_im = nullptr;
 	const DirectX::Image* n_im = nullptr;
-	auto load_aligned = [&](int idx, DirectX::ScratchImage& store, const DirectX::Image*& im) -> bool
+	auto load_native = [&](int idx, DirectX::ScratchImage& store, const DirectX::Image*& im) -> bool
 	{
 		if (!LoadFloat4(m_Entries[idx].path.c_str(), store, e.error))
 			return false;
 		im = store.GetImage(0, 0, 0);
-		if (im->width != self_im->width || im->height != self_im->height)
-		{
-			DirectX::ScratchImage resized;
-			if (FAILED(DirectX::Resize(*im, self_im->width, self_im->height,
-				DirectX::TEX_FILTER_BOX, resized)))
-			{
-				e.error = "companion resize failed";
-				return false;
-			}
-			store = std::move(resized);
-			im = store.GetImage(0, 0, 0);
-		}
 		return true;
 	};
-	if (e.role == RoleN && e.comp_rha >= 0 && !load_aligned(e.comp_rha, rha_img, rha_im))
+	if (e.role == RoleN && e.comp_rha >= 0 && !load_native(e.comp_rha, rha_img, rha_im))
 		return false;
-	if ((e.role == RoleRHA || e.role == RoleRMA) && e.comp_n >= 0 && !load_aligned(e.comp_n, n_img, n_im))
+	if ((e.role == RoleRHA || e.role == RoleRMA) && e.comp_n >= 0 && !load_native(e.comp_n, n_img, n_im))
 		return false;
 
 	// channel remap in float linear space (DESIGN3 3.2)
@@ -565,15 +625,27 @@ bool UIImageConverterForm::ConvertEntry(ConvEntry& e)
 		return false;
 	}
 	const DirectX::Image* remap_im = remap_img.GetImage(0, 0, 0);
+	const DirectX::Image* comp_im = rha_im ? rha_im : n_im;
+	const bool comp_native = comp_im && comp_im->width == self_im->width && comp_im->height == self_im->height;
 	for (size_t y = 0; y < self_im->height; ++y)
 	{
 		const float* sr = RowF(*self_im, y);
-		const float* cr = rha_im ? RowF(*rha_im, y) : (n_im ? RowF(*n_im, y) : nullptr);
+		const float* cr = comp_native ? RowF(*comp_im, y) : nullptr;
 		float* dr = RowW(*remap_im, y);
 		for (size_t x = 0; x < self_im->width; ++x)
 		{
 			const float* s = sr + x * 4;
-			const float* c = cr ? cr + x * 4 : nullptr;
+			float cbuf[4];
+			const float* c;
+			if (!comp_im)
+				c = nullptr;
+			else if (comp_native)
+				c = cr + x * 4;
+			else
+			{
+				SampleRemap4(*comp_im, x, y, self_im->width, self_im->height, cbuf);
+				c = cbuf;
+			}
 			float* o = dr + x * 4;
 			switch (e.role)
 			{
@@ -605,10 +677,13 @@ bool UIImageConverterForm::ConvertEntry(ConvEntry& e)
 	if (e.target_w > 0 && ((int)self_im->width != e.target_w || (int)self_im->height != e.target_h))
 	{
 		DirectX::ScratchImage resized;
-		if (FAILED(DirectX::Resize(*remap_im, (size_t)e.target_w, (size_t)e.target_h,
-			DirectX::TEX_FILTER_BOX, resized)))
+		HRESULT hr = DirectX::Resize(*remap_im, (size_t)e.target_w, (size_t)e.target_h,
+			DirectX::TEX_FILTER_BOX, resized);
+		if (FAILED(hr))
 		{
-			e.error = "resize failed";
+			char b[96];
+			sprintf_s(b, sizeof(b), "resize failed (0x%08X)", (u32)hr);
+			e.error = b;
 			return false;
 		}
 		work_img = std::move(resized);
