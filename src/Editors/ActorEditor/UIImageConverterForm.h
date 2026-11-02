@@ -146,6 +146,7 @@ private:
 
 	bool                 m_ConfirmOpen = false; // Make Texture confirmation modal
 	bool                 m_SizeError = false;   // "multiple of 4" validation popup
+	bool                 m_UseGPU = true;       // DirectCompute BC compression (D3D11)
 	u32                  m_LastConverted = 0;   // stats of the last Make Texture run
 	u32                  m_LastFailed = 0;
 

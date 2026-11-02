@@ -2,6 +2,8 @@
 #include "UIImageConverterForm.h"
 #include "imgui.h"
 #include "../xrEUI/EditorLocalization.h"
+#include <d3d11.h> // must precede DirectXTex.h: GPU Compress overloads are
+                   // only declared when __d3d11_h__ is defined
 #include <DirectXTex.h>
 #include <shlobj.h>
 
@@ -122,6 +124,40 @@ static const float* RowF(const DirectX::Image& im, size_t y)
 static float* RowW(const DirectX::Image& im, size_t y)
 {
 	return reinterpret_cast<float*>(im.pixels + im.rowPitch * y);
+}
+
+// lazily created D3D11 device for the DirectCompute BC compressor; nullptr
+// when unavailable (CPU path with TEX_COMPRESS_PARALLEL is the fallback)
+static ID3D11Device* AcquireGPUDevice()
+{
+	static ID3D11Device* dev = nullptr;
+	static bool tried = false;
+	if (!tried)
+	{
+		tried = true;
+		const D3D_FEATURE_LEVEL levels[] = { D3D_FEATURE_LEVEL_11_0 };
+		HRESULT hr = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, 0,
+			levels, ARRAYSIZE(levels), D3D11_SDK_VERSION, &dev, nullptr, nullptr);
+		if (FAILED(hr))
+			dev = nullptr;
+	}
+	return dev;
+}
+
+// binary alpha cutout applied to every mip of an R8G8B8A8 chain; used on the
+// GPU path where Compress only carries the BC1 threshold internally
+static void ThresholdAlpha8(DirectX::ScratchImage& img, float thr)
+{
+	for (size_t i = 0; i < img.GetImageCount(); ++i)
+	{
+		const DirectX::Image& im = img.GetImages()[i];
+		for (size_t y = 0; y < im.height; ++y)
+		{
+			u8* row = im.pixels + im.rowPitch * y;
+			for (size_t x = 0; x < im.width; ++x)
+				row[x * 4 + 3] = (row[x * 4 + 3] / 255.f) < thr ? 0 : 255;
+		}
+	}
 }
 
 // header-only read used at import for the multiple-of-4 source size gate
@@ -639,19 +675,32 @@ bool UIImageConverterForm::ConvertEntry(ConvEntry& e)
 		case FmtBC7:  dxgi = DXGI_FORMAT_BC7_UNORM; break;
 		}
 
+		// GPU first (DirectCompute, much faster), multithreaded CPU fallback;
+		// GPU BC7 is a fixed-mode search with slightly lower quality, the
+		// "GPU Compression" checkbox switches back to the CPU path
+		ID3D11Device* gpu = m_UseGPU ? AcquireGPUDevice() : nullptr;
 		DirectX::ScratchImage comp;
-		HRESULT hr;
-		if (e.fmt == FmtBC1 || e.fmt == FmtBC1a)
+		HRESULT hr = E_FAIL;
+		if (gpu)
 		{
-			// 1-bit alpha threshold carried by the compressor, applied per mip
-			float thr = e.cutout > 0 ? e.cutout / 255.f : 0.5f;
-			hr = DirectX::Compress(out8.GetImages(), out8.GetImageCount(), out8.GetMetadata(),
-				dxgi, DirectX::TEX_COMPRESS_DEFAULT, thr, comp);
+			// the GPU compressor applies no external BC1 threshold: quantize
+			// alpha ourselves per mip so 1-bit alpha matches the cutout setting
+			if ((e.fmt == FmtBC1 || e.fmt == FmtBC1a) && e.cutout > 0)
+				ThresholdAlpha8(out8, e.cutout / 255.f);
+			hr = DirectX::Compress(gpu, out8.GetImages(), out8.GetImageCount(), out8.GetMetadata(),
+				dxgi, DirectX::TEX_COMPRESS_DEFAULT, 1.0f, comp);
+			if (FAILED(hr))
+			{
+				comp = DirectX::ScratchImage();
+				ELog.Msg(mtWarning, "Image Converter: GPU compression failed (0x%08X), falling back to CPU.", (u32)hr);
+			}
 		}
-		else
+		if (!gpu || FAILED(hr))
 		{
+			// threshold is only used by BC1; PARALLEL enables multithreading
+			float thr = (e.fmt == FmtBC1 || e.fmt == FmtBC1a) && e.cutout > 0 ? e.cutout / 255.f : 0.5f;
 			hr = DirectX::Compress(out8.GetImages(), out8.GetImageCount(), out8.GetMetadata(),
-				dxgi, DirectX::TEX_COMPRESS_DEFAULT, 0.5f, comp);
+				dxgi, DirectX::TEX_COMPRESS_PARALLEL, thr, comp);
 		}
 		if (FAILED(hr))
 		{
@@ -922,6 +971,10 @@ void UIImageConverterForm::DrawSettings()
 		ImGui::SameLine();
 		ImGui::TextDisabled("(Enter)");
 	}
+
+	// GPU compression toggle (DirectCompute BC1-BC7; CPU fallback is
+	// multithreaded, just slower and higher BC7 quality)
+	ImGui::Checkbox(Loc("GPU Compression"), &m_UseGPU);
 
 	// alpha cutout: only albedo entries carry transparency semantics
 	{

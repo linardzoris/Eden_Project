@@ -49,6 +49,7 @@ target_link_libraries(ActorEditor PUBLIC xrECore)
 
 # LibOGG / LibVorbis (OGG sound params editor; xrECore links these PRIVATE,
 # so the editor exe needs its own copy)
+target_link_libraries(ActorEditor PRIVATE "d3d11.lib")
 set(AE_OGG ${CMAKE_BINARY_DIR}/packages/ImeSense.Packages.LibOgg.1.3.5.4/)
 set(AE_VOB ${CMAKE_BINARY_DIR}/packages/ImeSense.Packages.LibVorbis.1.3.7.4/)
 target_link_libraries(ActorEditor PRIVATE ${AE_OGG}native/lib/${CMAKE_VS_PLATFORM_NAME}/Release/libogg.lib)
