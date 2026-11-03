@@ -28,6 +28,12 @@ public:
 	// MU static lighting options (only meaningful when the reference is MU-static)
 	BOOL			m_MUBakeUnique = FALSE;			// bake hemi fit separately for this instance
 	float			m_MUHemiScalePerInstance = 1.f;	// hemi brightness multiplier applied when baked unique
+	enum EMeshLodMode{
+		mlodDefault		= 0,	// follow the reference object "Enable MLOD" flag
+		mlodEnabled		= 1,	// force mesh LOD on for this instance
+		mlodDisabled	= 2,	// force mesh LOD off for this instance
+	};
+	u32				m_MeshLodMode = mlodDefault;	// per-instance mesh-LOD override
 public:
     virtual void 	SetScale				(const Fvector& scale)
     {
@@ -67,6 +73,8 @@ public:
 	IC bool 		IsDynamic     			()	{return (m_pReference?m_pReference->IsDynamic():false); }
 	IC bool 		IsStatic     			()	{return (m_pReference?m_pReference->IsStatic():false); }
 	IC bool 		IsMUStatic     			()	{return (m_pReference?m_pReference->IsMUStatic():false); }
+	// effective per-instance mesh-LOD state: override value or the reference default
+	bool 			IsMeshLODEnabled		();
     int 			GetFaceCount			();
 	int 			GetVertexCount			();
     int 			GetSurfFaceCount		(const char* surf_name);
@@ -78,6 +86,7 @@ public:
 	void 			RenderEdge				(CEditableMesh* m=0, u32 color=0xFFC0C0C0);
 	void 			RenderBones				();
 	void 			RenderSingle			();
+public:
 
     // update methods
 	virtual void 	OnFrame					();
@@ -115,6 +124,8 @@ public:
     void			Blink					(CSurface* surf=0);
 
     virtual bool	Validate				(bool bMsg);
+	// mesh-LOD naming convention check: every "_LOD<n>" mesh must have a base mesh
+	bool			ValidateMeshLodNaming	(bool bMsg);
 
 	void ClearSurface();
 };

@@ -9,6 +9,7 @@
 #define SCENEOBJ_CHUNK_FLAGS			0x0905
 #define SCENEOBJ_CHUNK_SURFACE			0x0906
 #define SCENEOBJ_CHUNK_MU_PARAMS		0x0907
+#define SCENEOBJ_CHUNK_MESH_LOD		0x0908
 bool CSceneObject::LoadLTX(CInifile& ini, LPCSTR sect_name)
 {
     bool bRes = true;
@@ -61,6 +62,18 @@ bool CSceneObject::LoadLTX(CInifile& ini, LPCSTR sect_name)
         {
             m_MUBakeUnique				= ini.r_bool(sect_name, "mu_bake_unique");
             m_MUHemiScalePerInstance	= ini.r_float(sect_name, "mu_hemi_scale_per_instance");
+        }
+        if (ini.line_exist(sect_name, "mu_mesh_lod_mode"))
+        {
+            m_MeshLodMode				= ini.r_u32(sect_name, "mu_mesh_lod_mode");
+            if (m_MeshLodMode > CSceneObject::mlodDisabled)
+                m_MeshLodMode			= CSceneObject::mlodDefault;
+        }
+        else if (ini.line_exist(sect_name, "mu_mesh_lod"))
+        {
+            // legacy key (bool): on behaves as "Enabled", off as "follow reference"
+            if (ini.r_bool(sect_name, "mu_mesh_lod"))
+                m_MeshLodMode			= CSceneObject::mlodEnabled;
         }
         if (m_Flags.test(flUseSurface))
         {
@@ -134,6 +147,7 @@ void CSceneObject::SaveLTX(CInifile& ini, LPCSTR sect_name)
     {
         ini.w_bool				(sect_name, "mu_bake_unique", m_MUBakeUnique);
         ini.w_float				(sect_name, "mu_hemi_scale_per_instance", m_MUHemiScalePerInstance);
+        ini.w_u32				(sect_name, "mu_mesh_lod_mode", m_MeshLodMode);
     }
     if (m_Flags.test(flUseSurface))
     {
@@ -232,6 +246,15 @@ bool CSceneObject::LoadStream(IReader& F)
             m_MUBakeUnique				= F.r_u8();
             m_MUHemiScalePerInstance	= F.r_float();
         }
+        // Own chunk instead of appending inside SCENEOBJ_CHUNK_MU_PARAMS, so
+        // old files/saves stay compatible (absent chunk = follow reference).
+        // Stores the per-instance EMeshLodMode; legacy P0 scenes wrote u8(1),
+        // which maps to mlodEnabled.
+        if (F.find_chunk(SCENEOBJ_CHUNK_MESH_LOD)){
+            m_MeshLodMode				= F.r_u8();
+            if (m_MeshLodMode > CSceneObject::mlodDisabled)
+                m_MeshLodMode			= CSceneObject::mlodDefault;
+        }
         if (m_Flags.test(flUseSurface))
         {
             if (F.find_chunk(SCENEOBJ_CHUNK_SURFACE))
@@ -297,6 +320,13 @@ void CSceneObject::SaveStream(IWriter& F)
         F.w_u8			(m_MUBakeUnique ? 1 : 0);
         F.w_float		(m_MUHemiScalePerInstance);
         F.close_chunk	();
+
+        if (m_MeshLodMode != CSceneObject::mlodDefault)
+        {
+            F.open_chunk	(SCENEOBJ_CHUNK_MESH_LOD);
+            F.w_u8			(u8(m_MeshLodMode));
+            F.close_chunk	();
+        }
     }
 
     if (m_Flags.test(flUseSurface))

@@ -215,6 +215,9 @@ public:
 	// MU static objects: reference-level hemi brightness multiplier (baked once per model,
 	// shared by all instances that are not marked "bake unique")
 	float			m_MUHemiScaleReference = 1.f;
+	// MU static objects: build mesh-LOD levels from "_LOD1..3" named meshes.
+	// Reference-level default; scene instances may override it per placement.
+	BOOL			m_MeshLODEnabled = FALSE;
 	enum{
 		eoDynamic 	 	= (1<<0),			
 		eoProgressive 	= (1<<1),			
@@ -372,6 +375,9 @@ public:
 	void 			RenderSingle			(const Fmatrix& parent);
 	void 			RenderSkeletonSingle	(const Fmatrix& parent);
 	void 			RenderLOD				(const Fmatrix& parent);
+	// mesh-LOD viewport preview: renders only the meshes of the level selected
+	// by camera distance (approximates the runtime SSA switch, see DESIGN.md)
+	void 			RenderMeshLodPreview	(const Fmatrix& parent, int priority, bool strictB2F, SurfaceVec* surfaces);
 
 	// update methods
 	void 			OnFrame					();
@@ -575,6 +581,7 @@ private:
 #define EOBJ_CHUNK_LODS				0x0925
 #define EOBJ_CHUNK_SMOTIONS3		0x0926
 #define EOBJ_CHUNK_MU_PARAMS		0x0927
+#define EOBJ_CHUNK_MESH_LOD		0x0928
 //----------------------------------------------------
 
 

@@ -99,6 +99,11 @@ void CEditableObject::Save(IWriter& F)
     F.w_float		(m_MUHemiScaleReference);
     F.close_chunk	();
 
+    // MU static: mesh-LOD reference default (always written, tiny)
+    F.open_chunk	(EOBJ_CHUNK_MESH_LOD);
+    F.w_u8			(m_MeshLODEnabled ? 1 : 0);
+    F.close_chunk	();
+
     // meshes
     F.open_chunk	(EOBJ_CHUNK_EDITMESHES);
     int count		= 0;
@@ -224,6 +229,9 @@ bool CEditableObject::Load(IReader& F)
 
 		if (F.find_chunk(EOBJ_CHUNK_MU_PARAMS))
 			m_MUHemiScaleReference = F.r_float();
+
+		if (F.find_chunk(EOBJ_CHUNK_MESH_LOD))
+			m_MeshLODEnabled = F.r_u8() ? TRUE : FALSE;
 
 		if (F.find_chunk	(EOBJ_CHUNK_CLASSSCRIPT))
 			F.r_stringZ		(m_ClassScript);

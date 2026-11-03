@@ -38,6 +38,43 @@ bool CEditableObject::Reload()
 	return Load(m_LoadName.c_str());
 }
 
+// Parses the trailing "_LOD<n>" suffix (n = 1..3, case-insensitive).
+// Returns the level index, or 0 when the name carries no suffix.
+static int sGetMeshLodLevel(LPCSTR mesh_name)
+{
+	for (int n = 1; n <= 3; ++n)
+	{
+		string64		suf;
+		xr_sprintf		(suf, sizeof(suf), "_LOD%d", n);
+		const size_t	len		= xr_strlen(suf);
+		const size_t	nlen	= xr_strlen(mesh_name);
+		if (nlen > len && 0 == stricmp(mesh_name + (nlen - len), suf))
+			return n;
+	}
+	return 0;
+}
+
+// True when the object contains at least one "_LOD<n>" mesh of the given level.
+static bool sHasMeshLodLevel(CEditableObject* O, int level)
+{
+	for (EditMeshIt MESH = O->FirstMesh(); MESH != O->LastMesh(); ++MESH)
+		if (sGetMeshLodLevel((*MESH)->Name().c_str()) == level)
+			return true;
+	return false;
+}
+
+// Mesh that represents the given base mesh at the given LOD level:
+// the "_LOD<n>" mesh when present, the base mesh itself otherwise.
+static CEditableMesh* sResolveMeshLod(CEditableObject* O, CEditableMesh* base, int level)
+{
+	if (level <= 0)
+		return base;
+	string128		want;
+	xr_sprintf		(want, sizeof(want), "%s_LOD%d", base->Name().c_str(), level);
+	CEditableMesh*	m	= O->FindMeshByName(want);
+	return m ? m : base;
+}
+
 bool CEditableObject::RayPick(float& dist, const Fvector& S, const Fvector& D, const Fmatrix& inv_parent, SRayPickInfo* pinf)
 {
 	bool picked = false;
@@ -101,6 +138,14 @@ void CEditableObject::Render(const Fmatrix& parent, int priority, bool strictB2F
 	Fbox bb;
 	bb.xform(m_BBox, parent);
 	bb.getsphere(v, r);
+
+	// mesh-LOD viewport preview (MU static only): render the level selected
+	// by camera distance instead of the full-detail mesh set
+	if (m_MeshLODEnabled && IsMUStatic())
+	{
+		RenderMeshLodPreview(parent, priority, strictB2F, surfaces);
+		return;
+	}
 
 	if (EPrefs->object_flags.is(epoDrawLOD) && (m_objectFlags.is(eoUsingLOD) && (CalcSSA(v, r) < ssaLim)))
 	{
@@ -168,6 +213,75 @@ void CEditableObject::Render(const Fmatrix& parent, int priority, bool strictB2F
 			}
 
 			Engine.External.SetSkinningMode();
+		}
+	}
+}
+
+void CEditableObject::RenderMeshLodPreview(const Fmatrix& parent, int priority, bool strictB2F, SurfaceVec* surfaces)
+{
+	// SSA level selection, mirrors the runtime pipeline: ssa = R/d^2
+	// (r__dsgraph_build.cpp CalcSSA), threshold sqr(ps/3)/g_fSCREEN
+	// (R_calculate.cpp) with the runtime defaults ps = 20/12/6 and a nominal
+	// g_fSCREEN for a 1920x1080 viewport at 60 deg FOV. In-game cvar tuning
+	// takes precedence; this preview is an approximation only.
+	static const float	sLevelPs[4]		= {0.f, 20.f, 12.f, 6.f};
+	const float			nominal_screen	= 1920.f * 1080.f * _sqr(90.f / 60.f);
+
+	Fvector				C;
+	float				R;
+	Fbox				bb;
+	bb.xform			(m_BBox, parent);
+	bb.getsphere		(C, R);
+	Fvector				cam		= UI->CurrentView().m_Camera.GetPosition();
+	const float			distSQ	= cam.distance_to_sqr(C) + EPS;
+	const float			ssa		= R / distSQ;
+
+	int level = 0;
+	for (int n = 3; n >= 1; --n)
+	{
+		if (!sHasMeshLodLevel(this, n))
+			continue;	// empty level falls back to the next lower one
+		if (ssa < _sqr(sLevelPs[n] / 3.f) / nominal_screen)
+		{
+			level = n;
+			break;
+		}
+	}
+
+	RCache.set_xform_world	(parent);
+
+	if (psDeviceFlags.is(rsEdgedFaces) && (1 == priority) && (false == strictB2F))
+	{
+		for (EditMeshIt MESH = FirstMesh(); MESH != LastMesh(); ++MESH)
+		{
+			if (sGetMeshLodLevel((*MESH)->Name().c_str()) != 0)
+				continue;	// LOD meshes render only via substitution below
+			CEditableMesh* m = sResolveMeshLod(this, *MESH, level);
+			m->RenderEdge	(parent, 0, 0xFFC0C0C0);
+		}
+	}
+
+	// surface pass, replicated from the full-detail path below but restricted
+	// to the meshes of the selected level (scene-level surface overrides kept)
+	size_t s_id = 0;
+	for (SurfaceIt s_it = m_Surfaces.begin(); s_it != m_Surfaces.end(); ++s_it, ++s_id)
+	{
+		const int		pr		= (*s_it)->_Priority();
+		const bool		strict	= (*s_it)->_StrictB2F();
+		if ((priority != pr) || (strictB2F != strict))
+			continue;
+
+		if (surfaces != nullptr && surfaces->size() > s_id)
+			EDevice->SetShader((*surfaces)[s_id]->_Shader());
+		else
+			EDevice->SetShader((*s_it)->_Shader());
+
+		for (EditMeshIt MESH = FirstMesh(); MESH != LastMesh(); ++MESH)
+		{
+			if (sGetMeshLodLevel((*MESH)->Name().c_str()) != 0)
+				continue;	// LOD meshes render only via substitution below
+			CEditableMesh* m = sResolveMeshLod(this, *MESH, level);
+			m->Render		(parent, *s_it);
 		}
 	}
 }

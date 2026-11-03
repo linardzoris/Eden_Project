@@ -2,6 +2,29 @@
 
 #define BLINK_TIME 300.f
 
+// Parses the trailing "_LOD<n>" suffix (n = 1..3, case-insensitive).
+// Returns the level index, or 0 when the name carries no suffix.
+static int sGetMeshLodLevel(LPCSTR mesh_name)
+{
+	for (int n = 1; n <= 3; ++n)
+	{
+		string64		suf;
+		xr_sprintf		(suf, sizeof(suf), "_LOD%d", n);
+		const size_t	len		= xr_strlen(suf);
+		const size_t	nlen	= xr_strlen(mesh_name);
+		if (nlen > len && 0 == stricmp(mesh_name + (nlen - len), suf))
+			return n;
+	}
+	return 0;
+}
+
+static xr_token mesh_lod_mode_token[] = {
+	{ "Default (Reference)",	CSceneObject::mlodDefault	},
+	{ "Enabled",				CSceneObject::mlodEnabled	},
+	{ "Disabled",				CSceneObject::mlodDisabled	},
+	{ 0,						0							}
+};
+
 
 CSceneObject::CSceneObject(LPVOID data, LPCSTR name):CCustomObject(data,name)
 {
@@ -66,6 +89,18 @@ int CSceneObject::GetSurfFaceCount(const char* surf_name)
 int CSceneObject::GetVertexCount()
 {
 	return m_pReference?m_pReference->GetVertexCount():0;
+}
+
+// Effective per-instance mesh-LOD state: the override value when set,
+// otherwise the reference object "Enable MLOD" default.
+bool CSceneObject::IsMeshLODEnabled()
+{
+	if (m_MeshLodMode == mlodEnabled)
+		return true;
+	if (m_MeshLodMode == mlodDisabled)
+		return false;
+	CEditableObject* O = GetReference();
+	return O ? !!O->m_MeshLODEnabled : false;
 }
 
 void CSceneObject::OnUpdateTransform()
@@ -323,6 +358,7 @@ void CSceneObject::FillProp(LPCSTR pref, PropItemVec& items)
 	{
 		PHelper().CreateBOOL(items, PrepareKey(pref, "MU Lighting\\Hemi Bake Unique"), &m_MUBakeUnique);
 		PHelper().CreateFloat(items, PrepareKey(pref, "MU Lighting\\Hemi Scale (Per Instance)"), &m_MUHemiScalePerInstance, 0.f, 2.f);
+		PHelper().CreateToken32(items, PrepareKey(pref, "MU Lighting\\Mesh LOD"), &m_MeshLodMode, mesh_lod_mode_token);
 	}
 	SurfaceVec& s_lst = m_Surfaces;
 
@@ -446,10 +482,45 @@ void CSceneObject::Blink(CSurface* surf)
 	m_iBlinkTime	= EDevice->dwTimeGlobal+BLINK_TIME+EDevice->dwTimeDelta;
 }
 
+// Mesh-LOD naming convention: every mesh carrying a "_LOD<n>" suffix must
+// have a corresponding base mesh (base meshes must not carry the suffix; a
+// name ending in "_LOD<n>" is always treated as an LOD mesh and covered by
+// this check).
+bool CSceneObject::ValidateMeshLodNaming(bool bMsg)
+{
+	CEditableObject*	O		= GetReference();
+	if (!O)
+		return true;
+
+	bool				result	= true;
+	for (CEditableMesh* M : O->Meshes())
+	{
+		const int		level	= sGetMeshLodLevel(M->Name().c_str());
+		if (!level)
+			continue;
+
+		const size_t	nlen	= M->Name().size();
+		VERIFY			(nlen > 5);	// suffix parser guarantees at least one base char
+		xr_string		base	= xr_string(M->Name().c_str(), nlen - 5);
+
+		if (!O->FindMeshByName(base.c_str()))
+		{
+			if (bMsg)
+				ELog.Msg(mtError, "Object '%s': mesh '%s' has no base mesh '%s'.", O->GetName(), M->Name().c_str(), base.c_str());
+			result = false;
+		}
+	}
+	return result;
+}
+
 bool CSceneObject::Validate(bool bMsg)
 {
 	CEditableObject* E 	= GetReference(); R_ASSERT(E);
-	return E->Validate();
+	if (!E->Validate())
+		return false;
+	if (IsMeshLODEnabled() && IsMUStatic() && !ValidateMeshLodNaming(bMsg))
+		return false;
+	return true;
 }
 
 void CSceneObject::ClearSurface()

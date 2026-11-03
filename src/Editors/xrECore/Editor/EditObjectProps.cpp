@@ -66,6 +66,10 @@ void CEditableObject::FillBasicProps(LPCSTR pref, PropItemVec& items)
 //.    PHelper().CreateChoose	    (items, PrepareKey(pref,"LOD\\Reference"),	&m_LODs, smObject);
     PHelper().CreateChoose	    (items, PrepareKey(pref,"LOD\\Reference"),		&m_LODs, smVisual);
 
+    // MU static: reference-level mesh-LOD default (instances may override it)
+    if (IsMUStatic())
+        PHelper().CreateBOOL	(items, PrepareKey(pref,"MU Lighting\\Enable MLOD"), &m_MeshLODEnabled);
+
     FillSummaryProps			(pref,items);
 }
 //---------------------------------------------------------------------------
