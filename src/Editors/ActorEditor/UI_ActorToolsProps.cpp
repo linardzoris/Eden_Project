@@ -951,6 +951,7 @@ void CActorTools::FillObjectProperties(PropItemVec& items, LPCSTR pref, ListItem
 	{
 		PHelper().CreateFlag32(items, "Object\\Flags\\Using LOD", &m_pEditObject->m_objectFlags, CEditableObject::eoUsingLOD)->OnChangeEvent.bind(this, &CActorTools::OnUsingLodFlagChange);
 		PHelper().CreateFloat(items, "Object\\Flags\\Hemi Scale (Reference)", &m_pEditObject->m_MUHemiScaleReference, 0.f, 2.f);
+		PHelper().CreateBOOL(items, "Object\\Flags\\Enable MLOD", &m_pEditObject->m_MeshLODEnabled);
 	}
 
 	V = PHelper().CreateVector(items, "Object\\Transform\\Position", &m_pEditObject->a_vPosition, -100000, 100000, 0.01, 2);
