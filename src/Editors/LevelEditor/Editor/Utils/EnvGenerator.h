@@ -80,5 +80,7 @@ private:
 	bool		PlaceObject(CCustomObject* target, const Fvector& pos, const Fvector& normal, const SChannel& ch, SNameIndex& idx, SPBItem* pb);
 	void		ScatterUniform(CCustomObject* target, const SChannel& ch, int count, SNameIndex& idx, SPBItem* pb, int& placed);
 	void		ScatterHeatmap(CCustomObject* target, const SChannel& ch, int ch_idx, int count, SNameIndex& idx, SPBItem* pb, int& placed);
-	bool		SampleSurfacePoint(CCustomObject* target, const Fbox& bbox, Fvector& pos, Fvector& normal);
+	// u,v in [0,1] select the XZ sample position (image top-left = bbox x2,z2,
+	// v flipped so image top maps to max Z, matching viewport orientation)
+	bool		SampleSurfacePoint(CCustomObject* target, const Fbox& bbox, float u, float v, Fvector& pos, Fvector& normal);
 };

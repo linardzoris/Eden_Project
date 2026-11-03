@@ -98,7 +98,7 @@ float EEnvGenerator::AverageWeight(int ch) const
 		case CH_A: sum += (p >> 24) & 0xFF; break;
 		}
 	}
-	return (float)(sum / 255ULL) / (float)Heatmap.size();
+	return (float)((double)sum / (255.0 * (double)Heatmap.size()));
 }
 
 //---------------------------------------------------------------------------
@@ -183,10 +183,11 @@ void EEnvGenerator::SummarizeTargets(const xr_vector<CCustomObject*>& targets, b
 	estimate = iFloor(counted + 0.5f);
 }
 
-bool EEnvGenerator::SampleSurfacePoint(CCustomObject* target, const Fbox& bbox, Fvector& pos, Fvector& normal)
+bool EEnvGenerator::SampleSurfacePoint(CCustomObject* target, const Fbox& bbox, float u, float v, Fvector& pos, Fvector& normal)
 {
-	float rnd_x = ::Random.randF() * (bbox.x2 - bbox.x1) + bbox.x1;
-	float rnd_z = ::Random.randF() * (bbox.z2 - bbox.z1) + bbox.z1;
+	float rnd_x = u * (bbox.x2 - bbox.x1) + bbox.x1;
+	// image row 0 is the top; world Z grows upward from z1, so flip v
+	float rnd_z = bbox.z2 - v * (bbox.z2 - bbox.z1);
 
 	Fvector start;
 	start.set(rnd_x, bbox.y2 + 1.f, rnd_z);
@@ -266,7 +267,7 @@ void EEnvGenerator::ScatterUniform(CCustomObject* target, const SChannel& ch, in
 	for (int i = 0; i < count;)
 	{
 		Fvector pos, normal;
-		if (!SampleSurfacePoint(target, bbox, pos, normal))
+		if (!SampleSurfacePoint(target, bbox, ::Random.randF(), ::Random.randF(), pos, normal))
 		{
 			if (++misses > 512)
 			{
@@ -291,12 +292,13 @@ void EEnvGenerator::ScatterHeatmap(CCustomObject* target, const SChannel& ch, in
 	if (!target->GetBox(bbox))
 		return;
 
-	float sx = bbox.x2 - bbox.x1;
-	float sz = bbox.z2 - bbox.z1;
+	float avg = AverageWeight(ch_idx);
+	if (avg <= 0.f)
+		return;
 
-	// expected count already includes the channel's average weight, so the
-	// rejection loop keeps the distribution correct without runaway retries
-	int attempts_left = count * 12 + 256;
+	// rejection acceptance rate equals the channel's average weight, so budget
+	// attempts relative to it (expected attempts per placement = 1/avg)
+	int attempts_left = (int)(2.f * (float)count / avg) + 256;
 	int misses = 0;
 
 	for (int i = 0; i < count && attempts_left > 0;)
@@ -308,8 +310,10 @@ void EEnvGenerator::ScatterHeatmap(CCustomObject* target, const SChannel& ch, in
 		if (::Random.randF() > SampleWeight(ch_idx, u, v))
 			continue;
 
+		// the accepted (u,v) drives the actual surface position so objects
+		// land where the heatmap is bright, never in black regions
 		Fvector pos, normal;
-		if (!SampleSurfacePoint(target, bbox, pos, normal))
+		if (!SampleSurfacePoint(target, bbox, u, v, pos, normal))
 		{
 			if (++misses > 512)
 			{

@@ -205,7 +205,9 @@ void UIEnvGeneratorForm::DrawChannel(int idx, const char* label, const ImVec4& c
 		}
 
 		ImGui::DragFloat(Loc("Density"), &C.Density, 0.001f, 0.f, Gen->MaxDensity, "%.4f");
-		ImGui::TextDisabled(Loc("%.1f objects estimated"), TotalArea * Gen->ClampDensity(C));
+		// keep in sync with Generate(): heatmap channels scale by average weight
+		float est_w = (bTerrainTarget && Gen->HeatmapReady()) ? Gen->AverageWeight(idx) : 1.f;
+		ImGui::TextDisabled(Loc("%.1f objects estimated"), TotalArea * Gen->ClampDensity(C) * est_w);
 
 		if (!active)
 			ImGui::TextDisabled(Loc("inactive (needs terrain + heatmap)"));
