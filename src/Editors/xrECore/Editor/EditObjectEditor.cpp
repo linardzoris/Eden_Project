@@ -219,13 +219,14 @@ void CEditableObject::Render(const Fmatrix& parent, int priority, bool strictB2F
 
 void CEditableObject::RenderMeshLodPreview(const Fmatrix& parent, int priority, bool strictB2F, SurfaceVec* surfaces)
 {
-	// SSA level selection, mirrors the runtime pipeline: ssa = R/d^2
-	// (r__dsgraph_build.cpp CalcSSA), threshold sqr(ps/3)/g_fSCREEN
-	// (R_calculate.cpp) with the runtime defaults ps = 20/12/6 and a nominal
-	// g_fSCREEN for a 1920x1080 viewport at 60 deg FOV. In-game cvar tuning
-	// takes precedence; this preview is an approximation only.
-	static const float	sLevelPs[4]		= {0.f, 20.f, 12.f, 6.f};
-	const float			nominal_screen	= 1920.f * 1080.f * _sqr(90.f / 60.f);
+	// Level selection for the preview. Mirrors the runtime SSA relation
+	// ssa = R/d^2 (r__dsgraph_build.cpp CalcSSA), but the switch points are
+	// expressed as camera-distance multiples of the bounding-sphere radius so
+	// they stay reachable in an editor viewport (calibrated for LOD1 ~ 100 m
+	// on a R~=19 m object; the planned runtime defaults ps 280/140/70 give
+	// the same scale). In-game cvar tuning takes precedence; this preview is
+	// an approximation only.
+	static const float	sLevelDistMul[4]	= {0.f, 5.f, 10.f, 20.f};
 
 	Fvector				C;
 	float				R;
@@ -233,15 +234,14 @@ void CEditableObject::RenderMeshLodPreview(const Fmatrix& parent, int priority, 
 	bb.xform			(m_BBox, parent);
 	bb.getsphere		(C, R);
 	Fvector				cam		= UI->CurrentView().m_Camera.GetPosition();
-	const float			distSQ	= cam.distance_to_sqr(C) + EPS;
-	const float			ssa		= R / distSQ;
+	const float			dist	= cam.distance_to(C);
 
 	int level = 0;
 	for (int n = 3; n >= 1; --n)
 	{
 		if (!sHasMeshLodLevel(this, n))
 			continue;	// empty level falls back to the next lower one
-		if (ssa < _sqr(sLevelPs[n] / 3.f) / nominal_screen)
+		if (dist > sLevelDistMul[n] * R)
 		{
 			level = n;
 			break;
