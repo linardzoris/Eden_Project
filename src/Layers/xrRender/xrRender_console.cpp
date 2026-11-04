@@ -119,6 +119,11 @@ float		ps_r1_fog_luminance			= 1.1f	;					// r1-only
 int			ps_r1_use_terrain_mask		= 0;
 // R2
 float		ps_r2_ssaLOD_A				= 48.f	;
+// mesh-LOD group thresholds: same units as r2_ssa_lod_a/b; a level engages
+// when ssa < threshold. Calibrated for LOD1 ~ 100 m on a R~=19 m object.
+float		ps_r__lodgroup_ssa1			= 280.f	;
+float		ps_r__lodgroup_ssa2			= 140.f	;
+float		ps_r__lodgroup_ssa3			= 70.f	;
 float		ps_r2_ssaLOD_B				= 32.f	;
 
 Fvector3	ps_r_taa_jitter = { 0,0,0 };
@@ -201,6 +206,11 @@ float		ps_r2_dof_sky				= 30;				//	distance to sky
 float		ps_r2_dof_kernel_size		= 5.0f;						//	7.0f
 
 float		ps_r2_def_aref_quality = 115.0f;
+
+// Foliage mip fade (d3d11 tree path): leaves dissolve between start and end
+// mip levels; end <= start disables the effect.
+float		ps_r2_tree_mip_fade_start = 1.0f;
+float		ps_r2_tree_mip_fade_end = 5.0f;
 
 float		ps_r3_dyn_wet_surf_near		= 10.f;				// 10.0f
 float		ps_r3_dyn_wet_surf_far		= 30.f;				// 30.0f
@@ -733,6 +743,10 @@ void		xrRender_initconsole	()
 	// R2
 	CMD4(CCC_Float,		"r2_ssa_lod_a",			&ps_r2_ssaLOD_A,			16,		96		);
 	CMD4(CCC_Float,		"r2_ssa_lod_b",			&ps_r2_ssaLOD_B,			32,		64		);
+	// mesh-LOD group level thresholds; 0 disables the level
+	CMD4(CCC_Float,		"r__lodgroup_ssa1",		&ps_r__lodgroup_ssa1,		0,		1024	);
+	CMD4(CCC_Float,		"r__lodgroup_ssa2",		&ps_r__lodgroup_ssa2,		0,		1024	);
+	CMD4(CCC_Float,		"r__lodgroup_ssa3",		&ps_r__lodgroup_ssa3,		0,		1024	);
 
 	// R2-specific
 	CMD3(CCC_Mask,		"r2_tonemap",			&ps_r2_ls_flags,			R2FLAG_TONEMAP	);
@@ -842,6 +856,8 @@ void		xrRender_initconsole	()
 	CMD3(CCC_Mask, "r1_use_terrain_mask", &ps_r1_flags, R1FLAG_TERRAIN_MASK);
 
 	CMD4(CCC_Float, "r2_aref_quality", &ps_r2_def_aref_quality, 70.0f, 200.0f);
+	CMD4(CCC_Float, "r2_tree_mip_fade_start", &ps_r2_tree_mip_fade_start, 0.0f, 14.0f);
+	CMD4(CCC_Float, "r2_tree_mip_fade_end", &ps_r2_tree_mip_fade_end, 0.0f, 14.0f);
 	CMD3(CCC_Mask, "r2_use_bump", &ps_r__common_flags, R2FLAG_USE_BUMP);
 	CMD3(CCC_Mask, "r2_vignette", &ps_r2_ls_flags_ext, R2FLAG_SPP_VIGNETTE);
 	CMD3(CCC_Mask, "r2_aberration", &ps_r2_ls_flags_ext, R2FLAG_SPP_ABERRATION);

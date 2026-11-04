@@ -363,6 +363,23 @@ struct	OGF_LOD		: public OGF_Node
 	virtual void		Save		(IWriter &fs);
 };
 
+// Mesh-LOD level group (MT_LODGROUP). Children are stored flat in
+// OGF_CHILDREN_L, level-ordered (level 0 = full detail). level_child_count[n]
+// entries of the flat list belong to level n; empty levels are legal, the
+// runtime falls back to the nearest lower non-empty level.
+struct OGF_LodGroup : public OGF_Node
+{
+	u32					level_child_count	[4];
+	float				ssa_threshold		[4];	// 0 = runtime cvar decides
+
+	OGF_LodGroup(int _L, u16 _Sector) : OGF_Node(_L,_Sector)
+	{
+		ZeroMemory	(level_child_count, sizeof(level_child_count));
+		ZeroMemory	(ssa_threshold, sizeof(ssa_threshold));
+	}
+	virtual void		Save		(IWriter &fs);
+};
+
 void set_status(char* N, int id, int f, int v);
 
 extern OGF_Base*				g_TREE_ROOT		;

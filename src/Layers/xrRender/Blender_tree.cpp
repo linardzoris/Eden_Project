@@ -181,6 +181,9 @@ void	CBlender_Tree::Compile	(CBlender_Compile& C)
 	if (!oNotAnTree.value) {
 		RImplementation.addShaderOption("USE_TREEWAVE", "1");
 	}
+	// Foliage mip fade: dissolve alpha-tested leaves at high mip levels to
+	// cut distant canopy overdraw (r2_tree_mip_fade_start/end cvars).
+	RImplementation.addShaderOption("USE_MIP_FADE", "1");
 
 	switch (C.iElement)	{
 		case SE_R2_NORMAL_HQ:

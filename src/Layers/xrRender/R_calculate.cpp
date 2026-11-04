@@ -9,6 +9,8 @@ extern float		r_ssaDONTSORT	;
 extern float		r_ssaLOD_A		;
 extern float		r_ssaLOD_B		;
 extern float		r_ssaHZBvsTEX	;
+extern float		r_lodgroup_ssa[4];
+extern float		ps_r__lodgroup_ssa1, ps_r__lodgroup_ssa2, ps_r__lodgroup_ssa3;
 extern float		r_ssaGLOD_start,	r_ssaGLOD_end;
 
 void CRender::Calculate		()
@@ -21,6 +23,10 @@ void CRender::Calculate		()
 	r_ssaDONTSORT					=	_sqr(ps_r__ssaDONTSORT/3)	/g_fSCREEN;
 	r_ssaLOD_A						=	_sqr(ps_r2_ssaLOD_A/3)		/g_fSCREEN;
 	r_ssaLOD_B						=	_sqr(ps_r2_ssaLOD_B/3)		/g_fSCREEN;
+	// mesh-LOD group thresholds, same screen-size normalization
+	r_lodgroup_ssa[1]				=	_sqr(ps_r__lodgroup_ssa1/3)	/g_fSCREEN;
+	r_lodgroup_ssa[2]				=	_sqr(ps_r__lodgroup_ssa2/3)	/g_fSCREEN;
+	r_lodgroup_ssa[3]				=	_sqr(ps_r__lodgroup_ssa3/3)	/g_fSCREEN;
 	r_ssaGLOD_start					=	_sqr(ps_r__GLOD_ssa_start/3)/g_fSCREEN;
 	r_ssaGLOD_end					=	_sqr(ps_r__GLOD_ssa_end/3)	/g_fSCREEN;
 	r_ssaHZBvsTEX					=	_sqr(ps_r__ssaHZBvsTEX/3)	/g_fSCREEN;

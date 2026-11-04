@@ -60,6 +60,9 @@ cbuffer static_globals
     uniform float4 pos_decompression_params_hud;
     uniform float4 depth_unpack;
     uniform float def_aref;
+    // Foliage mip fade: x=start mip (fade begins), y=end mip (fully gone).
+    // end <= start disables the effect.
+    uniform float4 tree_mip_fade;
     uniform float4 parallax;
 
     uniform float4 m_taa_jitter;

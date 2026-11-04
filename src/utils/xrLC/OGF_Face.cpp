@@ -543,3 +543,37 @@ void OGF_LOD::Save		(IWriter &fs)
 	fs.w				(lod_faces,sizeof(lod_faces));
 	fs.close_chunk		();
 }
+
+void OGF_LodGroup::Save	(IWriter &fs)
+{
+	OGF_Base::Save		(fs);
+
+	// Header
+	fs.open_chunk		(OGF_HEADER);
+	ogf_header H;
+	H.format_version	= xrOGF_FormatVersion;
+	H.type				= MT_LODGROUP;
+	H.shader_id			= 0;
+	H.bb.min			= bbox.min;
+	H.bb.max			= bbox.max;
+	H.bs.c				= C;
+	H.bs.r				= R;
+	fs.w				(&H,sizeof(H));
+	fs.close_chunk		();
+
+	// Children: flat, level-ordered
+	fs.open_chunk		(OGF_CHILDREN_L);
+	fs.w_u32			((u32)chields.size());
+	fs.w				(&*chields.begin(),(u32)chields.size()*sizeof(u32));
+	fs.close_chunk		();
+
+	// Level layout + SSA thresholds (0 = runtime cvar)
+	fs.open_chunk		(OGF_LODGROUP_DEF);
+	ogf_lodgroup_def	D;
+	D.version			= 0;
+	D.level_count		= 4;
+	memcpy				(D.child_count, level_child_count, sizeof(D.child_count));
+	memcpy				(D.ssa_threshold, ssa_threshold, sizeof(D.ssa_threshold));
+	fs.w				(&D,sizeof(D));
+	fs.close_chunk		();
+}

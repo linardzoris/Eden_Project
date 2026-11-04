@@ -77,6 +77,9 @@ extern ECORE_API Flags32		ps_r__common_flags;
 // R2
 extern ECORE_API	float		ps_r2_ssaLOD_A;
 extern ECORE_API	float		ps_r2_ssaLOD_B;
+extern ECORE_API	float		ps_r__lodgroup_ssa1;	// mesh-LOD level 1 threshold
+extern ECORE_API	float		ps_r__lodgroup_ssa2;	// mesh-LOD level 2 threshold
+extern ECORE_API	float		ps_r__lodgroup_ssa3;	// mesh-LOD level 3 threshold
 extern ECORE_API	BOOL		ps_r2_particle_dt;
 // R2-specific
 extern ECORE_API Flags32		ps_r2_ls_flags;				// r2-only
@@ -131,6 +134,8 @@ extern ECORE_API Fvector3		ps_r2_dof;
 extern ECORE_API float			ps_r2_dof_sky;				//	distance to sky
 extern ECORE_API float			ps_r2_dof_kernel_size;		//	7.0f
 extern ECORE_API float			ps_r2_def_aref_quality;
+extern ECORE_API float			ps_r2_tree_mip_fade_start;	// mip level where foliage fade begins
+extern ECORE_API float			ps_r2_tree_mip_fade_end;	// mip level where foliage is fully faded
 
 extern ECORE_API float			ps_r3_dyn_wet_surf_near;	// 10.0f
 extern ECORE_API float			ps_r3_dyn_wet_surf_far;		// 30.0f

@@ -467,6 +467,14 @@ static class cl_def_aref : public R_constant_setup
 	}
 } binder_def_aref;
 
+// Foliage mip fade (x = start mip, y = end mip); end <= start disables it.
+static class cl_tree_mip_fade : public R_constant_setup
+{
+	virtual void setup(R_constant* C) override {
+		RCache.set_c(C, ps_r2_tree_mip_fade_start, ps_r2_tree_mip_fade_end, 0.0f, 0.0f);
+	}
+} binder_tree_mip_fade;
+
 static class cl_rain_params : public R_constant_setup {
 	u32 marker;
 	Fvector4 result;
@@ -661,6 +669,7 @@ void	CBlender_Compile::SetMapping()
 
 	r_Constant("screen_res", &binder_screen_res);
 	r_Constant("def_aref", &binder_def_aref);
+	r_Constant("tree_mip_fade", &binder_tree_mip_fade);
 
 	r_Constant("scaled_screen_res", &binder_scaled_screen_res);
 	r_Constant("target_screen_res", &binder_target_screen_res);

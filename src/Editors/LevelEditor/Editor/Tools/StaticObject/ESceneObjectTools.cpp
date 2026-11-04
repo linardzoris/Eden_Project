@@ -54,7 +54,9 @@ bool ESceneObjectTool::Validate(bool full_test)
             }
 
             // validate lods
-            if (Scene->IsValidateLODs && full_test && A->IsMUStatic())
+            // mesh-LOD objects are exempt: they are mutually exclusive with
+            // billboard LOD, so no FLOD/BLOD texture is ever exported
+            if (Scene->IsValidateLODs && full_test && A->IsMUStatic() && !A->IsMeshLODEnabled())
             {
                 CEditableObject* E = A->GetReference(); VERIFY(E);
                 // HQ billboards live under _eden\_shared\lods\blod, FLODs under _eden\_shared\lods\flod -

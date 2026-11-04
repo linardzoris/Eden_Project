@@ -111,7 +111,11 @@ void CBuild::BuildRapid		(BOOL bSaveForOtherCompilers)
 	Status					("Models...");
 
 	for (u32 ref=0; ref<mu_refs().size(); ref++)
+	{
+		if (mu_refs()[ref]->mesh_lod_level)			// mesh-LOD levels never contribute rcast geometry
+			continue;
 		mu_refs()[ref]->export_cform_rcast	(CL);
+	}
 
 	// "Building tree..
 	Status					("Building search tree...");

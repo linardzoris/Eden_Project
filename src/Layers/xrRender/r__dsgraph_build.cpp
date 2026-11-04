@@ -8,6 +8,7 @@
 #include "FLOD.h"
 #include "ParticleGroup.h"
 #include "FTreeVisual.h"
+#include "FLODGroupVisual.h"
 
 using	namespace R_dsgraph;
 
@@ -19,6 +20,7 @@ float		r_ssaDONTSORT;
 float		r_ssaLOD_A,			r_ssaLOD_B;
 float		r_ssaGLOD_start,	r_ssaGLOD_end;
 float		r_ssaHZBvsTEX;
+float		r_lodgroup_ssa[4];	// mesh-LOD group per-level thresholds (index 0 unused)
 
 ICF	float	CalcSSA				(float& distSQ, Fvector& C, dxRender_Visual* V)
 {
@@ -507,6 +509,21 @@ void CRender::add_leafs_Static(dxRender_Visual *pVisual)
 			}
 		}
 		return;
+	case MT_LODGROUP:
+		{
+			// Render exactly one mesh-LOD level, selected by screen size.
+			// Shadow phases (PHASE_SMAP) reach the same code path, so distant
+			// shadow casters automatically use the lower LOD meshes.
+			FLODGroupVisual*	pV		= (FLODGroupVisual*)pVisual;
+			float				D;
+			float				ssa		= CalcSSA(D, pV->vis.sphere.P, pV);
+			const u32			level	= pV->SelectLevel(ssa);
+			const u32			start	= pV->level_child_start[level];
+			const u32			count	= pV->level_child_count[level];
+			for (u32 i = 0; i < count; ++i)
+				add_leafs_Static(pV->children[start + i]);
+		}
+		return;
 	case MT_TREE_PM:
 	case MT_TREE_ST:
 		{
@@ -727,6 +744,23 @@ void CRender::add_Static(dxRender_Visual *pVisual, u32 planes)
 				I = pV->children.begin	();
 				E = pV->children.end	();
 				for (; I!=E; I++)	add_leafs_Static	(*I);
+			}
+		}
+		break;
+	case MT_LODGROUP:
+		{
+			// Same level selection as add_leafs_Static, but with frustum tests
+			// preserved for partially visible groups
+			FLODGroupVisual*	pV		= (FLODGroupVisual*)pVisual;
+			float				D;
+			float				ssa		= CalcSSA(D, pV->vis.sphere.P, pV);
+			const u32			level	= pV->SelectLevel(ssa);
+			const u32			start	= pV->level_child_start[level];
+			const u32			count	= pV->level_child_count[level];
+			for (u32 i = 0; i < count; ++i)
+			{
+				if (fcvPartial == VIS)	add_Static		(pV->children[start + i], planes);
+				else					add_leafs_Static	(pV->children[start + i]);
 			}
 		}
 		break;

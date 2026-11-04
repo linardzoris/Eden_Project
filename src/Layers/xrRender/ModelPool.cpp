@@ -8,6 +8,7 @@
 #ifndef _EDITOR
 #	include "FLOD.h"
 #	include "FTreeVisual.h"
+#	include "FLODGroupVisual.h"
 #endif
 
 #include "FVisual.h"
@@ -54,6 +55,9 @@ dxRender_Visual* CModelPool::Instance_Create(u32 type)
 #ifndef _EDITOR
 	case MT_LOD:
 		V	= new FLOD					();
+		break;
+	case MT_LODGROUP:
+		V	= new FLODGroupVisual		();
 		break;
 	case MT_TREE_ST:
 		V	= new FTreeVisual_ST		();

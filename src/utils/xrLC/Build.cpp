@@ -22,7 +22,7 @@
 
 void calc_ogf(xrMU_Model& mu_model);
 void export_geometry(xrMU_Model& mu_model);
-void export_ogf(xrMU_Reference& mu_reference);
+void export_ogf(xrMU_Reference& mu_reference, const xr_vector<u32>* lod_ref_ids);
 
 extern u16 RegisterShader(LPCSTR T);
 
@@ -355,13 +355,25 @@ void CBuild::RunAfterLight(IWriter* fs)
 		}
 
 		Status("MU : References...");
+		// Collect mesh-LOD references grouped by their base reference; level
+		// references are exported inside the base OGF_LodGroup node
+		xr_vector<xr_vector<u32>>	lod_groups_by_base;
+		lod_groups_by_base.resize	(mu_refs().size());
+		for (u32 m = 0; m < mu_refs().size(); m++)
+			if (mu_refs()[m]->mesh_lod_level)
+				lod_groups_by_base[mu_refs()[m]->base_ref_index].push_back(m);
+
 		for (u32 m = 0; m < mu_refs().size(); m++)
 		{
 			Progress(float(m) / float(mu_refs().size()));
-			LC_AUDIT_LOG("  MU_ref[%u]: model='%s' sector=%u", m,
+			LC_AUDIT_LOG("  MU_ref[%u]: model='%s' sector=%u lod_level=%u", m,
 				mu_refs()[m]->model ? mu_refs()[m]->model->m_name.c_str() : "(null)",
-				mu_refs()[m]->sector);
-			export_ogf(*mu_refs()[m]);
+				mu_refs()[m]->sector, mu_refs()[m]->mesh_lod_level);
+			// level references are consumed by their base group export
+			if (mu_refs()[m]->mesh_lod_level)
+				continue;
+			export_ogf(*mu_refs()[m],
+				lod_groups_by_base[m].empty() ? nullptr : &lod_groups_by_base[m]);
 		}
 	}
 	LC_AUDIT_LOG("MU OGF export done");

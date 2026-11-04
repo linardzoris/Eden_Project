@@ -130,6 +130,8 @@ void CBuild::BuildCForm	()
 	for (u32 ref = 0; ref < mu_refs().size(); ref++)
 	{
 		Progress( float(ref)/float(mu_refs().size()) );
+		if (mu_refs()[ref]->mesh_lod_level)			// mesh-LOD levels never contribute collision
+			continue;
 		mu_refs()[ref]->export_cform_game(CL);
 	}
 

@@ -17,10 +17,25 @@ void main(p_bumped_new I, out IXrayGbufferPack O)
     SloadNew(I, M);
 
 #ifdef USE_AREF
+    float aref_alpha = M.Color.w;
+    #ifdef USE_MIP_FADE
+        // Mip fade: dissolve alpha-tested foliage as the base map's mip level
+        // rises (small/distant canopy cards). More texels drop below the ref
+        // value, cutting distant overdraw; x=start mip (fade begins), y=end
+        // mip (fully gone). end <= start disables the effect.
+        float2 bsz;
+        s_base.GetDimensions(bsz.x, bsz.y);
+        float2 dxc = ddx(I.tcdh.xy) * bsz;
+        float2 dyc = ddy(I.tcdh.xy) * bsz;
+        float mip = 0.5f * log2(max(dot(dxc, dxc), dot(dyc, dyc)));
+        aref_alpha *= (tree_mip_fade.y > tree_mip_fade.x)
+            ? saturate((tree_mip_fade.y - mip) / (tree_mip_fade.y - tree_mip_fade.x))
+            : 1.0f;
+    #endif
     #if defined(USE_HASHED_AREF) && !defined(DETAIL_SHADOW_PASS)
-		    clip(M.Color.w - hashed_alpha_test(M.Point));
+		    clip(aref_alpha - hashed_alpha_test(M.Point));
     #else
-		    clip(M.Color.w - def_aref);
+		    clip(aref_alpha - def_aref);
     #endif
     #ifdef USE_DXT1_HACK
 	      M.Color.xyz *= rcp(max(0.0001f, M.Color.w));

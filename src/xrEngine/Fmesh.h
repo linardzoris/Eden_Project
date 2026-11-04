@@ -21,6 +21,8 @@ enum MT {
 	MT_TREE_PM				=11,
 
 	MT_3DFLUIDVOLUME		=12,
+
+	MT_LODGROUP				=13,	// mesh-LOD group: flat OGF_CHILDREN_L, level layout in OGF_LODGROUP_DEF
 };
 
 enum OGF_Chuncks {
@@ -50,8 +52,17 @@ enum OGF_Chuncks {
 	OGF_S_MOTION_REFS2		= 24,	// * changes in format
 	OGF_COLLISION_VERTICES	= 25,
 	OGF_COLLISION_INDICES	= 26,
-    OGF_forcedword			= 0xFFFFFFFF         
-};							
+	OGF_LODGROUP_DEF		= 27,	// + mesh-LOD group level layout (ogf_lodgroup_def)
+    OGF_forcedword			= 0xFFFFFFFF
+};
+
+// OGF_LODGROUP_DEF
+struct ogf_lodgroup_def {
+    u32     version;              // = 0
+    u32     level_count;          // = 4 (levels 0..3)
+    u32     child_count[4];       // children per level, flat OGF_CHILDREN_L order
+    float   ssa_threshold[4];     // switch-down threshold per level; 0 = use engine cvar
+};
 
 enum OGF_SkeletonVertType	{
 	OGF_VERTEXFORMAT_FVF_1L	= 1*0x12071980,

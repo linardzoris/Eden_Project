@@ -24,6 +24,15 @@ void xrMU_Reference::Load( IReader& F, xr_vector<xrMU_Model*>& mu_models )
 	if (R.flags.is(MUREF_FLAG_HEMI_SCALE_VALID))
 		memcpy(&hemi_scale_per_instance, &R.reserved[0], sizeof(float));
 
+	// mesh-LOD grouping transported through reserved[1]/reserved[2]
+	mesh_lod_level			= 0;
+	base_ref_index			= u32(-1);
+	if (R.flags.is(MUREF_FLAG_MESH_LOD_VALID))
+	{
+		mesh_lod_level		= u8(R.reserved[1]);
+		base_ref_index		= R.reserved[2];
+	}
+
 	c_scale.rgb.set		(1,1,1);
 	c_scale.hemi		= 1;
 	c_scale.sun			= 1;
