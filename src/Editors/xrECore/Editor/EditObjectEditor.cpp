@@ -129,6 +129,22 @@ bool CEditableObject::BoxPick(CCustomObject* obj, const Fbox& box, const Fmatrix
 extern float 	ssaLIMIT;
 extern float	g_fSCREEN;
 static const float ssaLim = 64.f*64.f/(640*480);
+
+// Camera-distance multiples of the bounding-sphere radius for the mesh-LOD
+// preview switch points (LOD1 ~ 100 m calibration on a R~=19 m object);
+// per-object switch distances (m_MeshLodDist) override these.
+static const float	sLevelDistMul[4]	= {0.f, 5.f, 10.f, 20.f};
+
+// Mesh-LOD capture mode (see SetMeshLodCaptureMode in EditObject.h): LOD
+// texture generation renders the object for capture, and the preview must
+// show the full-detail level regardless of the editor camera distance.
+static BOOL	s_mesh_lod_capture = FALSE;
+
+void SetMeshLodCaptureMode(BOOL b)
+{
+	s_mesh_lod_capture	= b;
+}
+
 void CEditableObject::Render(const Fmatrix& parent, int priority, bool strictB2F, SurfaceVec* surfaces)
 {
 	if (!(m_LoadState.is(LS_RBUFFERS)))
@@ -143,6 +159,26 @@ void CEditableObject::Render(const Fmatrix& parent, int priority, bool strictB2F
 	// by camera distance instead of the full-detail mesh set
 	if (m_MeshLODEnabled && IsMUStatic())
 	{
+		// Hybrid objects: beyond the billboard switch distance the runtime
+		// shows the billboard LOD (group level 3) - mirror that here instead
+		// of staying on the last mesh level. Suppressed during capture.
+		if (!s_mesh_lod_capture && m_objectFlags.is(eoUsingLOD) && EPrefs->object_flags.is(epoDrawLOD))
+		{
+			Fvector		bC;
+			float		bR;
+			Fbox		bbB;
+			bbB.xform	(m_BBox, parent);
+			bbB.getsphere(bC, bR);
+			const float	bdist	= UI->CurrentView().m_Camera.GetPosition().distance_to(bC);
+			const float	bdist_sw = m_MeshLodDist[2] > 0.f ? m_MeshLodDist[2] : sLevelDistMul[3] * bR;
+			if (bdist > bdist_sw)
+			{
+				// billboard renders on the single-pass transparent pass only
+				if ((1 == priority) && (true == strictB2F))
+					RenderLOD(parent);
+				return;
+			}
+		}
 		RenderMeshLodPreview(parent, priority, strictB2F, surfaces);
 		return;
 	}
@@ -217,16 +253,6 @@ void CEditableObject::Render(const Fmatrix& parent, int priority, bool strictB2F
 	}
 }
 
-// Mesh-LOD capture mode (see SetMeshLodCaptureMode in EditObject.h): LOD
-// texture generation renders the object for capture, and the preview must
-// show the full-detail level regardless of the editor camera distance.
-static BOOL	s_mesh_lod_capture = FALSE;
-
-void SetMeshLodCaptureMode(BOOL b)
-{
-	s_mesh_lod_capture	= b;
-}
-
 void CEditableObject::RenderMeshLodPreview(const Fmatrix& parent, int priority, bool strictB2F, SurfaceVec* surfaces)
 {
 	// Level selection for the preview. Mirrors the runtime SSA relation
@@ -236,8 +262,6 @@ void CEditableObject::RenderMeshLodPreview(const Fmatrix& parent, int priority, 
 	// on a R~=19 m object; the planned runtime defaults ps 280/140/70 give
 	// the same scale). In-game cvar tuning takes precedence; this preview is
 	// an approximation only.
-	static const float	sLevelDistMul[4]	= {0.f, 5.f, 10.f, 20.f};
-
 	Fvector				C;
 	float				R;
 	Fbox				bb;
