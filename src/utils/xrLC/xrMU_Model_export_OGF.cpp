@@ -51,62 +51,15 @@ static void export_ref_subdivs( xrMU_Reference& mu_reference, xr_vector<u32>& ge
 	}
 }
 
-void export_ogf( xrMU_Reference& mu_reference, const xr_vector<u32>* lod_ref_ids )
+// Create the billboard-LOD node (OGF_LOD) for the reference's model and
+// register it in g_TREE_ROOT. Returns the node's g_TREE_ROOT index, or
+// u32(-1) when the model has no billboard LOD (b_mu_model.lod_id).
+static u32 export_lod_node( xrMU_Reference& mu_reference, const xr_vector<u32>& generated_ids )
 {
-	xr_vector<u32>		generated_ids;
 	xrMU_Model *model = mu_reference.model;
-	export_ref_subdivs( mu_reference, generated_ids );
-
-	// Unbaked models export nothing at all (existing rule); the LOD group
-	// must follow the same rule, so this check stays ahead of the group branch.
-	if (model->color.size() == 0)
-		return;
-
-	// Mesh-LOD group: wrap full-detail + level references into one OGF_LodGroup
-	// node consumed by MT_LODGROUP at runtime
-	if (lod_ref_ids && lod_ref_ids->size())
-	{
-		OGF_LodGroup*		pGroup	= new OGF_LodGroup(1, mu_reference.sector);
-
-		// level 0: full-detail subdiv references
-		for (u32 id : generated_ids)
-			pGroup->AddChield(id);
-		pGroup->level_child_count[0] = (u32)pGroup->chields.size();
-
-		// levels 1..3: export each mesh-LOD reference into the same group
-		for (u32 r : *lod_ref_ids)
-		{
-			xrMU_Reference*		LR		= pBuild->mu_refs()[r];
-			xr_vector<u32>		lvl_ids;
-			export_ref_subdivs	(*LR, lvl_ids);
-			const u32			before	= (u32)pGroup->chields.size();
-			for (u32 id : lvl_ids)
-				pGroup->AddChield(id);
-			pGroup->level_child_count[LR->mesh_lod_level] =
-				(u32)pGroup->chields.size() - before;
-		}
-
-		// Per-level switch distances (metres, from the base reference object)
-		// convert to SSA thresholds at the exported bounding sphere: a level
-		// engages once ssa = R/d^2 drops below its threshold. 0 = runtime cvar.
-		// Must run after CalcBounds, which produces the exported sphere radius.
-		R_ASSERT			(pGroup->chields.size());
-		pGroup->CalcBounds	();
-		for (u32 n = 1; n <= 3; ++n)
-		{
-			const float		d = mu_reference.mesh_lod_dist[n - 1];
-			if (d > 0.f)
-				pGroup->ssa_threshold[n] = pGroup->R / (d * d);
-		}
-		csThreadLock.Enter();
-		g_tree.push_back	(pGroup);
-		csThreadLock.Leave();
-		return;
-	}
-
 	if (u16(-1) == model->m_lod_ID)
-		return;
-	 
+		return u32(-1);
+
 	// Create Node and fill it with information
 	b_lod&		LOD		= pBuild->lods	[model->m_lod_ID];
 	OGF_LOD*	pNode	= new OGF_LOD (1,mu_reference.sector);
@@ -130,13 +83,15 @@ void export_ogf( xrMU_Reference& mu_reference, const xr_vector<u32>* lod_ref_ids
 
 
 	if (pNode->chields.size() == 0)
-		return;
+	{
+		xr_delete		(pNode);
+		return u32(-1);
+	}
 
 	// Register node
-	R_ASSERT						(pNode->chields.size());
 	pNode->CalcBounds				();
 	csThreadLock.Enter();
-	g_tree.push_back				(pNode);
+	g_tree.push_back	(pNode);
 	csThreadLock.Leave();
 
 	// Calculate colors
@@ -172,5 +127,74 @@ void export_ogf( xrMU_Reference& mu_reference, const xr_vector<u32>* lod_ref_ids
 			F.v[lv].c_sun		= u8_clr	(_C.sun);
 		}
 	}
- 
+
+	return u32(g_tree.size() - 1);
+}
+
+void export_ogf( xrMU_Reference& mu_reference, const xr_vector<u32>* lod_ref_ids )
+{
+	xr_vector<u32>		generated_ids;
+	xrMU_Model *model = mu_reference.model;
+	export_ref_subdivs( mu_reference, generated_ids );
+
+	// Unbaked models export nothing at all (existing rule); the LOD group
+	// must follow the same rule, so this check stays ahead of the group branch.
+	if (model->color.size() == 0)
+		return;
+
+	// Mesh-LOD group: wrap full-detail + level references into one OGF_LodGroup
+	// node consumed by MT_LODGROUP at runtime
+	if (lod_ref_ids && lod_ref_ids->size())
+	{
+		OGF_LodGroup*		pGroup	= new OGF_LodGroup(1, mu_reference.sector);
+
+		// level 0: full-detail subdiv references
+		for (u32 id : generated_ids)
+			pGroup->AddChield(id);
+		pGroup->level_child_count[0] = (u32)pGroup->chields.size();
+
+		// levels 1..3: export each mesh-LOD reference into the same group
+		for (u32 r : *lod_ref_ids)
+		{
+			xrMU_Reference*		LR		= pBuild->mu_refs()[r];
+			xr_vector<u32>		lvl_ids;
+			export_ref_subdivs	(*LR, lvl_ids);
+			const u32			before	= (u32)pGroup->chields.size();
+			for (u32 id : lvl_ids)
+				pGroup->AddChield(id);
+			pGroup->level_child_count[LR->mesh_lod_level] =
+				(u32)pGroup->chields.size() - before;
+		}
+
+		// Hybrid mode: with 'Using LOD' set the model also carries a billboard
+		// LOD (b_mu_model.lod_id); it occupies mesh-LOD level 3, the farthest
+		// level. The runtime group recursion reaches the existing MT_LOD
+		// handling, so the billboard's own near/far logic stays intact.
+		const u32	lod_node	= export_lod_node(mu_reference, generated_ids);
+		if (u32(-1) != lod_node)
+		{
+			pGroup->AddChield			(lod_node);
+			pGroup->level_child_count[3] = 1;
+		}
+
+		// Per-level switch distances (metres, from the base reference object)
+		// convert to SSA thresholds at the exported bounding sphere: a level
+		// engages once ssa = R/d^2 drops below its threshold. 0 = runtime cvar.
+		// Must run after CalcBounds, which produces the exported sphere radius.
+		R_ASSERT			(pGroup->chields.size());
+		pGroup->CalcBounds	();
+		for (u32 n = 1; n <= 3; ++n)
+		{
+			const float		d = mu_reference.mesh_lod_dist[n - 1];
+			if (d > 0.f)
+				pGroup->ssa_threshold[n] = pGroup->R / (d * d);
+		}
+		csThreadLock.Enter();
+		g_tree.push_back	(pGroup);
+		csThreadLock.Leave();
+		return;
+	}
+
+	// Standalone billboard LOD (no mesh-LOD levels): existing MT_LOD export
+	export_lod_node		(mu_reference, generated_ids);
 }

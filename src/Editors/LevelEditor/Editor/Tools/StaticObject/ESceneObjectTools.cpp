@@ -54,11 +54,15 @@ bool ESceneObjectTool::Validate(bool full_test)
             }
 
             // validate lods
-            // mesh-LOD objects are exempt: they are mutually exclusive with
-            // billboard LOD, so no FLOD/BLOD texture is ever exported
-            if (Scene->IsValidateLODs && full_test && A->IsMUStatic() && !A->IsMeshLODEnabled())
+            // pure mesh-LOD objects (mesh LOD on, billboard LOD off) are
+            // exempt: no FLOD/BLOD texture is ever exported. Hybrid objects
+            // (mesh LOD + 'Using LOD') still use the billboard, so they are
+            // validated like normal billboard objects.
+            if (Scene->IsValidateLODs && full_test && A->IsMUStatic())
             {
                 CEditableObject* E = A->GetReference(); VERIFY(E);
+                if (!A->IsMeshLODEnabled() || E->m_objectFlags.is(CEditableObject::eoUsingLOD))
+                {
                 // HQ billboards live under _eden\_shared\lods\blod, FLODs under _eden\_shared\lods\flod -
                 // validate whichever texture the object actually uses
                 xr_string lod_name = E->HasHQBillboard() ? E->GetLODBillboardTextureName() : E->GetLODFLODTextureName();
@@ -82,6 +86,7 @@ bool ESceneObjectTool::Validate(bool full_test)
 
                 if (age_nm == -1 || age == -1)
                     bRes = false;
+                }
             }
         }
     );
