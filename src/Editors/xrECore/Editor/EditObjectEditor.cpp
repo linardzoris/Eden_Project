@@ -241,7 +241,11 @@ void CEditableObject::RenderMeshLodPreview(const Fmatrix& parent, int priority, 
 	{
 		if (!sHasMeshLodLevel(this, n))
 			continue;	// empty level falls back to the next lower one
-		if (dist > sLevelDistMul[n] * R)
+		// per-object switch distance overrides the radius-multiple default
+		const float		switch_dist = m_MeshLodDist[n - 1] > 0.f
+							? m_MeshLodDist[n - 1]
+							: sLevelDistMul[n] * R;
+		if (dist > switch_dist)
 		{
 			level = n;
 			break;

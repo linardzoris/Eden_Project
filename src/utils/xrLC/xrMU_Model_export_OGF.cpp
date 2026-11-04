@@ -86,9 +86,18 @@ void export_ogf( xrMU_Reference& mu_reference, const xr_vector<u32>* lod_ref_ids
 				(u32)pGroup->chields.size() - before;
 		}
 
-		// ssa_threshold[] stays 0: runtime console cvars decide the switch
+		// Per-level switch distances (metres, from the base reference object)
+		// convert to SSA thresholds at the exported bounding sphere: a level
+		// engages once ssa = R/d^2 drops below its threshold. 0 = runtime cvar.
+		// Must run after CalcBounds, which produces the exported sphere radius.
 		R_ASSERT			(pGroup->chields.size());
 		pGroup->CalcBounds	();
+		for (u32 n = 1; n <= 3; ++n)
+		{
+			const float		d = mu_reference.mesh_lod_dist[n - 1];
+			if (d > 0.f)
+				pGroup->ssa_threshold[n] = pGroup->R / (d * d);
+		}
 		csThreadLock.Enter();
 		g_tree.push_back	(pGroup);
 		csThreadLock.Leave();

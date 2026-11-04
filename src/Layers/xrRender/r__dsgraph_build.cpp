@@ -517,11 +517,13 @@ void CRender::add_leafs_Static(dxRender_Visual *pVisual)
 			FLODGroupVisual*	pV		= (FLODGroupVisual*)pVisual;
 			float				D;
 			float				ssa		= CalcSSA(D, pV->vis.sphere.P, pV);
-			const u32			level	= pV->SelectLevel(ssa);
+			const u32			level	= pV->SelectLevelHyst(ssa);
 			const u32			start	= pV->level_child_start[level];
 			const u32			count	= pV->level_child_count[level];
 			for (u32 i = 0; i < count; ++i)
 				add_leafs_Static(pV->children[start + i]);
+			if (phase != PHASE_SMAP)
+				lodgroup_dbg_add(level);
 		}
 		return;
 	case MT_TREE_PM:
@@ -754,7 +756,7 @@ void CRender::add_Static(dxRender_Visual *pVisual, u32 planes)
 			FLODGroupVisual*	pV		= (FLODGroupVisual*)pVisual;
 			float				D;
 			float				ssa		= CalcSSA(D, pV->vis.sphere.P, pV);
-			const u32			level	= pV->SelectLevel(ssa);
+			const u32			level	= pV->SelectLevelHyst(ssa);
 			const u32			start	= pV->level_child_start[level];
 			const u32			count	= pV->level_child_count[level];
 			for (u32 i = 0; i < count; ++i)
@@ -762,6 +764,8 @@ void CRender::add_Static(dxRender_Visual *pVisual, u32 planes)
 				if (fcvPartial == VIS)	add_Static		(pV->children[start + i], planes);
 				else					add_leafs_Static	(pV->children[start + i]);
 			}
+			if (phase != PHASE_SMAP)
+				lodgroup_dbg_add(level);
 		}
 		break;
 	case MT_TREE_ST:

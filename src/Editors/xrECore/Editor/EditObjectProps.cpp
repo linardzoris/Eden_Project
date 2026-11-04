@@ -68,7 +68,16 @@ void CEditableObject::FillBasicProps(LPCSTR pref, PropItemVec& items)
 
     // MU static: reference-level mesh-LOD default (instances may override it)
     if (IsMUStatic())
+    {
         PHelper().CreateBOOL	(items, PrepareKey(pref,"MU Lighting\\Enable MLOD"), &m_MeshLODEnabled);
+        if (m_MeshLODEnabled)
+        {
+            // per-level switch distances in metres; 0 = runtime cvar decides
+            PHelper().CreateFloat	(items, PrepareKey(pref,"MU Lighting\\MLOD Switch Distance 1"), &m_MeshLodDist[0], 0.f, 100000.f, 1.f, 0);
+            PHelper().CreateFloat	(items, PrepareKey(pref,"MU Lighting\\MLOD Switch Distance 2"), &m_MeshLodDist[1], 0.f, 100000.f, 1.f, 0);
+            PHelper().CreateFloat	(items, PrepareKey(pref,"MU Lighting\\MLOD Switch Distance 3"), &m_MeshLodDist[2], 0.f, 100000.f, 1.f, 0);
+        }
+    }
 
     FillSummaryProps			(pref,items);
 }

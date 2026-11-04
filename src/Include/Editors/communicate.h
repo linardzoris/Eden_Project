@@ -157,6 +157,8 @@ struct b_mu_reference
 //   reserved[1] = u32: mesh-LOD level index (1..3), valid when bit 2 set       [new]
 //   reserved[2] = u32: index of the base (full-detail) mu reference this
 //                 level belongs to, valid when bit 2 set                       [new]
+//   reserved[3..5] = float bits: per-level mesh-LOD switch distance in metres
+//                 (base reference only; 0 = runtime console cvar decides)     [new]
 
 struct b_params
 {

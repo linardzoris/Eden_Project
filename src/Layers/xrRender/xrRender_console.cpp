@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "xrRender_console.h"
 #include "dxRenderDeviceRender.h"
+#include "FLODGroupVisual.h"
 
 u32 ps_Preset =	2;
 xr_token							qpreset_token							[ ]={
@@ -124,6 +125,10 @@ float		ps_r2_ssaLOD_A				= 48.f	;
 float		ps_r__lodgroup_ssa1			= 280.f	;
 float		ps_r__lodgroup_ssa2			= 140.f	;
 float		ps_r__lodgroup_ssa3			= 70.f	;
+// mesh-LOD group switch hysteresis: relative SSA margin a level switch must
+// clear (0 = hard switch), ~10% of the switch distance at 0.2
+float		ps_r__lodgroup_hyst			= 0.2f	;
+int			ps_r__lodgroup_debug		= 0		;
 float		ps_r2_ssaLOD_B				= 32.f	;
 
 Fvector3	ps_r_taa_jitter = { 0,0,0 };
@@ -700,6 +705,20 @@ public:
 };
 
 //-----------------------------------------------------------------------
+class CCC_LodGroupDebug		: public CCC_Integer
+{
+public:
+	CCC_LodGroupDebug(LPCSTR N, int* V, int _min, int _max) : CCC_Integer(N, V, _min, _max) { };
+
+	virtual void Execute(LPCSTR args) {
+		CCC_Integer::Execute(args);
+		const u32*	C	= lodgroup_dbg_counts();
+		Msg("* LOD group histogram (current frame): L0=%d L1=%d L2=%d L3=%d",
+			C[0], C[1], C[2], C[3]);
+	}
+};
+
+//-----------------------------------------------------------------------
 void		xrRender_initconsole	()
 {
 	CMD3(CCC_Preset,	"_preset",				&ps_Preset,	qpreset_token	);
@@ -747,6 +766,10 @@ void		xrRender_initconsole	()
 	CMD4(CCC_Float,		"r__lodgroup_ssa1",		&ps_r__lodgroup_ssa1,		0,		1024	);
 	CMD4(CCC_Float,		"r__lodgroup_ssa2",		&ps_r__lodgroup_ssa2,		0,		1024	);
 	CMD4(CCC_Float,		"r__lodgroup_ssa3",		&ps_r__lodgroup_ssa3,		0,		1024	);
+	// mesh-LOD group: switch hysteresis (relative SSA margin, 0 = hard switch)
+	CMD4(CCC_Float,		"r__lodgroup_hyst",		&ps_r__lodgroup_hyst,		0,		1		);
+	// mesh-LOD group debug: executing the command prints the per-frame level histogram
+	CMD4(CCC_LodGroupDebug,	"r__lodgroup_debug",	&ps_r__lodgroup_debug,	0,		1		);
 
 	// R2-specific
 	CMD3(CCC_Mask,		"r2_tonemap",			&ps_r2_ls_flags,			R2FLAG_TONEMAP	);

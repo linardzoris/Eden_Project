@@ -104,6 +104,11 @@ void CEditableObject::Save(IWriter& F)
     F.w_u8			(m_MeshLODEnabled ? 1 : 0);
     F.close_chunk	();
 
+    // MU static: per-level mesh-LOD switch distances (always written, tiny)
+    F.open_chunk	(EOBJ_CHUNK_MESH_LOD_DIST);
+    F.w				(&m_MeshLodDist, sizeof(m_MeshLodDist));
+    F.close_chunk	();
+
     // meshes
     F.open_chunk	(EOBJ_CHUNK_EDITMESHES);
     int count		= 0;
@@ -232,6 +237,9 @@ bool CEditableObject::Load(IReader& F)
 
 		if (F.find_chunk(EOBJ_CHUNK_MESH_LOD))
 			m_MeshLODEnabled = F.r_u8() ? TRUE : FALSE;
+
+		if (F.find_chunk(EOBJ_CHUNK_MESH_LOD_DIST))
+			F.r			(&m_MeshLodDist, sizeof(m_MeshLodDist));
 
 		if (F.find_chunk	(EOBJ_CHUNK_CLASSSCRIPT))
 			F.r_stringZ		(m_ClassScript);

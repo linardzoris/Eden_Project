@@ -952,6 +952,13 @@ void CActorTools::FillObjectProperties(PropItemVec& items, LPCSTR pref, ListItem
 		PHelper().CreateFlag32(items, "Object\\Flags\\Using LOD", &m_pEditObject->m_objectFlags, CEditableObject::eoUsingLOD)->OnChangeEvent.bind(this, &CActorTools::OnUsingLodFlagChange);
 		PHelper().CreateFloat(items, "Object\\Flags\\Hemi Scale (Reference)", &m_pEditObject->m_MUHemiScaleReference, 0.f, 2.f);
 		PHelper().CreateBOOL(items, "Object\\Flags\\Enable MLOD", &m_pEditObject->m_MeshLODEnabled);
+		if (m_pEditObject->m_MeshLODEnabled)
+		{
+			// per-level switch distances in metres; 0 = runtime cvar decides
+			PHelper().CreateFloat(items, "Object\\Flags\\MLOD Switch Distance 1", &m_pEditObject->m_MeshLodDist[0], 0.f, 100000.f, 1.f, 0);
+			PHelper().CreateFloat(items, "Object\\Flags\\MLOD Switch Distance 2", &m_pEditObject->m_MeshLodDist[1], 0.f, 100000.f, 1.f, 0);
+			PHelper().CreateFloat(items, "Object\\Flags\\MLOD Switch Distance 3", &m_pEditObject->m_MeshLodDist[2], 0.f, 100000.f, 1.f, 0);
+		}
 	}
 
 	V = PHelper().CreateVector(items, "Object\\Transform\\Position", &m_pEditObject->a_vPosition, -100000, 100000, 0.01, 2);

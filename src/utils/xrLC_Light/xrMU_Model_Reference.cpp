@@ -33,6 +33,10 @@ void xrMU_Reference::Load( IReader& F, xr_vector<xrMU_Model*>& mu_models )
 		base_ref_index		= R.reserved[2];
 	}
 
+	// per-level switch distances (float bits in reserved[3..5]; base refs carry
+	// them without MUREF_FLAG_MESH_LOD_VALID, so parse unconditionally)
+	memcpy				(mesh_lod_dist, &R.reserved[3], sizeof(mesh_lod_dist));
+
 	c_scale.rgb.set		(1,1,1);
 	c_scale.hemi		= 1;
 	c_scale.sun			= 1;

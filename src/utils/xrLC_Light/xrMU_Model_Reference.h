@@ -23,12 +23,16 @@ public:
 	u8						mesh_lod_level;				// 0 = base reference, 1..3 = mesh-LOD level
 	u32						base_ref_index;				// index of the base reference this level belongs to
 
+	// per-level mesh-LOD switch distance in metres (base reference only;
+	// float bits transported in b_mu_reference.reserved[3..5], 0 = runtime cvar)
+	float					mesh_lod_dist[3];
+
 	xr_vector<base_color>	color;
 
 	base_color_c			c_scale;
 	base_color_c			c_bias;
 public:
-							xrMU_Reference		(): model(0), sector(u16(-1)), flags(Flags32().assign(0)), xform(Fidentity), bake_unique(false), hemi_scale_per_instance(1.f), mesh_lod_level(0), base_ref_index(u32(-1)){}
+							xrMU_Reference		(): model(0), sector(u16(-1)), flags(Flags32().assign(0)), xform(Fidentity), bake_unique(false), hemi_scale_per_instance(1.f), mesh_lod_level(0), base_ref_index(u32(-1)), mesh_lod_dist{0.f, 0.f, 0.f}{}
 
 	void					Load				( IReader& fs, xr_vector<xrMU_Model*>& mu_models );
 	void					calc_lighting		();

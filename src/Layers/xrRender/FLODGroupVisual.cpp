@@ -9,10 +9,13 @@
 // Normalized per-level thresholds, computed every frame in R_calculate.cpp
 // from the ps_r__lodgroup_ssaN console variables (index 0 unused).
 extern float r_lodgroup_ssa[4];
+extern float ps_r__lodgroup_hyst;	// switch hysteresis margin (relative, 0 = off)
+extern int	 ps_r__lodgroup_debug;	// 1 = collect the per-frame level histogram
 
 FLODGroupVisual::FLODGroupVisual()
 {
 	level_count	= 4;
+	hyst_level	= 0;
 	ZeroMemory	(level_child_start,	sizeof(level_child_start));
 	ZeroMemory	(level_child_count,	sizeof(level_child_count));
 	ZeroMemory	(ssa_threshold,		sizeof(ssa_threshold));
@@ -60,6 +63,7 @@ void FLODGroupVisual::Copy(dxRender_Visual *pFrom)
 	CopyMemory	(level_child_start,	F->level_child_start,	sizeof(level_child_start));
 	CopyMemory	(level_child_count,	F->level_child_count,	sizeof(level_child_count));
 	CopyMemory	(ssa_threshold,		F->ssa_threshold,		sizeof(ssa_threshold));
+	hyst_level					= 0;	// copies start with fresh hysteresis state
 }
 
 u32 FLODGroupVisual::SelectLevel(float ssa) const
@@ -74,4 +78,65 @@ u32 FLODGroupVisual::SelectLevel(float ssa) const
 			return u32(i);
 	}
 	return 0;
+}
+
+float FLODGroupVisual::EffectiveThreshold(u32 level) const
+{
+	return ssa_threshold[level] > 0.f ? ssa_threshold[level] : r_lodgroup_ssa[level];
+}
+
+u32 FLODGroupVisual::SelectLevelHyst(float ssa)
+{
+	const u32	fresh	= SelectLevel(ssa);
+	if (fresh == hyst_level)
+		return fresh;
+
+	const float	h		= ps_r__lodgroup_hyst;
+	if (h <= 0.f)
+	{
+		hyst_level	= fresh;
+		return fresh;
+	}
+
+	if (fresh < hyst_level)
+	{
+		// switching to a finer level: must clear the coarser level's
+		// boundary with a relative margin
+		const float	thr	= EffectiveThreshold(hyst_level);
+		if (thr > 0.f && ssa < thr * (1.f + h))
+			return hyst_level;
+	}
+	else
+	{
+		// switching to a coarser level: must drop below its boundary
+		// with a relative margin
+		const float	thr	= EffectiveThreshold(fresh);
+		if (thr > 0.f && ssa > thr * (1.f - h))
+			return hyst_level;
+	}
+
+	hyst_level	= fresh;
+	return fresh;
+}
+
+// Debug histogram (r__lodgroup_debug): groups rendered per selected level in
+// the current frame; self-resets when the frame index changes.
+static u32		s_dbg_count[4];
+static u32		s_dbg_frame	= u32(-1);
+
+void lodgroup_dbg_add(u32 level)
+{
+	if (!ps_r__lodgroup_debug)
+		return;
+	if (s_dbg_frame != Device.dwFrame)
+	{
+		s_dbg_frame	= Device.dwFrame;
+		ZeroMemory	(s_dbg_count, sizeof(s_dbg_count));
+	}
+	++s_dbg_count[level];
+}
+
+const u32* lodgroup_dbg_counts()
+{
+	return s_dbg_count;
 }

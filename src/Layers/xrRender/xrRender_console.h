@@ -80,6 +80,8 @@ extern ECORE_API	float		ps_r2_ssaLOD_B;
 extern ECORE_API	float		ps_r__lodgroup_ssa1;	// mesh-LOD level 1 threshold
 extern ECORE_API	float		ps_r__lodgroup_ssa2;	// mesh-LOD level 2 threshold
 extern ECORE_API	float		ps_r__lodgroup_ssa3;	// mesh-LOD level 3 threshold
+extern ECORE_API	float		ps_r__lodgroup_hyst;	// mesh-LOD switch hysteresis margin (0 = off)
+extern ECORE_API	int			ps_r__lodgroup_debug;	// mesh-LOD per-frame level histogram toggle
 extern ECORE_API	BOOL		ps_r2_particle_dt;
 // R2-specific
 extern ECORE_API Flags32		ps_r2_ls_flags;				// r2-only

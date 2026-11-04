@@ -218,6 +218,10 @@ public:
 	// MU static objects: build mesh-LOD levels from "_LOD1..3" named meshes.
 	// Reference-level default; scene instances may override it per placement.
 	BOOL			m_MeshLODEnabled = FALSE;
+	// MU static objects: per-level mesh-LOD switch distance in metres (LOD1..3).
+	// Converted to an SSA threshold R/d^2 at OGF export time; 0 = the runtime
+	// console cvar decides.
+	float			m_MeshLodDist[3] = {0.f, 0.f, 0.f};
 	enum{
 		eoDynamic 	 	= (1<<0),			
 		eoProgressive 	= (1<<1),			
@@ -582,6 +586,7 @@ private:
 #define EOBJ_CHUNK_SMOTIONS3		0x0926
 #define EOBJ_CHUNK_MU_PARAMS		0x0927
 #define EOBJ_CHUNK_MESH_LOD		0x0928
+#define EOBJ_CHUNK_MESH_LOD_DIST	0x0929
 //----------------------------------------------------
 
 
