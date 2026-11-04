@@ -577,6 +577,13 @@ private:
 #define EOBJ_CHUNK_SMOTIONS			0x0916
 #define EOBJ_CHUNK_SURFACES_XRLC	0x0918
 #define EOBJ_CHUNK_BONEPARTS		0x0919
+// HQ billboard / LOD texture capture mode: while active, the mesh-LOD
+// viewport preview always renders the full-detail level (base meshes only)
+// regardless of camera distance, so LOD texture captures of mesh-LOD objects
+// stay correct. Free function on purpose - keeps CEditableObject's layout
+// unchanged.
+ECORE_API void	SetMeshLodCaptureMode	(BOOL b);
+
 #define EOBJ_CHUNK_ACTORTRANSFORM	0x0920
 #define EOBJ_CHUNK_BONES2			0x0921
 #define EOBJ_CHUNK_DESC				0x0922

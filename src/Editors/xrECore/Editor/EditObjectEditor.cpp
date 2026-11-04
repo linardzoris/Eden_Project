@@ -217,6 +217,16 @@ void CEditableObject::Render(const Fmatrix& parent, int priority, bool strictB2F
 	}
 }
 
+// Mesh-LOD capture mode (see SetMeshLodCaptureMode in EditObject.h): LOD
+// texture generation renders the object for capture, and the preview must
+// show the full-detail level regardless of the editor camera distance.
+static BOOL	s_mesh_lod_capture = FALSE;
+
+void SetMeshLodCaptureMode(BOOL b)
+{
+	s_mesh_lod_capture	= b;
+}
+
 void CEditableObject::RenderMeshLodPreview(const Fmatrix& parent, int priority, bool strictB2F, SurfaceVec* surfaces)
 {
 	// Level selection for the preview. Mirrors the runtime SSA relation
@@ -237,18 +247,21 @@ void CEditableObject::RenderMeshLodPreview(const Fmatrix& parent, int priority, 
 	const float			dist	= cam.distance_to(C);
 
 	int level = 0;
-	for (int n = 3; n >= 1; --n)
+	if (!s_mesh_lod_capture)
 	{
-		if (!sHasMeshLodLevel(this, n))
-			continue;	// empty level falls back to the next lower one
-		// per-object switch distance overrides the radius-multiple default
-		const float		switch_dist = m_MeshLodDist[n - 1] > 0.f
-							? m_MeshLodDist[n - 1]
-							: sLevelDistMul[n] * R;
-		if (dist > switch_dist)
+		for (int n = 3; n >= 1; --n)
 		{
-			level = n;
-			break;
+			if (!sHasMeshLodLevel(this, n))
+				continue;	// empty level falls back to the next lower one
+			// per-object switch distance overrides the radius-multiple default
+			const float		switch_dist = m_MeshLodDist[n - 1] > 0.f
+								? m_MeshLodDist[n - 1]
+								: sLevelDistMul[n] * R;
+			if (dist > switch_dist)
+			{
+				level = n;
+				break;
+			}
 		}
 	}
 

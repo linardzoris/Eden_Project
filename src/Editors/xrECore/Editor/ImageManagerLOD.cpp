@@ -80,6 +80,24 @@ ICF static void  simple_hemi_callback(float x, float y, float z, float E, LPVOID
 
 const u32 lod_ss_quality  = 8;
 
+// Mesh-LOD level meshes ("X_LOD1..3") are fallback copies of the base
+// geometry; they must never participate in LOD texture generation - they
+// would multiply the collider cost and corrupt alpha/normal accumulation.
+static bool mesh_is_lod_level(CEditableMesh* M)
+{
+	LPCSTR		name	= M->Name().c_str();
+	for (int n = 1; n <= 3; ++n)
+	{
+		char			suf[8];
+		xr_sprintf		(suf, sizeof(suf), "_LOD%d", n);
+		const size_t	len		= xr_strlen(suf);
+		const size_t	nlen	= xr_strlen(name);
+		if (nlen > len && 0 == stricmp(name + (nlen - len), suf))
+			return true;
+	}
+	return false;
+}
+
 // 8 向正交捕捉，写入图集：横排为 8 个水平条带，竖排为 8 个垂直条带
 void CreateLODSamples(const Fbox& bbox, U32Vec& tgt_data, u32 cell_w, u32 cell_h, bool vertical, u32 atlas_w, u32 atlas_h)
 {
@@ -194,6 +212,10 @@ void CImageManager::CreateLODTexture(CEditableObject* OBJECT, U32Vec& lod_pixels
     float dR = bb.getradius();
     float d2R = dR * 2.f;
 
+    // capture mode: force the mesh-LOD viewport preview to the full-detail
+    // level so the GPU capture always sees the base meshes
+    SetMeshLodCaptureMode	(TRUE);
+
     CreateLODSamples(bb, lod_pixels, cell_w, cell_h, vertical, atlas_w, atlas_h);
 
     float 	LOD_CALC_SAMPLES = quality;
@@ -207,12 +229,22 @@ void CImageManager::CreateLODTexture(CEditableObject* OBJECT, U32Vec& lod_pixels
         if (0 == surf->m_ImageData)surf->CreateImageData();
     }
 
-    // pre-build collision models: workers must never trigger lazy GenerateCFModel concurrently
+    // pre-build collision models: workers must never trigger lazy GenerateCFModel concurrently.
+    // Mesh-LOD level meshes are excluded (see mesh_is_lod_level).
     for (EditMeshIt mesh_it = OBJECT->Meshes().begin(); mesh_it != OBJECT->Meshes().end(); mesh_it++)
-        (*mesh_it)->EnsureCFModel();
+        if (!mesh_is_lod_level(*mesh_it))
+            (*mesh_it)->EnsureCFModel();
 
     CTimer TTotal;
     TTotal.Start();
+
+    // filtered object ray query: mesh-LOD level meshes never participate
+    auto object_ray_query = [OBJECT](CDB::COLLIDER& CL, SPickQuery& PQ)
+    {
+        for (EditMeshIt m = OBJECT->Meshes().begin(); m != OBJECT->Meshes().end(); ++m)
+            if (!mesh_is_lod_level(*m))
+                (*m)->RayQuery(CL, PQ);
+    };
 
     // calculate
     for (u32 sample_idx = 0; sample_idx < LOD_SAMPLE_COUNT; sample_idx++)
@@ -258,7 +290,7 @@ void CImageManager::CreateLODTexture(CEditableObject* OBJECT, U32Vec& lod_pixels
                         M.transform_tiny(start);
                         start.mad(M.k, -dR);
                         PQ.prepare_rq(start, M.k, d2R, CDB::OPT_CULL);
-                        OBJECT->RayQuery(CL, PQ);
+                        object_ray_query(CL, PQ);
 
                         if (PQ.r_count())
                         {
@@ -334,7 +366,7 @@ void CImageManager::CreateLODTexture(CEditableObject* OBJECT, U32Vec& lod_pixels
                         Fvector start;
                         start.mad(Fvector().set(best_pt->x, best_pt->y, best_pt->z), it->light.direction, -dR);
                         PQ.prepare_rq(start, it->light.direction, dR, CDB::OPT_CULL);
-                        OBJECT->RayQuery(CL, PQ);
+                        object_ray_query(CL, PQ);
                         float ray_transp = 1.f;
 
                         if (PQ.r_count())
@@ -369,6 +401,8 @@ void CImageManager::CreateLODTexture(CEditableObject* OBJECT, U32Vec& lod_pixels
         nm_pixels[px_idx] = subst_alpha(nm_pixels[px_idx], color_get_R(hemi_tmp[px_idx]));
 
     UI->ProgressEnd(PB);
+
+    SetMeshLodCaptureMode	(FALSE);
 }
 
 //------------------------------------------------------------------------------
