@@ -239,7 +239,8 @@ void UIEditLibrary::GenerateLOD(const RStringVec& props, bool bHighQuality)
 			if (bHighQuality)
 			{
 				// HQ billboard：按物体比例的高分辨率图集，输出到 _shared\billboards
-				ImageLib.CreateBillboardTexture(O, O->GetLODBillboardTextureName().c_str(), xr_chrono_to_time_t(std::chrono::system_clock::now()), 4);
+				// quality=2: 3x3 normal sub-rays - billboard precision is enough for far view
+				ImageLib.CreateBillboardTexture(O, O->GetLODBillboardTextureName().c_str(), xr_chrono_to_time_t(std::chrono::system_clock::now()), 2);
 			}
 			else
 			{

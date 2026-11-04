@@ -279,6 +279,21 @@ void CImageManager::CreateLODTexture(CEditableObject* OBJECT, U32Vec& lod_pixels
 
                 n_vec.clear();
                 sample_pt_vec.clear();
+
+                // cheap early-out: one center ray gates the sub-ray grid;
+                // empty pixels (canopy gaps) skip the whole grid. No-hit
+                // pixels fall through to the normal gray fill below, matching
+                // the previous all-miss behavior.
+                {
+                    Fvector	start;
+                    start.set(X, Y, 0);
+                    M.transform_tiny(start);
+                    start.mad(M.k, -dR);
+                    PQ.prepare_rq(start, M.k, d2R, CDB::OPT_CULL);
+                    object_ray_query(CL, PQ);
+                }
+
+                if (PQ.r_count())
                 for (s32 iiH = -LOD_CALC_SAMPLES_LIM; iiH <= LOD_CALC_SAMPLES_LIM; iiH++)
                 {
                     float dY = iiH * (nm_dH / LOD_CALC_SAMPLES);
@@ -344,6 +359,12 @@ void CImageManager::CreateLODTexture(CEditableObject* OBJECT, U32Vec& lod_pixels
                 if (sample_pt_vec.empty())
                     continue;
 
+                // AO is low-frequency: evaluated only on the even-even
+                // sub-lattice (4x fewer hemisphere rays); odd pixels are
+                // filled from adjacent even samples after the loop
+                if ((iH & 1) || (iW & 1))
+                    continue;
+
                 // hemi/AO: evaluate once per pixel at the most opaque hit point instead of
                 // every sub-ray hit (AO is low-frequency; this removes the 25x ray explosion)
                 const Fvector4* best_pt = 0;
@@ -389,6 +410,46 @@ void CImageManager::CreateLODTexture(CEditableObject* OBJECT, U32Vec& lod_pixels
             }
         });
         PB->Inc();
+    }
+
+    // Fill odd pixels of the AO sub-lattice from adjacent even samples
+    // (average, clamped at cell borders). Pairs with the (iH&1)||(iW&1) gate
+    // in the ray loop above.
+    for (u32 sample_idx = 0; sample_idx < LOD_SAMPLE_COUNT; sample_idx++)
+    {
+        for (u32 iH = 0; iH < nm_ch; iH++)
+        {
+            for (u32 iW = 0; iW < nm_cw; iW++)
+            {
+                if (!((iH | iW) & 1))
+                    continue;	// even-even: computed by the ray loop
+
+                int			eH[2], nH = 0;
+                eH[nH++]	= int(iH) & ~1;
+                if ((iH & 1) && (eH[0] + 2) < int(nm_ch))
+                    eH[nH++] = eH[0] + 2;
+                int			eW[2], nW = 0;
+                eW[nW++]	= int(iW) & ~1;
+                if ((iW & 1) && (eW[0] + 2) < int(nm_cw))
+                    eW[nW++] = eW[0] + 2;
+
+                u32			acc = 0, cnt = 0;
+                for (int a = 0; a < nH; ++a)
+                    for (int b = 0; b < nW; ++b)
+                    {
+                        u32	row	= vertical ? sample_idx*nm_ch + u32(eH[a]) : u32(eH[a]);
+                        u32	col	= vertical ? u32(eW[b]) : sample_idx*nm_cw + u32(eW[b]);
+                        acc		+= color_get_R(hemi_tmp[(nm_atlas_h - row - 1) * nm_atlas_w + col]);
+                        ++cnt;
+                    }
+                if (!cnt)
+                    continue;
+                u8		h	= u8(acc / cnt);
+                u32		row	= vertical ? sample_idx*nm_ch + iH : iH;
+                u32		col	= vertical ? iW : sample_idx*nm_cw + iW;
+                hemi_tmp[(nm_atlas_h - row - 1) * nm_atlas_w + col] = color_rgba(h, h, h, 255);
+            }
+        }
     }
 
     Msg("LOD pixels %u: %3.2fsec", atlas_w*atlas_h, TTotal.GetElapsed_sec());
