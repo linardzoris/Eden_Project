@@ -235,6 +235,9 @@ void COLLIDER::box_query(const MODEL *m_def, const Fvector& b_center, const Fvec
 
 	m_def->syncronize		();
 
+	if (!m_def->tree)
+		return;	// empty model (build failed) - nothing to traverse, matches ray_query behavior
+
 	// Get nodes
 	const AABBNoLeafTree* T = (const AABBNoLeafTree*)m_def->tree->GetTree();
 	const AABBNoLeafNode* N = T->GetNodes();

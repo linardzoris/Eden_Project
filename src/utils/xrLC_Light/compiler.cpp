@@ -34,18 +34,21 @@ void xrLight_Details()
  // 3:15min, 4:03 ppl
 	u32 MAX_Z = gl_data.slots_data.size_z();
 	u32 MAX_X = gl_data.slots_data.size_x();
-	thread_local CDB::COLLIDER		DB;
-	DB.ray_options(CDB::OPT_CULL);
-	DB.box_options(CDB::OPT_FULL_TEST);
-	thread_local base_lighting		Selected;
 
-	thread_local DWORDVec box_result;
- 
 	xr_parallel_for
 	(
 		size_t(0), size_t(MAX_Z),
 		[&](size_t Z)
 		{
+			// Options must be set inside the parallel body: DB/Selected/box_result are
+			// thread_local and worker threads construct their own instances with default
+			// options (options set outside only configured the calling thread's instance).
+			thread_local CDB::COLLIDER		DB;
+			DB.ray_options(CDB::OPT_CULL);
+			DB.box_options(CDB::OPT_FULL_TEST);
+			thread_local base_lighting		Selected;
+			thread_local DWORDVec box_result;
+
 			Status("Z: %u/%u, processed: %u", Z, gl_data.slots_data.size_z(), IDX.load());
 
 			for (u32 X = 0; X < gl_data.slots_data.size_x(); X++)

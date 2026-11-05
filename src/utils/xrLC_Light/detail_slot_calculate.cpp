@@ -93,27 +93,60 @@ IC bool RayPick(CDB::COLLIDER& DB, Fvector& P, Fvector& D, float r, R_Light& L)
 	}
 }
 
+// Report bad build.cform indices at most a few times to avoid log flooding
+static void report_bad_index(const char* what, u32 value, u32 limit, u32 prim_id)
+{
+	static xr_atomic_s32 reports = 0;
+	if (reports.fetch_add(1) < 8)
+		clMsg("* detail_slot: bad %s %u (limit %u, prim %u)%s", what, value, limit, prim_id,
+			reports.load() == 8 ? " - further warnings suppressed" : "");
+}
+
 float getLastRP_Scale(CDB::COLLIDER* DB, R_Light& L)//, Face* skip)
 {
 	u32	tris_count		= DB->r_count();
 	float	scale		= 1.f;
 	Fvector B;
 
-//	X_TRY 
+//	X_TRY
 	{
 		for (u32 I=0; I<tris_count; I++)
 		{
 			CDB::RESULT& rpinf = DB->r_begin()[I];
+
+			// Validate indices from build.cform before dereferencing: an out-of-range
+			// material/texture index leads to a wild write (T.bHasAlpha) and heap corruption.
+			if (rpinf.id >= gl_data.g_rc_faces.size())
+			{
+				report_bad_index("rc_face id", rpinf.id, u32(gl_data.g_rc_faces.size()), rpinf.id);
+				continue;
+			}
 			// Access to texture
 			CDB::TRI& clT								= gl_data.RCAST_Model.get_tris()[rpinf.id];
 			b_rc_face& F								= gl_data.g_rc_faces[rpinf.id];
 //			if (0==F)									continue;
 //			if (skip==F)								continue;
 
+			if (F.dwMaterial >= gl_data.g_materials.size())
+			{
+				report_bad_index("material id", F.dwMaterial, u32(gl_data.g_materials.size()), rpinf.id);
+				continue;
+			}
 			b_material& M	= gl_data.g_materials				[F.dwMaterial];
+
+			if (M.surfidx >= gl_data.g_textures.size())
+			{
+				report_bad_index("texture id", M.surfidx, u32(gl_data.g_textures.size()), rpinf.id);
+				continue;
+			}
 			b_texture&	T	= gl_data.g_textures				[M.surfidx];
 
-		
+			if (gl_data.g_shaders_xrlc == 0 || M.reserved >= gl_data.g_shaders_xrlc->size())
+			{
+				report_bad_index("shader_xrlc id", M.reserved, gl_data.g_shaders_xrlc ? gl_data.g_shaders_xrlc->size() : 0, rpinf.id);
+				continue;
+			}
+
 			const Shader_xrLC& SH	= shader( F.dwMaterial, *(gl_data.g_shaders_xrlc), gl_data.g_materials );
 //			Shader_xrLCVec&	LIB = 		gl_data.g_shaders_xrlc->Library	();
 //			if (M.shader_xrlc>=LIB.size()) return		0;		//. hack - vy gonite rebyata - eto ne hack - eto sledy zamesti - shader_xrlc - index ne togo masiva !!

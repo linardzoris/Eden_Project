@@ -112,6 +112,10 @@ public:
 		library.push_back(parent?Shader_xrLC(*parent):Shader_xrLC());
 		return &library.back();
 	}
+	IC u32					size	() const
+	{
+		return u32(library.size());
+	}
 	void					Remove	(LPCSTR name)
 	{
 		for (Shader_xrLCIt it=library.begin(); it!=library.end(); it++)

@@ -24,14 +24,18 @@ ICF b_rc_face* GetGeomBuff(int GeomID, int Prim)
 
 bool CalculateEnergy(int GeomID, int PrimID, Fvector& B, float& energy, float u, float v)
 {
-	if (gl_data.g_rc_faces.size() < PrimID)
+	if (u32(PrimID) >= gl_data.g_rc_faces.size())
 	{
 		Msg("PrimitiveID: %u > Maximal Buffer: %u", PrimID, gl_data.g_rc_faces.size());
 		return false;
 	}
 
 	auto& F = gl_data.g_rc_faces[PrimID];
- 	b_material& M = gl_data.g_materials[F.dwMaterial];
+	if (F.dwMaterial >= gl_data.g_materials.size())
+		return false;
+	b_material& M = gl_data.g_materials[F.dwMaterial];
+	if (M.surfidx >= gl_data.g_textures.size())
+		return false;
 	b_texture& T = gl_data.g_textures[M.surfidx];
 
 	if (!T.bHasAlpha)
