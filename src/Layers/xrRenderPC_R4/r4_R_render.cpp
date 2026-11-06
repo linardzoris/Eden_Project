@@ -615,17 +615,17 @@ void CRender::Render()
 		r_dsgraph_render_hud					();
 		r_dsgraph_render_scope					();
 		Target->phase_scene_begin				();
-		r_dsgraph_render_graph					(0);
-		r_dsgraph_render_lods					(true,true);
+		r_dsgraph_render_graph					(0, !rs_overdraw);
+		r_dsgraph_render_lods					(true, !rs_overdraw);
 		if(Details)	Details->Render				();
 		Target->phase_scene_end					();
-	} 
-	else 
+	}
+	else
 	{
 		GPU_EVENT(DEFER_PART0_SPLIT);
 		// level, SPLIT
 		Target->phase_scene_begin				();
-		r_dsgraph_render_graph					(0);
+		r_dsgraph_render_graph					(0, !rs_overdraw);
 		Target->disable_aniso					();
 	}
 
@@ -706,9 +706,26 @@ void CRender::Render()
 		// level
 		Target->phase_scene_begin				();
 		r_dsgraph_render_hud					();
-		r_dsgraph_render_lods					(true,true);
+		r_dsgraph_render_lods					(true, !rs_overdraw);
 		if(Details)	Details->Render				();
 		Target->phase_scene_end					();
+	}
+
+	// Overdraw debug layer (rs_overdraw): replay the deferred geometry into
+	// rt_Overdraw with the flat counting pixel shader and additive blending.
+	// The dsgraph lists were kept (_clear=false above) and are re-rendered in
+	// the same order, so the depth-test results - and therefore the counted
+	// fragments - match the main G-buffer pass. Wallmarks and HUD are not
+	// counted.
+	if (rs_overdraw)
+	{
+		GPU_EVENT(DEFER_OVERDRAW_DEBUG);
+		Target->phase_overdraw					();
+		g_overdraw_active						= TRUE;
+		r_dsgraph_render_graph					(0);
+		r_dsgraph_render_lods					(true, true);
+		if (Details)	Details->Render_Repeat	();
+		g_overdraw_active						= FALSE;
 	}
 
 	{

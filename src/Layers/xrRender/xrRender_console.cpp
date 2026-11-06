@@ -217,6 +217,10 @@ float		ps_r2_def_aref_quality = 115.0f;
 float		ps_r2_tree_mip_fade_start = 1.0f;
 float		ps_r2_tree_mip_fade_end = 5.0f;
 
+// Overdraw debug layer: banded per-pixel fragment count visualization
+// (<=20% green, 20-40% blue, 40-60% yellow, 60-80% orange, 80-100% red).
+int			rs_overdraw = 0;
+
 float		ps_r3_dyn_wet_surf_near		= 10.f;				// 10.0f
 float		ps_r3_dyn_wet_surf_far		= 30.f;				// 30.0f
 int			ps_r3_dyn_wet_surf_sm_res	= 256;				// 256
@@ -792,6 +796,9 @@ void		xrRender_initconsole	()
 
 	CMD4(CCC_Float,		"r2_gloss_factor",		&ps_r2_gloss_factor,		.0f,	10.f	);
 
+	// Overdraw debug layer (engine + level editor + actor editor, R4 render path)
+	CMD4(CCC_Integer,	"rs_overdraw",			&rs_overdraw,				0,		1		);
+
 #ifdef DEBUG
 	CMD3(CCC_Mask,		"r2_use_nvdbt",			&ps_r2_ls_flags,			R2FLAG_USE_NVDBT);
 	CMD3(CCC_Mask,		"r2_mt",				&ps_r2_ls_flags,			R2FLAG_EXP_MT_CALC);
@@ -970,4 +977,19 @@ void xrRender_apply_tf() {
 	Console->Execute("r__tf_mipbias");
 }
 
+#endif
+
+#ifdef _EDITOR
+// Editors compile this file without the engine console block above (guarded
+// by #ifndef _EDITOR), so xrRender_initconsole() has no definition there -
+// engine renderer DLLs register commands from their DllMain, xrECore has no
+// such entry. Provide a minimal editor registration; called from xrECore
+// TUI::OnCreate right after the console object is created.
+#include "../../xrEngine/XR_IOConsole.h"
+#include "../../xrEngine/xr_ioc_cmd.h"
+
+void xrRender_initconsole()
+{
+	CMD4(CCC_Integer, "rs_overdraw", &rs_overdraw, 0, 1);
+}
 #endif

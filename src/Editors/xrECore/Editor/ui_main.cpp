@@ -32,6 +32,65 @@ namespace ImGui
 
 TUI* UI = nullptr;
 
+// Overdraw debug layer (rs_overdraw): dx9 editor implementation, shared by all
+// editors through xrECore. While g_overdraw_active is TRUE the CBackend hooks
+// (dx9R_Backend_Runtime.h) substitute every pass pixel shader with the flat
+// counting shader and force additive blending, so the count pass accumulates
+// 13/255 per shaded fragment into RTOverdraw (20 layers reach the red band).
+ECORE_API BOOL g_overdraw_active = FALSE;
+ECORE_API ID3DPixelShader* g_overdraw_flat_ps = nullptr;
+ECORE_API extern int rs_overdraw;
+extern void xrRender_initconsole();
+
+#include <d3dx9.h>
+
+namespace
+{
+	// Flat counting pixel shader: no inputs, no clipping - every shaded
+	// fragment adds one fixed step (13/255) to the accumulation target.
+	LPCSTR overdraw_count_ps_src =
+		"float4 main() : COLOR\n"
+		"{\n"
+		"	return float4(13.0f / 255.0f, 13.0f / 255.0f, 13.0f / 255.0f, 13.0f / 255.0f);\n"
+		"}\n";
+
+	// Banding display shader: maps the accumulated R channel (13/255 per
+	// counted layer, 20 layers = 100%) onto the overdraw color bands. Pixels
+	// with no counted geometry get alpha 0 and keep the background scene.
+	LPCSTR overdraw_band_ps_src =
+		"sampler2D s_count;\n"
+		"float4 main(float2 tc : TEXCOORD0) : COLOR\n"
+		"{\n"
+		"	float r = tex2D(s_count, tc).r;\n"
+		"	float f = r * (255.0f / 13.0f) / 20.0f;\n"
+		"	float3 c = float3(0.0f, 1.0f, 0.0f);\n"                     // <= 20%
+		"	c = lerp(c, float3(0.0f, 0.0f, 1.0f), step(0.2f, f));\n"    // 20-40%
+		"	c = lerp(c, float3(1.0f, 1.0f, 0.0f), step(0.4f, f));\n"    // 40-60%
+		"	c = lerp(c, float3(1.0f, 0.5f, 0.0f), step(0.6f, f));\n"    // 60-80%
+		"	c = lerp(c, float3(1.0f, 0.0f, 0.0f), step(0.8f, f));\n"    // 80-100%
+		"	return float4(c, step(0.02f, r));\n"
+		"}\n";
+
+	ID3DPixelShader* Overdraw_CompilePS(LPCSTR source)
+	{
+		ID3DXBuffer* code = nullptr;
+		ID3DXBuffer* err = nullptr;
+		HRESULT hr = D3DXCompileShader(source, xr_strlen(source), nullptr, nullptr, "main", "ps_2_0", 0, &code, &err, nullptr);
+		if (err)
+		{
+			Msg("! overdraw pixel shader compile failed: %s", (LPCSTR)err->GetBufferPointer());
+			err->Release();
+		}
+		if (FAILED(hr) || !code)
+			return nullptr;
+
+		ID3DPixelShader* ps = nullptr;
+		R_CHK(REDevice->CreatePixelShader((DWORD*)code->GetBufferPointer(), &ps));
+		code->Release();
+		return ps;
+	}
+}
+
 TUI::TUI()
 {
 	m_HConsole = 0;
@@ -65,6 +124,11 @@ TUI::TUI()
 	m_Size.set(DisplayX, DisplayY);
 
 	GUIManager = this;
+
+	// Overdraw debug layer (rs_overdraw)
+	OverdrawQuadVB		= nullptr;
+	OverdrawCountPS		= nullptr;
+	OverdrawBandPS		= nullptr;
 }
 //---------------------------------------------------------------------------
 TUI::~TUI()
@@ -105,12 +169,26 @@ ImTextureID TUI::LoadTexture(const char* Texture) const
 void TUI::OnDeviceCreate()
 {
 	DU_impl.OnDeviceCreate();
+
+	// Overdraw debug layer (rs_overdraw)
+	OverdrawCountPS = Overdraw_CompilePS(overdraw_count_ps_src);
+	OverdrawBandPS = Overdraw_CompilePS(overdraw_band_ps_src);
+	g_overdraw_flat_ps = OverdrawCountPS;
 }
 
 void TUI::OnDeviceDestroy()
 {
 	DU_impl.OnDeviceDestroy();
 	TextureStack.clear();
+
+	// Overdraw debug layer (rs_overdraw)
+	g_overdraw_flat_ps = nullptr;
+	if (OverdrawBandPS)		{ OverdrawBandPS->Release();	OverdrawBandPS = nullptr; }
+	if (OverdrawCountPS)	{ OverdrawCountPS->Release();	OverdrawCountPS = nullptr; }
+	OverdrawTexList = nullptr;
+	OverdrawQuad.destroy();
+	if (OverdrawQuadVB)		{ OverdrawQuadVB->Release();	OverdrawQuadVB = nullptr; }
+	RTOverdraw.destroy();
 }
 
 bool TUI::IsModified()
@@ -397,6 +475,136 @@ void TUI::Invalidate()
 	UI->RT.create("$user$rt_color", UI->GetRenderWidth(), UI->GetRenderHeight(), D3DFMT_X8R8G8B8);
 }
 
+//---------------------------------------------------------------------------
+// Overdraw debug layer (rs_overdraw)
+//---------------------------------------------------------------------------
+
+BOOL TUI::OverdrawEnsureResources()
+{
+	if (!OverdrawCountPS || !OverdrawBandPS)
+		return FALSE;
+
+	const u32 W = GetRenderWidth();
+	const u32 H = GetRenderHeight();
+	if (!RTOverdraw || !RTOverdraw->valid() || RTOverdraw->dwWidth != W || RTOverdraw->dwHeight != H)
+	{
+		RTOverdraw.destroy();
+		RTOverdraw.create("$user$overdraw", W, H, D3DFMT_A8R8G8B8);
+		if (!RTOverdraw || !RTOverdraw->valid())
+			return FALSE;
+		// Single-entry texture list for the banding pass: stage 0 binding
+		// goes through RCache so the backend texture cache stays consistent.
+		OverdrawTexList = ref_texture_list(new STextureList());
+		OverdrawTexList->push_back(std::make_pair(u32(0), RTOverdraw->pTexture));
+	}
+
+	if (!OverdrawQuad)
+	{
+		// Fullscreen quad in NDC space, drawn with identity transforms.
+		struct OverdrawQuadVert { float x, y, z; float u, v; };
+		static const OverdrawQuadVert Verts[6] =
+		{
+			{-1.f, -1.f, 0.f, 0.f, 1.f}, {1.f, -1.f, 0.f, 1.f, 1.f}, {-1.f, 1.f, 0.f, 0.f, 0.f},
+			{1.f, -1.f, 0.f, 1.f, 1.f}, {1.f, 1.f, 0.f, 1.f, 0.f}, {-1.f, 1.f, 0.f, 0.f, 0.f},
+		};
+		REDevice->CreateVertexBuffer(sizeof(Verts), 0, D3DFVF_XYZ | D3DFVF_TEX1, D3DPOOL_MANAGED, &OverdrawQuadVB, nullptr);
+		if (!OverdrawQuadVB)
+			return FALSE;
+		void* ptr = nullptr;
+		R_CHK(OverdrawQuadVB->Lock(0, 0, &ptr, 0));
+		CopyMemory(ptr, Verts, sizeof(Verts));
+		OverdrawQuadVB->Unlock();
+		OverdrawQuad.create(D3DFVF_XYZ | D3DFVF_TEX1, OverdrawQuadVB, nullptr);
+	}
+	return TRUE;
+}
+
+BOOL TUI::OverdrawCountPass()
+{
+	if (!OverdrawEnsureResources())
+		return FALSE;
+
+	// Count target: A8R8G8B8 additive accumulation over the SAME depth buffer
+	// the main pass uses, cleared first so every frame restarts from zero.
+	RCache.set_RT(RTOverdraw->pRT, 0);
+	RCache.set_RT(0, 1);
+	RCache.set_RT(0, 2);
+	RCache.set_RT(0, 3);
+	RCache.set_ZB(ZB->pRT);
+	REDevice->Clear(0, 0, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0x0, 1, 0);
+
+	g_overdraw_active = TRUE;
+	Tools->Render();
+	g_overdraw_active = FALSE;
+
+	// Restore the main-pass target chain exactly as the normal frame setup.
+	RCache.set_RT(RT->pRT, 0);
+	RCache.set_RT(RTDiffuse->pRT, 1);
+	RCache.set_RT(RTNormal->pRT, 2);
+	RCache.set_RT(RTPostion->pRT, 3);
+	// Neutral blend defaults (device-direct states, no backend cache behind them).
+	EDevice->SetRS(D3DRS_ALPHABLENDENABLE, FALSE);
+	EDevice->SetRS(D3DRS_BLENDOP, D3DBLENDOP_ADD);
+	EDevice->SetRS(D3DRS_SRCBLEND, D3DBLEND_ONE);
+	EDevice->SetRS(D3DRS_DESTBLEND, D3DBLEND_ZERO);
+	EDevice->SetRS(D3DRS_ALPHATESTENABLE, FALSE);
+	// Same stencil marker state the normal frame setup installs.
+	RCache.set_Stencil(TRUE, D3DCMP_ALWAYS, 0x01, 0xff, 0xff, D3DSTENCILOP_KEEP, D3DSTENCILOP_REPLACE, D3DSTENCILOP_KEEP);
+	// Fresh depth for the normal scene pass.
+	REDevice->Clear(0, 0, D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0x0, 1, 0);
+	return TRUE;
+}
+
+void TUI::OverdrawDrawBands()
+{
+	// Screen-space overlay: identity transforms, NDC quad, no depth usage.
+	RCache.set_xform_world(Fidentity);
+	RCache.set_xform_view(Fidentity);
+	RCache.set_xform_project(Fidentity);
+	RCache.set_Z(FALSE);
+	RCache.set_CullMode(CULL_NONE);
+	// Stencil stays enabled with the frame marker state so it can never
+	// reject the overlay (device stencil state is unknown after pass states).
+	RCache.set_Stencil(TRUE, D3DCMP_ALWAYS, 0x01, 0xff, 0xff, D3DSTENCILOP_KEEP, D3DSTENCILOP_REPLACE, D3DSTENCILOP_KEEP);
+	REDevice->SetRenderState(D3DRS_ZWRITEENABLE, FALSE);
+	// Normal alpha blending; alpha 0 keeps pixels without counted geometry
+	// untouched (the background scene stays visible).
+	EDevice->SetRS(D3DRS_ALPHABLENDENABLE, TRUE);
+	EDevice->SetRS(D3DRS_BLENDOP, D3DBLENDOP_ADD);
+	EDevice->SetRS(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
+	EDevice->SetRS(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+	EDevice->SetRS(D3DRS_ALPHATESTENABLE, FALSE);
+	// Bind the count texture through RCache so the backend cache stays consistent.
+	RCache.set_Textures(OverdrawTexList);
+	EDevice->SetSS(0, D3DSAMP_MINFILTER, D3DTEXF_POINT);
+	EDevice->SetSS(0, D3DSAMP_MAGFILTER, D3DTEXF_POINT);
+	EDevice->SetSS(0, D3DSAMP_MIPFILTER, D3DTEXF_NONE);
+	EDevice->SetSS(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+	EDevice->SetSS(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+	RCache.set_VS((ID3DVertexShader*)nullptr, "overdraw_band_vs");
+	RCache.set_PS(OverdrawBandPS, "overdraw_band_ps");
+	RCache.set_Geometry(OverdrawQuad);
+	RCache.Render(D3DPT_TRIANGLELIST, 0, 2);
+
+	// Restore the states the rest of the frame relies on.
+	RCache.set_Z(TRUE);
+	RCache.set_CullMode(CULL_CCW);
+	REDevice->SetRenderState(D3DRS_ZWRITEENABLE, TRUE);
+	EDevice->SetRS(D3DRS_ALPHABLENDENABLE, FALSE);
+	EDevice->SetRS(D3DRS_BLENDOP, D3DBLENDOP_ADD);
+	EDevice->SetRS(D3DRS_SRCBLEND, D3DBLEND_ONE);
+	EDevice->SetRS(D3DRS_DESTBLEND, D3DBLEND_ZERO);
+	const u32 Filter = psDeviceFlags.is(rsFilterLinear) ? D3DTEXF_LINEAR : D3DTEXF_POINT;
+	EDevice->SetSS(0, D3DSAMP_MAGFILTER, Filter);
+	EDevice->SetSS(0, D3DSAMP_MINFILTER, Filter);
+	EDevice->SetSS(0, D3DSAMP_MIPFILTER, Filter);
+	EDevice->SetSS(0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
+	EDevice->SetSS(0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
+	// Unbind the count texture at device level; the backend list cache set
+	// above makes any other texture list rebind its entries on demand.
+	REDevice->SetTexture(0, nullptr);
+}
+
 extern ENGINE_API xr_atomic_bool g_bRendering;
 void TUI::Redraw()
 {
@@ -513,7 +721,17 @@ void TUI::Redraw()
 				DU_impl.DrawPivot(m_Pivot);
 			}
 
+			// Overdraw debug layer (rs_overdraw): count pass first, drawing
+			// the scene a second time into the accumulation target.
+			BOOL overdraw_counted = FALSE;
+			if (rs_overdraw)
+				overdraw_counted = OverdrawCountPass();
+
 			Tools->Render();
+
+			// Overdraw debug layer: band the accumulated counts over the scene.
+			if (overdraw_counted)
+				OverdrawDrawBands();
 
 			// draw selection rect
 			if (m_SelectionRect)
@@ -686,6 +904,11 @@ bool TUI::OnCreate()
 
 	Console = new CConsole();
 	Console->Initialize();
+
+	// Register the xrRender console commands (rs_overdraw etc.). Engine
+	// renderer DLLs do this from their DllMain (EntryPoint.cpp), xrECore
+	// compiles the same sources without that entry, so register here.
+	xrRender_initconsole();
 
 	UI->IR_Capture	();
 

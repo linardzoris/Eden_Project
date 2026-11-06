@@ -8,6 +8,7 @@
 #include "blender_light_spot.h"
 #include "blender_light_reflected.h"
 #include "blender_combine.h"
+#include "blender_overdraw.h"
 #include "../xrRender/blender_screen_postprocess.h"
 #include "blender_bloom_build.h"
 #include "blender_luminance.h"
@@ -358,6 +359,25 @@ CRenderTarget::CRenderTarget()
 		R_CHK(RDevice->CreateBlendState(&desc, &g_debug_blend_state));
 	}
 
+	// Overdraw debug layer (rs_overdraw): additive blend state used by the
+	// replay pass to accumulate per-pixel fragment counts into rt_Overdraw.
+	g_overdraw_active = FALSE;
+	g_overdraw_ps = nullptr;
+	if (g_overdraw_blend == nullptr) {
+		D3D11_BLEND_DESC desc;
+		ZeroMemory(&desc, sizeof(desc));
+		desc.AlphaToCoverageEnable = false;
+		desc.RenderTarget[0].BlendEnable = true;
+		desc.RenderTarget[0].SrcBlend = D3D11_BLEND_ONE;
+		desc.RenderTarget[0].DestBlend = D3D11_BLEND_ONE;
+		desc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+		desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+		desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ONE;
+		desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+		desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+		R_CHK(RDevice->CreateBlendState(&desc, &g_overdraw_blend));
+	}
+
 	CImGuiManager::Instance().Subscribe("GraphicDebug", CImGuiManager::ERenderPriority::eMedium, [this]() {
 		if (!Engine.External.EditorStates[static_cast<std::uint8_t>(EditorUI::Shaders)]) {
 			return;
@@ -516,6 +536,7 @@ CRenderTarget::CRenderTarget()
 	b_luminance = new CBlender_luminance();
 	b_combine = new CBlender_combine();
 	b_ssao = new CBlender_SSAO();
+	b_overdraw = new CBlender_overdraw();
 
 	CRT::CRTCreationFlags isUAV = RFeatureLevel >= D3D_FEATURE_LEVEL_11_0 ? CRT::USE_UAV_FLAG : (CRT::CRTCreationFlags)NULL;
 
@@ -656,6 +677,15 @@ CRenderTarget::CRenderTarget()
 
 	// OCCLUSION
 	s_occq.create(b_occq, "r2\\occq");
+
+	// OVERDRAW DEBUG (rs_overdraw)
+	{
+		rt_Overdraw.create(r2_RT_overdraw, s_dwWidth, s_dwHeight, DxgiFormat::DXGI_FORMAT_R16_FLOAT);
+		s_overdraw.create(b_overdraw, "null");
+		// Extract the flat counting pixel shader used by the CBackend set_PS
+		// override hook while the overdraw replay pass runs.
+		g_overdraw_ps = s_overdraw->E[0]->passes[0]->ps->ps;
+	}
 
 	// DIRECT (spot)
 	DxgiFormat depth_format = (DxgiFormat)RImplementation.o.HW_smap_FORMAT;
@@ -1010,6 +1040,7 @@ CRenderTarget::~CRenderTarget	()
 	xr_delete(b_spp);
 	xr_delete(b_accum_mask);
 	xr_delete(b_occq);
+	xr_delete(b_overdraw);
 	xr_delete(b_cas);
 	xr_delete(b_gtao);
 	xr_delete(b_taa);
@@ -1022,11 +1053,19 @@ CRenderTarget::~CRenderTarget	()
 #endif
 	CImGuiManager::Instance().Unsubscribe("GraphicDebug");
 
-	if (g_debug_blend_state != nullptr) 
+	if (g_debug_blend_state != nullptr)
 	{
 		g_debug_blend_state->Release();
 		g_debug_blend_state = nullptr;
 	}
+
+	if (g_overdraw_blend != nullptr)
+	{
+		g_overdraw_blend->Release();
+		g_overdraw_blend = nullptr;
+	}
+	g_overdraw_ps = nullptr;
+	g_overdraw_active = FALSE;
 }
 
 void CRenderTarget::reset_light_marker( bool bResetStencil)

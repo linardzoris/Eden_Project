@@ -193,6 +193,9 @@ void CRenderTarget::phase_combine()
 		// AO-to-hemi mode (r__use_ao_as_hemi), consumed by combine_1.ps.hlsl
 		RCache.set_c				("combine_ao_params",	(float)ps_r_use_ao_as_hemi, 0.f, 0.f, 0.f);
 
+		// Overdraw debug layer (rs_overdraw), consumed by combine_1.ps.hlsl
+		RCache.set_c				("overdraw_params",		(float)rs_overdraw, 0.f, 0.f, 0.f);
+
 		RCache.Render(D3DPT_TRIANGLELIST, Offset, 0, 4, 0, 2);
 	}
 

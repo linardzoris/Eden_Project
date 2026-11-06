@@ -47,3 +47,17 @@ void	CRenderTarget::phase_scene_end		()
 {
 	disable_aniso();
 }
+
+// overdraw debug layer (rs_overdraw): target for the overdraw replay pass.
+// Binds rt_Overdraw over the main depth buffer WITHOUT clearing depth, so the
+// replayed geometry sees the exact depth state of the finished G-buffer pass
+// and the accumulated R channel approximates per-pixel shader executions.
+void	CRenderTarget::phase_overdraw	()
+{
+	GPU_EVENT(phase_overdraw);
+
+	u_setrt(rt_Overdraw, 0, 0, RDepth);
+
+	FLOAT ColorRGBA[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	RContext->ClearRenderTargetView(rt_Overdraw->pRT, ColorRGBA);
+}

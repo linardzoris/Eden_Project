@@ -175,6 +175,7 @@ public:
 	void							Load			();
 	void							Unload			();
 	void							Render			();
+	void							Render_Repeat	();
 
 	void							cache_Alloc();
 	void							cache_Free();

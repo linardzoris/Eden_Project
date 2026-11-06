@@ -5,6 +5,15 @@
 #include "StateManager/dx10StateManager.h"
 #include "StateManager/dx10ShaderResourceStateCache.h"
 
+#ifdef USE_DX11
+// Overdraw debug layer (rs_overdraw). Defined in r4.cpp; while
+// g_overdraw_active is TRUE the set_PS/set_States hooks below substitute the
+// flat counting pixel shader and an additive blend state.
+extern BOOL g_overdraw_active;
+extern ID3DPixelShader* g_overdraw_ps;
+extern ID3DBlendState* g_overdraw_blend;
+#endif
+
 IC void CBackend::set_xform( u32 ID, const Fmatrix& M_ )
 {
 	stat.xforms			++;
@@ -58,6 +67,12 @@ ICF void CBackend::set_Format(SDeclaration* _decl)
 
 ICF void CBackend::set_PS(ID3DPixelShader* _ps, LPCSTR _n)
 {
+#ifdef USE_DX11
+	// Overdraw debug layer (rs_overdraw): substitute the flat counting pixel
+	// shader while the overdraw replay pass is running.
+	if (g_overdraw_active && g_overdraw_ps)
+		_ps = g_overdraw_ps;
+#endif
 	if (ps!=_ps)
 	{
 		PGO				(Msg("PGO:Pshader:%x",_ps));

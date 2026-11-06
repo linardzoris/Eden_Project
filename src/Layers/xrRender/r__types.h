@@ -42,6 +42,7 @@
 #define		r2_RT_sslr_point	"$user$sslr_point"	//P1: half-res SSLR ray hit points
 
 #define		r2_RT_ssao_temp		"$user$ssao_temp"		//temporary rt for ssao calculation
+#define		r2_RT_overdraw		"$user$overdraw"		// overdraw debug layer (rs_overdraw) fragment count
 #define		r2_RT_half_depth	"$user$half_depth"		//temporary rt for hbao calculation
 
 #if USE_DX11

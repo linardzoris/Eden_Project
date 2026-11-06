@@ -2,6 +2,15 @@
 #define	dx9R_Backend_Runtime_included
 #pragma once
 
+#ifdef _EDITOR
+// Overdraw debug layer (rs_overdraw): while g_overdraw_active is TRUE every
+// pass pixel shader is substituted with the flat counting shader and the
+// Render hooks below force additive blending / skip fixed-function draws.
+// Defined (and exported) in xrECore ui_main.cpp.
+extern ECORE_API BOOL g_overdraw_active;
+extern ECORE_API ID3DPixelShader* g_overdraw_flat_ps;
+#endif
+
 IC void		CBackend::set_xform			(u32 ID, const Fmatrix& M_)
 {
 	stat.xforms			++;
@@ -45,6 +54,13 @@ ICF void CBackend::set_Format(IDirect3DVertexDeclaration9* _decl)
 
 ICF void CBackend::set_PS(ID3DPixelShader* _ps, LPCSTR _n)
 {
+#ifdef _EDITOR
+	// Overdraw debug layer (rs_overdraw): substitute the pass pixel shader
+	// with the flat counting shader. Fixed-function passes keep their null
+	// PS and are skipped by the Render hooks below.
+	if (g_overdraw_active && g_overdraw_flat_ps && _ps)
+		_ps = g_overdraw_flat_ps;
+#endif
 	if (ps!=_ps)
 	{
 		PGO				(Msg("PGO:Pshader:%x",_ps));
@@ -104,6 +120,21 @@ ICF void CBackend::Render(D3DPRIMITIVETYPE T_, u32 baseV, u32 startV, u32 countV
 	if (PC==0)
 		return;
 
+#ifdef _EDITOR
+	// Overdraw debug layer (rs_overdraw): skip fixed-function helper draws
+	// (no pixel shader - wireframes, grid, gizmos) and force additive
+	// blending so every shaded fragment accumulates one counting step.
+	if (g_overdraw_active)
+	{
+		if (!ps)
+			return;
+		RDevice->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
+		RDevice->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ONE);
+		RDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);
+		RDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
+		RDevice->SetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
+	}
+#endif
 	stat.calls			++;
 	stat.verts			+= countV;
 	stat.polys			+= PC;
@@ -118,6 +149,20 @@ ICF void CBackend::Render(D3DPRIMITIVETYPE T_, u32 startV, u32 PC)
 	if (PC==0)
 		return;
 
+#ifdef _EDITOR
+	// Overdraw debug layer (rs_overdraw): same counting rules as the indexed
+	// path above.
+	if (g_overdraw_active)
+	{
+		if (!ps)
+			return;
+		RDevice->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
+		RDevice->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ONE);
+		RDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);
+		RDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
+		RDevice->SetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
+	}
+#endif
 	stat.calls			++;
 	stat.verts			+= 3*PC;
 	stat.polys			+= PC;

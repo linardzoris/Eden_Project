@@ -3,6 +3,7 @@
 
 #include "UI_MainCommand.h"
 #include "../../xrEngine/IInputReceiver.h"
+#include "../../Layers/xrRender/Shader.h"
 
 // refs
 class CCustomObject;
@@ -216,6 +217,11 @@ public:
 	void 			OnDeviceCreate		();
 	void			OnDeviceDestroy		();
 
+	// Overdraw debug layer (rs_overdraw)
+	BOOL			OverdrawEnsureResources	();
+	BOOL			OverdrawCountPass		();
+	void			OverdrawDrawBands		();
+
 	virtual LPCSTR 	EditorName			()=0;
 	virtual LPCSTR	EditorDesc			()=0;
 	virtual ImTextureID LoadTexture(const char*) const override;
@@ -253,6 +259,14 @@ public:
 	ref_rt RTDiffuse;
 	ref_rt RTCopy;
 	ref_rt ZB;
+
+	// Overdraw debug layer (rs_overdraw)
+	ref_rt			RTOverdraw;			// A8R8G8B8 additive accumulation target (13/255 per shaded fragment)
+	ref_texture_list OverdrawTexList;	// single-entry (stage 0, RTOverdraw.pTexture) list for the banding pass
+	ref_geom		OverdrawQuad;		// fullscreen NDC quad (XYZ + TEX1), drawn with identity transforms
+	ID3DVertexBuffer* OverdrawQuadVB;	// raw vertex buffer, owned here (SGeometry does not AddRef)
+	ID3DPixelShader* OverdrawCountPS;	// flat counting shader substituted for pass PS by the CBackend hook
+	ID3DPixelShader* OverdrawBandPS;	// banding display shader
 
 	struct Viewport
 	{

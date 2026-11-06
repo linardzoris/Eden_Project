@@ -418,3 +418,16 @@ void CDetailManager::Render()
 		m_frame_render = Device.dwFrame;
 	}
 }
+
+// Re-render the already-selected detail batch without touching the
+// double-buffered visibility keys, the async update task or the animation
+// state (used by the overdraw debug replay, rs_overdraw).
+void CDetailManager::Render_Repeat()
+{
+#ifndef _EDITOR
+	if (0 == dtFS)						return;
+	if (!psDeviceFlags.is(rsDetails))	return;
+	if (!hw_BatchSize)	return;
+#endif
+	hw_Render();
+}

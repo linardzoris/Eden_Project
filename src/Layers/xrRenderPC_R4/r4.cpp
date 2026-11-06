@@ -40,6 +40,12 @@ float		r_dtex_range		= 50.f;
 
 // combine_1 debug view mode, see r4_rendertarget.h
 int			g_combine_debug_mode	= 0;
+
+// Overdraw debug layer (rs_overdraw) hook state, see r4_rendertarget.h and
+// dx10R_Backend_Runtime.h.
+BOOL		g_overdraw_active		= FALSE;
+ID3DPixelShader*	g_overdraw_ps	= nullptr;
+ID3DBlendState*		g_overdraw_blend	= nullptr;
 //////////////////////////////////////////////////////////////////////////
 ShaderElement*			CRender::rimp_select_sh_dynamic	(dxRender_Visual	*pVisual, float cdist_sq)
 {

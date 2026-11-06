@@ -28,6 +28,9 @@ void	CBlender_combine::Compile(CBlender_Compile& C)
 		C.r_dx10Texture		("sky_s0",			r2_T_sky0			);
 		C.r_dx10Texture		("sky_s1",			r2_T_sky1			);
 		C.r_dx10Texture		("s_env",			r2_RT_env			);
+		// Overdraw debug layer (rs_overdraw): per-pixel fragment count from the
+		// overdraw replay pass, banded by combine_1.ps.hlsl.
+		C.r_dx10Texture		("s_overdraw",		r2_RT_overdraw		);
 		C.r_dx10Texture		("s_occ",			r2_RT_ssao_temp		);
 		C.r_dx10Texture		("s_half_depth",	r2_RT_half_depth	);
 		C.r_dx10Texture		("s_refl",			r2_RT_sslr			);

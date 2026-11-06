@@ -139,6 +139,10 @@ extern ECORE_API float			ps_r2_def_aref_quality;
 extern ECORE_API float			ps_r2_tree_mip_fade_start;	// mip level where foliage fade begins
 extern ECORE_API float			ps_r2_tree_mip_fade_end;	// mip level where foliage is fully faded
 
+// Overdraw debug layer (rs_overdraw 0/1): banded per-pixel fragment count
+// visualization rendered by the R4 overdraw replay pass.
+extern ECORE_API int			rs_overdraw;
+
 extern ECORE_API float			ps_r3_dyn_wet_surf_near;	// 10.0f
 extern ECORE_API float			ps_r3_dyn_wet_surf_far;		// 30.0f
 extern ECORE_API int			ps_r3_dyn_wet_surf_sm_res;	// 256

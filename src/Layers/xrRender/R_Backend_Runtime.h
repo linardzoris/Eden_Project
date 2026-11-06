@@ -90,6 +90,14 @@ ICF void	CBackend::set_States		(ID3DState* _state)
 #endif
 		state			= _state;
 		state->Apply	();
+#ifdef USE_DX11
+		// Overdraw debug layer (rs_overdraw): after the pass state has been
+		// applied, swap in the additive blend state so replayed geometry
+		// accumulates fragment counts into rt_Overdraw. Depth/stencil and
+		// samplers stay from the pass state.
+		if (g_overdraw_active && g_overdraw_blend)
+			StateManager.SetBlendState(g_overdraw_blend);
+#endif
 	}
 }
 

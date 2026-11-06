@@ -9,11 +9,17 @@
 #include "reflections.hlsli"
 
 Texture2D<float> s_occ;
+Texture2D<float> s_overdraw;
 
 // Debug view mode: 0 = disabled (normal combine), 1+ = output the selected
 // G-buffer channel instead of the final color (picked in the GraphicDebug
 // ImGui window, passed from CRenderTarget::phase_combine).
 uniform float4 combine_debug_params; // x = mode
+
+// Overdraw debug layer (rs_overdraw): renders a banded visualization of the
+// per-pixel fragment count accumulated into rt_Overdraw by the overdraw
+// replay pass. 1.0 = 20 counted layers.
+uniform float4 overdraw_params; // x = enabled
 
 // AO-to-hemi mode (r__use_ao_as_hemi): 0 = AO darkens the final ambient
 // multiply only (legacy), 1 = AO folded into hemi irradiance with an
@@ -30,6 +36,21 @@ struct _input
 
 float4 main(_input I) : SV_Target
 {
+    // Overdraw debug layer: banded per-pixel fragment count. Early-out before
+    // the expensive G-buffer unpack/lighting. Alpha is zeroed so the
+    // INVSRCALPHA/SRCALPHA blend passes the debug value through unmodified.
+    [branch]
+    if (overdraw_params.x > 0.5f)
+    {
+        float Overdraw = s_overdraw.SampleLevel(smp_rtlinear, I.tc0.xy, 0.0f).r;
+        float3 Debug = float3(0.0f, 1.0f, 0.0f);                  // <=20%
+        if (Overdraw > 0.2f) Debug = float3(0.0f, 0.0f, 1.0f);    // 20-40%
+        if (Overdraw > 0.4f) Debug = float3(1.0f, 1.0f, 0.0f);    // 40-60%
+        if (Overdraw > 0.6f) Debug = float3(1.0f, 0.5f, 0.0f);    // 60-80%
+        if (Overdraw > 0.8f) Debug = float3(1.0f, 0.0f, 0.0f);    // 80-100%
+        return float4(Debug, 0.0f);
+    }
+
     IXrayGbuffer O;
     GbufferUnpack(I.tc0.xy, I.pos2d.xy, O);
     float3 Light = s_accumulator.Load(int3(I.pos2d.xy, 0)).xyz;

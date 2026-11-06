@@ -9,6 +9,14 @@ class light;
 // set from the GraphicDebug ImGui window, consumed in CRenderTarget::phase_combine.
 extern int g_combine_debug_mode;
 
+// Overdraw debug layer (rs_overdraw). While g_overdraw_active is TRUE the
+// CBackend set_PS/set_States hooks substitute the flat counting pixel shader
+// and an additive blend state, so any geometry drawn in that window accumulates
+// fragment counts into rt_Overdraw instead of shading.
+extern BOOL					g_overdraw_active;
+extern ID3DPixelShader*		g_overdraw_ps;
+extern ID3DBlendState*		g_overdraw_blend;
+
 //#define DU_SPHERE_NUMVERTEX 92
 //#define DU_SPHERE_NUMFACES	180
 //#define DU_CONE_NUMVERTEX	18
@@ -32,6 +40,7 @@ public:
 	u32							dwLightMarkerID;
 	// 
 	IBlender*					b_occq;
+	IBlender*					b_overdraw;
 	IBlender*					b_accum_mask;
 	IBlender*					b_accum_direct;
 	IBlender*					b_accum_point;
@@ -134,6 +143,10 @@ private:
 
 	// OCCq
 	ref_shader					s_occq;
+
+	// Overdraw debug layer (rs_overdraw)
+	ref_rt						rt_Overdraw;
+	ref_shader					s_overdraw;
 
 	// SMAA
 	ref_rt						rt_smaa_edgetex;
@@ -289,6 +302,7 @@ public:
 
 	void						phase_scene_begin		();
 	void						phase_scene_end			();
+	void						phase_overdraw			();
 	void						phase_occq				();
 	void						phase_ssao				();
 	void						phase_downsamp			();
