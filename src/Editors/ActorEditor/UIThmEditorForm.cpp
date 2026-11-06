@@ -721,6 +721,7 @@ static bool ThmPickFolder(const char* title, const char* initial, xr_string& out
 		IFileDialog* dlg = nullptr;
 		if (SUCCEEDED(CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&dlg))))
 		{
+			ELog.Msg(mtInformation, "THM Editor: folder picker = IFileDialog, default = '%s'", initial && initial[0] ? initial : "(none)");
 			DWORD opts = 0;
 			dlg->GetOptions(&opts);
 			dlg->SetOptions(opts | FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM | FOS_PATHMUSTEXIST);
@@ -766,6 +767,8 @@ static bool ThmPickFolder(const char* title, const char* initial, xr_string& out
 			MultiByteToWideChar(CP_ACP, 0, initial, -1, wroot, MAX_PATH);
 			SHParseDisplayName(wroot, nullptr, &root, 0, nullptr);
 		}
+		ELog.Msg(mtInformation, "THM Editor: folder picker = SHBrowseForFolder, initial = '%s' (root pidl %s)",
+			initial && initial[0] ? initial : "(none)", root ? "ok" : "FAILED");
 
 		BROWSEINFOA bi = {};
 		char display[MAX_PATH] = "";
@@ -900,12 +903,21 @@ void UIThmEditorForm::DoScanOrphans()
 {
 	string_path gt_buf;
 	FS.update_path(gt_buf, "$game_textures$", "");
+	// fsgame.ltx paths can be relative to the working directory; the shell
+	// dialogs need an absolute path to pre-select anything
+	if (strlen(gt_buf) < 2 || gt_buf[1] != ':')
+	{
+		string_path rel;
+		xr_strcpy(rel, sizeof(rel), gt_buf);
+		_fullpath(gt_buf, rel, sizeof(gt_buf));
+	}
 	// strip the trailing separator so the browse dialog pre-selects the folder
 	size_t len = strlen(gt_buf);
 	while (len > 3 && (gt_buf[len - 1] == '\\' || gt_buf[len - 1] == '/'))
 		gt_buf[--len] = 0;
 
 	xr_string dir;
+	ELog.Msg(mtInformation, "THM Editor: scan default folder = '%s'", gt_buf);
 	if (!ThmPickFolder("Select folder to scan for orphan textures", gt_buf, dir))
 		return;
 
