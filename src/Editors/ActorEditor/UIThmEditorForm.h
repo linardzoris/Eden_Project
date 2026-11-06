@@ -100,6 +100,17 @@ private:
 		bool           dirty = false;
 	};
 
+	// orphan scan result: a .dds under the scanned folder whose .thm is
+	// missing. _bump# files never get a thm and are excluded by the scan.
+	struct OrphanEntry
+	{
+		xr_string dds_path;  // absolute path of the .dds
+		xr_string thm_path;  // absolute path of the missing .thm to create
+		xr_string tex_name;  // texture name relative to the scan root (lowercase, no ext)
+		bool      is_bump;   // *_bump.dds
+		bool      has_bump;  // albedo only: matching *_bump.dds exists
+	};
+
 	bool ParseThm(LPCSTR path, ThmEntry& out);   // read one .thm into out
 	bool WriteThm(ThmEntry& e);                  // serialize one entry to disk
 	// companion .object metadata: flags + surfaces editable, all other body
@@ -108,6 +119,8 @@ private:
 	static bool WriteObjectFile(LPCSTR path, const ThmEntry& e);
 	static bool ObjReadStringZ(IReader& S, xr_string& out);
 	static bool ObjParseSurfaces3(IReader& S, xr_vector<ObjSurface>& out);
+	void DoScanOrphans();
+	void DoFixOrphans();
 	void DoLoad();
 	void DoLoadObject();
 	void DoSaveSelected(bool save_as);
@@ -201,6 +214,9 @@ private:
 	xr_vector<ThmEntry> m_Entries;
 	xr_vector<int>      m_Selection;   // sorted indices into m_Entries
 	int                 m_Anchor = -1; // last plain/ctrl-clicked row, shift anchor
+
+	// orphan scan state (Scan Orphans -> Fix Orphaned)
+	xr_vector<OrphanEntry> m_Orphans;
 
 	// edit mirror of the primary selection (ImGui needs stable writable storage)
 	STextureParams m_Params;

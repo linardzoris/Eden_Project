@@ -3,6 +3,7 @@
 #include "imgui.h"
 #include "../xrEUI/EditorLocalization.h"
 #include "../xrECore/Editor/device.h" // REDevice: preview texture creation
+#include <shlobj.h>                  // SHBrowseForFolderA: orphan scan folder picker
 
 // The xr_token tables live in ETextureParams.cpp (xrECore) but are not
 // exported from the DLL; duplicate them here under local names for the UI only
@@ -682,6 +683,327 @@ void UIThmEditorForm::ResetEdits()
 	ColorToText(m_FadeColor, sizeof(m_FadeColor), m_Params.fade_color);
 }
 
+// ----------------------------------------------------------------------------
+// orphan scan (Scan Orphans -> Fix Orphaned)
+//
+// Finds *.dds under a user-chosen folder whose .thm is missing and creates
+// minimal texture thms for them. Classification:
+//   *_bump#.dds  skipped - the engine reads _bump# only through its _bump
+//                         pair, no thm is ever needed
+//   *_bump.dds   bump    - thm gets type=BumpMap (vanilla convention)
+//   anything else albedo  - thm gets type=Image; when a matching *_bump.dds
+//                         exists it is linked via bump_mode=Use + bump_name,
+//                         exactly like hand-authored vanilla thm files
+// All created thms use the STextureParams::Clear() defaults requested by the
+// workflow: material=Blin<->Phong, material_weight=0, bump_mode=None.
+// ----------------------------------------------------------------------------
+
+// native folder picker. The engine main thread runs COM in MTA mode
+// (xrCore.cpp) where IFileDialog deadlocks, so: when this thread can own a
+// COM STA apartment use the modern IFileDialog (SetDefaultFolder opens at
+// 'initial'), otherwise fall back to legacy SHBrowseForFolderA rooted at
+// 'initial' (pidlRoot - the documented way to make it start in a folder).
+static bool ThmFileExists(const char* path);
+static bool ThmPickFolder(const char* title, const char* initial, xr_string& out)
+{
+	HRESULT hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+	bool com_owned = (hr == S_OK || hr == S_FALSE);
+	bool ok = false;
+
+	if (com_owned)
+	{
+		wchar_t winit[MAX_PATH] = L"";
+		wchar_t wtitle[256] = L"";
+		if (initial && initial[0])
+			MultiByteToWideChar(CP_ACP, 0, initial, -1, winit, MAX_PATH);
+		MultiByteToWideChar(CP_ACP, 0, title, -1, wtitle, 256);
+
+		IFileDialog* dlg = nullptr;
+		if (SUCCEEDED(CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&dlg))))
+		{
+			DWORD opts = 0;
+			dlg->GetOptions(&opts);
+			dlg->SetOptions(opts | FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM | FOS_PATHMUSTEXIST);
+			dlg->SetTitle(wtitle);
+			if (winit[0])
+			{
+				IShellItem* item = nullptr;
+				if (SUCCEEDED(SHCreateItemFromParsingName(winit, nullptr, IID_PPV_ARGS(&item))))
+				{
+					dlg->SetDefaultFolder(item);
+					item->Release();
+				}
+			}
+			if (SUCCEEDED(dlg->Show(GetForegroundWindow())))
+			{
+				IShellItem* res = nullptr;
+				if (SUCCEEDED(dlg->GetResult(&res)))
+				{
+					PWSTR wpath = nullptr;
+					if (SUCCEEDED(res->GetDisplayName(SIGDN_FILESYSPATH, &wpath)))
+					{
+						char apath[MAX_PATH] = "";
+						WideCharToMultiByte(CP_ACP, 0, wpath, -1, apath, MAX_PATH, nullptr, nullptr);
+						out = apath;
+						ok = true;
+						CoTaskMemFree(wpath);
+					}
+					res->Release();
+				}
+			}
+			dlg->Release();
+		}
+		CoUninitialize();
+	}
+
+	if (!ok)
+	{
+		// legacy fallback: rooted at 'initial' so the tree starts there
+		LPITEMIDLIST root = nullptr;
+		if (initial && initial[0] && ThmFileExists(initial))
+		{
+			wchar_t wroot[MAX_PATH] = L"";
+			MultiByteToWideChar(CP_ACP, 0, initial, -1, wroot, MAX_PATH);
+			SHParseDisplayName(wroot, nullptr, &root, 0, nullptr);
+		}
+
+		BROWSEINFOA bi = {};
+		char display[MAX_PATH] = "";
+		bi.hwndOwner = GetForegroundWindow();
+		bi.pszDisplayName = display;
+		bi.pidlRoot = root;
+		bi.lpszTitle = title;
+		bi.ulFlags = BIF_RETURNONLYFSDIRS;
+		LPITEMIDLIST pidl = SHBrowseForFolderA(&bi);
+		if (pidl)
+		{
+			char path[MAX_PATH] = "";
+			if (SHGetPathFromIDListA(pidl, path))
+			{
+				out = path;
+				ok = true;
+			}
+			CoTaskMemFree(pidl);
+		}
+		if (root)
+			ILFree(root);
+	}
+	return ok;
+}
+
+// ASCII-only lowercase (avoids CRT locale surprises on non-ANSI names)
+static xr_string ThmLower(xr_string s)
+{
+	for (char& c : s)
+		if (c >= 'A' && c <= 'Z')
+			c += 'a' - 'A';
+	return s;
+}
+
+static bool ThmEndsWithI(const xr_string& s, const char* suffix)
+{
+	size_t len = strlen(suffix);
+	if (s.size() < len)
+		return false;
+	return 0 == _stricmp(s.c_str() + s.size() - len, suffix);
+}
+
+static bool ThmFileExists(const char* path)
+{
+	return GetFileAttributesA(path) != INVALID_FILE_ATTRIBUTES;
+}
+
+// recursive *.dds walk below dir; appends absolute paths
+static void ThmFindDds(const char* dir, xr_vector<xr_string>& out)
+{
+	string_path pattern;
+	xr_strconcat(pattern, dir, "\\*");
+	WIN32_FIND_DATAA fd;
+	HANDLE h = FindFirstFileA(pattern, &fd);
+	if (h == INVALID_HANDLE_VALUE)
+		return;
+	do
+	{
+		if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+		{
+			if (fd.cFileName[0] == '.')
+				continue; // "." and ".."
+			string_path sub;
+			xr_strconcat(sub, dir, "\\", fd.cFileName);
+			ThmFindDds(sub, out);
+		}
+		else
+		{
+			LPCSTR ext = strext(fd.cFileName);
+			if (ext && 0 == _stricmp(ext, ".dds"))
+			{
+				string_path full;
+				xr_strconcat(full, dir, "\\", fd.cFileName);
+				out.push_back(full);
+			}
+		}
+	} while (FindNextFileA(h, &fd));
+	FindClose(h);
+}
+
+// texture key for a dds path: lowercase, no extension. Relative to the game
+// textures root when the file lives under it (matches the bump_name format
+// of existing vanilla thm files, e.g. "act\xxx_bump"), otherwise relative to
+// the scanned folder.
+static xr_string ThmTexKey(const xr_string& path, const xr_string& gt_root, const xr_string& scan_root)
+{
+	xr_string low = ThmLower(path);
+	size_t dot = low.find_last_of('.');
+	if (dot != xr_string::npos)
+		low.resize(dot);
+
+	xr_string root = ThmLower(gt_root);
+	while (!root.empty() && (root[root.size() - 1] == '\\' || root[root.size() - 1] == '/'))
+		root.erase(root.size() - 1);
+	bool under_gt = root.size() > 3 && // need at least "c:\x", not a bare "c:\"
+		low.size() > root.size() &&
+		0 == low.compare(0, root.size(), root) &&
+		(low[root.size()] == '\\' || low[root.size()] == '/');
+	if (!under_gt)
+	{
+		root = ThmLower(scan_root);
+		while (!root.empty() && (root[root.size() - 1] == '\\' || root[root.size() - 1] == '/'))
+			root.erase(root.size() - 1);
+	}
+	if (low.size() > root.size() &&
+		0 == low.compare(0, root.size(), root) &&
+		(low[root.size()] == '\\' || low[root.size()] == '/'))
+		low.erase(0, root.size() + 1);
+	for (char& c : low)
+		if (c == '/')
+			c = '\\';
+	return low;
+}
+
+// dds dimensions straight from the DDS header (DWORDs at offset 12/16)
+static void ThmReadDdsSize(const char* path, u32& w, u32& h)
+{
+	w = h = 0;
+	FILE* f = fopen(path, "rb");
+	if (!f)
+		return;
+	u8 hdr[20];
+	size_t rd = fread(hdr, 1, sizeof(hdr), f);
+	fclose(f);
+	if (rd < sizeof(hdr) || memcmp(hdr, "DDS ", 4) != 0)
+		return;
+	memcpy(&w, hdr + 12, sizeof(u32));
+	memcpy(&h, hdr + 16, sizeof(u32));
+}
+
+void UIThmEditorForm::DoScanOrphans()
+{
+	string_path gt_buf;
+	FS.update_path(gt_buf, "$game_textures$", "");
+	// strip the trailing separator so the browse dialog pre-selects the folder
+	size_t len = strlen(gt_buf);
+	while (len > 3 && (gt_buf[len - 1] == '\\' || gt_buf[len - 1] == '/'))
+		gt_buf[--len] = 0;
+
+	xr_string dir;
+	if (!ThmPickFolder("Select folder to scan for orphan textures", gt_buf, dir))
+		return;
+
+	xr_vector<xr_string> dds;
+	ThmFindDds(dir.c_str(), dds);
+
+	// pass 1: classify, collect keys of every dds found (for _bump matching)
+	struct DdsInfo
+	{
+		xr_string path;
+		xr_string key;
+		bool      is_bump;
+	};
+	xr_vector<DdsInfo> found;
+	xr_map<xr_string, bool> keys;
+	found.reserve(dds.size());
+	for (const xr_string& p : dds)
+	{
+		DdsInfo info;
+		info.path = p;
+		info.key = ThmTexKey(p, gt_buf, dir);
+		info.is_bump = ThmEndsWithI(info.key, "_bump");
+		keys[info.key] = true;
+		found.push_back(info);
+	}
+
+	// pass 2: orphans = no .thm next to the .dds, _bump# never needs one
+	m_Orphans.clear();
+	u32 bumps = 0, linked = 0;
+	for (const DdsInfo& f : found)
+	{
+		if (ThmEndsWithI(f.key, "_bump#"))
+			continue;
+
+		xr_string thm = f.path;
+		size_t dot = thm.find_last_of('.');
+		if (dot != xr_string::npos)
+			thm.resize(dot);
+		thm += ".thm";
+		if (ThmFileExists(thm.c_str()))
+			continue;
+
+		OrphanEntry o;
+		o.dds_path = f.path;
+		o.thm_path = thm;
+		o.tex_name = f.key;
+		o.is_bump = f.is_bump;
+		o.has_bump = !f.is_bump && keys.find(f.key + "_bump") != keys.end();
+		if (o.is_bump)
+			++bumps;
+		else if (o.has_bump)
+			++linked;
+		m_Orphans.push_back(o);
+	}
+
+	ELog.Msg(mtInformation, "THM Editor: scanned %u dds files under '%s', found %u orphaned (bump: %u, albedo: %u of which %u have a bump).",
+		(u32)found.size(), dir.c_str(), (u32)m_Orphans.size(), bumps, (u32)m_Orphans.size() - bumps, linked);
+}
+
+void UIThmEditorForm::DoFixOrphans()
+{
+	if (m_Orphans.empty())
+		return;
+
+	u32 created = 0;
+	for (const OrphanEntry& o : m_Orphans)
+	{
+		ThmEntry e;
+		e.path = o.thm_path;
+		e.kind = KindTexture;
+		e.thm_type = ECustomThumbnail::ETTexture;
+		e.params.Clear(); // material=Blin<->Phong, weight=0, bump_mode=None
+
+		u32 w, h;
+		ThmReadDdsSize(o.dds_path.c_str(), w, h);
+		e.params.width = (int)w;
+		e.params.height = (int)h;
+
+		if (o.is_bump)
+		{
+			e.params.type = STextureParams::ttBumpMap;
+		}
+		else if (o.has_bump)
+		{
+			// link the existing bump the way vanilla thm files do
+			e.params.bump_mode = STextureParams::tbmUse;
+			e.params.bump_name = (o.tex_name + "_bump").c_str();
+		}
+
+		if (WriteThm(e))
+			++created;
+	}
+
+	ELog.Msg(mtInformation, "THM Editor: created %u of %u missing thm files.", created, (u32)m_Orphans.size());
+	m_Orphans.clear();
+}
+
+
 void UIThmEditorForm::DoLoad()
 {
 	xr_string fn;
@@ -1285,6 +1607,19 @@ void UIThmEditorForm::Draw()
 	ImGui::SameLine();
 	if (ImGui::Button(Loc("Batch LTX -> THM")))
 		ConvertLtxToThm();
+	ImGui::SameLine();
+	if (ImGui::Button(Loc("Scan Orphans")))
+		DoScanOrphans();
+	ImGui::SameLine();
+	{
+		bool can_fix = !m_Orphans.empty();
+		if (!can_fix)
+			ImGui::BeginDisabled();
+		if (ImGui::Button(Loc("Fix Orphaned")))
+			DoFixOrphans();
+		if (!can_fix)
+			ImGui::EndDisabled();
+	}
 
 	if (!m_Entries.empty())
 	{
@@ -1309,6 +1644,26 @@ void UIThmEditorForm::Draw()
 		ImGui::TextDisabled(Loc("No file loaded"));
 
 	DrawFileList();
+
+	// orphan scan results: one line per missing thm, suffix marks the kind
+	if (!m_Orphans.empty())
+	{
+		u32 bumps = 0;
+		for (const OrphanEntry& o : m_Orphans)
+			if (o.is_bump)
+				++bumps;
+		ImGui::Text("%s: %u  [bump: %u, albedo: %u]", Loc("Orphaned textures"), (u32)m_Orphans.size(), bumps, (u32)m_Orphans.size() - bumps);
+		ImGui::BeginChild("orphan_list", ImVec2(0, ImGui::GetFrameHeightWithSpacing() * 6.0f), ImGuiChildFlags_FrameStyle);
+		for (const OrphanEntry& o : m_Orphans)
+		{
+			xr_string label = o.tex_name;
+			label += o.is_bump ? "  [bump]" : (o.has_bump ? "  [+bump]" : "");
+			ImGui::Selectable(label.c_str());
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", o.dds_path.c_str());
+		}
+		ImGui::EndChild();
+	}
 
 	if (prim >= 0)
 	{

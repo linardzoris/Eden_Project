@@ -1160,6 +1160,9 @@
 	<string id="Save All"><text>保存全部</text></string>
 	<string id="Batch THM -> LTX"><text>批量 THM -> LTX</text></string>
 	<string id="Batch LTX -> THM"><text>批量 LTX -> THM</text></string>
+	<string id="Scan Orphans"><text>扫描孤儿纹理</text></string>
+	<string id="Fix Orphaned"><text>修复孤儿THM</text></string>
+	<string id="Orphaned textures"><text>孤儿纹理</text></string>
 	<string id="Convert LTX to THM"><text>LTX 转换为 THM</text></string>
 	<string id="(mixed)"><text>（！！混合！！）</text></string>
 	<string id="Files"><text>文件数</text></string>
