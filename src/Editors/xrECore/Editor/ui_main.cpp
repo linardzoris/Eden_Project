@@ -522,7 +522,10 @@ BOOL TUI::OverdrawEnsureResources()
 BOOL TUI::OverdrawCountPass()
 {
 	if (!OverdrawEnsureResources())
+	{
+		Msg("! [overdraw] ensure resources failed - count pass skipped");
 		return FALSE;
+	}
 
 	// Count target: A8R8G8B8 additive accumulation over the SAME depth buffer
 	// the main pass uses, cleared first so every frame restarts from zero.
@@ -552,6 +555,52 @@ BOOL TUI::OverdrawCountPass()
 	RCache.set_Stencil(TRUE, D3DCMP_ALWAYS, 0x01, 0xff, 0xff, D3DSTENCILOP_KEEP, D3DSTENCILOP_REPLACE, D3DSTENCILOP_KEEP);
 	// Fresh depth for the normal scene pass.
 	REDevice->Clear(0, 0, D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0x0, 1, 0);
+
+	// TEMPORARY DIAGNOSTICS (rs_overdraw editor bring-up): read back the
+	// count RT and report the max accumulated R over a sparse grid.
+	{
+		static IDirect3DSurface9* probe = nullptr;
+		static u32 probe_w = 0, probe_h = 0, dbg_frame = 0;
+		const u32 W = GetRenderWidth();
+		const u32 H = GetRenderHeight();
+		if (probe && (probe_w != W || probe_h != H))
+		{
+			probe->Release();
+			probe = nullptr;
+		}
+		if (!probe)
+		{
+			REDevice->CreateOffscreenPlainSurface(W, H, D3DFMT_A8R8G8B8, D3DPOOL_SYSTEMMEM, &probe, nullptr);
+			probe_w = W;
+			probe_h = H;
+		}
+		if (probe && SUCCEEDED(REDevice->GetRenderTargetData(RTOverdraw->pRT, probe)))
+		{
+			D3DLOCKED_RECT lr;
+			if (SUCCEEDED(probe->LockRect(&lr, nullptr, D3DLOCK_READONLY)))
+			{
+				u32 maxR = 0;
+				u32 maxPos = 0;
+				const u8* base = (const u8*)lr.pBits;
+				for (u32 y = 0; y < H; y += 32)
+				{
+					const u32* row = (const u32*)(base + y * lr.Pitch);
+					for (u32 x = 0; x < W; x += 32)
+					{
+						const u32 r = (row[x] >> 16) & 0xFF;
+						if (r > maxR)
+						{
+							maxR = r;
+							maxPos = (y << 16) | x;
+						}
+					}
+				}
+				probe->UnlockRect();
+				dbg_frame++;
+				Msg("~ [overdraw] frame %u: maxR=%u/255 at (%u,%u)", dbg_frame, maxR, maxPos & 0xFFFF, maxPos >> 16);
+			}
+		}
+	}
 	return TRUE;
 }
 
@@ -584,6 +633,18 @@ void TUI::OverdrawDrawBands()
 	RCache.set_VS((ID3DVertexShader*)nullptr, "overdraw_band_vs");
 	RCache.set_PS(OverdrawBandPS, "overdraw_band_ps");
 	RCache.set_Geometry(OverdrawQuad);
+	// TEMPORARY DIAGNOSTICS: device state right before the banding draw.
+	{
+		DWORD zEn = 0, zFunc = 0, stEn = 0, stFunc = 0, stRef = 0, ablEn = 0;
+		REDevice->GetRenderState(D3DRS_ZENABLE, &zEn);
+		REDevice->GetRenderState(D3DRS_ZFUNC, &zFunc);
+		REDevice->GetRenderState(D3DRS_STENCILENABLE, &stEn);
+		REDevice->GetRenderState(D3DRS_STENCILFUNC, &stFunc);
+		REDevice->GetRenderState(D3DRS_STENCILREF, &stRef);
+		REDevice->GetRenderState(D3DRS_ALPHABLENDENABLE, &ablEn);
+		Msg("~ [overdraw] bands pre-draw: zEn=%u zFunc=%u stEn=%u stFunc=%u stRef=%u blend=%u",
+			zEn, zFunc, stEn, stFunc, stRef, ablEn);
+	}
 	RCache.Render(D3DPT_TRIANGLELIST, 0, 2);
 
 	// Restore the states the rest of the frame relies on.
